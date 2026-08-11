@@ -1,0 +1,169 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body-raw);
+  --font-display: var(--font-display-raw);
+  --font-mono: var(--font-body-raw);
+  --font-heading: var(--font-display-raw);
+
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --color-gold-deep: var(--gold-deep);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+  GalleryZone's brand is black + brass gold, but it now supports a real
+  light theme too (paper + ink + the same brass gold, darkened for
+  contrast on a light ground) via next-themes' .dark class toggle.
+  Default is dark — see ThemeProvider's defaultTheme in app/layout.tsx.
+*/
+:root {
+  --background: #f7f3e9;
+  --foreground: #201c13;
+
+  --card: #fdfbf5;
+  --card-foreground: #201c13;
+  --popover: #fdfbf5;
+  --popover-foreground: #201c13;
+
+  --gold: #a9782c;
+  --gold-bright: #8a6423;
+  --gold-deep: #6e4f1b;
+
+  --primary: var(--gold);
+  --primary-foreground: #fdfbf5;
+
+  --secondary: #efead9;
+  --secondary-foreground: #201c13;
+
+  --muted: #f1ecde;
+  --muted-foreground: #6b6656;
+
+  --accent: #efead9;
+  --accent-foreground: #201c13;
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --ring: var(--gold);
+
+  --chart-1: var(--gold);
+  --chart-2: var(--gold-bright);
+  --chart-3: var(--gold-deep);
+  --chart-4: #8a836c;
+  --chart-5: #b6ae94;
+
+  --radius: 0.75rem;
+
+  --sidebar: #f1ecde;
+  --sidebar-foreground: #201c13;
+  --sidebar-primary: var(--gold);
+  --sidebar-primary-foreground: #fdfbf5;
+  --sidebar-accent: #efead9;
+  --sidebar-accent-foreground: #201c13;
+  --sidebar-border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --sidebar-ring: var(--gold);
+}
+
+.dark {
+  --background: #0b0a08;
+  --foreground: #f1ece0;
+
+  --card: #141209;
+  --card-foreground: #f1ece0;
+  --popover: #141209;
+  --popover-foreground: #f1ece0;
+
+  --gold: #c89a4a;
+  --gold-bright: #e9c57a;
+  --gold-deep: #8a6423;
+
+  --primary: var(--gold);
+  --primary-foreground: #171310;
+
+  --secondary: #1c1a12;
+  --secondary-foreground: #f1ece0;
+
+  --muted: #17150e;
+  --muted-foreground: #9c9686;
+
+  --accent: #1c1a12;
+  --accent-foreground: #f1ece0;
+
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --border: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --ring: var(--gold);
+
+  --chart-1: var(--gold-bright);
+  --chart-2: var(--gold);
+  --chart-3: var(--gold-deep);
+  --chart-4: #6b6656;
+  --chart-5: #443f30;
+
+  --sidebar: #100f0a;
+  --sidebar-foreground: #f1ece0;
+  --sidebar-primary: var(--gold);
+  --sidebar-primary-foreground: #171310;
+  --sidebar-accent: #1c1a12;
+  --sidebar-accent-foreground: #f1ece0;
+  --sidebar-border: color-mix(in oklab, var(--foreground) 10%, transparent);
+  --sidebar-ring: var(--gold);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

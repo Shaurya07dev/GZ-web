@@ -1,0 +1,6 @@
+# This repo tracks only the website codebase in frontend-web/.
+# Everything else at the root (docs, PDFs, reference images, corpus data)
+# is workspace scratch material and stays untracked.
+/*
+!/frontend-web/
+!/.gitignore

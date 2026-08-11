@@ -1,0 +1,46 @@
+import { FileEdit, Clock3, Sparkles, BookmarkCheck, CircleCheckBig } from "lucide-react";
+import type { ArtworkStatus } from "./dashboard-data";
+
+const STATUS_CONFIG: Record<
+  ArtworkStatus,
+  { label: string; icon: typeof FileEdit; className: string }
+> = {
+  draft: {
+    label: "Draft",
+    icon: FileEdit,
+    className: "border-border bg-secondary text-muted-foreground",
+  },
+  pending_approval: {
+    label: "Pending Approval",
+    icon: Clock3,
+    className: "border-gold/35 bg-gold/10 text-gold-bright",
+  },
+  live: {
+    label: "Live",
+    icon: Sparkles,
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  reserved: {
+    label: "Reserved",
+    icon: BookmarkCheck,
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
+  },
+  sold: {
+    label: "Sold",
+    icon: CircleCheckBig,
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+};
+
+export function ArtworkStatusPill({ status }: { status: ArtworkStatus }) {
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${config.className}`}
+    >
+      <Icon className="size-3" strokeWidth={2} />
+      {config.label}
+    </span>
+  );
+}
