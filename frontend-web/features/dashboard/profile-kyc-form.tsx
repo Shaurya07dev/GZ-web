@@ -105,9 +105,7 @@ export function ProfileKycForm() {
             </button>
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">
-              Profile photo
-            </p>
+            <p className="text-sm font-medium text-foreground">Profile photo</p>
             <p className="text-xs text-muted-foreground">
               Shown on your public artist page.
             </p>
@@ -225,8 +223,8 @@ export function ProfileKycForm() {
             {PROFILE.aadhaarMasked}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Encrypted at rest and used only for identity verification.
-            Contact support to update your Aadhaar details.
+            Encrypted at rest and used only for identity verification. Contact
+            support to update your Aadhaar details.
           </p>
         </div>
 
@@ -236,8 +234,8 @@ export function ProfileKycForm() {
               Identity documents
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Submit an additional ID or address proof if support has
-              requested one for your account.
+              Submit an additional ID or address proof if support has requested
+              one for your account.
             </p>
           </div>
 
@@ -273,15 +271,16 @@ export function ProfileKycForm() {
 
           <div className="flex items-center gap-3 rounded-md border border-border p-3.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-              <Building2 className="size-4 text-gold-bright" strokeWidth={1.5} />
+              <Building2
+                className="size-4 text-gold-bright"
+                strokeWidth={1.5}
+              />
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-foreground">
                 {PROFILE.bankAccountMasked}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Currently on file
-              </p>
+              <p className="text-xs text-muted-foreground">Currently on file</p>
             </div>
           </div>
 
@@ -292,9 +291,7 @@ export function ProfileKycForm() {
               inputMode="numeric"
               placeholder="Enter to update"
               value={bankForm.bankAccountNumber}
-              onChange={(e) =>
-                updateBank("bankAccountNumber", e.target.value)
-              }
+              onChange={(e) => updateBank("bankAccountNumber", e.target.value)}
               className="h-10"
             />
           </div>
@@ -305,9 +302,7 @@ export function ProfileKycForm() {
               id="ifsc"
               maxLength={11}
               value={bankForm.ifsc}
-              onChange={(e) =>
-                updateBank("ifsc", e.target.value.toUpperCase())
-              }
+              onChange={(e) => updateBank("ifsc", e.target.value.toUpperCase())}
               className="h-10"
             />
           </div>

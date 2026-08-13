@@ -9,17 +9,31 @@ import { toast } from "sonner";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldDescription,
+} from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdminSettings, useUpdateSettingsMutation } from "@/hooks/useAdminSystem";
+import {
+  useAdminSettings,
+  useUpdateSettingsMutation,
+} from "@/hooks/useAdminSystem";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
 import type { PlatformSettings } from "@/types/admin";
 
 const settingsSchema = z.object({
-  markupPercent: z.coerce.number<number>().min(0, "Cannot be negative").max(100, "Cannot exceed 100%"),
-  gstPercent: z.coerce.number<number>().min(0, "Cannot be negative").max(100, "Cannot exceed 100%"),
+  markupPercent: z.coerce
+    .number<number>()
+    .min(0, "Cannot be negative")
+    .max(100, "Cannot exceed 100%"),
+  gstPercent: z.coerce
+    .number<number>()
+    .min(0, "Cannot be negative")
+    .max(100, "Cannot exceed 100%"),
   aggregatorCommissionPercent: z.coerce
     .number<number>()
     .min(0, "Cannot be negative")
@@ -39,7 +53,8 @@ const FIELDS: Array<{
   {
     name: "markupPercent",
     label: "Customer markup",
-    description: "Added to the artist's private price to reach the public price.",
+    description:
+      "Added to the artist's private price to reach the public price.",
     suffix: "%",
   },
   {
@@ -51,7 +66,8 @@ const FIELDS: Array<{
   {
     name: "aggregatorCommissionPercent",
     label: "Aggregator commission",
-    description: "Share of the markup paid to the aggregator on an assisted sale.",
+    description:
+      "Share of the markup paid to the aggregator on an assisted sale.",
     suffix: "%",
   },
   {
@@ -100,7 +116,9 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
 
   async function onSubmit(values: SettingsInput) {
     setFormError(null);
-    const changed = FIELDS.filter((f) => values[f.name] !== settings[f.name]).map((f) => f.label);
+    const changed = FIELDS.filter(
+      (f) => values[f.name] !== settings[f.name],
+    ).map((f) => f.label);
 
     try {
       const updated = await updateMutation.mutateAsync(values);
@@ -111,12 +129,16 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
         entityType: "settings",
         entityId: "platform",
         entityLabel: "Platform settings",
-        detail: changed.length ? `Changed: ${changed.join(", ")}` : "Saved with no changes",
+        detail: changed.length
+          ? `Changed: ${changed.join(", ")}`
+          : "Saved with no changes",
       });
       reset(values);
       toast.success("Settings saved");
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Could not save settings.");
+      setFormError(
+        error instanceof Error ? error.message : "Could not save settings.",
+      );
     }
   }
 
@@ -143,7 +165,9 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
               name={entry.name}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor={`setting-${entry.name}`}>{entry.label}</FieldLabel>
+                  <FieldLabel htmlFor={`setting-${entry.name}`}>
+                    {entry.label}
+                  </FieldLabel>
                   <div className="relative">
                     <Input
                       id={`setting-${entry.name}`}
@@ -152,7 +176,9 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
                       step={entry.suffix === "%" ? "0.5" : "100"}
                       value={field.value ?? ""}
                       onChange={(e) =>
-                        field.onChange(e.target.value === "" ? "" : Number(e.target.value))
+                        field.onChange(
+                          e.target.value === "" ? "" : Number(e.target.value),
+                        )
                       }
                       onBlur={field.onBlur}
                       name={field.name}
@@ -168,7 +194,9 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
                     </span>
                   </div>
                   <FieldDescription>{entry.description}</FieldDescription>
-                  <FieldError errors={fieldState.error ? [fieldState.error] : undefined} />
+                  <FieldError
+                    errors={fieldState.error ? [fieldState.error] : undefined}
+                  />
                 </Field>
               )}
             />
@@ -182,7 +210,11 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
           </p>
         ) : null}
 
-        <Button type="submit" disabled={updateMutation.isPending} className="w-full">
+        <Button
+          type="submit"
+          disabled={updateMutation.isPending}
+          className="w-full"
+        >
           {updateMutation.isPending ? "Saving…" : "Save settings"}
         </Button>
       </form>
@@ -191,7 +223,8 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
         markupPercent={Number(live.markupPercent ?? settings.markupPercent)}
         gstPercent={Number(live.gstPercent ?? settings.gstPercent)}
         aggregatorCommissionPercent={Number(
-          live.aggregatorCommissionPercent ?? settings.aggregatorCommissionPercent,
+          live.aggregatorCommissionPercent ??
+            settings.aggregatorCommissionPercent,
         )}
       />
     </div>
@@ -232,8 +265,16 @@ function PricingPreview({
       </p>
 
       <dl className="mt-4 space-y-2.5 border-t border-gold/25 pt-4">
-        <Row label="Artist lists at" value={formatINR(EXAMPLE_ARTIST_PRICE)} muted />
-        <Row label={`Markup (${safeMarkup}%)`} value={`+ ${formatINR(markup)}`} muted />
+        <Row
+          label="Artist lists at"
+          value={formatINR(EXAMPLE_ARTIST_PRICE)}
+          muted
+        />
+        <Row
+          label={`Markup (${safeMarkup}%)`}
+          value={`+ ${formatINR(markup)}`}
+          muted
+        />
         <Row label="Customer sees" value={formatINR(customerPrice)} emphasis />
         <Row label={`GST (${safeGst}%)`} value={`+ ${formatINR(gst)}`} muted />
         <div className="flex items-baseline justify-between border-t border-gold/25 pt-2.5">
@@ -249,7 +290,10 @@ function PricingPreview({
           How the markup splits
         </p>
         <dl className="mt-2.5 space-y-2.5">
-          <Row label="Artist receives" value={formatINR(EXAMPLE_ARTIST_PRICE)} />
+          <Row
+            label="Artist receives"
+            value={formatINR(EXAMPLE_ARTIST_PRICE)}
+          />
           <Row
             label={`Aggregator (${safeCommission}% of markup)`}
             value={formatINR(aggregatorShare)}
@@ -257,8 +301,8 @@ function PricingPreview({
           <Row label="Platform retains" value={formatINR(platformShare)} />
         </dl>
         <p className="mt-3 text-xs text-muted-foreground">
-          On a marketplace-only sale with no aggregator involved, the platform retains
-          the full {formatINR(markup)} markup.
+          On a marketplace-only sale with no aggregator involved, the platform
+          retains the full {formatINR(markup)} markup.
         </p>
       </div>
     </section>
@@ -278,10 +322,16 @@ function Row({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className={`text-sm ${muted ? "text-muted-foreground" : "text-foreground"}`}>{label}</dt>
+      <dt
+        className={`text-sm ${muted ? "text-muted-foreground" : "text-foreground"}`}
+      >
+        {label}
+      </dt>
       <dd
         className={`tabular-nums ${
-          emphasis ? "text-base font-semibold text-foreground" : "text-sm text-foreground"
+          emphasis
+            ? "text-base font-semibold text-foreground"
+            : "text-sm text-foreground"
         }`}
       >
         {value}

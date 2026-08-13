@@ -122,7 +122,9 @@ function pageWindow(current: number, total: number): Array<number | "gap"> {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
 
   const pages = new Set<number>([1, total, current, current - 1, current + 1]);
-  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const sorted = [...pages]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
 
   const result: Array<number | "gap"> = [];
   let previous = 0;
@@ -157,7 +159,9 @@ export function AdminDataTable<T>({
   const [sort, setSort] = useState<SortState>(null);
   const [page, setPage] = useState(1);
   const [filterValues, setFilterValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries((filters ?? []).map((f) => [f.key, f.defaultValue ?? ALL]))
+    Object.fromEntries(
+      (filters ?? []).map((f) => [f.key, f.defaultValue ?? ALL]),
+    ),
   );
 
   // Same 300ms debounce as features/marketplace/marketplace-search-bar.tsx:
@@ -172,17 +176,21 @@ export function AdminDataTable<T>({
 
   const activeFilters = useMemo(
     () => (filters ?? []).filter((f) => (filterValues[f.key] ?? ALL) !== ALL),
-    [filters, filterValues]
+    [filters, filterValues],
   );
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return rows.filter((row) => {
-      if (needle && searchValue && !searchValue(row).toLowerCase().includes(needle)) {
+      if (
+        needle &&
+        searchValue &&
+        !searchValue(row).toLowerCase().includes(needle)
+      ) {
         return false;
       }
       return activeFilters.every((filter) =>
-        filter.matches(row, filterValues[filter.key])
+        filter.matches(row, filterValues[filter.key]),
       );
     });
   }, [rows, query, searchValue, activeFilters, filterValues]);
@@ -216,8 +224,10 @@ export function AdminDataTable<T>({
     if (!column.sortable) return;
     setPage(1);
     setSort((current) => {
-      if (current?.key !== column.key) return { key: column.key, direction: "asc" };
-      if (current.direction === "asc") return { key: column.key, direction: "desc" };
+      if (current?.key !== column.key)
+        return { key: column.key, direction: "asc" };
+      if (current.direction === "asc")
+        return { key: column.key, direction: "desc" };
       // Third click clears, restoring whatever order the caller passed in
       // (queues arrive oldest-first and that ordering is meaningful).
       return null;
@@ -228,7 +238,7 @@ export function AdminDataTable<T>({
     setDraft("");
     setQuery("");
     setFilterValues(
-      Object.fromEntries((filters ?? []).map((f) => [f.key, ALL]))
+      Object.fromEntries((filters ?? []).map((f) => [f.key, ALL])),
     );
     setPage(1);
   }
@@ -237,7 +247,7 @@ export function AdminDataTable<T>({
     <div
       className={cn(
         "overflow-hidden rounded-lg border border-border bg-card",
-        className
+        className,
       )}
     >
       {hasToolbar && (
@@ -264,7 +274,9 @@ export function AdminDataTable<T>({
               {filters.map((filter) => {
                 // A caller may or may not include its own "all" option; inject
                 // one only when it hasn't, so the choice is never duplicated.
-                const hasAllOption = filter.options.some((o) => o.value === ALL);
+                const hasAllOption = filter.options.some(
+                  (o) => o.value === ALL,
+                );
                 const allLabel = `All ${filter.label}`;
                 return (
                   <Select
@@ -288,13 +300,15 @@ export function AdminDataTable<T>({
                           worse than the option's own label. */}
                       <SelectValue>
                         {(value: unknown) =>
-                          filter.options.find((o) => o.value === value)?.label ??
-                          allLabel
+                          filter.options.find((o) => o.value === value)
+                            ?.label ?? allLabel
                         }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {!hasAllOption && <SelectItem value={ALL}>{allLabel}</SelectItem>}
+                      {!hasAllOption && (
+                        <SelectItem value={ALL}>{allLabel}</SelectItem>
+                      )}
                       {filter.options.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
@@ -354,7 +368,7 @@ export function AdminDataTable<T>({
                       }
                       className={cn(
                         "px-4 py-2.5 text-[11px] font-medium tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase",
-                        column.className
+                        column.className,
                       )}
                     >
                       {column.sortable ? (
@@ -363,14 +377,14 @@ export function AdminDataTable<T>({
                           onClick={() => toggleSort(column)}
                           className={cn(
                             "inline-flex items-center gap-1.5 rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                            active && "text-foreground"
+                            active && "text-foreground",
                           )}
                         >
                           {column.header}
                           <SortIcon
                             className={cn(
                               "size-3 transition-opacity",
-                              active ? "text-gold-bright" : "opacity-50"
+                              active ? "text-gold-bright" : "opacity-50",
                             )}
                             strokeWidth={2}
                           />
@@ -386,15 +400,20 @@ export function AdminDataTable<T>({
 
             <tbody>
               {isLoading
-                ? Array.from({ length: Math.min(pageSize, 8) }).map((_, rowIndex) => (
-                    <tr key={rowIndex} className="border-b border-border/60 last:border-0">
-                      {columns.map((column) => (
-                        <td key={column.key} className="px-4 py-3">
-                          <Skeleton className="h-4 w-[70%] min-w-16" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
+                ? Array.from({ length: Math.min(pageSize, 8) }).map(
+                    (_, rowIndex) => (
+                      <tr
+                        key={rowIndex}
+                        className="border-b border-border/60 last:border-0"
+                      >
+                        {columns.map((column) => (
+                          <td key={column.key} className="px-4 py-3">
+                            <Skeleton className="h-4 w-[70%] min-w-16" />
+                          </td>
+                        ))}
+                      </tr>
+                    ),
+                  )
                 : pageRows.map((row) => {
                     const href = getRowHref?.(row);
                     const label = getRowLabel?.(row) ?? getRowKey(row);
@@ -413,7 +432,11 @@ export function AdminDataTable<T>({
                           interactive
                             ? (event) => {
                                 const target = event.target as HTMLElement;
-                                if (target.closest("a,button,input,select,textarea"))
+                                if (
+                                  target.closest(
+                                    "a,button,input,select,textarea",
+                                  )
+                                )
                                   return;
                                 if (href) router.push(href);
                                 else onRowClick?.(row);
@@ -422,7 +445,7 @@ export function AdminDataTable<T>({
                         }
                         className={cn(
                           "relative border-b border-border/60 transition-colors last:border-0",
-                          interactive && "cursor-pointer hover:bg-muted/40"
+                          interactive && "cursor-pointer hover:bg-muted/40",
                         )}
                       >
                         {columns.map((column, columnIndex) => (
@@ -430,7 +453,7 @@ export function AdminDataTable<T>({
                             key={column.key}
                             className={cn(
                               "px-4 py-3 align-middle text-sm text-foreground",
-                              column.className
+                              column.className,
                             )}
                           >
                             {columnIndex === 0 && href && (
@@ -470,8 +493,8 @@ export function AdminDataTable<T>({
       {!isLoading && sorted.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span className="tabular-nums">
-            Showing {start + 1} to {Math.min(start + pageSize, sorted.length)} of{" "}
-            {sorted.length}
+            Showing {start + 1} to {Math.min(start + pageSize, sorted.length)}{" "}
+            of {sorted.length}
           </span>
 
           {totalPages > 1 && (
@@ -489,7 +512,7 @@ export function AdminDataTable<T>({
                     }}
                     className={cn(
                       "h-7 px-2.5 text-xs transition-colors hover:bg-muted",
-                      currentPage === 1 && "pointer-events-none opacity-40"
+                      currentPage === 1 && "pointer-events-none opacity-40",
                     )}
                   />
                 </PaginationItem>
@@ -514,13 +537,13 @@ export function AdminDataTable<T>({
                           "tabular-nums transition-all",
                           entry === currentPage
                             ? "!border-primary/50 scale-110 text-gold-bright shadow-md"
-                            : "hover:bg-muted active:scale-90"
+                            : "hover:bg-muted active:scale-90",
                         )}
                       >
                         {entry}
                       </PaginationLink>
                     </PaginationItem>
-                  )
+                  ),
                 )}
 
                 <PaginationItem>
@@ -535,7 +558,8 @@ export function AdminDataTable<T>({
                     }}
                     className={cn(
                       "h-7 px-2.5 text-xs transition-colors hover:bg-muted",
-                      currentPage === totalPages && "pointer-events-none opacity-40"
+                      currentPage === totalPages &&
+                        "pointer-events-none opacity-40",
                     )}
                   />
                 </PaginationItem>

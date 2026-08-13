@@ -1,7 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CartesianGrid, LabelList, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  CartesianGrid,
+  LabelList,
+  Line,
+  LineChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import type { UserGrowthPoint } from "@/lib/mock-data/admin-analytics";
 
@@ -98,7 +106,12 @@ export function GrowthLineChart({
         <YAxis {...axisChrome} width={36} allowDecimals={false} />
         <Tooltip
           cursor={crosshairCursor}
-          content={<ChartTooltipContent formatValue={formatCount} nameByKey={NAME_BY_KEY} />}
+          content={
+            <ChartTooltipContent
+              formatValue={formatCount}
+              nameByKey={NAME_BY_KEY}
+            />
+          }
         />
         {SERIES.map((series) => (
           <Line
@@ -126,7 +139,9 @@ export function GrowthLineChart({
               offset={12}
               fill={CHART_MUTED}
               fontSize={11}
-              valueAccessor={(_entry, index) => (index === lastIndex ? series.label : null)}
+              valueAccessor={(_entry, index) =>
+                index === lastIndex ? series.label : null
+              }
             />
           </Line>
         ))}
@@ -140,7 +155,7 @@ function buildAriaLabel(points: UserGrowthPoint[]): string {
   const first = points[0];
   const last = points[points.length - 1];
   const parts = SERIES.map(
-    (series) => `${series.label} ${first[series.key]} to ${last[series.key]}`
+    (series) => `${series.label} ${first[series.key]} to ${last[series.key]}`,
   ).join(", ");
   return `Line chart of cumulative accounts by role from ${first.label} to ${last.label}: ${parts}.`;
 }

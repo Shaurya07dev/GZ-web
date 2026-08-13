@@ -93,6 +93,8 @@ export function VolumeBarChart({
 function buildAriaLabel(points: VolumePoint[]): string {
   if (!points.length) return "Order volume. No data.";
   const total = points.reduce((sum, point) => sum + point.orders, 0);
-  const peak = points.reduce((best, point) => (point.orders > best.orders ? point : best));
+  const peak = points.reduce((best, point) =>
+    point.orders > best.orders ? point : best,
+  );
   return `Bar chart of order volume from ${points[0].label} to ${points[points.length - 1].label}. ${formatCount(total)} orders in total, peaking at ${formatCount(peak.orders)} on ${peak.label}.`;
 }

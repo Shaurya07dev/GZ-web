@@ -5,8 +5,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BadgeCheck, Check, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { RejectReasonDialog } from "@/features/admin/reject-reason-dialog";
 import {
@@ -28,7 +36,9 @@ const REJECT_PRESETS = [
 function waitingDays(user: AdminUser): number {
   return Math.max(
     0,
-    Math.round((ADMIN_TODAY.getTime() - new Date(user.createdAt).getTime()) / 86_400_000),
+    Math.round(
+      (ADMIN_TODAY.getTime() - new Date(user.createdAt).getTime()) / 86_400_000,
+    ),
   );
 }
 
@@ -42,7 +52,9 @@ export function KycQueueTable() {
       header: "Artist",
       render: (row) => (
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{row.name}</p>
+          <p className="truncate text-sm font-medium text-foreground">
+            {row.name}
+          </p>
           <p className="truncate text-xs text-muted-foreground">{row.email}</p>
         </div>
       ),
@@ -52,7 +64,10 @@ export function KycQueueTable() {
     {
       key: "kycStatus",
       header: "KYC status",
-      render: (row) => (row.kycStatus ? <AdminStatusBadge status={row.kycStatus} size="sm" /> : null),
+      render: (row) =>
+        row.kycStatus ? (
+          <AdminStatusBadge status={row.kycStatus} size="sm" />
+        ) : null,
       sortable: true,
       sortValue: (row) => row.kycStatus ?? "",
     },
@@ -144,7 +159,9 @@ function KycReviewDialog({
         entityId: user.id,
         entityLabel: user.name,
       });
-      toast.success("KYC approved", { description: `${user.name} is now verified.` });
+      toast.success("KYC approved", {
+        description: `${user.name} is now verified.`,
+      });
       onClose();
     } catch {
       toast.error("Could not approve KYC. Try again.");
@@ -165,7 +182,9 @@ function KycReviewDialog({
         detail: reason,
       });
       setRejectOpen(false);
-      toast.success("KYC rejected", { description: "The artist can resubmit their documents." });
+      toast.success("KYC rejected", {
+        description: "The artist can resubmit their documents.",
+      });
       onClose();
     } catch {
       toast.error("Could not reject KYC. Try again.");
@@ -174,7 +193,10 @@ function KycReviewDialog({
 
   return (
     <>
-      <Dialog open={Boolean(user) && !rejectOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog
+        open={Boolean(user) && !rejectOpen}
+        onOpenChange={(open) => !open && onClose()}
+      >
         <DialogContent className="max-w-lg">
           {user ? (
             <>
@@ -186,7 +208,11 @@ function KycReviewDialog({
                 <Field label="Email" value={user.email} />
                 <Field label="Phone" value={user.phone} />
                 <Field label="Role" value={user.role} className="capitalize" />
-                <Field label="Current status" value={user.kycStatus ?? "—"} className="capitalize" />
+                <Field
+                  label="Current status"
+                  value={user.kycStatus ?? "Not set"}
+                  className="capitalize"
+                />
               </dl>
 
               {/* Identity documents are never exposed in full to the console —
@@ -208,18 +234,25 @@ function KycReviewDialog({
                   <p className="mt-1 font-mono text-base tabular-nums text-foreground">
                     XXXXXXXX7788
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">IFSC HDFC0001234</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    IFSC HDFC0001234
+                  </p>
                 </div>
 
                 <p className="flex items-start gap-2 rounded-md border border-border bg-card p-3 text-xs text-muted-foreground">
                   <ShieldCheck className="mt-px size-3.5 shrink-0 text-gold-bright" />
-                  Full identity numbers are never exposed to the console. Approve only
-                  once the submitted documents have been checked in the secure viewer.
+                  Full identity numbers are never exposed to the console.
+                  Approve only once the submitted documents have been checked in
+                  the secure viewer.
                 </p>
               </div>
 
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <Button onClick={handleApprove} disabled={isBusy} className="flex-1">
+                <Button
+                  onClick={handleApprove}
+                  disabled={isBusy}
+                  className="flex-1"
+                >
                   <Check className="size-4" />
                   {approveMutation.isPending ? "Approving…" : "Approve"}
                 </Button>
@@ -263,7 +296,9 @@ function Field({
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`truncate text-sm text-foreground ${className ?? ""}`}>{value}</dd>
+      <dd className={`truncate text-sm text-foreground ${className ?? ""}`}>
+        {value}
+      </dd>
     </div>
   );
 }

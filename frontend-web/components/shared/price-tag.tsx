@@ -15,7 +15,7 @@ export function PriceTag({ amount, className }: PriceTagProps) {
     <span
       className={cn(
         "font-display text-lg font-semibold tabular-nums text-foreground",
-        className
+        className,
       )}
     >
       {formatINR(amount)}

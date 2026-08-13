@@ -65,12 +65,24 @@ const STATUS_CONFIG: Record<
 > = {
   // --- artwork lifecycle ---
   draft: { label: "Draft", tone: "neutral", icon: FileEdit },
-  pending_approval: { label: "Pending Approval", tone: "pending", icon: Clock3 },
+  pending_approval: {
+    label: "Pending Approval",
+    tone: "pending",
+    icon: Clock3,
+  },
   marketplace: { label: "Marketplace", tone: "positive", icon: Sparkles },
   reserved: { label: "Reserved", tone: "info", icon: BookmarkCheck },
-  preparing_dispatch: { label: "Preparing Dispatch", tone: "info", icon: PackageCheck },
+  preparing_dispatch: {
+    label: "Preparing Dispatch",
+    tone: "info",
+    icon: PackageCheck,
+  },
   in_transit: { label: "In Transit", tone: "info", icon: Truck },
-  with_aggregator: { label: "With Aggregator", tone: "info", icon: BookmarkCheck },
+  with_aggregator: {
+    label: "With Aggregator",
+    tone: "info",
+    icon: BookmarkCheck,
+  },
   sold: { label: "Sold", tone: "positive", icon: CircleCheckBig },
   settlement_complete: { label: "Settled", tone: "positive", icon: Scale },
   returned: { label: "Returned", tone: "negative", icon: Undo2 },
@@ -99,7 +111,11 @@ const STATUS_CONFIG: Record<
 
   // --- KYC ---
   submitted: { label: "Submitted", tone: "pending", icon: ShieldQuestion },
-  under_review: { label: "Under Review", tone: "pending", icon: ShieldQuestion },
+  under_review: {
+    label: "Under Review",
+    tone: "pending",
+    icon: ShieldQuestion,
+  },
   approved: { label: "Approved", tone: "positive", icon: UserCheck },
 };
 
@@ -133,9 +149,11 @@ export function AdminStatusBadge({
     <span
       className={cn(
         "inline-flex w-fit items-center rounded-full border font-medium whitespace-nowrap",
-        size === "sm" ? "gap-1 px-2 py-0.5 text-[11px]" : "gap-1.5 px-2.5 py-1 text-xs",
+        size === "sm"
+          ? "gap-1 px-2 py-0.5 text-[11px]"
+          : "gap-1.5 px-2.5 py-1 text-xs",
         TONE_CLASSES[tone],
-        className
+        className,
       )}
     >
       <Icon className={size === "sm" ? "size-2.5" : "size-3"} strokeWidth={2} />

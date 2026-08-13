@@ -23,12 +23,13 @@ import {
 import type { ArtistVerificationState } from "@/types/artist";
 import type { Artwork, SocialProofLink } from "@/types/artwork";
 
-const SOCIAL_ICON: Record<SocialProofLink["platform"], typeof InstagramGlyph> = {
-  instagram: InstagramGlyph,
-  youtube: YoutubeGlyph,
-  x: XGlyph,
-  tiktok: TiktokGlyph,
-};
+const SOCIAL_ICON: Record<SocialProofLink["platform"], typeof InstagramGlyph> =
+  {
+    instagram: InstagramGlyph,
+    youtube: YoutubeGlyph,
+    x: XGlyph,
+    tiktok: TiktokGlyph,
+  };
 
 const SOCIAL_LABEL: Record<SocialProofLink["platform"], string> = {
   instagram: "Instagram",
@@ -56,7 +57,10 @@ interface ArtworkInfoPanelProps {
 // through this same component for simplicity (the page is small enough that
 // splitting it further would be more files than the situation warrants),
 // but nothing here depends on client-only state except the two toggles.
-export function ArtworkInfoPanel({ artwork, verification }: ArtworkInfoPanelProps) {
+export function ArtworkInfoPanel({
+  artwork,
+  verification,
+}: ArtworkInfoPanelProps) {
   const [insuranceOpen, setInsuranceOpen] = useState(false);
   const isWishlisted = useWishlistStore((state) => state.has(artwork.id));
   const toggleWishlist = useWishlistStore((state) => state.toggle);
@@ -112,8 +116,8 @@ export function ArtworkInfoPanel({ artwork, verification }: ArtworkInfoPanelProp
             {insuranceOpen && (
               <div className="absolute top-full left-0 z-20 mt-2 w-64 rounded-md border border-border bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-lg">
                 Transit insurance is recommended for artworks valued above
-                ₹20,000, in partnership with HDFC ERGO — this piece qualifies
-                and ships fully covered.
+                ₹20,000, in partnership with HDFC ERGO. This piece qualifies and
+                ships fully covered.
               </div>
             )}
           </div>
@@ -129,7 +133,9 @@ export function ArtworkInfoPanel({ artwork, verification }: ArtworkInfoPanelProp
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Medium</dt>
-          <dd className="mt-0.5 font-medium text-foreground">{artwork.medium}</dd>
+          <dd className="mt-0.5 font-medium text-foreground">
+            {artwork.medium}
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Dimensions</dt>
@@ -185,7 +191,9 @@ export function ArtworkInfoPanel({ artwork, verification }: ArtworkInfoPanelProp
 
       {artwork.socialProofLinks.length > 0 && (
         <div>
-          <p className="text-xs text-muted-foreground">Process &amp; provenance</p>
+          <p className="text-xs text-muted-foreground">
+            Process &amp; provenance
+          </p>
           <div className="mt-2 flex items-center gap-2">
             {artwork.socialProofLinks.map((link) => {
               const Icon = SOCIAL_ICON[link.platform];
@@ -232,7 +240,7 @@ export function ArtworkInfoPanel({ artwork, verification }: ArtworkInfoPanelProp
             "inline-flex items-center justify-center gap-2 rounded-md border px-5 py-3 text-sm font-medium transition-colors",
             isWishlisted
               ? "border-gold/50 bg-gold/10 text-gold-bright"
-              : "border-border text-foreground/85 hover:border-gold/40 hover:text-gold-bright"
+              : "border-border text-foreground/85 hover:border-gold/40 hover:text-gold-bright",
           )}
         >
           <Heart

@@ -17,8 +17,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel, FieldError, FieldGroup, FieldContent } from "@/components/ui/field";
-import { useAddAddressMutation, useUpdateAddressMutation } from "@/hooks/useAddresses";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+  FieldContent,
+} from "@/components/ui/field";
+import {
+  useAddAddressMutation,
+  useUpdateAddressMutation,
+} from "@/hooks/useAddresses";
 import type { Address } from "@/types/customer";
 
 // React Hook Form + Controller wrapping Field/FieldLabel/FieldError, per the
@@ -63,7 +72,11 @@ interface AddressFormDialogProps {
   initialValues?: Address;
 }
 
-export function AddressFormDialog({ open, onOpenChange, initialValues }: AddressFormDialogProps) {
+export function AddressFormDialog({
+  open,
+  onOpenChange,
+  initialValues,
+}: AddressFormDialogProps) {
   const isEditing = Boolean(initialValues);
   const queryClient = useQueryClient();
   const addMutation = useAddAddressMutation();
@@ -95,7 +108,10 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
   // session, matching aggregatorService's "the caller's cache update is
   // truth" pattern.
   function onSubmit(values: AddressFormValues) {
-    const payload = { ...values, line2: values.line2?.trim() ? values.line2.trim() : undefined };
+    const payload = {
+      ...values,
+      line2: values.line2?.trim() ? values.line2.trim() : undefined,
+    };
 
     if (isEditing && initialValues) {
       updateMutation.mutate(
@@ -109,21 +125,27 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
             queryClient.setQueryData<Address[]>(["addresses"], (prev) => {
               const base = prev ?? [];
               return base.map((a) =>
-                a.id === updated.id ? updated : updated.isDefault ? { ...a, isDefault: false } : a
+                a.id === updated.id
+                  ? updated
+                  : updated.isDefault
+                    ? { ...a, isDefault: false }
+                    : a,
               );
             });
             toast.success("Address updated");
             onOpenChange(false);
           },
           onError: (error) => toast.error(error.message),
-        }
+        },
       );
     } else {
       addMutation.mutate(payload, {
         onSuccess: (created) => {
           queryClient.setQueryData<Address[]>(["addresses"], (prev) => {
             const base = prev ?? [];
-            const cleared = created.isDefault ? base.map((a) => ({ ...a, isDefault: false })) : base;
+            const cleared = created.isDefault
+              ? base.map((a) => ({ ...a, isDefault: false }))
+              : base;
             return [...cleared, created];
           });
           toast.success("Address added");
@@ -143,7 +165,9 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
     >
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit address" : "Add address"}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Edit address" : "Add address"}
+          </DialogTitle>
           <DialogDescription>
             {isEditing
               ? "Update the delivery details for this address."
@@ -163,7 +187,12 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="line1">Address line 1</FieldLabel>
-                  <Input id="line1" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                  <Input
+                    id="line1"
+                    className="h-10"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}
@@ -174,8 +203,15 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
               name="line2"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="line2">Address line 2 (optional)</FieldLabel>
-                  <Input id="line2" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                  <FieldLabel htmlFor="line2">
+                    Address line 2 (optional)
+                  </FieldLabel>
+                  <Input
+                    id="line2"
+                    className="h-10"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}
@@ -188,7 +224,12 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="city">City</FieldLabel>
-                    <Input id="city" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="city"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -199,7 +240,12 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="state">State</FieldLabel>
-                    <Input id="state" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="state"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -247,7 +293,11 @@ export function AddressFormDialog({ open, onOpenChange, initialValues }: Address
         </form>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
             Cancel
           </Button>
           <Button type="submit" form="address-form" disabled={isPending}>

@@ -6,7 +6,7 @@ import { AuthFormHeader } from "@/features/auth/components/auth-form-header";
 import { ResetPasswordForm } from "@/features/auth/components/reset-password-form";
 
 export const metadata: Metadata = {
-  title: "Reset Password — GalleryZone",
+  title: "Reset Password | GalleryZone",
   description: "Choose a new password for your GalleryZone account.",
 };
 
@@ -15,7 +15,9 @@ export const metadata: Metadata = {
 // UI switch on this screen) both resolve to the same expired/invalid-link
 // state — a real reset flow can't tell those two failure modes apart
 // either, so this mock phase shouldn't pretend to.
-export default async function ResetPasswordPage(props: PageProps<"/reset-password">) {
+export default async function ResetPasswordPage(
+  props: PageProps<"/reset-password">,
+) {
   const { token } = await props.searchParams;
   const resolvedToken = Array.isArray(token) ? token[0] : token;
 
@@ -31,6 +33,7 @@ export default async function ResetPasswordPage(props: PageProps<"/reset-passwor
         />
         <Button
           className="h-10 w-full max-w-[220px]"
+          nativeButton={false}
           render={<Link href="/forgot-password" />}
         >
           Request a new link

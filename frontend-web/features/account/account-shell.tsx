@@ -77,7 +77,7 @@ function Sidebar({
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[transform,width] lg:sticky lg:top-0 lg:h-[100dvh] lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "lg:w-20" : "lg:w-64"
+          collapsed ? "lg:w-20" : "lg:w-64",
         )}
       >
         <div className="flex h-16 items-center justify-between px-5">
@@ -88,7 +88,7 @@ function Sidebar({
             <span
               className={cn(
                 "text-xs font-medium tracking-[0.18em] text-sidebar-foreground",
-                collapsed && "lg:hidden"
+                collapsed && "lg:hidden",
               )}
             >
               GALLERYZONE
@@ -117,7 +117,7 @@ function Sidebar({
         <span
           className={cn(
             "mx-5 mt-1 mb-3 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase",
-            collapsed && "lg:hidden"
+            collapsed && "lg:hidden",
           )}
         >
           My Account
@@ -137,14 +137,19 @@ function Sidebar({
                   collapsed && "lg:justify-center lg:px-2",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                 )}
               >
                 <item.icon
-                  className={cn("size-4 shrink-0", active && "text-gold-bright")}
+                  className={cn(
+                    "size-4 shrink-0",
+                    active && "text-gold-bright",
+                  )}
                   strokeWidth={1.75}
                 />
-                <span className={cn(collapsed && "lg:hidden")}>{item.label}</span>
+                <span className={cn(collapsed && "lg:hidden")}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
@@ -155,7 +160,7 @@ function Sidebar({
           onClick={onClose}
           className={cn(
             "mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 transition-colors hover:bg-sidebar-accent",
-            collapsed && "lg:justify-center lg:px-2"
+            collapsed && "lg:justify-center lg:px-2",
           )}
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-xs font-semibold text-gold-bright">

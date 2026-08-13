@@ -18,6 +18,7 @@ no persistence — but built as if a backend existed, so swapping in the real
 API later is mechanical, not a rewrite.
 
 Reference documents (all under `markitdown/`):
+
 - `GalleryZone_Software_Architecture_Docume.md` — system architecture, DB
   schema, API contracts, frontend conventions (Ch. 5).
 - `Galleryzone Artist Onboarding Guide.md` — pricing formula, verification
@@ -39,17 +40,22 @@ of calling axios:
 ```ts
 // services/artworkService.ts (mock phase)
 export const artworkService = {
-  list: (filters: ArtworkFilters) => mockDelay(filterArtworks(mockArtworks, filters)),
-  get: (id: string) => mockDelay(mockArtworks.find(a => a.id === id)),
+  list: (filters: ArtworkFilters) =>
+    mockDelay(filterArtworks(mockArtworks, filters)),
+  get: (id: string) => mockDelay(mockArtworks.find((a) => a.id === id)),
 };
 
 // hooks/useArtworks.ts — identical to what SAD §5.3 specifies for the real thing
 export function useArtworks(filters: ArtworkFilters) {
-  return useQuery({ queryKey: ['artworks', filters], queryFn: () => artworkService.list(filters) });
+  return useQuery({
+    queryKey: ["artworks", filters],
+    queryFn: () => artworkService.list(filters),
+  });
 }
 ```
 
 One shared fixture module, `lib/mock-data/`, is the single source of truth:
+
 - `artworks.ts` — ~15-20 artworks spanning categories/mediums/price bands,
   shaped per the SAD's `artworks` table (id, artist_id, title, description,
   category, medium, dimensions, year_created, artist_price [never rendered
@@ -106,7 +112,7 @@ Routes: `app/(public)/{terms,privacy,cookies}/page.tsx`, shared
 existing `SiteHeader`/`SiteFooter`).
 
 - **Terms** — drafted from the real MOU clauses in `Artist Complete
-  workflow.md` (artist owns artwork until sale, GalleryZone's non-exclusive
+workflow.md` (artist owns artwork until sale, GalleryZone's non-exclusive
   promotion rights, no listing elsewhere while actively listed, termination
   for counterfeit/false-info/IP-infringement/fraud, Indian law/Hyderabad
   courts jurisdiction, written-amendment clause), generalized to cover all

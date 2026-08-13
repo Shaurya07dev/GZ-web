@@ -46,7 +46,8 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <ol className="flex items-center gap-2" aria-label="Checkout progress">
         {STEPS.map((s, index) => {
-          const isComplete = index < stepIndex || Boolean(placedOrder && index <= stepIndex);
+          const isComplete =
+            index < stepIndex || Boolean(placedOrder && index <= stepIndex);
           const isCurrent = index === stepIndex;
           return (
             <li key={s.key} className="flex flex-1 items-center gap-2">
@@ -57,7 +58,7 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
                 aria-current={isCurrent ? "step" : undefined}
                 className={cn(
                   "flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm font-medium transition-colors disabled:cursor-default",
-                  isCurrent ? "text-foreground" : "text-muted-foreground"
+                  isCurrent ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 <span
@@ -67,10 +68,14 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
                       ? "border-gold bg-gold-bright text-background"
                       : isCurrent
                         ? "border-gold-bright text-gold-bright"
-                        : "border-border text-muted-foreground"
+                        : "border-border text-muted-foreground",
                   )}
                 >
-                  {isComplete ? <Check className="size-3.5" strokeWidth={2.5} /> : index + 1}
+                  {isComplete ? (
+                    <Check className="size-3.5" strokeWidth={2.5} />
+                  ) : (
+                    index + 1
+                  )}
                 </span>
                 <span className="hidden sm:inline">{s.label}</span>
               </button>
@@ -78,7 +83,7 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
                 <span
                   className={cn(
                     "h-px flex-1",
-                    index < stepIndex ? "bg-gold/50" : "bg-border"
+                    index < stepIndex ? "bg-gold/50" : "bg-border",
                   )}
                   aria-hidden="true"
                 />

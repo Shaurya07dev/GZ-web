@@ -48,15 +48,26 @@ export function AnalyticsView() {
           once at the top rather than being repeated per card. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">{rangeLabel.toLowerCase()}</span>
+          Showing{" "}
+          <span className="font-medium text-foreground">
+            {rangeLabel.toLowerCase()}
+          </span>
         </p>
         <RangeSelector value={range} onChange={setRange} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryStat label="GMV" value={formatINR(gmv)} note={rangeLabel} />
-        <SummaryStat label="Platform revenue" value={formatINR(platform)} note={rangeLabel} />
-        <SummaryStat label="Artist payouts" value={formatINR(artist)} note={rangeLabel} />
+        <SummaryStat
+          label="Platform revenue"
+          value={formatINR(platform)}
+          note={rangeLabel}
+        />
+        <SummaryStat
+          label="Artist payouts"
+          value={formatINR(artist)}
+          note={rangeLabel}
+        />
         <SummaryStat
           label="Orders"
           value={new Intl.NumberFormat("en-IN").format(orders)}
@@ -66,11 +77,17 @@ export function AnalyticsView() {
 
       {/* Full-width: the headline series, and the only one worth reading
           point-by-point. */}
-      <RevenueAreaChart data={revenue} description={`${rangeLabel}, by where each rupee lands.`} />
+      <RevenueAreaChart
+        data={revenue}
+        description={`${rangeLabel}, by where each rupee lands.`}
+      />
 
       {/* Paired: two different questions at the same altitude. */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <VolumeBarChart data={volume} description={`Completed orders, ${rangeLabel.toLowerCase()}.`} />
+        <VolumeBarChart
+          data={volume}
+          description={`Completed orders, ${rangeLabel.toLowerCase()}.`}
+        />
         <CategoryBarChart data={categoryPerformance} />
       </div>
 
@@ -81,7 +98,10 @@ export function AnalyticsView() {
         <TierDonutChart data={verificationTiers} />
       </div>
 
-      <GrowthLineChart data={growth} description={`Cumulative accounts, ${rangeLabel.toLowerCase()}.`} />
+      <GrowthLineChart
+        data={growth}
+        description={`Cumulative accounts, ${rangeLabel.toLowerCase()}.`}
+      />
 
       <TopPerformersTable artists={topArtists} aggregators={topAggregators} />
     </div>

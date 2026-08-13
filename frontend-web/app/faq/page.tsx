@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { FaqTabs } from "@/features/faq/faq-tabs";
 
 export const metadata: Metadata = {
-  title: "FAQ — GalleryZone",
+  title: "FAQ | GalleryZone",
   description:
     "Answers on pricing privacy, settlement timing, verification tiers, reservations, and buyer rights, organized by who's asking.",
 };
@@ -20,8 +20,8 @@ export default function FaqPage() {
               Frequently asked questions.
             </h1>
             <p className="mt-5 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-              How pricing privacy, settlements, verification, and buyer
-              rights work on GalleryZone, organized by who&rsquo;s asking.
+              How pricing privacy, settlements, verification, and buyer rights
+              work on GalleryZone, organized by who&rsquo;s asking.
             </p>
 
             <div className="mt-12">

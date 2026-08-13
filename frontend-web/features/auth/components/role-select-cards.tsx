@@ -34,7 +34,7 @@ export function RoleSelectCards({ selected, onSelect }: RoleSelectCardsProps) {
               "flex items-start gap-3.5 rounded-lg border px-4 py-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
               isSelected
                 ? "border-gold/60 bg-gold/[0.06]"
-                : "border-border hover:border-gold/30 hover:bg-muted/50"
+                : "border-border hover:border-gold/30 hover:bg-muted/50",
             )}
           >
             <span
@@ -42,7 +42,7 @@ export function RoleSelectCards({ selected, onSelect }: RoleSelectCardsProps) {
                 "flex size-9 shrink-0 items-center justify-center rounded-full border",
                 isSelected
                   ? "border-gold/50 bg-gold/10 text-gold-bright"
-                  : "border-border text-muted-foreground"
+                  : "border-border text-muted-foreground",
               )}
             >
               <Icon className="size-4" strokeWidth={1.75} />

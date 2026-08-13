@@ -9,39 +9,48 @@ import { JOURNEY_STEPS } from "./journey-data";
 
 export function JourneySection() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [autoAdvancing, setAutoAdvancing] = useState(true);
   const step = JOURNEY_STEPS[activeIndex];
 
-  // Re-scheduled on every activeIndex change, so a manual tab click restarts
-  // the countdown from zero exactly like the auto-advance does — same code
-  // path either way, no separate "was this a click or a timeout" state.
+  // Auto-advance only reschedules while `autoAdvancing` is true. A manual
+  // tab click turns it off for good (handleSelect below), so picking a step
+  // means staying on it — not just restarting the same countdown.
   useEffect(() => {
+    if (!autoAdvancing) return;
     const timer = setTimeout(() => {
       setActiveIndex((i) => (i + 1) % JOURNEY_STEPS.length);
     }, JOURNEY_STEP_DURATION_MS);
     return () => clearTimeout(timer);
-  }, [activeIndex]);
+  }, [activeIndex, autoAdvancing]);
+
+  function handleSelect(index: number) {
+    setActiveIndex(index);
+    setAutoAdvancing(false);
+  }
 
   return (
     <section className="relative overflow-hidden py-28 md:py-36">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <motion.div
-          className="max-w-md"
+          className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-10%" }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <p className="text-sm font-medium tracking-[0.14em] text-gold-bright">
-            04 <span className="text-gold/50">•</span> THE ARTWORK JOURNEY
-          </p>
-          <h2 className="mt-4 text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
-            From the artist&rsquo;s hands to the{" "}
-            <span className="text-gold-bright">collector&rsquo;s</span>{" "}
-            walls.
-          </h2>
-          <p className="mt-5 text-balance text-sm leading-relaxed text-muted-foreground">
-            Every artwork moves through a trusted journey — from
-            submission and verification to sale and ownership.
+          <div>
+            <p className="text-sm font-medium tracking-[0.14em] text-gold-bright">
+              04 <span className="text-gold/50">•</span> THE ARTWORK JOURNEY
+            </p>
+            <h2 className="mt-4 text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
+              From the artist&rsquo;s hands to the
+              <br />
+              <span className="text-gold-bright">collector&rsquo;s</span> walls.
+            </h2>
+          </div>
+          <p className="max-w-sm text-balance text-base text-muted-foreground">
+            Every artwork moves through a trusted journey, from submission and
+            verification to sale and ownership.
           </p>
         </motion.div>
 
@@ -52,7 +61,11 @@ export function JourneySection() {
           viewport={{ once: true, margin: "-10%" }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
         >
-          <JourneyStepper activeIndex={activeIndex} onSelect={setActiveIndex} />
+          <JourneyStepper
+            activeIndex={activeIndex}
+            onSelect={handleSelect}
+            autoAdvancing={autoAdvancing}
+          />
 
           <AnimatePresence mode="wait">
             <motion.p

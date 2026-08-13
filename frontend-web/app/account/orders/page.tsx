@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { OrderList } from "@/features/account/order-list";
 
 export const metadata: Metadata = {
-  title: "Your Orders — GalleryZone",
+  title: "Your Orders | GalleryZone",
 };
 
 export default function AccountOrdersPage() {
@@ -13,8 +13,8 @@ export default function AccountOrdersPage() {
           Your orders
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Track every artwork you&rsquo;ve bought on GalleryZone, from
-          placement through delivery.
+          Track every artwork you&rsquo;ve bought on GalleryZone, from placement
+          through delivery.
         </p>
       </div>
 

@@ -57,6 +57,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
         </div>
         <Button
           className="h-10 w-full max-w-[220px]"
+          nativeButton={false}
           render={<Link href="/login" />}
         >
           Continue to Login

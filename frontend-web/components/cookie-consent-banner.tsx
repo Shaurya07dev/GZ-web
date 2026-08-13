@@ -52,7 +52,10 @@ export function CookieConsentBanner() {
               We use essential cookies to keep GalleryZone secure, and
               functional storage to remember things like your theme and
               wishlist. See our{" "}
-              <Link href="/cookies" className="font-medium text-gold-bright hover:underline">
+              <Link
+                href="/cookies"
+                className="font-medium text-gold-bright hover:underline"
+              >
                 Cookie Policy
               </Link>{" "}
               for details.

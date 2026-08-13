@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { AnalyticsView } from "@/features/admin/analytics/analytics-view";
 
 export const metadata = {
-  title: "Analytics — GalleryZone Admin",
+  title: "Analytics | GalleryZone Admin",
 };
 
 export default function AdminAnalyticsPage() {

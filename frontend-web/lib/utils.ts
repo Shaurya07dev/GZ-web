@@ -1,8 +1,8 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 // Single shared money formatter — every ₹ amount in the app renders through
@@ -14,5 +14,5 @@ export function formatINR(amount: number): string {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(amount)
+  }).format(amount);
 }

@@ -2,8 +2,14 @@
 
 import Image from "next/image";
 import { Palette } from "lucide-react";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
-import { AdminStatusBadge, adminStatusLabel } from "@/features/admin/admin-status-badge";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
+import {
+  AdminStatusBadge,
+  adminStatusLabel,
+} from "@/features/admin/admin-status-badge";
 import { useAdminArtworks } from "@/hooks/useAdminCatalog";
 import { formatINR } from "@/lib/utils";
 import type { Artwork } from "@/types/artwork";
@@ -23,12 +29,22 @@ export function ArtworkAdminTable() {
         <div className="flex items-center gap-3">
           <div className="relative size-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
             {row.images[0] ? (
-              <Image src={row.images[0].thumbnailUrl} alt="" fill sizes="40px" className="object-cover" />
+              <Image
+                src={row.images[0].thumbnailUrl}
+                alt=""
+                fill
+                sizes="40px"
+                className="object-cover"
+              />
             ) : null}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">{row.title}</p>
-            <p className="truncate text-xs text-muted-foreground">{row.artistName}</p>
+            <p className="truncate text-sm font-medium text-foreground">
+              {row.title}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {row.artistName}
+            </p>
           </div>
         </div>
       ),
@@ -38,7 +54,11 @@ export function ArtworkAdminTable() {
     {
       key: "category",
       header: "Category",
-      render: (row) => <span className="text-sm capitalize text-muted-foreground">{row.category}</span>,
+      render: (row) => (
+        <span className="text-sm capitalize text-muted-foreground">
+          {row.category}
+        </span>
+      ),
       sortable: true,
       sortValue: (row) => row.category,
     },
@@ -53,7 +73,9 @@ export function ArtworkAdminTable() {
       key: "price",
       header: "Price",
       render: (row) => (
-        <span className="text-sm tabular-nums text-foreground">{formatINR(row.customerPrice)}</span>
+        <span className="text-sm tabular-nums text-foreground">
+          {formatINR(row.customerPrice)}
+        </span>
       ),
       sortable: true,
       sortValue: (row) => row.customerPrice,
@@ -63,7 +85,9 @@ export function ArtworkAdminTable() {
       header: "Channel",
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.listingType === "marketplace_and_aggregator" ? "Marketplace + aggregator" : "Marketplace only"}
+          {row.listingType === "marketplace_and_aggregator"
+            ? "Marketplace + aggregator"
+            : "Marketplace only"}
         </span>
       ),
       sortable: true,
@@ -85,7 +109,10 @@ export function ArtworkAdminTable() {
         {
           key: "status",
           label: "Status",
-          options: statuses.map((s) => ({ value: s, label: adminStatusLabel(s) })),
+          options: statuses.map((s) => ({
+            value: s,
+            label: adminStatusLabel(s),
+          })),
           matches: (row, value) => row.status === value,
         },
         {

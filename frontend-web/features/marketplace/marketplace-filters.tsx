@@ -22,11 +22,11 @@ import type { ArtworkFilters } from "@/types/artwork";
 const ALL_VALUE = "all";
 
 const CATEGORY_OPTIONS = Array.from(
-  new Set(mockArtworks.map((artwork) => artwork.category))
+  new Set(mockArtworks.map((artwork) => artwork.category)),
 ).sort();
 
 const MEDIUM_OPTIONS = Array.from(
-  new Set(mockArtworks.map((artwork) => artwork.medium))
+  new Set(mockArtworks.map((artwork) => artwork.medium)),
 ).sort();
 
 const SORT_OPTIONS: {
@@ -50,10 +50,10 @@ function titleCase(value: string): string {
 function hasActiveStructuredFilters(filters: ArtworkFilters): boolean {
   return Boolean(
     filters.category ||
-      filters.medium ||
-      typeof filters.minPrice === "number" ||
-      typeof filters.maxPrice === "number" ||
-      (filters.sortBy && filters.sortBy !== "newest")
+    filters.medium ||
+    typeof filters.minPrice === "number" ||
+    typeof filters.maxPrice === "number" ||
+    (filters.sortBy && filters.sortBy !== "newest"),
   );
 }
 

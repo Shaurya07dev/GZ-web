@@ -5,7 +5,7 @@ import { ArtistCard } from "@/features/artists/artist-card";
 import { mockArtists } from "@/lib/mock-data/artists";
 
 export const metadata: Metadata = {
-  title: "Artists — GalleryZone",
+  title: "Artists | GalleryZone",
   description:
     "Meet the independent, verified artists selling original artwork on GalleryZone.",
 };
@@ -23,9 +23,9 @@ export default function ArtistsDirectoryPage() {
               Our Artists
             </h1>
             <p className="mt-3 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-              Independent artists building their practice on GalleryZone —
-              every listing backed by full price privacy and a signed
-              certificate of authenticity.
+              Independent artists building their practice on GalleryZone: every
+              listing backed by full price privacy and a signed certificate of
+              authenticity.
             </p>
           </div>
         </section>

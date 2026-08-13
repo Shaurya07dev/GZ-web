@@ -4,24 +4,21 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { User, Mail, Send, Check, Clock3 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { InstagramGlyph, XGlyph, LinkedinGlyph } from "@/components/social-icons";
+  InstagramGlyph,
+  XGlyph,
+  LinkedinGlyph,
+} from "@/components/social-icons";
 import { ROLE_OPTIONS, CONTACT_EMAIL } from "./contact-data";
 
 type ContactFormData = {
   fullName: string;
   email: string;
   role: string;
-  subject: string;
   message: string;
 };
 
@@ -29,7 +26,6 @@ const EMPTY_FORM: ContactFormData = {
   fullName: "",
   email: "",
   role: "",
-  subject: "",
   message: "",
 };
 
@@ -37,7 +33,10 @@ export function ContactSection() {
   const [form, setForm] = useState<ContactFormData>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState(false);
 
-  function updateField<K extends keyof ContactFormData>(field: K, value: string) {
+  function updateField<K extends keyof ContactFormData>(
+    field: K,
+    value: string,
+  ) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -57,8 +56,8 @@ export function ContactSection() {
             Get in <span className="text-gold-bright">touch.</span>
           </h1>
           <p className="mt-5 text-balance text-base leading-relaxed text-muted-foreground">
-            Questions about listing art, buying a piece, or partnering with
-            us as a gallery. Send a message and our team will follow up.
+            Questions about listing art, buying a piece, or partnering with us
+            as a gallery. Send a message and our team will follow up.
           </p>
         </div>
 
@@ -69,17 +68,17 @@ export function ContactSection() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="flex flex-col items-start gap-3 rounded-lg border border-gold/30 bg-card p-8"
+                className="flex min-h-[22rem] flex-col items-start justify-center gap-4 rounded-lg border border-gold/30 bg-card p-8"
               >
-                <span className="flex size-10 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-                  <Check className="size-5 text-gold-bright" />
+                <span className="flex size-12 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
+                  <Check className="size-6 text-gold-bright" />
                 </span>
-                <h2 className="font-display text-xl font-semibold text-foreground">
+                <h2 className="font-display text-2xl font-semibold text-foreground">
                   Message sent.
                 </h2>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Thanks, {form.fullName.split(" ")[0] || "we've got it"}.
-                  We typically reply within 1 business day.
+                <p className="max-w-sm text-balance text-base leading-relaxed text-muted-foreground">
+                  Thanks, {form.fullName.split(" ")[0] || "we've got it"}. We
+                  typically reply within 1 business day.
                 </p>
               </motion.div>
             ) : (
@@ -94,7 +93,9 @@ export function ContactSection() {
                         required
                         placeholder="Devika Rao"
                         value={form.fullName}
-                        onChange={(e) => updateField("fullName", e.target.value)}
+                        onChange={(e) =>
+                          updateField("fullName", e.target.value)
+                        }
                         className="h-10 pl-9"
                       />
                     </div>
@@ -116,35 +117,34 @@ export function ContactSection() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="role">I am a...</Label>
-                    <Select
-                      value={form.role}
-                      onValueChange={(value) => updateField("role", value ?? "")}
+                  <div className="flex flex-col gap-2 sm:col-span-2">
+                    <Label>I am a...</Label>
+                    <div
+                      role="radiogroup"
+                      aria-label="I am a..."
+                      className="grid grid-cols-3 gap-2"
                     >
-                      <SelectTrigger id="role" className="h-10 w-full">
-                        <SelectValue placeholder="Select one" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
+                      {ROLE_OPTIONS.map((option) => {
+                        const isSelected = form.role === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            onClick={() => updateField("role", option.value)}
+                            className={cn(
+                              "rounded-md border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                              isSelected
+                                ? "border-gold/60 bg-gold/10 text-gold-bright"
+                                : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground",
+                            )}
+                          >
                             {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Input
-                      id="subject"
-                      required
-                      placeholder="What's this about?"
-                      value={form.subject}
-                      onChange={(e) => updateField("subject", e.target.value)}
-                      className="h-10"
-                    />
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="flex flex-col gap-2 sm:col-span-2">
@@ -207,8 +207,8 @@ export function ContactSection() {
                   1 business day
                 </p>
                 <p className="relative mt-3 max-w-[220px] text-sm leading-relaxed opacity-80">
-                  That&rsquo;s typically how long it takes us to reply.
-                  Order and payment issues get priority.
+                  That&rsquo;s typically how long it takes us to reply. Order
+                  and payment issues get priority.
                 </p>
               </div>
             </div>

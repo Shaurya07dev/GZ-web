@@ -27,7 +27,10 @@ function scorePassword(password: string): 0 | 1 | 2 | 3 | 4 {
 // plan's brand-consistency direction. --primary is overridden locally so
 // the shared Progress primitive's `bg-primary` indicator picks up the
 // score's color without needing a bespoke variant of that primitive.
-const STRENGTH_META: Record<0 | 1 | 2 | 3 | 4, { label: string; color: string }> = {
+const STRENGTH_META: Record<
+  0 | 1 | 2 | 3 | 4,
+  { label: string; color: string }
+> = {
   0: { label: "", color: "var(--chart-5)" },
   1: { label: "Weak", color: "var(--chart-5)" },
   2: { label: "Fair", color: "var(--chart-3)" },
@@ -35,7 +38,10 @@ const STRENGTH_META: Record<0 | 1 | 2 | 3 | 4, { label: string; color: string }>
   4: { label: "Strong", color: "var(--chart-1)" },
 };
 
-export function PasswordStrengthMeter({ password, className }: PasswordStrengthMeterProps) {
+export function PasswordStrengthMeter({
+  password,
+  className,
+}: PasswordStrengthMeterProps) {
   const score = scorePassword(password);
   const meta = STRENGTH_META[score];
 
@@ -49,7 +55,8 @@ export function PasswordStrengthMeter({ password, className }: PasswordStrengthM
         aria-label="Password strength"
       />
       <span className="text-xs text-muted-foreground">
-        Password strength: <span className="font-medium text-foreground">{meta.label}</span>
+        Password strength:{" "}
+        <span className="font-medium text-foreground">{meta.label}</span>
       </span>
     </div>
   );

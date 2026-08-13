@@ -8,7 +8,11 @@ import { AuthLayoutPanel } from "@/features/auth/components/auth-layout-panel";
 // for a layout shared across all of them (LayoutProps binds to one route);
 // plain `children: React.ReactNode` is the honest typing here, not a
 // placeholder pending a future fix.
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background lg:flex-row">
       <AuthLayoutPanel />

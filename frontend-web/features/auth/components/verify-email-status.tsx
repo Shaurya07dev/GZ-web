@@ -63,7 +63,10 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
           transition={TRANSITION}
           className="flex flex-col items-center gap-5 text-center"
         >
-          <Loader2 className="size-8 animate-spin text-gold-bright" strokeWidth={1.5} />
+          <Loader2
+            className="size-8 animate-spin text-gold-bright"
+            strokeWidth={1.5}
+          />
           <AuthFormHeader
             title="Verifying your email…"
             description="This should only take a moment."
@@ -81,7 +84,10 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
           className="flex flex-col items-center gap-5 text-center"
         >
           <span className="flex size-14 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-            <CheckCircle2 className="size-6 text-gold-bright" strokeWidth={1.5} />
+            <CheckCircle2
+              className="size-6 text-gold-bright"
+              strokeWidth={1.5}
+            />
           </span>
           <AuthFormHeader
             title="Email verified"
@@ -89,6 +95,7 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
           />
           <Button
             className="h-10 w-full max-w-[220px]"
+            nativeButton={false}
             render={<Link href="/login" />}
           >
             Continue to Login
@@ -106,7 +113,10 @@ export function VerifyEmailStatus({ token }: VerifyEmailStatusProps) {
           className="flex flex-col items-center gap-5 text-center"
         >
           <span className="flex size-14 items-center justify-center rounded-full border border-destructive/40 bg-destructive/10">
-            <MailWarning className="size-6 text-destructive" strokeWidth={1.5} />
+            <MailWarning
+              className="size-6 text-destructive"
+              strokeWidth={1.5}
+            />
           </span>
           <AuthFormHeader
             title="This link is invalid or has expired"

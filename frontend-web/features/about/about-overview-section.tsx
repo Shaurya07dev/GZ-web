@@ -13,7 +13,9 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
-const collageArtwork = mockArtworks.find((a) => a.id === "monsoon-over-madurai");
+const collageArtwork = mockArtworks.find(
+  (a) => a.id === "monsoon-over-madurai",
+);
 
 export function AboutOverviewSection() {
   return (
@@ -33,12 +35,13 @@ export function AboutOverviewSection() {
           <h1 className="mt-5 text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
             The art market,
             <br />
-            built to protect <span className="text-gold-bright">the artist.</span>
+            built to protect{" "}
+            <span className="text-gold-bright">the artist.</span>
           </h1>
           <p className="mt-5 text-balance text-base leading-relaxed text-muted-foreground">
-            GalleryZone connects independent artists with verified galleries
-            and collectors worldwide, keeping every listed price confidential
-            and every artwork&rsquo;s authenticity verifiable.
+            GalleryZone connects independent artists with verified galleries and
+            collectors worldwide, keeping every listed price confidential and
+            every artwork&rsquo;s authenticity verifiable.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -97,15 +100,17 @@ export function AboutOverviewSection() {
                 A verified community
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Every artist clears a 3-tier verification system before
-                earning platform trust — identity, activity, then a first
-                confirmed sale.
+                Every artist clears a 3-tier verification system before earning
+                platform trust: identity, activity, then a first confirmed sale.
               </p>
             </div>
 
             <div className="flex items-center gap-3 border-t border-border pt-6">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-                <Sparkles className="size-4 text-gold-bright" strokeWidth={1.5} />
+                <Sparkles
+                  className="size-4 text-gold-bright"
+                  strokeWidth={1.5}
+                />
               </span>
               <div>
                 <p className="text-sm font-medium text-foreground">
@@ -125,22 +130,28 @@ export function AboutOverviewSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-10%" }}
-          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.08 } },
+          }}
         >
-          <motion.div variants={fadeUp} transition={{ duration: 0.5, ease: "easeOut" }}>
+          <motion.div
+            variants={fadeUp}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
             <h2 className="text-balance font-display text-3xl leading-[1.15] font-semibold sm:text-4xl">
               Our mission is to protect the artist&rsquo;s price.
             </h2>
             <p className="mt-5 max-w-md text-balance text-base leading-relaxed text-muted-foreground">
-              For too long, sharing your work meant losing control of its
-              price. We built GalleryZone so a piece&rsquo;s price stays
-              private everywhere it&rsquo;s shown, while its authenticity
-              stays provable everywhere it travels.
+              For too long, sharing your work meant losing control of its price.
+              We built GalleryZone so a piece&rsquo;s price stays private
+              everywhere it&rsquo;s shown, while its authenticity stays provable
+              everywhere it travels.
             </p>
             <p className="mt-4 max-w-md text-balance text-base leading-relaxed text-muted-foreground">
-              No public price tags, no guesswork on authenticity — just a
-              signed certificate, a verifiable origin, and a market that
-              works the way artists always wanted it to.
+              No public price tags, no guesswork on authenticity: just a signed
+              certificate, a verifiable origin, and a market that works the way
+              artists always wanted it to.
             </p>
           </motion.div>
 
@@ -155,10 +166,15 @@ export function AboutOverviewSection() {
                   className="flex items-start gap-4"
                 >
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary">
-                    <Icon className="size-4 text-gold-bright" strokeWidth={1.75} />
+                    <Icon
+                      className="size-4 text-gold-bright"
+                      strokeWidth={1.75}
+                    />
                   </span>
                   <div>
-                    <h3 className="font-medium text-foreground">{pillar.title}</h3>
+                    <h3 className="font-medium text-foreground">
+                      {pillar.title}
+                    </h3>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                       {pillar.description}
                     </p>

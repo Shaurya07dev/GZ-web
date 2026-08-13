@@ -1,6 +1,11 @@
 export type OrderStatus =
-  | "pending" | "paid" | "confirmed" | "packed" | "transit"
-  | "delivered" | "cancelled";
+  | "pending"
+  | "paid"
+  | "confirmed"
+  | "packed"
+  | "transit"
+  | "delivered"
+  | "cancelled";
 
 export interface OrderStatusEvent {
   status: OrderStatus;

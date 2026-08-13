@@ -9,9 +9,22 @@ import { toast } from "sonner";
 import { FolderTree, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldDescription,
+} from "@/components/ui/field";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
   useAdminCategories,
@@ -24,7 +37,11 @@ import { ADMIN } from "@/features/admin/admin-data";
 import type { Category } from "@/types/admin";
 
 const categorySchema = z.object({
-  name: z.string().trim().min(2, "At least 2 characters").max(60, "Keep it under 60 characters"),
+  name: z
+    .string()
+    .trim()
+    .min(2, "At least 2 characters")
+    .max(60, "Keep it under 60 characters"),
 });
 type CategoryInput = z.infer<typeof categorySchema>;
 
@@ -68,7 +85,9 @@ export function CategoryManager() {
       // The service rejects with a real explanation when the category still
       // holds artworks — surface it inline in the dialog rather than as a
       // toast that vanishes before it can be acted on.
-      setDeleteError(error instanceof Error ? error.message : "Could not delete category.");
+      setDeleteError(
+        error instanceof Error ? error.message : "Could not delete category.",
+      );
     }
   }
 
@@ -76,7 +95,9 @@ export function CategoryManager() {
     {
       key: "name",
       header: "Category",
-      render: (row) => <span className="text-sm font-medium text-foreground">{row.name}</span>,
+      render: (row) => (
+        <span className="text-sm font-medium text-foreground">{row.name}</span>
+      ),
       sortable: true,
       sortValue: (row) => row.name,
     },
@@ -84,7 +105,9 @@ export function CategoryManager() {
       key: "slug",
       header: "Slug",
       render: (row) => (
-        <span className="font-mono text-xs text-muted-foreground">{row.slug}</span>
+        <span className="font-mono text-xs text-muted-foreground">
+          {row.slug}
+        </span>
       ),
       sortable: true,
       sortValue: (row) => row.slug,
@@ -93,7 +116,9 @@ export function CategoryManager() {
       key: "count",
       header: "Artworks",
       render: (row) => (
-        <span className="text-sm tabular-nums text-muted-foreground">{row.artworkCount}</span>
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {row.artworkCount}
+        </span>
       ),
       sortable: true,
       sortValue: (row) => row.artworkCount,
@@ -103,7 +128,12 @@ export function CategoryManager() {
       header: "",
       render: (row) => (
         <div className="flex justify-end gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setEditing(row)} aria-label={`Edit ${row.name}`}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setEditing(row)}
+            aria-label={`Edit ${row.name}`}
+          >
             <Pencil className="size-3.5" />
           </Button>
           <Button
@@ -252,7 +282,9 @@ function CategoryFormDialog({
       reset({ name: "" });
       onOpenChange(false);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Something went wrong.");
+      setFormError(
+        error instanceof Error ? error.message : "Something went wrong.",
+      );
     }
   }
 
@@ -260,7 +292,9 @@ function CategoryFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "New category" : "Edit category"}</DialogTitle>
+          <DialogTitle>
+            {mode === "create" ? "New category" : "Edit category"}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -280,10 +314,12 @@ function CategoryFormDialog({
                 <FieldDescription>
                   Slug:{" "}
                   <span className="font-mono">
-                    {slugPreview(nameValue) || "—"}
+                    {slugPreview(nameValue) || "Not set"}
                   </span>
                 </FieldDescription>
-                <FieldError errors={fieldState.error ? [fieldState.error] : undefined} />
+                <FieldError
+                  errors={fieldState.error ? [fieldState.error] : undefined}
+                />
               </Field>
             )}
           />

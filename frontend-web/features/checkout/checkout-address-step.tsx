@@ -9,7 +9,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+} from "@/components/ui/field";
 import { useAddresses, useAddAddressMutation } from "@/hooks/useAddresses";
 import type { Address } from "@/types/customer";
 
@@ -75,7 +80,7 @@ export function CheckoutAddressStep({
           setIsAdding(false);
           reset(EMPTY_VALUES);
         },
-      }
+      },
     );
   }
 
@@ -118,11 +123,14 @@ export function CheckoutAddressStep({
                   "relative flex flex-col gap-1 rounded-lg border px-4 py-3.5 text-left text-sm transition-colors",
                   selected
                     ? "border-gold/60 bg-gold/10"
-                    : "border-border hover:border-gold/30 hover:bg-card"
+                    : "border-border hover:border-gold/30 hover:bg-card",
                 )}
               >
                 <span className="flex items-center gap-1.5 pr-6 font-medium text-foreground">
-                  <MapPin className="size-3.5 shrink-0 text-gold-bright" strokeWidth={1.75} />
+                  <MapPin
+                    className="size-3.5 shrink-0 text-gold-bright"
+                    strokeWidth={1.75}
+                  />
                   {address.line1}
                 </span>
                 {address.line2 && (
@@ -168,7 +176,9 @@ export function CheckoutAddressStep({
               name="line1"
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="checkout-line1">Address line 1</FieldLabel>
+                  <FieldLabel htmlFor="checkout-line1">
+                    Address line 1
+                  </FieldLabel>
                   <Input
                     id="checkout-line1"
                     className="h-10"
@@ -256,7 +266,9 @@ export function CheckoutAddressStep({
                 <label className="flex items-center gap-2.5 text-sm text-foreground">
                   <Checkbox
                     checked={field.value}
-                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    onCheckedChange={(checked) =>
+                      field.onChange(checked === true)
+                    }
                   />
                   Set as default address
                 </label>
@@ -265,7 +277,11 @@ export function CheckoutAddressStep({
           </FieldGroup>
 
           <div className="flex items-center gap-3">
-            <Button type="submit" size="sm" disabled={addAddressMutation.isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={addAddressMutation.isPending}
+            >
               {addAddressMutation.isPending ? "Saving…" : "Save address"}
             </Button>
             <Button

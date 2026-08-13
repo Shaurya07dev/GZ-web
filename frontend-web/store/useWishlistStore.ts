@@ -26,6 +26,6 @@ export const useWishlistStore = create<WishlistState>()(
         })),
       has: (artworkId) => get().ids.includes(artworkId),
     }),
-    { name: "gz-wishlist" }
-  )
+    { name: "gz-wishlist" },
+  ),
 );

@@ -4,11 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { ArtworkImage } from "@/types/artwork";
 
 interface ArtworkGalleryProps {
@@ -51,7 +47,9 @@ export function ArtworkGallery({ images, title }: ArtworkGalleryProps) {
         </button>
 
         <DialogContent className="max-w-3xl border-none bg-transparent p-0 shadow-none ring-0 sm:max-w-3xl">
-          <DialogTitle className="sr-only">{title} — full size view</DialogTitle>
+          <DialogTitle className="sr-only">
+            Full size view of {title}
+          </DialogTitle>
           <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-black/40">
             <Image
               src={active.url}
@@ -65,7 +63,11 @@ export function ArtworkGallery({ images, title }: ArtworkGalleryProps) {
       </Dialog>
 
       {sorted.length > 1 && (
-        <div className="flex gap-2.5 overflow-x-auto pb-1" role="list" aria-label="Artwork images">
+        <div
+          className="flex gap-2.5 overflow-x-auto pb-1"
+          role="list"
+          aria-label="Artwork images"
+        >
           {sorted.map((image, index) => (
             <button
               key={`${image.url}-${image.sortOrder}`}
@@ -78,7 +80,7 @@ export function ArtworkGallery({ images, title }: ArtworkGalleryProps) {
                 "relative size-16 shrink-0 overflow-hidden rounded-md border transition-colors sm:size-[72px]",
                 index === activeIndex
                   ? "border-gold-bright ring-1 ring-gold-bright"
-                  : "border-border hover:border-gold/50"
+                  : "border-border hover:border-gold/50",
               )}
             >
               <Image

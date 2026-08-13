@@ -8,7 +8,7 @@ import {
 } from "@/features/legal/data/cookies-sections";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy — GalleryZone",
+  title: "Cookie Policy | GalleryZone",
   description: "Which cookies GalleryZone uses and why.",
 };
 
@@ -24,14 +24,23 @@ export default function CookiesPage() {
                 <table className="w-full min-w-[520px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b border-border/60 bg-muted/40">
-                      <th className="px-4 py-3 font-medium text-foreground">Category</th>
-                      <th className="px-4 py-3 font-medium text-foreground">Examples</th>
-                      <th className="px-4 py-3 font-medium text-foreground">Purpose</th>
+                      <th className="px-4 py-3 font-medium text-foreground">
+                        Category
+                      </th>
+                      <th className="px-4 py-3 font-medium text-foreground">
+                        Examples
+                      </th>
+                      <th className="px-4 py-3 font-medium text-foreground">
+                        Purpose
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {cookieCategories.map((row) => (
-                      <tr key={row.category} className="border-b border-border/40 last:border-0">
+                      <tr
+                        key={row.category}
+                        className="border-b border-border/40 last:border-0"
+                      >
                         <td className="px-4 py-3 align-top font-medium whitespace-nowrap text-foreground">
                           {row.category}
                         </td>
@@ -49,7 +58,7 @@ export default function CookiesPage() {
             </LegalSectionBlock>
           ) : (
             <LegalSectionBlock key={section.id} section={section} />
-          )
+          ),
         )}
       </article>
     </LegalLayout>

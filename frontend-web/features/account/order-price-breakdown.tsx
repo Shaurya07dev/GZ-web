@@ -46,13 +46,18 @@ function Row({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <dt className={cn("text-muted-foreground", emphasized && "font-medium text-foreground")}>
+      <dt
+        className={cn(
+          "text-muted-foreground",
+          emphasized && "font-medium text-foreground",
+        )}
+      >
         {label}
       </dt>
       <dd
         className={cn(
           "tabular-nums text-foreground",
-          emphasized && "font-display text-base font-semibold"
+          emphasized && "font-display text-base font-semibold",
         )}
       >
         {formatINR(amount)}

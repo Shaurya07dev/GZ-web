@@ -6,7 +6,8 @@ const GAP = 14;
 
 export function RevenueChart() {
   const max = Math.max(...REVENUE_SERIES.map((point) => point.amount));
-  const barWidth = (WIDTH - GAP * (REVENUE_SERIES.length - 1)) / REVENUE_SERIES.length;
+  const barWidth =
+    (WIDTH - GAP * (REVENUE_SERIES.length - 1)) / REVENUE_SERIES.length;
 
   return (
     <div className="rounded-lg border border-border bg-card p-5">
@@ -25,8 +26,16 @@ export function RevenueChart() {
       >
         <defs>
           <linearGradient id="revenue-bar" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--gold-bright)" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="var(--gold-deep)" stopOpacity="0.6" />
+            <stop
+              offset="0%"
+              stopColor="var(--gold-bright)"
+              stopOpacity="0.95"
+            />
+            <stop
+              offset="100%"
+              stopColor="var(--gold-deep)"
+              stopOpacity="0.6"
+            />
           </linearGradient>
         </defs>
         {REVENUE_SERIES.map((point, i) => {

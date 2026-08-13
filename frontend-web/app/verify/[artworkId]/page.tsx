@@ -9,17 +9,17 @@ import { ProvenanceTimeline } from "@/features/verify/provenance-timeline";
 import { getArtistById, getArtworkById } from "@/lib/mock-data/helpers";
 
 export async function generateMetadata(
-  props: PageProps<"/verify/[artworkId]">
+  props: PageProps<"/verify/[artworkId]">,
 ): Promise<Metadata> {
   const { artworkId } = await props.params;
   const artwork = getArtworkById(artworkId);
 
   if (!artwork) {
-    return { title: "Passport not found — GalleryZone" };
+    return { title: "Passport not found | GalleryZone" };
   }
 
   return {
-    title: `Artwork Passport — ${artwork.title} — GalleryZone`,
+    title: `Artwork Passport | ${artwork.title} | GalleryZone`,
     description: `Verify the authenticity and provenance of "${artwork.title}" on GalleryZone.`,
   };
 }
@@ -30,7 +30,7 @@ export async function generateMetadata(
 // is no client interactivity here at all, matching Task 17 Step 3's
 // explicit guidance.
 export default async function ArtworkPassportPage(
-  props: PageProps<"/verify/[artworkId]">
+  props: PageProps<"/verify/[artworkId]">,
 ) {
   const { artworkId } = await props.params;
   const artwork = getArtworkById(artworkId);

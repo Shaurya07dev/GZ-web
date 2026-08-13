@@ -23,7 +23,8 @@ export function useAdminSettings() {
 export function useUpdateSettingsMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<PlatformSettings>) => adminService.updateSettings(patch),
+    mutationFn: (patch: Partial<PlatformSettings>) =>
+      adminService.updateSettings(patch),
     onSuccess: (settings) => {
       queryClient.setQueryData(["admin-settings"], settings);
     },
@@ -40,7 +41,8 @@ export function useAdminReports() {
 export function useGenerateReportMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: GenerateReportInput) => adminService.generateReport(input),
+    mutationFn: (input: GenerateReportInput) =>
+      adminService.generateReport(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
     },

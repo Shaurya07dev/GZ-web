@@ -5,7 +5,7 @@ import { LegalSectionBlock } from "@/features/legal/legal-section";
 import { privacySections } from "@/features/legal/data/privacy-sections";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — GalleryZone",
+  title: "Privacy Policy | GalleryZone",
   description:
     "What GalleryZone collects, how it's used, and who it's shared with.",
 };

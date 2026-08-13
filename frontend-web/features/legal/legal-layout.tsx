@@ -14,7 +14,11 @@ interface LegalLayoutProps {
 // then SiteFooter. Not route-grouped (per plan Global Constraints, only
 // app/(auth)/ is a route group in this codebase) — these three routes each
 // get their own flat app/<route>/page.tsx importing this same layout.
-export function LegalLayout({ title, lastUpdated, children }: LegalLayoutProps) {
+export function LegalLayout({
+  title,
+  lastUpdated,
+  children,
+}: LegalLayoutProps) {
   return (
     <>
       <SiteHeader />

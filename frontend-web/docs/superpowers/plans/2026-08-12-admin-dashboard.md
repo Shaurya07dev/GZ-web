@@ -8,7 +8,7 @@
 
 **Tech Stack:** Same as the rest of `frontend-web` — Next.js 16 App Router, TanStack Query v5, Zustand, React Hook Form + Zod + `Field`/`Controller`, shadcn `base-nova`, Tailwind v4 — **plus Recharts** (new, admin-only).
 
-**Source spec:** `frontend-web/docs/superpowers/specs/2026-08-12-admin-dashboard-design.md` — read it before starting; it explains the *why* behind decisions this plan only states.
+**Source spec:** `frontend-web/docs/superpowers/specs/2026-08-12-admin-dashboard-design.md` — read it before starting; it explains the _why_ behind decisions this plan only states.
 
 ## Global Constraints
 
@@ -32,11 +32,13 @@ All constraints from `docs/superpowers/plans/2026-08-11-frontend-remaining-pages
 ### Task 1: Admin types, mock data, analytics series
 
 **Files:**
+
 - Create: `types/admin.ts`
 - Create: `lib/mock-data/admin.ts`, `lib/mock-data/admin-analytics.ts`
 - Create: `features/admin/admin-data.ts`
 
 **Interfaces:**
+
 - Consumes: `mockArtworks`, `mockArtists`, `mockOrders`, `mockAggregatorHoldings` (existing fixtures — reuse, never modify).
 - Produces: every type and fixture below; all four tracks import from here.
 
@@ -48,7 +50,8 @@ import type { OrderStatus } from "./order";
 
 export type UserRole = "artist" | "aggregator" | "customer" | "admin";
 export type UserStatus = "pending" | "active" | "suspended" | "blocked";
-export type KycStatus = "pending" | "submitted" | "under_review" | "approved" | "rejected";
+export type KycStatus =
+  "pending" | "submitted" | "under_review" | "approved" | "rejected";
 
 export interface AdminUser {
   id: string;
@@ -57,10 +60,10 @@ export interface AdminUser {
   phone: string;
   role: UserRole;
   status: UserStatus;
-  createdAt: string;      // ISO
+  createdAt: string; // ISO
   lastLoginAt: string | null;
-  kycStatus?: KycStatus;  // artists only
-  companyName?: string;   // aggregators only
+  kycStatus?: KycStatus; // artists only
+  companyName?: string; // aggregators only
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";
@@ -70,8 +73,8 @@ export interface WithdrawalRequest {
   userId: string;
   userName: string;
   userRole: Extract<UserRole, "artist" | "aggregator">;
-  amount: number;                 // >= 1000 per platform rule
-  bankAccountMasked: string;      // e.g. "XXXXXXXX1234" — never a full number
+  amount: number; // >= 1000 per platform rule
+  bankAccountMasked: string; // e.g. "XXXXXXXX1234" — never a full number
   walletBalance: number;
   status: WithdrawalStatus;
   requestedAt: string;
@@ -94,11 +97,18 @@ export interface Settlement {
 }
 
 export type AuditAction =
-  | "artwork.approved" | "artwork.rejected" | "artwork.delisted"
-  | "kyc.approved" | "kyc.rejected"
-  | "withdrawal.approved" | "withdrawal.rejected"
-  | "user.suspended" | "user.activated"
-  | "category.created" | "category.updated" | "category.deleted"
+  | "artwork.approved"
+  | "artwork.rejected"
+  | "artwork.delisted"
+  | "kyc.approved"
+  | "kyc.rejected"
+  | "withdrawal.approved"
+  | "withdrawal.rejected"
+  | "user.suspended"
+  | "user.activated"
+  | "category.created"
+  | "category.updated"
+  | "category.deleted"
   | "settings.updated";
 
 export interface AuditLogEntry {
@@ -107,9 +117,9 @@ export interface AuditLogEntry {
   action: AuditAction;
   entityType: "artwork" | "user" | "withdrawal" | "category" | "settings";
   entityId: string;
-  entityLabel: string;   // human-readable, e.g. the artwork title
-  detail?: string;       // e.g. a rejection reason
-  createdAt: string;     // ISO
+  entityLabel: string; // human-readable, e.g. the artwork title
+  detail?: string; // e.g. a rejection reason
+  createdAt: string; // ISO
 }
 
 export interface Category {
@@ -120,10 +130,10 @@ export interface Category {
 }
 
 export interface PlatformSettings {
-  markupPercent: number;            // 30
-  gstPercent: number;               // 5
-  minWithdrawalAmount: number;      // 1000
-  insuranceThreshold: number;       // 20000
+  markupPercent: number; // 30
+  gstPercent: number; // 5
+  minWithdrawalAmount: number; // 1000
+  insuranceThreshold: number; // 20000
   aggregatorCommissionPercent: number; // 20 (of the markup)
 }
 
@@ -143,7 +153,7 @@ export interface AdminActivityEvent {
   id: string;
   label: string;
   detail: string;
-  at: string;   // ISO
+  at: string; // ISO
   kind: "artwork" | "order" | "user" | "withdrawal" | "settlement";
 }
 
@@ -158,7 +168,7 @@ export type AdminOrderStatusFilter = OrderStatus | "all";
 export const ADMIN = {
   name: "Ops Console",
   email: "ops@galleryzone.art",
-  avatar: "/early-program/avatar-1.png",  // verify this path exists; use any real file under public/
+  avatar: "/early-program/avatar-1.png", // verify this path exists; use any real file under public/
 };
 
 // Fixed "today" anchor matching every other mock-data file.
@@ -185,22 +195,56 @@ Pre-baked demonstration series — **explicitly not** aggregated from order fixt
 ```ts
 export type RangeKey = "30d" | "90d" | "12m";
 
-export interface RevenuePoint { label: string; gmv: number; platform: number; artist: number; aggregator: number; }
-export interface VolumePoint { label: string; orders: number; }
-export interface CategoryPerformance { category: string; revenue: number; orders: number; }
-export interface FunnelStage { stage: string; count: number; }
-export interface UserGrowthPoint { label: string; artists: number; aggregators: number; customers: number; }
-export interface TierDistribution { tier: string; count: number; }
-export interface TopPerformer { name: string; revenue: number; count: number; }
+export interface RevenuePoint {
+  label: string;
+  gmv: number;
+  platform: number;
+  artist: number;
+  aggregator: number;
+}
+export interface VolumePoint {
+  label: string;
+  orders: number;
+}
+export interface CategoryPerformance {
+  category: string;
+  revenue: number;
+  orders: number;
+}
+export interface FunnelStage {
+  stage: string;
+  count: number;
+}
+export interface UserGrowthPoint {
+  label: string;
+  artists: number;
+  aggregators: number;
+  customers: number;
+}
+export interface TierDistribution {
+  tier: string;
+  count: number;
+}
+export interface TopPerformer {
+  name: string;
+  revenue: number;
+  count: number;
+}
 
-export const revenueSeries: Record<RangeKey, RevenuePoint[]> = { /* ... */ };
-export const volumeSeries: Record<RangeKey, VolumePoint[]> = { /* ... */ };
-export const categoryPerformance: CategoryPerformance[] = [ /* ... */ ];
-export const artworkFunnel: FunnelStage[] = [ /* draft → pending → marketplace → reserved → sold → settled */ ];
-export const userGrowthSeries: Record<RangeKey, UserGrowthPoint[]> = { /* ... */ };
-export const verificationTiers: TierDistribution[] = [ /* Gold / 2-tier / 1-tier / unverified */ ];
-export const topArtists: TopPerformer[] = [ /* ... */ ];
-export const topAggregators: TopPerformer[] = [ /* ... */ ];
+export const revenueSeries: Record<RangeKey, RevenuePoint[]> = {/* ... */};
+export const volumeSeries: Record<RangeKey, VolumePoint[]> = {/* ... */};
+export const categoryPerformance: CategoryPerformance[] = [/* ... */];
+export const artworkFunnel: FunnelStage[] = [
+  /* draft → pending → marketplace → reserved → sold → settled */
+];
+export const userGrowthSeries: Record<RangeKey, UserGrowthPoint[]> = {
+  /* ... */
+};
+export const verificationTiers: TierDistribution[] = [
+  /* Gold / 2-tier / 1-tier / unverified */
+];
+export const topArtists: TopPerformer[] = [/* ... */];
+export const topAggregators: TopPerformer[] = [/* ... */];
 ```
 
 Internal coherence matters: for every `RevenuePoint`, `platform + artist + aggregator` should equal `gmv`; category revenue should roughly sum to the 12m GMV total; funnel counts should decrease monotonically. Charts that visibly contradict each other are worse than no charts.
@@ -219,11 +263,13 @@ git commit -m "feat: add admin types, fixtures, and analytics demo series"
 ### Task 2: Admin services, hooks, and the live audit store
 
 **Files:**
+
 - Create: `services/adminService.ts`
 - Create: `store/useAdminAuditStore.ts`
 - Create: `hooks/useAdminDashboard.ts`, `hooks/useAdminModeration.ts`, `hooks/useAdminUsers.ts`, `hooks/useAdminCommerce.ts`, `hooks/useAdminSystem.ts`
 
 **Interfaces:**
+
 - Consumes: everything from Task 1; `mockDelay`/`mockError`.
 - Produces: the service + hooks every track calls.
 
@@ -234,7 +280,7 @@ import { create } from "zustand";
 import type { AuditLogEntry } from "@/types/admin";
 
 interface AdminAuditState {
-  entries: AuditLogEntry[];               // session-appended only
+  entries: AuditLogEntry[]; // session-appended only
   append: (entry: Omit<AuditLogEntry, "id" | "createdAt">) => void;
 }
 
@@ -243,12 +289,17 @@ export const useAdminAuditStore = create<AdminAuditState>((set) => ({
   append: (entry) =>
     set((state) => ({
       entries: [
-        { ...entry, id: `audit-${crypto.randomUUID()}`, createdAt: new Date().toISOString() },
+        {
+          ...entry,
+          id: `audit-${crypto.randomUUID()}`,
+          createdAt: new Date().toISOString(),
+        },
         ...state.entries,
       ],
     })),
 }));
 ```
+
 Not persisted (unlike the wishlist store) — an audit trail that survives reload but isn't real would be actively misleading. Session-only is the honest choice. Scoped exception to "server data doesn't live in Zustand", same reasoning as the wishlist store: there is no server.
 
 - [ ] **Step 2: Write `services/adminService.ts`**
@@ -262,44 +313,60 @@ export const adminService = {
   getActivity: () => mockDelay(mockAdminActivity),
 
   // moderation
-  listPendingArtworks: () => mockDelay(mockPendingArtworks.filter(a => a.status === "pending_approval")),
-  getPendingArtwork: (id: string) => mockDelay(mockPendingArtworks.find(a => a.id === id)),
-  approveArtwork: (id: string) => mockDelay({ id, status: "marketplace" as const }),
-  rejectArtwork: (id: string, reason: string) => mockDelay({ id, status: "returned" as const, reason }),
-  listKycQueue: () => mockDelay(/* artists with kycStatus submitted|under_review */),
-  approveKyc: (userId: string) => mockDelay({ userId, kycStatus: "approved" as const }),
-  rejectKyc: (userId: string, reason: string) => mockDelay({ userId, kycStatus: "rejected" as const, reason }),
+  listPendingArtworks: () =>
+    mockDelay(
+      mockPendingArtworks.filter((a) => a.status === "pending_approval"),
+    ),
+  getPendingArtwork: (id: string) =>
+    mockDelay(mockPendingArtworks.find((a) => a.id === id)),
+  approveArtwork: (id: string) =>
+    mockDelay({ id, status: "marketplace" as const }),
+  rejectArtwork: (id: string, reason: string) =>
+    mockDelay({ id, status: "returned" as const, reason }),
+  listKycQueue: () =>
+    mockDelay(/* artists with kycStatus submitted|under_review */),
+  approveKyc: (userId: string) =>
+    mockDelay({ userId, kycStatus: "approved" as const }),
+  rejectKyc: (userId: string, reason: string) =>
+    mockDelay({ userId, kycStatus: "rejected" as const, reason }),
   listWithdrawals: () => mockDelay(mockWithdrawals),
-  approveWithdrawal: (id: string) => mockDelay({ id, status: "completed" as const }),
-  rejectWithdrawal: (id: string, reason: string) => mockDelay({ id, status: "rejected" as const, reason }),
+  approveWithdrawal: (id: string) =>
+    mockDelay({ id, status: "completed" as const }),
+  rejectWithdrawal: (id: string, reason: string) =>
+    mockDelay({ id, status: "rejected" as const, reason }),
 
   // catalog
   listAllArtworks: () => mockDelay([...mockArtworks, ...mockPendingArtworks]),
   getArtworkAdmin: (id: string) => mockDelay(/* search both sets */),
   delistArtwork: (id: string) => mockDelay({ id, status: "returned" as const }),
   listCategories: () => mockDelay(mockCategories),
-  createCategory: (name: string) => mockDelay(/* new Category, slug derived from name */),
+  createCategory: (name: string) =>
+    mockDelay(/* new Category, slug derived from name */),
   updateCategory: (id: string, name: string) => mockDelay(/* ... */),
   deleteCategory: (id: string) => mockDelay({ id }),
 
   // people
   listUsers: (role?: UserRole) => mockDelay(/* filtered mockAdminUsers */),
-  getUser: (id: string) => mockDelay(mockAdminUsers.find(u => u.id === id)),
+  getUser: (id: string) => mockDelay(mockAdminUsers.find((u) => u.id === id)),
   setUserStatus: (id: string, status: UserStatus) => mockDelay({ id, status }),
 
   // commerce
   listOrders: () => mockDelay(mockOrders),
   listSettlements: () => mockDelay(mockSettlements),
-  retrySettlement: (id: string) => mockDelay({ id, status: "processed" as const }),
+  retrySettlement: (id: string) =>
+    mockDelay({ id, status: "processed" as const }),
 
   // system
   listAuditLog: () => mockDelay(mockAuditLog),
   getSettings: () => mockDelay(defaultPlatformSettings),
-  updateSettings: (patch: Partial<PlatformSettings>) => mockDelay({ ...defaultPlatformSettings, ...patch }),
+  updateSettings: (patch: Partial<PlatformSettings>) =>
+    mockDelay({ ...defaultPlatformSettings, ...patch }),
   listReports: () => mockDelay(/* seeded report rows */),
-  generateReport: (input: { type: string; from: string; to: string }) => mockDelay(/* new report row */),
+  generateReport: (input: { type: string; from: string; to: string }) =>
+    mockDelay(/* new report row */),
 };
 ```
+
 (Sketch — write the real filter/find/derive logic. `deleteCategory` must reject via `mockError` when the category's `artworkCount > 0`, matching the spec's guard.)
 
 - [ ] **Step 3: Write the hooks**
@@ -322,11 +389,13 @@ git commit -m "feat: add admin services, hooks, and session audit store"
 ### Task 3: AdminShell, AdminDataTable, and shared admin UI
 
 **Files:**
+
 - Create: `app/admin/layout.tsx`
 - Create: `features/admin/admin-shell.tsx`, `features/admin/admin-data-table.tsx`, `features/admin/admin-page-header.tsx`, `features/admin/admin-status-badge.tsx`, `features/admin/confirm-action-dialog.tsx`, `features/admin/reject-reason-dialog.tsx`
 - Modify: `features/auth/components/login-form.tsx`
 
 **Interfaces:**
+
 - Produces: the shell every admin page renders inside, plus the table and dialogs all four tracks reuse. **Get these right — four tracks depend on them.**
 
 - [ ] **Step 1: Implement `AdminShell`**
@@ -346,6 +415,7 @@ Each Moderation item shows a live pending-count badge sourced from `useAdminDash
 - [ ] **Step 2: Implement `AdminDataTable`**
 
 One generic table used by every table page. Props:
+
 ```ts
 interface AdminDataTableColumn<T> {
   key: string;
@@ -361,15 +431,21 @@ interface AdminDataTableProps<T> {
   columns: AdminDataTableColumn<T>[];
   isLoading?: boolean;
   getRowKey: (row: T) => string;
-  getRowHref?: (row: T) => string;      // whole-row link when provided
+  getRowHref?: (row: T) => string; // whole-row link when provided
   searchPlaceholder?: string;
-  searchValue?: (row: T) => string;      // fields searched
-  filters?: Array<{ key: string; label: string; options: Array<{value: string; label: string}>; matches: (row: T, value: string) => boolean }>;
-  pageSize?: number;                     // default 15
+  searchValue?: (row: T) => string; // fields searched
+  filters?: Array<{
+    key: string;
+    label: string;
+    options: Array<{ value: string; label: string }>;
+    matches: (row: T, value: string) => boolean;
+  }>;
+  pageSize?: number; // default 15
   emptyTitle: string;
   emptyDescription: string;
 }
 ```
+
 Includes: search input (debounced 300ms — reuse the pattern from `features/marketplace/marketplace-search-bar.tsx`), zero or more dropdown filters, click-to-sort headers, offset pagination with page numbers (SAD §9.3 — jump-to-page matters for admin), skeleton rows while `isLoading`, and `EmptyState` (`components/shared/empty-state.tsx`) when there are no rows. No row virtualization (spec §7 explains why).
 
 - [ ] **Step 3: Implement the small shared pieces**
@@ -399,10 +475,12 @@ git commit -m "feat: add admin shell, data table, shared admin UI, admin login o
 ### Task 4: Recharts install + themed chart wrappers
 
 **Files:**
+
 - Create: `features/admin/charts/chart-card.tsx`, `features/admin/charts/chart-theme.ts`, `features/admin/charts/revenue-area-chart.tsx`, `features/admin/charts/volume-bar-chart.tsx`, `features/admin/charts/category-bar-chart.tsx`, `features/admin/charts/funnel-chart.tsx`, `features/admin/charts/growth-line-chart.tsx`, `features/admin/charts/tier-donut-chart.tsx`
 - Modify: `package.json` (add `recharts`)
 
 **Interfaces:**
+
 - Consumes: the series types from `lib/mock-data/admin-analytics.ts` (Task 1).
 - Produces: every chart component the Overview and Analytics pages render.
 
@@ -415,6 +493,7 @@ Mandatory before writing chart code. Reconcile its palette guidance with this pr
 ```bash
 npm install recharts
 ```
+
 The existing hand-rolled `features/dashboard/revenue-chart.tsx` is **not** migrated — leave it exactly as it is.
 
 - [ ] **Step 3: Write `chart-theme.ts`**
@@ -428,6 +507,7 @@ Shared frame: title, optional subtitle/description, optional right-side control 
 - [ ] **Step 5: Write the six chart wrappers**
 
 Each takes typed data props (no data fetching inside — pages pass data in) and renders a themed Recharts chart inside `ChartCard`:
+
 - `RevenueAreaChart` — stacked area, platform / artist / aggregator over time.
 - `VolumeBarChart` — order counts over time.
 - `CategoryBarChart` — horizontal bars, revenue by category.
@@ -456,7 +536,7 @@ git commit -m "feat: add recharts and themed admin chart wrappers"
 
 **Files:** Create `app/admin/page.tsx`, `features/admin/overview/admin-kpi-grid.tsx`, `features/admin/overview/moderation-queue-cards.tsx`, `features/admin/overview/admin-activity-feed.tsx`
 
-- [ ] **Step 1** — `AdminKpiGrid`: nine tiles from `useAdminKpis()` (GMV, platform revenue, artist payouts, total orders, active artworks, total users, and the three pending counts). Money via `formatINR`. The three pending tiles are visually distinct (they're *actionable*, the rest are informational) and link to their queues.
+- [ ] **Step 1** — `AdminKpiGrid`: nine tiles from `useAdminKpis()` (GMV, platform revenue, artist payouts, total orders, active artworks, total users, and the three pending counts). Money via `formatINR`. The three pending tiles are visually distinct (they're _actionable_, the rest are informational) and link to their queues.
 - [ ] **Step 2** — `ModerationQueueCards`: three cards (Artworks / KYC / Withdrawals) each showing count + the oldest waiting item's age + a "Review" link. When a queue is empty, say so positively rather than rendering an empty card.
 - [ ] **Step 3** — `AdminActivityFeed`: recent events from `useAdminActivity()`, newest first, icon per `kind`, relative timestamps computed against `ADMIN_TODAY` (not `Date.now()` — see the fixed-anchor convention in `features/aggregator/aggregator-data.ts`).
 - [ ] **Step 4** — Assemble `app/admin/page.tsx` with `AdminPageHeader` + a compact `RevenueAreaChart` (30d) for at-a-glance trend.
@@ -590,5 +670,5 @@ git commit -m "feat: add recharts and themed admin chart wrappers"
 
 - **Spec coverage**: every section of spec §4 maps to a task; §5 charting → Task 4; §6 consequences (cache updates + live audit) → wired into Tasks 7-9, 10-11, 13, 15-17; §7 shared table → Task 3.
 - **Type consistency**: `types/admin.ts` (Task 1) is the single definition source; `AdminDataTable`'s generic column API (Task 3) is used verbatim by Tasks 7, 9, 10, 11, 12, 14, 15, 16.
-- **Shared-abstraction judgment**: `AdminShell` is a fourth *independent* shell (consistent with prior precedent, avoids destabilizing three working portals), but `UserTable` (Task 12) **is** shared across three pages because those three genuinely differ only in configuration — the distinction is deliberate, not inconsistent.
+- **Shared-abstraction judgment**: `AdminShell` is a fourth _independent_ shell (consistent with prior precedent, avoids destabilizing three working portals), but `UserTable` (Task 12) **is** shared across three pages because those three genuinely differ only in configuration — the distinction is deliberate, not inconsistent.
 - **Real-rule fidelity**: Aadhaar masking (§8.7), immutable audit logs (§8.8), offset pagination for admin tables (§9.3), the five eligibility criteria, and the documented platform constants (30% / 5% / ₹1,000 / ₹20,000 / 20%) are all pulled from the source docs, not invented.

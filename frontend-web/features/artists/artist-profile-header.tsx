@@ -9,12 +9,13 @@ import {
 import { verifiedTierCount } from "@/types/artist";
 import type { ArtistProfile, ArtistSocialLink } from "@/types/artist";
 
-const SOCIAL_ICON: Record<ArtistSocialLink["platform"], typeof InstagramGlyph> = {
-  instagram: InstagramGlyph,
-  youtube: YoutubeGlyph,
-  x: XGlyph,
-  tiktok: TiktokGlyph,
-};
+const SOCIAL_ICON: Record<ArtistSocialLink["platform"], typeof InstagramGlyph> =
+  {
+    instagram: InstagramGlyph,
+    youtube: YoutubeGlyph,
+    x: XGlyph,
+    tiktok: TiktokGlyph,
+  };
 
 const SOCIAL_LABEL: Record<ArtistSocialLink["platform"], string> = {
   instagram: "Instagram",
@@ -30,10 +31,10 @@ const SOCIAL_LABEL: Record<ArtistSocialLink["platform"], string> = {
 function verificationSummary(artist: ArtistProfile): string {
   const tierCount = verifiedTierCount(artist.verification);
   if (tierCount === 3) {
-    return "Gold ✦ Verified — completed social media, active plan, and first-sale verification.";
+    return "Gold ✦ Verified: completed social media, active plan, and first-sale verification.";
   }
   if (tierCount > 0) {
-    return `Verified — ${tierCount} of 3 verification tiers complete.`;
+    return `Verified: ${tierCount} of 3 verification tiers complete.`;
   }
   return "This artist is completing their GalleryZone verification.";
 }

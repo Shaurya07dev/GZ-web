@@ -53,10 +53,13 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
   const artistTier = artist ? verifiedTierCount(artist.verification) : 0;
   const artistPriorWorks = getArtworksByArtist(artwork.artistId).length;
 
-  const submittedAt = artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
+  const submittedAt =
+    artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
   const waitingDays = Math.max(
     0,
-    Math.round((ADMIN_TODAY.getTime() - new Date(submittedAt).getTime()) / 86_400_000),
+    Math.round(
+      (ADMIN_TODAY.getTime() - new Date(submittedAt).getTime()) / 86_400_000,
+    ),
   );
 
   // The mock services never mutate the shared fixture arrays, so the call site
@@ -110,7 +113,9 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
     }
   }
 
-  const sortedImages = [...artwork.images].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sortedImages = [...artwork.images].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
@@ -170,17 +175,32 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
               <h1 className="font-display text-lg font-semibold text-foreground">
                 {artwork.title}
               </h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">{artwork.artistName}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {artwork.artistName}
+              </p>
             </div>
             <AdminStatusBadge status={artwork.status} />
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4">
-            <Detail label="Category" value={artwork.category} className="capitalize" />
+            <Detail
+              label="Category"
+              value={artwork.category}
+              className="capitalize"
+            />
             <Detail label="Medium" value={artwork.medium} />
-            <Detail label="Dimensions" value={artwork.dimensions ?? "—"} />
-            <Detail label="Year" value={artwork.yearCreated?.toString() ?? "—"} />
-            <Detail label="Customer price" value={formatINR(artwork.customerPrice)} />
+            <Detail
+              label="Dimensions"
+              value={artwork.dimensions ?? "Not set"}
+            />
+            <Detail
+              label="Year"
+              value={artwork.yearCreated?.toString() ?? "Not set"}
+            />
+            <Detail
+              label="Customer price"
+              value={formatINR(artwork.customerPrice)}
+            />
             <Detail label="Insured" value={artwork.insured ? "Yes" : "No"} />
             <Detail
               label="Listing"
@@ -190,7 +210,10 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
                   : "Marketplace only"
               }
             />
-            <Detail label="Waiting" value={waitingDays === 0 ? "Today" : `${waitingDays} days`} />
+            <Detail
+              label="Waiting"
+              value={waitingDays === 0 ? "Today" : `${waitingDays} days`}
+            />
           </dl>
         </section>
 
@@ -205,8 +228,8 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
           {artistTier === 0 ? (
             <p className="mt-3 flex items-start gap-2 rounded-md border border-gold/40 bg-gold/[0.06] p-3 text-xs text-muted-foreground">
               <ShieldAlert className="mt-px size-3.5 shrink-0 text-gold-bright" />
-              First-time artist with no verification tiers cleared yet. Worth a closer
-              look at documentation.
+              First-time artist with no verification tiers cleared yet. Worth a
+              closer look at documentation.
             </p>
           ) : null}
         </section>
@@ -290,7 +313,9 @@ function Detail({
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`truncate text-sm text-foreground ${className ?? ""}`}>{value}</dd>
+      <dd className={`truncate text-sm text-foreground ${className ?? ""}`}>
+        {value}
+      </dd>
     </div>
   );
 }

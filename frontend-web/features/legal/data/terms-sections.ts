@@ -14,7 +14,7 @@ export const termsSections: LegalSection[] = [
     heading: "Accounts",
     body: [
       "You must register an account to list, reserve, or purchase artwork on GalleryZone. You agree to provide accurate registration information and to keep it up to date, and you're responsible for all activity that happens under your account.",
-      "Artists additionally submit government ID and, where applicable, a signature sample as part of onboarding — this is used to verify identity and to support the Certificate of Authenticity issued for each listed artwork, not shared publicly.",
+      "Artists additionally submit government ID and, where applicable, a signature sample as part of onboarding; this is used to verify identity and to support the Certificate of Authenticity issued for each listed artwork, and is not shared publicly.",
     ],
   },
   {
@@ -22,7 +22,7 @@ export const termsSections: LegalSection[] = [
     heading: "Ownership & Rights",
     body: [
       "The artist or seller retains full ownership of an artwork right up until a sale is confirmed. Listing a work on GalleryZone does not transfer ownership, and does not grant GalleryZone any exclusive rights to it.",
-      "While a listing is active, GalleryZone holds a non-exclusive right to promote and market the artwork — on the marketplace itself, in curated collections, and across GalleryZone's own marketing channels — for the duration of that listing only.",
+      "While a listing is active, GalleryZone holds a non-exclusive right to promote and market the artwork (on the marketplace itself, in curated collections, and across GalleryZone's own marketing channels) for the duration of that listing only.",
     ],
   },
   {
@@ -37,14 +37,14 @@ export const termsSections: LegalSection[] = [
     id: "exclusivity",
     heading: "Exclusivity While Listed",
     body: [
-      "An artwork actively listed on GalleryZone may not simultaneously be listed for sale on another marketplace or platform. This applies for as long as the listing remains active — once it's sold, delisted, or returned, that restriction ends.",
+      "An artwork actively listed on GalleryZone may not simultaneously be listed for sale on another marketplace or platform. This applies for as long as the listing remains active; once it's sold, delisted, or returned, that restriction ends.",
     ],
   },
   {
     id: "pricing-confidentiality",
     heading: "Pricing Confidentiality",
     body: [
-      "The artist's listed price for a work is private and is never shown to buyers or the public — only the final customer-facing price (which includes GalleryZone's markup and applicable GST) is displayed. This confidentiality is enforced at the platform level, not just hidden by the interface.",
+      "The artist's listed price for a work is private and is never shown to buyers or the public. Only the final customer-facing price (which includes GalleryZone's markup and applicable GST) is displayed. This confidentiality is enforced at the platform level, not just hidden by the interface.",
       "GalleryZone reserves the right to reject or delist an artwork at any stage, including after it has gone live, if it's found to no longer meet eligibility or quality standards.",
     ],
   },
@@ -52,7 +52,7 @@ export const termsSections: LegalSection[] = [
     id: "payments-wallet",
     heading: "Payments & Wallet",
     body: [
-      "Artists are paid the full value of their listed price — 100% of it — within 7 days of a confirmed marketplace sale, paid directly to the bank account on file. Delivery charges for marketplace sales are collected from the customer and are never deducted from the artist's payout.",
+      "Artists are paid the full value of their listed price (100% of it) within 7 days of a confirmed marketplace sale, paid directly to the bank account on file. Delivery charges for marketplace sales are collected from the customer and are never deducted from the artist's payout.",
       "Aggregators earn a share of the markup on artworks they've reserved and sold through their own channel, settled once a recorded sale is confirmed. Withdrawal requests are processed against the balance available in your GalleryZone wallet; minimums and processing timelines are shown in-app at the time of withdrawal.",
       "Transit insurance is available, and strongly recommended, for artworks valued above ₹20,000 (partnered with HDFC ERGO). Uninsured artworks placed with an aggregator for physical display carry no platform liability for accidental loss or damage in transit.",
     ],
@@ -76,7 +76,7 @@ export const termsSections: LegalSection[] = [
     id: "dispute-resolution",
     heading: "Dispute Resolution",
     body: [
-      "Most disagreements — over a delivery, a sale record, or a settlement — are resolved directly through GalleryZone support in the first instance. If a dispute can't be resolved that way, it will be handled under the governing law and jurisdiction set out below.",
+      "Most disagreements (over a delivery, a sale record, or a settlement) are resolved directly through GalleryZone support in the first instance. If a dispute can't be resolved that way, it will be handled under the governing law and jurisdiction set out below.",
     ],
   },
   {
@@ -90,7 +90,7 @@ export const termsSections: LegalSection[] = [
     id: "changes",
     heading: "Changes to These Terms",
     body: [
-      "Amendments to these Terms are made in writing. When they take effect, this page is updated with the revised text and a new \"Last updated\" date — continued use of GalleryZone after that date constitutes acceptance of the revised Terms.",
+      'Amendments to these Terms are made in writing. When they take effect, this page is updated with the revised text and a new "Last updated" date; continued use of GalleryZone after that date constitutes acceptance of the revised Terms.',
     ],
   },
 ];

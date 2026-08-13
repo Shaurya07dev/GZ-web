@@ -66,13 +66,20 @@ export function AdminActivityFeed() {
           : (events ?? []).map((event) => {
               const Icon = KIND_ICON[event.kind];
               return (
-                <li key={event.id} className="flex items-start gap-3 px-5 py-3.5">
+                <li
+                  key={event.id}
+                  className="flex items-start gap-3 px-5 py-3.5"
+                >
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                     <Icon className="size-4" strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">{event.label}</p>
-                    <p className="truncate text-xs text-muted-foreground">{event.detail}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {event.label}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {event.detail}
+                    </p>
                   </div>
                   <time
                     dateTime={event.at}

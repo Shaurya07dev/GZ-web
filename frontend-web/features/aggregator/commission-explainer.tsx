@@ -23,18 +23,24 @@ export function CommissionExplainer() {
             You earn 20% of the 30% markup
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            On every aggregator-assisted sale, GalleryZone adds a 30% markup
-            on top of the artist&rsquo;s price. You keep a 20% share of that
-            markup as commission, on top of your advance.
+            On every aggregator-assisted sale, GalleryZone adds a 30% markup on
+            top of the artist&rsquo;s price. You keep a 20% share of that markup
+            as commission, on top of your advance.
           </p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-3 rounded-md border border-border bg-background px-4 py-3.5 text-sm">
         <ExampleFigure label="Listed price" value={WORKED_EXAMPLE.listed} />
-        <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        <ArrowRight
+          className="size-3.5 shrink-0 text-muted-foreground"
+          strokeWidth={1.75}
+        />
         <ExampleFigure label="Platform markup" value={WORKED_EXAMPLE.markup} />
-        <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        <ArrowRight
+          className="size-3.5 shrink-0 text-muted-foreground"
+          strokeWidth={1.75}
+        />
         <ExampleFigure
           label="Your share"
           value={WORKED_EXAMPLE.aggregatorShare}

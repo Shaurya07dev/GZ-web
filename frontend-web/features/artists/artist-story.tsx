@@ -29,7 +29,9 @@ export function ArtistStory({ bio }: ArtistStoryProps) {
 
   return (
     <div>
-      <h2 className="font-display text-xl font-semibold text-foreground">Story</h2>
+      <h2 className="font-display text-xl font-semibold text-foreground">
+        Story
+      </h2>
       <div
         className="prose-story mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground [&_p]:mb-3 [&_p:last-child]:mb-0"
         // eslint-disable-next-line react/no-danger -- sanctioned exception, see comment above

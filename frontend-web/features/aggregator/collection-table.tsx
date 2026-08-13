@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BookmarkCheck, CircleCheckBig, GalleryVerticalEnd, Pencil } from "lucide-react";
+import {
+  BookmarkCheck,
+  CircleCheckBig,
+  GalleryVerticalEnd,
+  Pencil,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -34,8 +39,10 @@ const STATUS_CONFIG: Record<
 
 export function CollectionTable() {
   const { data, isPending, isError } = useAggregatorCollection();
-  const [priceDialogHolding, setPriceDialogHolding] = useState<CollectionRow | null>(null);
-  const [saleDialogHolding, setSaleDialogHolding] = useState<CollectionRow | null>(null);
+  const [priceDialogHolding, setPriceDialogHolding] =
+    useState<CollectionRow | null>(null);
+  const [saleDialogHolding, setSaleDialogHolding] =
+    useState<CollectionRow | null>(null);
 
   if (isPending) {
     return (
@@ -85,7 +92,10 @@ export function CollectionTable() {
               const isSold = holding.status === "sold_pending_settlement";
               const status = STATUS_CONFIG[holding.status];
               return (
-                <tr key={holding.id} className="border-b border-border last:border-0">
+                <tr
+                  key={holding.id}
+                  className="border-b border-border last:border-0"
+                >
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
@@ -115,18 +125,29 @@ export function CollectionTable() {
                       disabled={isSold}
                       className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 -ml-1.5 transition-colors enabled:hover:bg-muted disabled:cursor-not-allowed"
                     >
-                      <PriceTag amount={holding.displayPrice} className="text-sm" />
+                      <PriceTag
+                        amount={holding.displayPrice}
+                        className="text-sm"
+                      />
                       {!isSold && (
-                        <Pencil className="size-3 text-muted-foreground" strokeWidth={1.75} />
+                        <Pencil
+                          className="size-3 text-muted-foreground"
+                          strokeWidth={1.75}
+                        />
                       )}
                     </button>
                   </td>
 
                   <td className="px-4 py-3.5">
                     {isSold ? (
-                      <span className="text-xs text-muted-foreground">&mdash;</span>
+                      <span className="text-xs text-muted-foreground">
+                        &mdash;
+                      </span>
                     ) : (
-                      <ExpiryCountdown expiresAt={holding.expiresAt} className="w-32" />
+                      <ExpiryCountdown
+                        expiresAt={holding.expiresAt}
+                        className="w-32"
+                      />
                     )}
                   </td>
 

@@ -32,7 +32,9 @@ export function VerificationProgress() {
               >
                 Tier {tier.tier}: {tier.title}
               </p>
-              <p className="text-xs text-muted-foreground">{tier.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {tier.description}
+              </p>
             </div>
           </li>
         ))}

@@ -21,7 +21,7 @@
 - **Artist's private `artist_price` is never rendered anywhere in public-facing UI** — only `customer_price` (the +30%+GST public price). This is a real platform rule (SAD §8.7), not a style preference — the mock `Artwork` type should not even carry `artistPrice` as a field consumed by any public/customer-facing component.
 - **Forms use `Field`/`Controller`, not `Form`/`FormField`.** This project's shadcn style has no real `form` component (see Task 1's execution note) — build every form with React Hook Form's `Controller` wrapping shadcn's `Field`/`FieldLabel`/`FieldError` primitives instead.
 - **Only one `next dev` process can run per checkout at a time** (confirmed empirically — Next 16's Turbopack holds a project-wide lock regardless of `-p` port). If you're one of several agents working in parallel and a dev server refused to start because another is already running, don't fight over the lock: use `curl` against whichever port is already live to check your own routes (Next hot-reloads all agents' file changes into the same running instance), or fall back to `npx tsc --noEmit` plus a manual code read as your verification. Note in your report which verification path you actually used — no browser/screenshot tool has been available to agents so far, so "verify in browser" has in practice meant curl + type-check, not an eyeballed visual check; say so plainly rather than implying a visual check happened when it didn't.
-- **Use the Linux Node toolchain, and use `--webpack` for the dev server.** This WSL box's default `npm`/`npx` resolve to a Windows Node install that breaks on this project's paths — prepend `/home/yashm/.nvm/versions/node/v24.19.0/bin` to `PATH` first. Separately, and more importantly: **Turbopack (this project's default dev bundler) has a confirmed, reproducible bug in this environment** — it crashes with `FATAL: ... spawning node pooled process — No such file or directory (os error 2)` while compiling `app/globals.css`, turning every single route into a 500 (verified directly, consistently reproducible, not a flaky one-off, not fixed by adjusting `PATH`). Compiling with webpack instead avoids it entirely and renders correctly. Always start the dev server as `node_modules/.bin/next dev --webpack -p <port>` (or `npm run dev -- --webpack -p <port>`) — never bare `next dev` — for every verification step in every task from here on. Two earlier agents (Tasks 1 and 4) reported clean boots without this flag; that was not a real pass — they didn't hit the bug by chance, most likely due to a caching or timing difference, not because the underlying crash is avoidable without `--webpack`. Do not trust a bare-Turbopack "✓ Ready" as confirmation that pages actually render — always follow up with a `curl` that inspects response status *and* body content, not just that the process started.
+- **Use the Linux Node toolchain, and use `--webpack` for the dev server.** This WSL box's default `npm`/`npx` resolve to a Windows Node install that breaks on this project's paths — prepend `/home/yashm/.nvm/versions/node/v24.19.0/bin` to `PATH` first. Separately, and more importantly: **Turbopack (this project's default dev bundler) has a confirmed, reproducible bug in this environment** — it crashes with `FATAL: ... spawning node pooled process — No such file or directory (os error 2)` while compiling `app/globals.css`, turning every single route into a 500 (verified directly, consistently reproducible, not a flaky one-off, not fixed by adjusting `PATH`). Compiling with webpack instead avoids it entirely and renders correctly. Always start the dev server as `node_modules/.bin/next dev --webpack -p <port>` (or `npm run dev -- --webpack -p <port>`) — never bare `next dev` — for every verification step in every task from here on. Two earlier agents (Tasks 1 and 4) reported clean boots without this flag; that was not a real pass — they didn't hit the bug by chance, most likely due to a caching or timing difference, not because the underlying crash is avoidable without `--webpack`. Do not trust a bare-Turbopack "✓ Ready" as confirmation that pages actually render — always follow up with a `curl` that inspects response status _and_ body content, not just that the process started.
 - **Commit after every task.** If `git commit` fails with `insufficient permission for adding an object to repository database .git/objects`, this is a known pre-existing environment issue (root-owned `.git/objects` entries) unrelated to your change — stage the work, note the failed commit in your task report, and continue to the next task rather than attempting `sudo`/ownership workarounds yourself.
 
 ---
@@ -31,10 +31,12 @@
 ### Task 1: New shadcn primitives + Sonner toaster
 
 **Files:**
+
 - Create (via CLI, not hand-authored): `components/ui/checkbox.tsx`, `components/ui/field.tsx`, `components/ui/alert.tsx`, `components/ui/sonner.tsx`, `components/ui/dialog.tsx`, `components/ui/accordion.tsx`, `components/ui/skeleton.tsx`
 - Modify: `app/layout.tsx`
 
 **Interfaces:**
+
 - Produces: standard shadcn exports for each primitive (e.g. `Checkbox`, `Field`/`FieldLabel`/`FieldDescription`/`FieldError`/`FieldGroup`/`FieldSet`/`FieldContent` (see note below), `Alert`/`AlertTitle`/`AlertDescription`, `Dialog`/`DialogContent`/`DialogTrigger`, `Accordion`/`AccordionItem`/`AccordionTrigger`/`AccordionContent`, `Skeleton`), plus a mounted `<Toaster />` and `toast` importable anywhere via `import { toast } from "sonner"`.
 
 > **Update from Task 1 execution:** this project's shadcn style (`base-nova`, built on `@base-ui/react`) has **no real `form` registry item** — `npx shadcn add form` is a silent no-op (confirmed: the registry entry for this style is an empty stub). The actual, currently-documented pattern for this style is `Field`/`FieldLabel`/`FieldDescription`/`FieldError`/`FieldGroup`/`FieldSet`/`FieldLegend`/`FieldSeparator`/`FieldContent`/`FieldTitle`, composed directly with React Hook Form's own `Controller` — **not** a `FormField`/`FormControl` context wrapper. Every later task that builds a form (Tasks 7, 8, 9, and the Aggregator dialogs in Tasks 23-24) must use `Controller` + `<Field data-invalid={fieldState.invalid}>` + `<FieldLabel>` + `<FieldError errors={[fieldState.error]}>`, not the classic API. Install `field`, not `form`.
@@ -42,9 +44,11 @@
 - [ ] **Step 1: Install the primitives via the shadcn CLI**
 
 Run from `frontend-web/`:
+
 ```bash
 npx shadcn@latest add checkbox field alert sonner dialog accordion skeleton
 ```
+
 This project already has `components.json` configured (`style: base-nova`, `baseColor: neutral`, no Tailwind prefix) — the CLI will match existing conventions automatically. If the CLI errors or the flag syntax differs from what's shown here, run `npx shadcn@latest add --help` and adjust — this is a newer major version of the `shadcn` package (`^4.16.2`) and syntax may have moved since training data.
 
 - [ ] **Step 2: Wire the Toaster into the root layout**
@@ -67,22 +71,34 @@ git commit -m "feat: add checkbox/form/alert/sonner/dialog/accordion/skeleton pr
 ### Task 2: Mock data types, fixtures, and helpers
 
 **Files:**
+
 - Create: `types/artwork.ts`, `types/artist.ts`, `types/aggregator.ts`
 - Create: `lib/mock-utils.ts`
 - Create: `lib/mock-data/artworks.ts`, `lib/mock-data/artists.ts`, `lib/mock-data/aggregator-holdings.ts`, `lib/mock-data/helpers.ts`
 
 **Interfaces:**
+
 - Consumes: nothing (this is the base layer).
 - Produces: every type and fixture-access function listed below — every later task in every track imports from here.
 
 - [ ] **Step 1: Write the shared types**
 
 `types/artwork.ts`:
+
 ```ts
 export type ArtworkStatus =
-  | "draft" | "pending_approval" | "marketplace" | "reserved"
-  | "preparing_dispatch" | "in_transit" | "with_aggregator" | "sold"
-  | "settlement_complete" | "delivered" | "completed" | "returned";
+  | "draft"
+  | "pending_approval"
+  | "marketplace"
+  | "reserved"
+  | "preparing_dispatch"
+  | "in_transit"
+  | "with_aggregator"
+  | "sold"
+  | "settlement_complete"
+  | "delivered"
+  | "completed"
+  | "returned";
 
 export type ListingType = "marketplace_only" | "marketplace_and_aggregator";
 
@@ -141,6 +157,7 @@ export interface ArtworkFilters {
 ```
 
 `types/artist.ts`:
+
 ```ts
 export interface ArtistSocialLink {
   platform: "instagram" | "youtube" | "x" | "tiktok";
@@ -163,11 +180,14 @@ export interface ArtistProfile {
 }
 
 export function verifiedTierCount(v: ArtistVerificationState): 0 | 1 | 2 | 3 {
-  return ([v.tier1SocialMedia, v.tier2ActivePlan, v.tier3FirstSale].filter(Boolean).length) as 0 | 1 | 2 | 3;
+  return [v.tier1SocialMedia, v.tier2ActivePlan, v.tier3FirstSale].filter(
+    Boolean,
+  ).length as 0 | 1 | 2 | 3;
 }
 ```
 
 `types/aggregator.ts`:
+
 ```ts
 export interface AggregatorHolding {
   id: string; // assignment id
@@ -186,7 +206,12 @@ export interface RecordSalePayload {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
-  deliveryAddress: { line1: string; city: string; state: string; pincode: string };
+  deliveryAddress: {
+    line1: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
   deliveryMode: "courier" | "self_pickup";
 }
 ```
@@ -199,7 +224,9 @@ export function mockDelay<T>(data: T, ms = 600): Promise<T> {
 }
 
 export function mockError(message: string, ms = 600): Promise<never> {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms));
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(message)), ms),
+  );
 }
 ```
 
@@ -219,13 +246,32 @@ import type { ArtistProfile } from "@/types/artist";
 import { mockArtworks } from "./artworks";
 import { mockArtists } from "./artists";
 
-export function getArtworkById(id: string): Artwork | undefined { /* ... */ }
-export function getArtworksByArtist(artistId: string): Artwork[] { /* ... */ }
-export function getArtistById(id: string): ArtistProfile | undefined { /* ... */ }
-export function toSummary(artwork: Artwork): ArtworkSummary { /* strip detail fields */ }
-export function filterArtworks(artworks: Artwork[], filters: ArtworkFilters): Artwork[] { /* category/price/medium/query */ }
-export function sortArtworks(artworks: Artwork[], sortBy: ArtworkFilters["sortBy"]): Artwork[] { /* ... */ }
+export function getArtworkById(id: string): Artwork | undefined {
+  /* ... */
+}
+export function getArtworksByArtist(artistId: string): Artwork[] {
+  /* ... */
+}
+export function getArtistById(id: string): ArtistProfile | undefined {
+  /* ... */
+}
+export function toSummary(artwork: Artwork): ArtworkSummary {
+  /* strip detail fields */
+}
+export function filterArtworks(
+  artworks: Artwork[],
+  filters: ArtworkFilters,
+): Artwork[] {
+  /* category/price/medium/query */
+}
+export function sortArtworks(
+  artworks: Artwork[],
+  sortBy: ArtworkFilters["sortBy"],
+): Artwork[] {
+  /* ... */
+}
 ```
+
 Implement each with real logic (straightforward `.filter`/`.sort`/`.find` — no placeholders).
 
 - [ ] **Step 5: Verify**
@@ -244,11 +290,13 @@ git commit -m "feat: add mock data types, fixtures, and query helpers"
 ### Task 3: Shared display components + wishlist store
 
 **Files:**
+
 - Create: `components/shared/artwork-card.tsx`, `components/shared/artwork-card-skeleton.tsx`, `components/shared/price-tag.tsx`, `components/shared/verified-badge.tsx`, `components/shared/empty-state.tsx`
 - Create: `store/useWishlistStore.ts`
 - Modify: `lib/utils.ts` (add `formatINR`)
 
 **Interfaces:**
+
 - Consumes: `ArtworkSummary`, `ArtistVerificationState`, `verifiedTierCount` (Task 2).
 - Produces:
   - `formatINR(amount: number): string`
@@ -295,15 +343,17 @@ export const useWishlistStore = create<WishlistState>()(
         })),
       has: (artworkId) => get().ids.includes(artworkId),
     }),
-    { name: "gz-wishlist" }
-  )
+    { name: "gz-wishlist" },
+  ),
 );
 ```
+
 This is a deliberate, scoped exception to "server data never lives in Zustand" (SAD §5.5) — there is no server yet. It gets replaced by real query/mutation state once a `/wishlist` API exists (see spec §5).
 
 - [ ] **Step 3: Implement `ArtworkCard`, `ArtworkCardSkeleton`, `PriceTag`, `VerifiedBadge`, `EmptyState`**
 
 Each is a small, focused component (SAD §5.2 caps components around 250-300 lines):
+
 - `ArtworkCard`: thumbnail (next/image), title, artist name + `VerifiedBadge` if `verifiedArtist`, `PriceTag`, insured badge if `insured`, wishlist heart button (uses `useWishlistStore`, `e.preventDefault()`/`stopPropagation()` so it doesn't trigger the card's own link navigation), whole card links to `/marketplace/${id}`. If `status !== "marketplace"`, render a status badge ("Reserved"/"Sold") and visually de-emphasize (reduced opacity or grayscale treatment) with the wishlist/navigation still functional (a sold artwork's detail page still exists) — apply the design-taste-frontend/emil-design-eng skills for the actual visual treatment per the Global Constraints.
 - `ArtworkCardSkeleton`: same footprint as `ArtworkCard` using the new `Skeleton` primitive, for loading states.
 - `PriceTag`: renders `formatINR(amount)`, monospace/tabular-nums for alignment in grids.
@@ -326,10 +376,12 @@ git commit -m "feat: add shared ArtworkCard/PriceTag/VerifiedBadge/EmptyState an
 ### Task 4: Global nav integration + coming-soon stubs
 
 **Files:**
+
 - Modify: `components/site-header.tsx`, `components/site-footer-data.ts`
 - Create: `app/account/page.tsx`, `app/checkout/page.tsx`
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: working (non-dangling) nav links to every route this plan will create; `/account` and `/checkout` stub pages that later tasks (Auth login redirect, Artwork Detail Buy Now) can link to safely.
 
@@ -363,11 +415,13 @@ git commit -m "feat: add cookie policy footer link and checkout/account stub pag
 ### Task 5: Auth Zod schemas + mock auth service
 
 **Files:**
+
 - Create: `features/auth/schemas/auth-schemas.ts`
 - Create: `services/authService.ts`
 - Create: `hooks/useAuth.ts`
 
 **Interfaces:**
+
 - Consumes: `mockDelay`, `mockError` (Task 2).
 - Produces: `loginSchema`, `registerSchema` (+ per-role refinements), `forgotPasswordSchema`, `resetPasswordSchema` (all Zod); `authService.{login,register,forgotPassword,resetPassword,verifyEmail}`; `useLoginMutation`, `useRegisterMutation`, `useForgotPasswordMutation`, `useResetPasswordMutation`, `useVerifyEmailMutation` (all TanStack `useMutation`).
 
@@ -392,50 +446,66 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
-export const registerBaseSchema = z.object({
-  role: roleSchema,
-  name: z.string().min(2, "Name is too short"),
-  email: z.string().email(),
-  phone: z.string().min(10, "Enter a valid phone number"),
-  password: passwordRule,
-  confirmPassword: z.string(),
-  acceptedTerms: z.literal(true, { message: "You must accept the Terms" }),
-  companyName: z.string().optional(),
-  contactPerson: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-}).refine(
-  (data) => data.role !== "aggregator" || (!!data.companyName && !!data.contactPerson),
-  { message: "Company name and contact person are required", path: ["companyName"] }
-);
+export const registerBaseSchema = z
+  .object({
+    role: roleSchema,
+    name: z.string().min(2, "Name is too short"),
+    email: z.string().email(),
+    phone: z.string().min(10, "Enter a valid phone number"),
+    password: passwordRule,
+    confirmPassword: z.string(),
+    acceptedTerms: z.literal(true, { message: "You must accept the Terms" }),
+    companyName: z.string().optional(),
+    contactPerson: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
+  .refine(
+    (data) =>
+      data.role !== "aggregator" ||
+      (!!data.companyName && !!data.contactPerson),
+    {
+      message: "Company name and contact person are required",
+      path: ["companyName"],
+    },
+  );
 export type RegisterInput = z.infer<typeof registerBaseSchema>;
 
 export const forgotPasswordSchema = z.object({ email: z.string().email() });
 
-export const resetPasswordSchema = z.object({
-  password: passwordRule,
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+export const resetPasswordSchema = z
+  .object({
+    password: passwordRule,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 ```
 
 - [ ] **Step 2: Write the mock service**
 
 `services/authService.ts` — every method takes a validated input plus an optional `simulateError?: boolean` param (the "dev toggle" from spec §3) and returns `mockDelay(...)` on success or `mockError("...")` when `simulateError` is true, with a realistic message per case:
+
 - `login`: error message `"Invalid email or password"`.
 - `register`: error message `"That email is already registered"`.
 - `resetPassword`: error message `"This reset link has expired. Request a new one."`.
 - `verifyEmail`: error message `"This verification link is invalid or has expired."`.
 
 - [ ] **Step 3: Write `hooks/useAuth.ts`** wrapping each service method in `useMutation`, e.g.:
+
 ```ts
 export function useLoginMutation() {
-  return useMutation({ mutationFn: (input: LoginInput & { simulateError?: boolean }) => authService.login(input) });
+  return useMutation({
+    mutationFn: (input: LoginInput & { simulateError?: boolean }) =>
+      authService.login(input),
+  });
 }
 ```
+
 One such hook per service method.
 
 - [ ] **Step 4: Verify**
@@ -454,10 +524,12 @@ git commit -m "feat: add auth validation schemas and mock auth service"
 ### Task 6: AuthLayout shell
 
 **Files:**
+
 - Create: `app/(auth)/layout.tsx`
 - Create: `features/auth/components/auth-layout-panel.tsx`
 
 **Interfaces:**
+
 - Consumes: `mockArtworks` (Task 2, for the rotating showcase imagery).
 - Produces: every page in Tasks 7-10 renders inside this layout automatically (it's a Next.js layout, not an imported component).
 
@@ -483,10 +555,12 @@ git commit -m "feat: add split-screen AuthLayout shell"
 ### Task 7: Register page
 
 **Files:**
+
 - Create: `app/(auth)/register/page.tsx`
 - Create: `features/auth/components/role-select-cards.tsx`, `features/auth/components/register-form.tsx`, `features/auth/data/role-options.ts`
 
 **Interfaces:**
+
 - Consumes: `registerBaseSchema`, `RegisterInput`, `Role`, `useRegisterMutation` (Task 5); `AuthLayout` (Task 6, automatic).
 - Produces: working `/register` and `/register?role=<role>` (already linked from shipped header/footer — this is not optional).
 
@@ -522,10 +596,12 @@ git commit -m "feat: add register page with role picker and dynamic form"
 ### Task 8: Login page
 
 **Files:**
+
 - Create: `app/(auth)/login/page.tsx`
 - Create: `features/auth/components/login-form.tsx`
 
 **Interfaces:**
+
 - Consumes: `loginSchema`, `LoginInput`, `useLoginMutation` (Task 5).
 - Produces: working `/login`.
 
@@ -549,10 +625,12 @@ git commit -m "feat: add login page with demo role-based redirect"
 ### Task 9: Forgot + Reset password pages
 
 **Files:**
+
 - Create: `app/(auth)/forgot-password/page.tsx`, `app/(auth)/reset-password/page.tsx`
 - Create: `features/auth/components/forgot-password-form.tsx`, `features/auth/components/reset-password-form.tsx`, `features/auth/components/password-strength-meter.tsx`
 
 **Interfaces:**
+
 - Consumes: `forgotPasswordSchema`, `resetPasswordSchema`, `useForgotPasswordMutation`, `useResetPasswordMutation` (Task 5).
 - Produces: working `/forgot-password` and `/reset-password?token=...`.
 
@@ -584,10 +662,12 @@ git commit -m "feat: add forgot/reset password flow with strength meter"
 ### Task 10: Verify-email page
 
 **Files:**
+
 - Create: `app/(auth)/verify-email/page.tsx`
 - Create: `features/auth/components/verify-email-status.tsx`
 
 **Interfaces:**
+
 - Consumes: `useVerifyEmailMutation` (Task 5).
 - Produces: working `/verify-email?token=...`.
 
@@ -611,11 +691,13 @@ git commit -m "feat: add verify-email page with success/failure states"
 ### Task 11: Legal pages (Terms, Privacy, Cookies)
 
 **Files:**
+
 - Create: `features/legal/legal-layout.tsx`, `features/legal/legal-toc.tsx`
 - Create: `features/legal/data/terms-sections.ts`, `features/legal/data/privacy-sections.ts`, `features/legal/data/cookies-sections.ts`
 - Create: `app/terms/page.tsx`, `app/privacy/page.tsx`, `app/cookies/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `SiteHeader`, `SiteFooter` (existing).
 - Produces: working `/terms`, `/privacy`, `/cookies` (both already linked from the shipped footer).
 
@@ -626,6 +708,7 @@ git commit -m "feat: add verify-email page with success/failure states"
 - [ ] **Step 2: Write `terms-sections.ts`**
 
 Draft real content, generalized from artist-only to all three roles, from the actual MOU clauses in `Artist Complete workflow.md`:
+
 - "Ownership & Rights" — artist/seller retains ownership of the artwork until a confirmed sale; GalleryZone holds non-exclusive promotion and marketing rights for the duration of an active listing.
 - "Exclusivity While Listed" — no listing of the same artwork on another platform while actively listed on GalleryZone.
 - "Eligibility" — work must be 100% handmade/original; no replicas, no AI-generated or digital prints, no NFTs; the lister must own all rights and the work must not infringe any third party's IP.
@@ -661,10 +744,12 @@ git commit -m "feat: add Terms/Privacy/Cookies legal pages"
 ### Task 12: Cookie consent banner
 
 **Files:**
+
 - Create: `components/cookie-consent-banner.tsx`
 - Modify: `app/layout.tsx`
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: a site-wide banner mounted once in the root layout.
 
@@ -692,10 +777,12 @@ git commit -m "feat: add cookie consent banner"
 ### Task 13: `artworkService` + query hooks
 
 **Files:**
+
 - Create: `services/artworkService.ts`
 - Create: `hooks/useArtworks.ts`, `hooks/useArtwork.ts`, `hooks/useArtistProfile.ts`
 
 **Interfaces:**
+
 - Consumes: `mockArtworks`, `mockArtists`, `getArtworkById`, `getArtworksByArtist`, `getArtistById`, `filterArtworks`, `sortArtworks`, `toSummary`, `mockDelay` (Task 2).
 - Produces: `artworkService.{list,get,listByArtist}`, `artistService.get` (small enough to live in the same file), `useArtworks(filters)`, `useArtwork(id)`, `useArtistProfile(id)`, `useArtistArtworks(id)` — all `useQuery`, matching the query-key convention in SAD §5.4 (`['artworks', filters]`, `['artwork', id]`).
 
@@ -703,21 +790,32 @@ git commit -m "feat: add cookie consent banner"
 
 ```ts
 export const artworkService = {
-  list: (filters: ArtworkFilters) => mockDelay(filterArtworks(mockArtworks, filters).map(toSummary).sort(/* per filters.sortBy via sortArtworks first */)),
+  list: (filters: ArtworkFilters) =>
+    mockDelay(
+      filterArtworks(mockArtworks, filters)
+        .map(toSummary)
+        .sort(/* per filters.sortBy via sortArtworks first */),
+    ),
   get: (id: string) => mockDelay(getArtworkById(id)),
-  listByArtist: (artistId: string) => mockDelay(getArtworksByArtist(artistId).map(toSummary)),
+  listByArtist: (artistId: string) =>
+    mockDelay(getArtworksByArtist(artistId).map(toSummary)),
 };
 
 export const artistService = {
   get: (id: string) => mockDelay(getArtistById(id)),
 };
 ```
+
 (Write the real sort-then-filter composition, not this abbreviated sketch.)
 
 - [ ] **Step 2: Implement the hooks**, each a thin `useQuery` wrapper with the exact query keys above, e.g.:
+
 ```ts
 export function useArtworks(filters: ArtworkFilters) {
-  return useQuery({ queryKey: ["artworks", filters], queryFn: () => artworkService.list(filters) });
+  return useQuery({
+    queryKey: ["artworks", filters],
+    queryFn: () => artworkService.list(filters),
+  });
 }
 ```
 
@@ -737,10 +835,12 @@ git commit -m "feat: add artwork/artist mock services and query hooks"
 ### Task 14: Marketplace page
 
 **Files:**
+
 - Create: `app/marketplace/page.tsx`
 - Create: `features/marketplace/marketplace-grid.tsx`, `features/marketplace/marketplace-filters.tsx`, `features/marketplace/marketplace-search-bar.tsx`
 
 **Interfaces:**
+
 - Consumes: `useArtworks` (Task 13); `ArtworkCard`, `ArtworkCardSkeleton`, `EmptyState` (Task 3).
 - Produces: working `/marketplace`.
 
@@ -770,14 +870,16 @@ git commit -m "feat: add marketplace browse page with filters, search, and sort"
 ### Task 15: Artwork Detail page
 
 **Files:**
+
 - Create: `app/marketplace/[artworkId]/page.tsx`
 - Create: `features/marketplace/artwork-gallery.tsx`, `features/marketplace/artwork-info-panel.tsx`, `features/marketplace/related-artworks-rail.tsx`
 
 **Interfaces:**
+
 - Consumes: `useArtwork`, `useArtistArtworks`, `useArtistProfile` (Task 13); `ArtworkCard`, `PriceTag`, `VerifiedBadge`, `useWishlistStore` (Task 3); `getArtworksByArtist` (Task 2, for the "more from this artist" rail, excluding the current artwork).
 - Produces: working `/marketplace/[artworkId]`.
 
-> **Note from Task 3's execution:** `ArtworkSummary`/`Artwork` only carry `verifiedArtist: boolean`, not the artist's full `ArtistVerificationState` — passing that boolean-derived data into `VerifiedBadge` can only ever render the subtle "at least tier 1" mark, never the full "Gold ✦ Verified" pill. To show the artist's *real* tier on this page, call `useArtistProfile(artwork.artistId)` (Task 13) alongside `useArtwork` and pass its `.verification` into `VerifiedBadge`, not a value synthesized from `verifiedArtist`.
+> **Note from Task 3's execution:** `ArtworkSummary`/`Artwork` only carry `verifiedArtist: boolean`, not the artist's full `ArtistVerificationState` — passing that boolean-derived data into `VerifiedBadge` can only ever render the subtle "at least tier 1" mark, never the full "Gold ✦ Verified" pill. To show the artist's _real_ tier on this page, call `useArtistProfile(artwork.artistId)` (Task 13) alongside `useArtwork` and pass its `.verification` into `VerifiedBadge`, not a value synthesized from `verifiedArtist`.
 
 - [ ] **Step 1: Implement `ArtworkGallery`**
 
@@ -809,10 +911,12 @@ git commit -m "feat: add artwork detail page"
 ### Task 16: Artist Public Profile page + Artists directory
 
 **Files:**
+
 - Create: `app/artists/page.tsx`, `app/artists/[artistId]/page.tsx`
 - Create: `features/artists/artist-profile-header.tsx`, `features/artists/artist-story.tsx`, `features/artists/artist-card.tsx`
 
 **Interfaces:**
+
 - Consumes: `useArtistProfile`, `useArtistArtworks` (Task 13); `mockArtists` (Task 2); `VerifiedBadge`, `ArtworkCard` (Task 3).
 - Produces: working `/artists` and `/artists/[artistId]` (both already linked from the shipped footer's "Artists"/Explore column).
 
@@ -846,10 +950,12 @@ git commit -m "feat: add artist directory and public profile pages"
 ### Task 17: Verify / Artwork Passport page
 
 **Files:**
+
 - Create: `app/verify/[artworkId]/page.tsx`
 - Create: `features/verify/artwork-passport-card.tsx`, `features/verify/provenance-timeline.tsx`
 
 **Interfaces:**
+
 - Consumes: `getArtworkById`, `getArtistById` (Task 2).
 - Produces: working `/verify/[artworkId]` (also linked from the Artwork Detail page, Task 15).
 
@@ -883,10 +989,12 @@ git commit -m "feat: add artwork passport verification page"
 ### Task 18: About page
 
 **Files:**
+
 - Create: `app/about/page.tsx`
 - Create: `features/about/about-overview-section.tsx`, `features/about/verification-tiers-section.tsx`, `features/about/tech-features-section.tsx`, `features/about/about-data.ts`
 
 **Interfaces:**
+
 - Consumes: `SiteHeader`, `SiteFooter` (existing).
 - Produces: working `/about` (already linked extensively from the shipped header/footer, including the `#how-it-works` anchor from `SiteHeader`'s "How It Works" link).
 
@@ -913,10 +1021,12 @@ git commit -m "feat: add about page with platform overview and verification expl
 ### Task 19: FAQ page
 
 **Files:**
+
 - Create: `app/faq/page.tsx`
 - Create: `features/faq/faq-tabs.tsx`, `features/faq/faq-data.ts`
 
 **Interfaces:**
+
 - Consumes: `Accordion`/`AccordionItem`/`AccordionTrigger`/`AccordionContent` (Task 1), `Tabs` (existing primitive).
 - Produces: working `/faq` (already linked from the shipped footer's "For Collectors" column).
 
@@ -925,6 +1035,7 @@ Note: `features/landing/faq-data.ts` and `faq-section.tsx` already exist for the
 - [ ] **Step 1: Write `faq-data.ts`**
 
 Structured as `{ audience: "general" | "artists" | "aggregators" | "buyers"; question: string; answer: string }[]`, at least 4 real questions per audience sourced from documented mechanics:
+
 - General: what is GalleryZone, how is pricing kept private, what does "Verified" mean.
 - Artists: the pricing formula (listed price + 30% markup + 5% GST, aggregator gets 20% of the markup), 7-day settlement timing, insurance (recommended above ₹20,000, HDFC ERGO), the 3-tier verification system.
 - Aggregators: the reservation/advance-payment flow (5% or 3% advance), the 30-day display window, commission structure.
@@ -952,10 +1063,12 @@ git commit -m "feat: add FAQ page with audience-tabbed accordions"
 ### Task 20: `aggregatorService` + hooks (including mutations)
 
 **Files:**
+
 - Create: `services/aggregatorService.ts`
 - Create: `hooks/useAggregatorInventory.ts`, `hooks/useAggregatorCollection.ts`, `hooks/useAggregatorDashboard.ts`
 
 **Interfaces:**
+
 - Consumes: `mockArtworks`, `mockAggregatorHoldings`, `getArtworkById`, `mockDelay`, `mockError` (Task 2).
 - Produces: `aggregatorService.{dashboardSummary, listReservableInventory, listCollection, reserve, recordSale}`; `useAggregatorDashboard()`, `useReservableInventory()`, `useAggregatorCollection()`, `useReserveArtworkMutation()`, `useRecordSaleMutation()`.
 
@@ -985,16 +1098,19 @@ git commit -m "feat: add aggregator mock service and hooks"
 ### Task 21: Aggregator layout & shell
 
 **Files:**
+
 - Create: `app/aggregator/layout.tsx`
 - Create: `features/aggregator/aggregator-shell.tsx`, `features/aggregator/aggregator-data.ts`
 
 **Interfaces:**
+
 - Consumes: nothing new (mirrors `DashboardShell`'s pattern, does not import from it — see rationale below).
 - Produces: shared shell wrapping every page in Tasks 22-24.
 
 - [ ] **Step 1: Implement `AggregatorShell`**
 
 Deliberately a parallel sibling to `features/dashboard/dashboard-shell.tsx`, not a shared/generalized abstraction — `DashboardShell` is currently hardcoded to artist nav items and artist-specific data (per its actual source: `NAV_ITEMS` is a local const, not a prop), and generalizing it into a shared `RoleShell` for two current call sites is more abstraction than the situation warrants (YAGNI) and risks regressing the already-shipped, working Artist Dashboard. Copy `DashboardShell`'s structure (Sidebar + Topbar composition, identical Tailwind classes/tokens for visual consistency) into a new file, then adapt:
+
 - Nav items: Dashboard (`/aggregator/dashboard`), Inventory (`/aggregator/inventory`), Collection (`/aggregator/collection`).
 - No "List new artwork" CTA equivalent — aggregators don't create listings.
 - Bottom profile card links to nothing special (no verification page for aggregators in this phase) — just show a static aggregator name/avatar from `aggregator-data.ts` (mirroring `dashboard-data.ts`'s `ARTIST` constant pattern with an `AGGREGATOR` constant: company name, contact person, avatar).
@@ -1017,10 +1133,12 @@ git commit -m "feat: add aggregator portal shell"
 ### Task 22: Aggregator Dashboard page
 
 **Files:**
+
 - Create: `app/aggregator/dashboard/page.tsx`
 - Create: `features/aggregator/aggregator-kpi-cards.tsx`, `features/aggregator/commission-explainer.tsx`
 
 **Interfaces:**
+
 - Consumes: `useAggregatorDashboard` (Task 20); reuses `features/dashboard/recent-activity-feed.tsx`'s pattern for an activity feed (adapt, don't import — same reasoning as Task 21).
 
 - [ ] **Step 1: Implement `AggregatorKpiCards`** — three cards: Active Reservations, Commission Earned (`PriceTag`), Pending Settlements, following the same visual card pattern as the artist dashboard's `KPICard` (reuse `features/dashboard/kpi-cards.tsx`'s component directly if it's already generic over a metric/label/value — check that file first; only fork a copy if it's hardcoded to artist metrics the way `DashboardShell` is).
@@ -1047,10 +1165,12 @@ git commit -m "feat: add aggregator dashboard page"
 ### Task 23: Aggregator Inventory page
 
 **Files:**
+
 - Create: `app/aggregator/inventory/page.tsx`
 - Create: `features/aggregator/reservable-inventory-grid.tsx`, `features/aggregator/reserve-artwork-dialog.tsx`
 
 **Interfaces:**
+
 - Consumes: `useReservableInventory`, `useReserveArtworkMutation` (Task 20); `ArtworkCard`, `EmptyState` (Task 3).
 
 - [ ] **Step 1: Implement `ReservableInventoryGrid`** — grid of reservable artworks (reuse `ArtworkCard`, but each card's action is "Reserve" instead of navigating straight to the detail page — clicking "Reserve" opens `ReserveArtworkDialog` rather than following a link).
@@ -1077,10 +1197,12 @@ git commit -m "feat: add aggregator inventory page with reserve flow"
 ### Task 24: Aggregator Collection page
 
 **Files:**
+
 - Create: `app/aggregator/collection/page.tsx`
 - Create: `features/aggregator/collection-table.tsx`, `features/aggregator/edit-display-price-dialog.tsx`, `features/aggregator/record-sale-dialog.tsx`, `features/aggregator/expiry-countdown.tsx`
 
 **Interfaces:**
+
 - Consumes: `useAggregatorCollection`, `useRecordSaleMutation` (Task 20); `PriceTag`, `formatINR` (Task 3); `RecordSalePayload` (Task 2).
 
 - [ ] **Step 1: Implement `ExpiryCountdown`** — takes `expiresAt: string`, renders a `Progress`-bar-based countdown (elapsed fraction of the 30-day window) plus "X days left" text, visually flagged (e.g. destructive-toned) when under 3 days remain.

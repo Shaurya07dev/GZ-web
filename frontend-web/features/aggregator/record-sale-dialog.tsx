@@ -22,13 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+} from "@/components/ui/field";
 import { useRecordSaleMutation } from "@/hooks/useAggregatorCollection";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
 
 const recordSaleSchema = z.object({
-  soldPrice: z.number({ message: "Enter the sold price" }).positive("Enter a valid price"),
+  soldPrice: z
+    .number({ message: "Enter the sold price" })
+    .positive("Enter a valid price"),
   buyerName: z.string().min(2, "Enter the buyer's name"),
   buyerEmail: z.string().email("Enter a valid email"),
   buyerPhone: z.string().min(10, "Enter a valid phone number"),
@@ -36,7 +43,9 @@ const recordSaleSchema = z.object({
   city: z.string().min(2, "Enter the city"),
   state: z.string().min(2, "Enter the state"),
   pincode: z.string().regex(/^\d{6}$/, "Enter a valid 6-digit pincode"),
-  deliveryMode: z.enum(["courier", "self_pickup"], { message: "Select a delivery mode" }),
+  deliveryMode: z.enum(["courier", "self_pickup"], {
+    message: "Select a delivery mode",
+  }),
 });
 type RecordSaleFormValues = z.infer<typeof recordSaleSchema>;
 
@@ -62,14 +71,14 @@ interface RecordSaleDialogProps {
 // types/aggregator.ts's RecordSalePayload) -- soldPrice/buyer details/
 // delivery address+mode -- with deliveryAddress's four sub-fields flattened
 // for the form and re-nested on submit.
-export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDialogProps) {
+export function RecordSaleDialog({
+  holding,
+  open,
+  onOpenChange,
+}: RecordSaleDialogProps) {
   const recordSaleMutation = useRecordSaleMutation();
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-  } = useForm<RecordSaleFormValues>({
+  const { control, handleSubmit, reset } = useForm<RecordSaleFormValues>({
     resolver: zodResolver(recordSaleSchema),
     defaultValues: EMPTY_VALUES,
   });
@@ -107,7 +116,7 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
         onError: (error) => {
           toast.error(error.message);
         },
-      }
+      },
     );
   }
 
@@ -122,8 +131,8 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
         <DialogHeader>
           <DialogTitle>Record sale</DialogTitle>
           <DialogDescription>
-            &ldquo;{holding.artwork.title}&rdquo; &mdash; matches the buyer
-            and delivery details used to confirm this sale.
+            &ldquo;{holding.artwork.title}&rdquo; &mdash; matches the buyer and
+            delivery details used to confirm this sale.
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +170,12 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="buyerName">Buyer name</FieldLabel>
-                    <Input id="buyerName" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="buyerName"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -172,7 +186,12 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="buyerPhone">Buyer phone</FieldLabel>
-                    <Input id="buyerPhone" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="buyerPhone"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -203,7 +222,12 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="line1">Delivery address</FieldLabel>
-                  <Input id="line1" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                  <Input
+                    id="line1"
+                    className="h-10"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}
@@ -216,7 +240,12 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="city">City</FieldLabel>
-                    <Input id="city" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="city"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -227,7 +256,12 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="state">State</FieldLabel>
-                    <Input id="state" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="state"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -238,7 +272,14 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="pincode">Pincode</FieldLabel>
-                    <Input id="pincode" inputMode="numeric" maxLength={6} className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="pincode"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -251,7 +292,10 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="deliveryMode">Delivery mode</FieldLabel>
-                  <Select value={field.value} onValueChange={(value) => field.onChange(value)}>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => field.onChange(value)}
+                  >
                     <SelectTrigger id="deliveryMode" className="h-10 w-full">
                       <SelectValue placeholder="Select delivery mode" />
                     </SelectTrigger>
@@ -275,7 +319,11 @@ export function RecordSaleDialog({ holding, open, onOpenChange }: RecordSaleDial
           >
             Cancel
           </Button>
-          <Button type="submit" form="record-sale-form" disabled={recordSaleMutation.isPending}>
+          <Button
+            type="submit"
+            form="record-sale-form"
+            disabled={recordSaleMutation.isPending}
+          >
             {recordSaleMutation.isPending ? "Recording…" : "Record sale"}
           </Button>
         </DialogFooter>

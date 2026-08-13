@@ -32,9 +32,9 @@ export function VerificationTiersSection() {
             How verification works.
           </h2>
           <p className="mt-4 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-            Three tiers confirm an artist&rsquo;s identity, activity, and
-            track record, so anyone browsing a listing can see exactly how
-            established the artist is.
+            Three tiers confirm an artist&rsquo;s identity, activity, and track
+            record, so anyone browsing a listing can see exactly how established
+            the artist is.
           </p>
         </motion.div>
 
@@ -91,15 +91,21 @@ function TierNode({
   gold?: boolean;
 }) {
   return (
-    <motion.div variants={fadeUp} transition={{ duration: 0.5, ease: "easeOut" }}>
+    <motion.div
+      variants={fadeUp}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
       <span
         className={cn(
           "relative z-10 flex size-14 shrink-0 items-center justify-center rounded-full border bg-background",
-          gold ? "border-gold bg-gold/15" : "border-gold/40 bg-card"
+          gold ? "border-gold bg-gold/15" : "border-gold/40 bg-card",
         )}
       >
         <Icon
-          className={cn("size-6", gold ? "text-gold-bright" : "text-gold-bright/85")}
+          className={cn(
+            "size-6",
+            gold ? "text-gold-bright" : "text-gold-bright/85",
+          )}
           strokeWidth={1.5}
         />
       </span>
@@ -108,7 +114,7 @@ function TierNode({
         <p
           className={cn(
             "text-xs font-medium tracking-[0.14em]",
-            gold ? "text-gold-bright" : "text-muted-foreground"
+            gold ? "text-gold-bright" : "text-muted-foreground",
           )}
         >
           {label.toUpperCase()}

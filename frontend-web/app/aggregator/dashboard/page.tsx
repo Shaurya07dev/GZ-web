@@ -4,7 +4,7 @@ import { CommissionExplainer } from "@/features/aggregator/commission-explainer"
 import { AggregatorActivityFeed } from "@/features/aggregator/aggregator-activity-feed";
 
 export const metadata: Metadata = {
-  title: "Dashboard — GalleryZone Aggregator Portal",
+  title: "Dashboard | GalleryZone Aggregator Portal",
 };
 
 export default function AggregatorDashboardPage() {

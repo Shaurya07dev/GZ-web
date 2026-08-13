@@ -36,9 +36,8 @@ export default function MarketplacePage() {
               The Marketplace
             </h1>
             <p className="mt-3 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-              Original, verified artwork from independent artists across
-              India. Every piece ships with a signed certificate of
-              authenticity.
+              Original, verified artwork from independent artists across India.
+              Every piece ships with a signed certificate of authenticity.
             </p>
             <MarketplaceSearchBar
               value={filters.query ?? ""}

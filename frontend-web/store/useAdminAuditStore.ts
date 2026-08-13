@@ -22,7 +22,7 @@ import type { AuditLogEntry } from "@/types/admin";
 // ---------------------------------------------------------------------------
 
 interface AdminAuditState {
-  entries: AuditLogEntry[];               // session-appended only, newest first
+  entries: AuditLogEntry[]; // session-appended only, newest first
   append: (entry: Omit<AuditLogEntry, "id" | "createdAt">) => void;
 }
 
@@ -31,7 +31,11 @@ export const useAdminAuditStore = create<AdminAuditState>((set) => ({
   append: (entry) =>
     set((state) => ({
       entries: [
-        { ...entry, id: `audit-${crypto.randomUUID()}`, createdAt: new Date().toISOString() },
+        {
+          ...entry,
+          id: `audit-${crypto.randomUUID()}`,
+          createdAt: new Date().toISOString(),
+        },
         ...state.entries,
       ],
     })),

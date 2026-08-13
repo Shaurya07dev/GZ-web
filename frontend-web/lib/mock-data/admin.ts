@@ -1,4 +1,9 @@
-import type { Artwork, ArtworkImage, ArtworkStatus, SocialProofLink } from "@/types/artwork";
+import type {
+  Artwork,
+  ArtworkImage,
+  ArtworkStatus,
+  SocialProofLink,
+} from "@/types/artwork";
 import { verifiedTierCount } from "@/types/artist";
 import type {
   AdminActivityEvent,
@@ -59,13 +64,23 @@ function daysAgo(days: number): string {
 }
 
 function history(...entries: Array<[ArtworkStatus, number]>) {
-  return entries.map(([status, days]) => ({ status, changedAt: daysAgo(days) }));
+  return entries.map(([status, days]) => ({
+    status,
+    changedAt: daysAgo(days),
+  }));
 }
 
-function artistMeta(artistId: string): { artistName: string; verifiedArtist: boolean } {
+function artistMeta(artistId: string): {
+  artistName: string;
+  verifiedArtist: boolean;
+} {
   const artist = mockArtists.find((a) => a.id === artistId);
-  if (!artist) throw new Error(`mock-data/admin: unknown artistId "${artistId}"`);
-  return { artistName: artist.name, verifiedArtist: verifiedTierCount(artist.verification) > 0 };
+  if (!artist)
+    throw new Error(`mock-data/admin: unknown artistId "${artistId}"`);
+  return {
+    artistName: artist.name,
+    verifiedArtist: verifiedTierCount(artist.verification) > 0,
+  };
 }
 
 const IMG = {
@@ -99,7 +114,7 @@ function images(title: string, files: string[]): ArtworkImage[] {
     url,
     thumbnailUrl: url,
     sortOrder: i,
-    altText: `${title} — ${STAGE_LABELS[i] ?? `detail view ${i + 1}`}`,
+    altText: `${title}, ${STAGE_LABELS[i] ?? `detail view ${i + 1}`}`,
   }));
 }
 
@@ -141,7 +156,12 @@ export const mockPendingArtworks: Artwork[] = [
     images: images("Salt Flat Nocturne", [IMG.portrait, IMG.bird, IMG.eco3]),
     coaCertificateNumber: "GZ-COA-2026-0019",
     coaIssueDate: daysAgo(2),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-salt-flat-nocturne/" }]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-salt-flat-nocturne/",
+      },
+    ]),
     statusHistory: history(["draft", 2], ["pending_approval", 0]),
   },
   {
@@ -160,10 +180,20 @@ export const mockPendingArtworks: Artwork[] = [
       "Painted over six weeks from sketches made during a controlled burn outside Dehradun, breaking the smoke line into the overlapping planes Ishaan has been working with since his stairwell series. The underpainting is left visible along the lower edge where the canvas was cropped after stretching. Full studio session filmed from blank canvas to final coat.",
     dimensions: "30x40 in",
     yearCreated: 2026,
-    images: images("Wildfire Sutra", [IMG.framed, IMG.landscape, IMG.eco1, IMG.journey]),
+    images: images("Wildfire Sutra", [
+      IMG.framed,
+      IMG.landscape,
+      IMG.eco1,
+      IMG.journey,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0020",
     coaIssueDate: daysAgo(4),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-wildfire-sutra" }]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-wildfire-sutra",
+      },
+    ]),
     statusHistory: history(["draft", 4], ["pending_approval", 1]),
   },
   {
@@ -185,7 +215,12 @@ export const mockPendingArtworks: Artwork[] = [
     images: images("Loom Song in Indigo", [IMG.drape, IMG.eco2, IMG.journey]),
     coaCertificateNumber: "GZ-COA-2026-0021",
     coaIssueDate: daysAgo(5),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-loom-song-indigo/" }]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-loom-song-indigo/",
+      },
+    ]),
     statusHistory: history(["draft", 5], ["pending_approval", 2]),
   },
   {
@@ -204,10 +239,21 @@ export const mockPendingArtworks: Artwork[] = [
       "A lost-wax bronze cast in Arjun's family workshop, taking the seated-figure motif he has returned to for years and opening the torso so light passes through it. The surface is left in its raw pour patina with the sprue marks ground back by hand rather than machine-finished. Filmed from wax model through to the final pour.",
     dimensions: "20 in H x 11 in W x 8 in D",
     yearCreated: 2026,
-    images: images("Foundry Light Study", [IMG.busts, IMG.drape, IMG.pyramid, IMG.eco3, IMG.bird]),
+    images: images("Foundry Light Study", [
+      IMG.busts,
+      IMG.drape,
+      IMG.pyramid,
+      IMG.eco3,
+      IMG.bird,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0022",
     coaIssueDate: daysAgo(8),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-foundry-light" }]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-foundry-light",
+      },
+    ]),
     statusHistory: history(["draft", 8], ["pending_approval", 3]),
   },
   {
@@ -226,10 +272,19 @@ export const mockPendingArtworks: Artwork[] = [
       "An etching of the last Hooghly ferry of the night pulling away from the ghat, bitten in three stages on a copper plate to push the water further into shadow than earlier prints in the series. Hand-inked and pulled individually on a proofing press. Numbered 4 of 14.",
     dimensions: "12x18 in",
     yearCreated: 2026,
-    images: images("Ferry Whistle Nocturne", [IMG.pyramid, IMG.busts, IMG.eco2]),
+    images: images("Ferry Whistle Nocturne", [
+      IMG.pyramid,
+      IMG.busts,
+      IMG.eco2,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0023",
     coaIssueDate: daysAgo(9),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-ferry-whistle/" }]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-ferry-whistle/",
+      },
+    ]),
     statusHistory: history(["draft", 9], ["pending_approval", 4]),
   },
   {
@@ -248,10 +303,21 @@ export const mockPendingArtworks: Artwork[] = [
       "Painted from the Nagapattinam shoreline in the week after a cyclone crossed it, working wet-into-wet to hold the flattened, over-bright light that follows a storm. The debris line along the foreground is built in palette-knife impasto against an otherwise thinly glazed canvas. Ships with a signed Certificate of Authenticity and a studio video of the varnishing pass.",
     dimensions: "28x38 in",
     yearCreated: 2026,
-    images: images("After the Cyclone", [IMG.landscape, IMG.framed, IMG.idPaint, IMG.journey, IMG.eco1]),
+    images: images("After the Cyclone", [
+      IMG.landscape,
+      IMG.framed,
+      IMG.idPaint,
+      IMG.journey,
+      IMG.eco1,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0024",
     coaIssueDate: daysAgo(11),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-after-the-cyclone/" }]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-after-the-cyclone/",
+      },
+    ]),
     statusHistory: history(["draft", 11], ["pending_approval", 6]),
   },
   {
@@ -270,10 +336,20 @@ export const mockPendingArtworks: Artwork[] = [
       "Sheet-metal offcuts from a Hyderabad scrapyard, welded into an overlapping leaf structure on a plywood panel and left under wet cloths for three weeks so the oxidation runs unevenly before sealing. Priya works without a finished drawing, cutting and placing each piece against the last. The final colour is a product of the rusting, not of applied pigment alone.",
     dimensions: "28 in H x 36 in W x 4 in D",
     yearCreated: 2026,
-    images: images("Oxide Garden Panel", [IMG.busts, IMG.pyramid, IMG.drape, IMG.eco2]),
+    images: images("Oxide Garden Panel", [
+      IMG.busts,
+      IMG.pyramid,
+      IMG.drape,
+      IMG.eco2,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0025",
     coaIssueDate: daysAgo(14),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-oxide-garden" }]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-oxide-garden",
+      },
+    ]),
     statusHistory: history(["draft", 14], ["pending_approval", 8]),
   },
   {
@@ -292,10 +368,20 @@ export const mockPendingArtworks: Artwork[] = [
       "The third booth in Kavya's series on Bengaluru's single-screen cinemas, photographed mid reel-change with only the projector lamp lighting the room. Shot on medium-format film, hand-processed, and printed on archival cotton rag in an edition of nine. Signed and numbered on the reverse.",
     dimensions: "20x24 in",
     yearCreated: 2026,
-    images: images("Projection Booth No. 3", [IMG.bird, IMG.portrait, IMG.eco1, IMG.journey]),
+    images: images("Projection Booth No. 3", [
+      IMG.bird,
+      IMG.portrait,
+      IMG.eco1,
+      IMG.journey,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0026",
     coaIssueDate: daysAgo(16),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-projection-booth-3/" }]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-projection-booth-3/",
+      },
+    ]),
     statusHistory: history(["draft", 16], ["pending_approval", 11]),
   },
   {
@@ -314,10 +400,22 @@ export const mockPendingArtworks: Artwork[] = [
       "Carved from a rejected Makrana block that cracked at the quarry, keeping the original fracture as the spine of the form rather than cutting around it. Hand-worked over eleven weeks with no mechanical finishing on the final passes, so the tool rhythm stays legible across the polished faces. Base included.",
     dimensions: "19 in H x 14 in W x 9 in D",
     yearCreated: 2025,
-    images: images("Quarry Fragment II", [IMG.drape, IMG.busts, IMG.pyramid, IMG.eco3, IMG.bird, IMG.portrait]),
+    images: images("Quarry Fragment II", [
+      IMG.drape,
+      IMG.busts,
+      IMG.pyramid,
+      IMG.eco3,
+      IMG.bird,
+      IMG.portrait,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0027",
     coaIssueDate: daysAgo(21),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-quarry-fragment-2" }]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-quarry-fragment-2",
+      },
+    ]),
     statusHistory: history(["draft", 21], ["pending_approval", 14]),
   },
 
@@ -338,7 +436,11 @@ export const mockPendingArtworks: Artwork[] = [
       "Three panels painted as one continuous view of a drying riverbed, intended to hang with a hand's width between them so the gap reads as part of the composition. Still in progress: the third panel's foreground has been reworked twice and Meera has not yet signed the set.",
     dimensions: "3 panels, 18x24 in each",
     yearCreated: 2026,
-    images: images("River Stone Triptych", [IMG.idPaint, IMG.landscape, IMG.framed]),
+    images: images("River Stone Triptych", [
+      IMG.idPaint,
+      IMG.landscape,
+      IMG.framed,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0028",
     coaIssueDate: daysAgo(3),
     socialProofLinks: social([]),
@@ -357,7 +459,7 @@ export const mockPendingArtworks: Artwork[] = [
     status: "draft",
     listingType: "marketplace_only",
     description:
-      "A small study working the border stitch her grandmother taught her into a grid rather than an edge, dyed with marigold and pomegranate rind from the family kitchen garden. Photographed but not yet submitted — Ananya is waiting to finish the matching second panel.",
+      "A small study working the border stitch her grandmother taught her into a grid rather than an edge, dyed with marigold and pomegranate rind from the family kitchen garden. Photographed but not yet submitted. Ananya is waiting to finish the matching second panel.",
     dimensions: "14x18 in",
     yearCreated: 2026,
     images: images("Warp and Weft No. 4", [IMG.drape, IMG.eco3, IMG.journey]),
@@ -381,14 +483,27 @@ export const mockPendingArtworks: Artwork[] = [
     status: "returned",
     listingType: "marketplace_only",
     description:
-      "A smaller companion study to Ishaan's stairwell series, worked in a narrower palette across four sessions. Returned to the artist after review for re-photography — the submitted images were shot under mixed lighting and did not show the surface accurately.",
+      "A smaller companion study to Ishaan's stairwell series, worked in a narrower palette across four sessions. Returned to the artist after review for re-photography. The submitted images were shot under mixed lighting and did not show the surface accurately.",
     dimensions: "20x24 in",
     yearCreated: 2026,
-    images: images("Chromatic Drift Study", [IMG.framed, IMG.eco2, IMG.landscape]),
+    images: images("Chromatic Drift Study", [
+      IMG.framed,
+      IMG.eco2,
+      IMG.landscape,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0030",
     coaIssueDate: daysAgo(12),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-chromatic-drift" }]),
-    statusHistory: history(["draft", 12], ["pending_approval", 9], ["returned", 5]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-chromatic-drift",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 12],
+      ["pending_approval", 9],
+      ["returned", 5],
+    ),
   },
   {
     id: "paper-lantern-series-i",
@@ -406,11 +521,25 @@ export const mockPendingArtworks: Artwork[] = [
       "A two-colour linocut of paper lanterns strung across a Kalighat lane, hand-cut and printed in two registered passes on a proofing press. Delisted at the artist's request while he reworks the second colour block; the edition will be re-submitted once the new pulls are complete.",
     dimensions: "12x16 in",
     yearCreated: 2025,
-    images: images("Paper Lantern Series I", [IMG.busts, IMG.pyramid, IMG.eco1]),
+    images: images("Paper Lantern Series I", [
+      IMG.busts,
+      IMG.pyramid,
+      IMG.eco1,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0031",
     coaIssueDate: daysAgo(74),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-paper-lantern-1/" }]),
-    statusHistory: history(["draft", 74], ["pending_approval", 70], ["marketplace", 64], ["returned", 26]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-paper-lantern-1/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 74],
+      ["pending_approval", 70],
+      ["marketplace", 64],
+      ["returned", 26],
+    ),
   },
 ];
 
@@ -437,20 +566,58 @@ interface ArtistAdminMeta {
 }
 
 const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
-  "meera-nair": { status: "active", kycStatus: "approved", joinedDaysAgo: 340, lastLoginDaysAgo: 1 },
-  "arjun-mehta": { status: "active", kycStatus: "approved", joinedDaysAgo: 322, lastLoginDaysAgo: 2 },
+  "meera-nair": {
+    status: "active",
+    kycStatus: "approved",
+    joinedDaysAgo: 340,
+    lastLoginDaysAgo: 1,
+  },
+  "arjun-mehta": {
+    status: "active",
+    kycStatus: "approved",
+    joinedDaysAgo: 322,
+    lastLoginDaysAgo: 2,
+  },
   // Tier-1 only and still mid-review — this is one of the KYC queue's rows.
-  "kavya-iyer": { status: "active", kycStatus: "under_review", joinedDaysAgo: 58, lastLoginDaysAgo: 0 },
-  "rohan-bhattacharya": { status: "active", kycStatus: "approved", joinedDaysAgo: 128, lastLoginDaysAgo: 4 },
+  "kavya-iyer": {
+    status: "active",
+    kycStatus: "under_review",
+    joinedDaysAgo: 58,
+    lastLoginDaysAgo: 0,
+  },
+  "rohan-bhattacharya": {
+    status: "active",
+    kycStatus: "approved",
+    joinedDaysAgo: 128,
+    lastLoginDaysAgo: 4,
+  },
   // Zero tiers, joined this month — matches her public bio exactly.
-  "ananya-deshmukh": { status: "active", kycStatus: "submitted", joinedDaysAgo: 26, lastLoginDaysAgo: 1 },
-  "ishaan-kapoor": { status: "active", kycStatus: "approved", joinedDaysAgo: 190, lastLoginDaysAgo: 6 },
-  "priya-subramaniam": { status: "active", kycStatus: "approved", joinedDaysAgo: 214, lastLoginDaysAgo: 9 },
+  "ananya-deshmukh": {
+    status: "active",
+    kycStatus: "submitted",
+    joinedDaysAgo: 26,
+    lastLoginDaysAgo: 1,
+  },
+  "ishaan-kapoor": {
+    status: "active",
+    kycStatus: "approved",
+    joinedDaysAgo: 190,
+    lastLoginDaysAgo: 6,
+  },
+  "priya-subramaniam": {
+    status: "active",
+    kycStatus: "approved",
+    joinedDaysAgo: 214,
+    lastLoginDaysAgo: 9,
+  },
 };
 
 const derivedArtistUsers: AdminUser[] = mockArtists.map((artist, i) => {
   const meta = ARTIST_ADMIN_META[artist.id];
-  if (!meta) throw new Error(`mock-data/admin: no admin metadata for artist "${artist.id}"`);
+  if (!meta)
+    throw new Error(
+      `mock-data/admin: no admin metadata for artist "${artist.id}"`,
+    );
   return {
     id: `user-${artist.id}`,
     name: artist.name,
@@ -661,7 +828,11 @@ export const mockAdminUsers: AdminUser[] = [
 export const KYC_QUEUE_STATUSES: KycStatus[] = ["submitted", "under_review"];
 
 export function isInKycQueue(user: AdminUser): boolean {
-  return user.role === "artist" && !!user.kycStatus && KYC_QUEUE_STATUSES.includes(user.kycStatus);
+  return (
+    user.role === "artist" &&
+    !!user.kycStatus &&
+    KYC_QUEUE_STATUSES.includes(user.kycStatus)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -684,37 +855,138 @@ interface WithdrawalSeed {
 }
 
 const WITHDRAWAL_SEEDS: WithdrawalSeed[] = [
-  { id: "wd-1001", userId: "user-meera-nair", amount: 42500, bankAccountMasked: "XXXXXXXX4417", walletBalance: 58300, status: "pending", requestedDaysAgo: 2, processedDaysAgo: null },
-  { id: "wd-1002", userId: "user-arjun-mehta", amount: 96000, bankAccountMasked: "XXXXXXXX8820", walletBalance: 96000, status: "pending", requestedDaysAgo: 4, processedDaysAgo: null },
-  { id: "wd-1003", userId: "user-agg-verandah", amount: 31200, bankAccountMasked: "XXXXXXXX1174", walletBalance: 27600, status: "pending", requestedDaysAgo: 1, processedDaysAgo: null },
-  { id: "wd-1004", userId: "user-artist-devika-rao", amount: 12800, bankAccountMasked: "XXXXXXXX6903", walletBalance: 21450, status: "pending", requestedDaysAgo: 6, processedDaysAgo: null },
-  { id: "wd-1005", userId: "user-priya-subramaniam", amount: 64300, bankAccountMasked: "XXXXXXXX3355", walletBalance: 71900, status: "completed", requestedDaysAgo: 19, processedDaysAgo: 17 },
-  { id: "wd-1006", userId: "user-agg-kala-collective", amount: 24000, bankAccountMasked: "XXXXXXXX7742", walletBalance: 48150, status: "completed", requestedDaysAgo: 31, processedDaysAgo: 29 },
-  { id: "wd-1007", userId: "user-ishaan-kapoor", amount: 18600, bankAccountMasked: "XXXXXXXX2098", walletBalance: 26700, status: "completed", requestedDaysAgo: 45, processedDaysAgo: 44 },
-  { id: "wd-1008", userId: "user-artist-lata-menon", amount: 5000, bankAccountMasked: "XXXXXXXX9061", walletBalance: 5000, status: "rejected", requestedDaysAgo: 22, processedDaysAgo: 20 },
-  { id: "wd-1009", userId: "user-rohan-bhattacharya", amount: 9400, bankAccountMasked: "XXXXXXXX5527", walletBalance: 14200, status: "rejected", requestedDaysAgo: 12, processedDaysAgo: 11 },
-  { id: "wd-1010", userId: "user-agg-fort-kochi", amount: 52000, bankAccountMasked: "XXXXXXXX4183", walletBalance: 61300, status: "failed", requestedDaysAgo: 8, processedDaysAgo: 7 },
+  {
+    id: "wd-1001",
+    userId: "user-meera-nair",
+    amount: 42500,
+    bankAccountMasked: "XXXXXXXX4417",
+    walletBalance: 58300,
+    status: "pending",
+    requestedDaysAgo: 2,
+    processedDaysAgo: null,
+  },
+  {
+    id: "wd-1002",
+    userId: "user-arjun-mehta",
+    amount: 96000,
+    bankAccountMasked: "XXXXXXXX8820",
+    walletBalance: 96000,
+    status: "pending",
+    requestedDaysAgo: 4,
+    processedDaysAgo: null,
+  },
+  {
+    id: "wd-1003",
+    userId: "user-agg-verandah",
+    amount: 31200,
+    bankAccountMasked: "XXXXXXXX1174",
+    walletBalance: 27600,
+    status: "pending",
+    requestedDaysAgo: 1,
+    processedDaysAgo: null,
+  },
+  {
+    id: "wd-1004",
+    userId: "user-artist-devika-rao",
+    amount: 12800,
+    bankAccountMasked: "XXXXXXXX6903",
+    walletBalance: 21450,
+    status: "pending",
+    requestedDaysAgo: 6,
+    processedDaysAgo: null,
+  },
+  {
+    id: "wd-1005",
+    userId: "user-priya-subramaniam",
+    amount: 64300,
+    bankAccountMasked: "XXXXXXXX3355",
+    walletBalance: 71900,
+    status: "completed",
+    requestedDaysAgo: 19,
+    processedDaysAgo: 17,
+  },
+  {
+    id: "wd-1006",
+    userId: "user-agg-kala-collective",
+    amount: 24000,
+    bankAccountMasked: "XXXXXXXX7742",
+    walletBalance: 48150,
+    status: "completed",
+    requestedDaysAgo: 31,
+    processedDaysAgo: 29,
+  },
+  {
+    id: "wd-1007",
+    userId: "user-ishaan-kapoor",
+    amount: 18600,
+    bankAccountMasked: "XXXXXXXX2098",
+    walletBalance: 26700,
+    status: "completed",
+    requestedDaysAgo: 45,
+    processedDaysAgo: 44,
+  },
+  {
+    id: "wd-1008",
+    userId: "user-artist-lata-menon",
+    amount: 5000,
+    bankAccountMasked: "XXXXXXXX9061",
+    walletBalance: 5000,
+    status: "rejected",
+    requestedDaysAgo: 22,
+    processedDaysAgo: 20,
+  },
+  {
+    id: "wd-1009",
+    userId: "user-rohan-bhattacharya",
+    amount: 9400,
+    bankAccountMasked: "XXXXXXXX5527",
+    walletBalance: 14200,
+    status: "rejected",
+    requestedDaysAgo: 12,
+    processedDaysAgo: 11,
+  },
+  {
+    id: "wd-1010",
+    userId: "user-agg-fort-kochi",
+    amount: 52000,
+    bankAccountMasked: "XXXXXXXX4183",
+    walletBalance: 61300,
+    status: "failed",
+    requestedDaysAgo: 8,
+    processedDaysAgo: 7,
+  },
 ];
 
-export const mockWithdrawals: WithdrawalRequest[] = WITHDRAWAL_SEEDS.map((seed) => {
-  const user = mockAdminUsers.find((u) => u.id === seed.userId);
-  if (!user) throw new Error(`mock-data/admin: withdrawal "${seed.id}" references unknown user "${seed.userId}"`);
-  if (user.role !== "artist" && user.role !== "aggregator") {
-    throw new Error(`mock-data/admin: withdrawal "${seed.id}" requester must be an artist or aggregator`);
-  }
-  return {
-    id: seed.id,
-    userId: user.id,
-    userName: user.role === "aggregator" ? (user.companyName ?? user.name) : user.name,
-    userRole: user.role,
-    amount: seed.amount,
-    bankAccountMasked: seed.bankAccountMasked,
-    walletBalance: seed.walletBalance,
-    status: seed.status,
-    requestedAt: daysAgo(seed.requestedDaysAgo),
-    processedAt: seed.processedDaysAgo === null ? null : daysAgo(seed.processedDaysAgo),
-  };
-});
+export const mockWithdrawals: WithdrawalRequest[] = WITHDRAWAL_SEEDS.map(
+  (seed) => {
+    const user = mockAdminUsers.find((u) => u.id === seed.userId);
+    if (!user)
+      throw new Error(
+        `mock-data/admin: withdrawal "${seed.id}" references unknown user "${seed.userId}"`,
+      );
+    if (user.role !== "artist" && user.role !== "aggregator") {
+      throw new Error(
+        `mock-data/admin: withdrawal "${seed.id}" requester must be an artist or aggregator`,
+      );
+    }
+    return {
+      id: seed.id,
+      userId: user.id,
+      userName:
+        user.role === "aggregator"
+          ? (user.companyName ?? user.name)
+          : user.name,
+      userRole: user.role,
+      amount: seed.amount,
+      bankAccountMasked: seed.bankAccountMasked,
+      walletBalance: seed.walletBalance,
+      status: seed.status,
+      requestedAt: daysAgo(seed.requestedDaysAgo),
+      processedAt:
+        seed.processedDaysAgo === null ? null : daysAgo(seed.processedDaysAgo),
+    };
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Settlements. The three components are never authored by hand — they are
@@ -742,40 +1014,137 @@ interface SettlementSeed {
 }
 
 const SETTLEMENT_SEEDS: SettlementSeed[] = [
-  { id: "stl-4001", orderId: "order-monsoon-madurai", artworkId: "monsoon-over-madurai", status: "processed", createdDaysAgo: 11, processedDaysAgo: 9 },
-  { id: "stl-4002", orderId: "order-backwater-light", artworkId: "backwater-light-early-hours", status: "pending", createdDaysAgo: 1, processedDaysAgo: null },
-  { id: "stl-4003", orderId: "order-tide-line-dusk", artworkId: "tide-line-dusk", status: "pending", createdDaysAgo: 1, processedDaysAgo: null },
-  { id: "stl-4004", orderId: "order-ancestral-bronze", artworkId: "ancestral-bronze-study", status: "pending", createdDaysAgo: 1, processedDaysAgo: null },
-  { id: "stl-4005", orderId: "order-gz-2610", artworkId: "salvaged-frequencies", status: "processed", createdDaysAgo: 9, processedDaysAgo: 6 },
-  { id: "stl-4006", orderId: "order-gz-2604", artworkId: "rust-and-ochre-wall-piece", status: "processed", createdDaysAgo: 24, processedDaysAgo: 22 },
-  { id: "stl-4007", orderId: "order-gz-2597", artworkId: "concrete-bloom", status: "processed", createdDaysAgo: 33, processedDaysAgo: 31 },
-  { id: "stl-4008", orderId: "order-gz-2588", artworkId: "fractured-skyline", status: "processed", createdDaysAgo: 47, processedDaysAgo: 45 },
-  { id: "stl-4009", orderId: "order-gz-2571", artworkId: "howrah-line-evening", status: "processed", createdDaysAgo: 52, processedDaysAgo: 50 },
-  { id: "stl-4010", orderId: "order-gz-2559", artworkId: "last-show-at-metro-talkies", status: "failed", createdDaysAgo: 16, processedDaysAgo: 14 },
-  { id: "stl-4011", orderId: "order-gz-2544", artworkId: "field-of-kusum-dye", status: "processed", createdDaysAgo: 8, processedDaysAgo: 5 },
-  { id: "stl-4012", orderId: "order-gz-2531", artworkId: "ghat-steps-no-7", status: "failed", createdDaysAgo: 39, processedDaysAgo: 37 },
+  {
+    id: "stl-4001",
+    orderId: "order-monsoon-madurai",
+    artworkId: "monsoon-over-madurai",
+    status: "processed",
+    createdDaysAgo: 11,
+    processedDaysAgo: 9,
+  },
+  {
+    id: "stl-4002",
+    orderId: "order-backwater-light",
+    artworkId: "backwater-light-early-hours",
+    status: "pending",
+    createdDaysAgo: 1,
+    processedDaysAgo: null,
+  },
+  {
+    id: "stl-4003",
+    orderId: "order-tide-line-dusk",
+    artworkId: "tide-line-dusk",
+    status: "pending",
+    createdDaysAgo: 1,
+    processedDaysAgo: null,
+  },
+  {
+    id: "stl-4004",
+    orderId: "order-ancestral-bronze",
+    artworkId: "ancestral-bronze-study",
+    status: "pending",
+    createdDaysAgo: 1,
+    processedDaysAgo: null,
+  },
+  {
+    id: "stl-4005",
+    orderId: "order-gz-2610",
+    artworkId: "salvaged-frequencies",
+    status: "processed",
+    createdDaysAgo: 9,
+    processedDaysAgo: 6,
+  },
+  {
+    id: "stl-4006",
+    orderId: "order-gz-2604",
+    artworkId: "rust-and-ochre-wall-piece",
+    status: "processed",
+    createdDaysAgo: 24,
+    processedDaysAgo: 22,
+  },
+  {
+    id: "stl-4007",
+    orderId: "order-gz-2597",
+    artworkId: "concrete-bloom",
+    status: "processed",
+    createdDaysAgo: 33,
+    processedDaysAgo: 31,
+  },
+  {
+    id: "stl-4008",
+    orderId: "order-gz-2588",
+    artworkId: "fractured-skyline",
+    status: "processed",
+    createdDaysAgo: 47,
+    processedDaysAgo: 45,
+  },
+  {
+    id: "stl-4009",
+    orderId: "order-gz-2571",
+    artworkId: "howrah-line-evening",
+    status: "processed",
+    createdDaysAgo: 52,
+    processedDaysAgo: 50,
+  },
+  {
+    id: "stl-4010",
+    orderId: "order-gz-2559",
+    artworkId: "last-show-at-metro-talkies",
+    status: "failed",
+    createdDaysAgo: 16,
+    processedDaysAgo: 14,
+  },
+  {
+    id: "stl-4011",
+    orderId: "order-gz-2544",
+    artworkId: "field-of-kusum-dye",
+    status: "processed",
+    createdDaysAgo: 8,
+    processedDaysAgo: 5,
+  },
+  {
+    id: "stl-4012",
+    orderId: "order-gz-2531",
+    artworkId: "ghat-steps-no-7",
+    status: "failed",
+    createdDaysAgo: 39,
+    processedDaysAgo: 37,
+  },
 ];
 
 // Exported so Task 15's detail drawer can show the same reconciliation the
 // fixture was built from instead of re-deriving it slightly differently.
 export function splitSettlement(
   orderTotal: number,
-  viaAggregator: boolean
-): { artistAmount: number; aggregatorCommission: number; platformRevenue: number } {
+  viaAggregator: boolean,
+): {
+  artistAmount: number;
+  aggregatorCommission: number;
+  platformRevenue: number;
+} {
   const artistAmount = Math.round(orderTotal / 1.3);
   const markup = orderTotal - artistAmount;
   const aggregatorCommission = viaAggregator ? Math.round(markup * 0.2) : 0;
-  return { artistAmount, aggregatorCommission, platformRevenue: markup - aggregatorCommission };
+  return {
+    artistAmount,
+    aggregatorCommission,
+    platformRevenue: markup - aggregatorCommission,
+  };
 }
 
 export const mockSettlements: Settlement[] = SETTLEMENT_SEEDS.map((seed) => {
   const artwork = mockArtworks.find((a) => a.id === seed.artworkId);
   if (!artwork) {
-    throw new Error(`mock-data/admin: settlement "${seed.id}" references unknown artwork "${seed.artworkId}"`);
+    throw new Error(
+      `mock-data/admin: settlement "${seed.id}" references unknown artwork "${seed.artworkId}"`,
+    );
   }
   const order = mockOrders.find((o) => o.id === seed.orderId);
   const orderTotal = order ? order.amount : artwork.customerPrice;
-  const split = splitSettlement(orderTotal, artwork.listingType === "marketplace_and_aggregator");
+  const split = splitSettlement(
+    orderTotal,
+    artwork.listingType === "marketplace_and_aggregator",
+  );
   return {
     id: seed.id,
     orderId: seed.orderId,
@@ -784,7 +1153,8 @@ export const mockSettlements: Settlement[] = SETTLEMENT_SEEDS.map((seed) => {
     ...split,
     status: seed.status,
     createdAt: daysAgo(seed.createdDaysAgo),
-    processedAt: seed.processedDaysAgo === null ? null : daysAgo(seed.processedDaysAgo),
+    processedAt:
+      seed.processedDaysAgo === null ? null : daysAgo(seed.processedDaysAgo),
   };
 });
 
@@ -813,7 +1183,10 @@ export function artworkCategoryFromSlug(slug: string): string {
 
 const categoryCounts = new Map<string, number>();
 for (const artwork of allArtworksForCounts) {
-  categoryCounts.set(artwork.category, (categoryCounts.get(artwork.category) ?? 0) + 1);
+  categoryCounts.set(
+    artwork.category,
+    (categoryCounts.get(artwork.category) ?? 0) + 1,
+  );
 }
 
 export const mockCategories: Category[] = [
@@ -842,26 +1215,198 @@ export const mockCategories: Category[] = [
 // ---------------------------------------------------------------------------
 
 export const mockAuditLog: AuditLogEntry[] = [
-  { id: "audit-0001", adminName: "Sneha Kulkarni", action: "artwork.rejected", entityType: "artwork", entityId: "chromatic-drift-study", entityLabel: "Chromatic Drift Study", detail: "Images shot under mixed lighting — surface not accurately represented. Re-photograph and resubmit.", createdAt: daysAgo(5) },
-  { id: "audit-0002", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "grandmothers-stitch-revisited", entityLabel: "Grandmother's Stitch, Revisited", createdAt: daysAgo(6) },
-  { id: "audit-0003", adminName: "Rahul Verma", action: "settings.updated", entityType: "settings", entityId: "platform-settings", entityLabel: "Platform settings", detail: "Insurance-recommended threshold reviewed and confirmed unchanged.", createdAt: daysAgo(7) },
-  { id: "audit-0004", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "field-of-kusum-dye", entityLabel: "Field of Kusum Dye", createdAt: daysAgo(10) },
-  { id: "audit-0005", adminName: "Rahul Verma", action: "withdrawal.rejected", entityType: "withdrawal", entityId: "wd-1009", entityLabel: "Payout request — Rohan Bhattacharya", detail: "Bank account name does not match the registered artist name.", createdAt: daysAgo(11) },
-  { id: "audit-0006", adminName: "Sneha Kulkarni", action: "category.created", entityType: "category", entityId: "cat-ceramics", entityLabel: "Ceramics", detail: "Added ahead of the ceramics cohort onboarding.", createdAt: daysAgo(15) },
-  { id: "audit-0007", adminName: "Rahul Verma", action: "withdrawal.approved", entityType: "withdrawal", entityId: "wd-1005", entityLabel: "Payout request — Priya Subramaniam", createdAt: daysAgo(17) },
-  { id: "audit-0008", adminName: "Ops Console", action: "user.suspended", entityType: "user", entityId: "user-agg-baithak", entityLabel: "Baithak Gallery", detail: "Repeated failure to return unsold consignments within the 30-day window.", createdAt: daysAgo(18) },
-  { id: "audit-0009", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "balcony-seats-empty-reel", entityLabel: "Balcony Seats, Empty Reel", createdAt: daysAgo(20) },
-  { id: "audit-0010", adminName: "Rahul Verma", action: "withdrawal.rejected", entityType: "withdrawal", entityId: "wd-1008", entityLabel: "Payout request — Lata Menon", detail: "Account suspended pending KYC re-submission.", createdAt: daysAgo(20) },
-  { id: "audit-0011", adminName: "Sneha Kulkarni", action: "artwork.delisted", entityType: "artwork", entityId: "paper-lantern-series-i", entityLabel: "Paper Lantern Series I", detail: "Delisted at the artist's request while the second colour block is reworked.", createdAt: daysAgo(26) },
-  { id: "audit-0012", adminName: "Rahul Verma", action: "withdrawal.approved", entityType: "withdrawal", entityId: "wd-1006", entityLabel: "Payout request — Kala Collective", createdAt: daysAgo(29) },
-  { id: "audit-0013", adminName: "Sneha Kulkarni", action: "kyc.rejected", entityType: "user", entityId: "user-artist-lata-menon", entityLabel: "Lata Menon", detail: "Submitted document was illegible; re-submission requested.", createdAt: daysAgo(29) },
-  { id: "audit-0014", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "last-show-at-metro-talkies", entityLabel: "Last Show at Metro Talkies", createdAt: daysAgo(30) },
-  { id: "audit-0015", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "rust-and-ochre-wall-piece", entityLabel: "Rust and Ochre Wall Piece", createdAt: daysAgo(32) },
-  { id: "audit-0016", adminName: "Sneha Kulkarni", action: "kyc.approved", entityType: "user", entityId: "user-artist-devika-rao", entityLabel: "Devika Rao", createdAt: daysAgo(34) },
-  { id: "audit-0017", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "college-street-folio", entityLabel: "College Street Folio", createdAt: daysAgo(38) },
-  { id: "audit-0018", adminName: "Sneha Kulkarni", action: "kyc.approved", entityType: "user", entityId: "user-rohan-bhattacharya", entityLabel: "Rohan Bhattacharya", createdAt: daysAgo(41) },
-  { id: "audit-0019", adminName: "Ops Console", action: "user.activated", entityType: "user", entityId: "user-customer-vikram-desai", entityLabel: "Vikram Desai", detail: "Payment dispute resolved; account restored.", createdAt: daysAgo(44) },
-  { id: "audit-0020", adminName: "Ops Console", action: "artwork.approved", entityType: "artwork", entityId: "reclaimed-stone-vessel", entityLabel: "Reclaimed Stone Vessel", createdAt: daysAgo(47) },
+  {
+    id: "audit-0001",
+    adminName: "Sneha Kulkarni",
+    action: "artwork.rejected",
+    entityType: "artwork",
+    entityId: "chromatic-drift-study",
+    entityLabel: "Chromatic Drift Study",
+    detail:
+      "Images shot under mixed lighting. Surface not accurately represented. Re-photograph and resubmit.",
+    createdAt: daysAgo(5),
+  },
+  {
+    id: "audit-0002",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "grandmothers-stitch-revisited",
+    entityLabel: "Grandmother's Stitch, Revisited",
+    createdAt: daysAgo(6),
+  },
+  {
+    id: "audit-0003",
+    adminName: "Rahul Verma",
+    action: "settings.updated",
+    entityType: "settings",
+    entityId: "platform-settings",
+    entityLabel: "Platform settings",
+    detail: "Insurance-recommended threshold reviewed and confirmed unchanged.",
+    createdAt: daysAgo(7),
+  },
+  {
+    id: "audit-0004",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "field-of-kusum-dye",
+    entityLabel: "Field of Kusum Dye",
+    createdAt: daysAgo(10),
+  },
+  {
+    id: "audit-0005",
+    adminName: "Rahul Verma",
+    action: "withdrawal.rejected",
+    entityType: "withdrawal",
+    entityId: "wd-1009",
+    entityLabel: "Payout request: Rohan Bhattacharya",
+    detail: "Bank account name does not match the registered artist name.",
+    createdAt: daysAgo(11),
+  },
+  {
+    id: "audit-0006",
+    adminName: "Sneha Kulkarni",
+    action: "category.created",
+    entityType: "category",
+    entityId: "cat-ceramics",
+    entityLabel: "Ceramics",
+    detail: "Added ahead of the ceramics cohort onboarding.",
+    createdAt: daysAgo(15),
+  },
+  {
+    id: "audit-0007",
+    adminName: "Rahul Verma",
+    action: "withdrawal.approved",
+    entityType: "withdrawal",
+    entityId: "wd-1005",
+    entityLabel: "Payout request: Priya Subramaniam",
+    createdAt: daysAgo(17),
+  },
+  {
+    id: "audit-0008",
+    adminName: "Ops Console",
+    action: "user.suspended",
+    entityType: "user",
+    entityId: "user-agg-baithak",
+    entityLabel: "Baithak Gallery",
+    detail:
+      "Repeated failure to return unsold consignments within the 30-day window.",
+    createdAt: daysAgo(18),
+  },
+  {
+    id: "audit-0009",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "balcony-seats-empty-reel",
+    entityLabel: "Balcony Seats, Empty Reel",
+    createdAt: daysAgo(20),
+  },
+  {
+    id: "audit-0010",
+    adminName: "Rahul Verma",
+    action: "withdrawal.rejected",
+    entityType: "withdrawal",
+    entityId: "wd-1008",
+    entityLabel: "Payout request: Lata Menon",
+    detail: "Account suspended pending KYC re-submission.",
+    createdAt: daysAgo(20),
+  },
+  {
+    id: "audit-0011",
+    adminName: "Sneha Kulkarni",
+    action: "artwork.delisted",
+    entityType: "artwork",
+    entityId: "paper-lantern-series-i",
+    entityLabel: "Paper Lantern Series I",
+    detail:
+      "Delisted at the artist's request while the second colour block is reworked.",
+    createdAt: daysAgo(26),
+  },
+  {
+    id: "audit-0012",
+    adminName: "Rahul Verma",
+    action: "withdrawal.approved",
+    entityType: "withdrawal",
+    entityId: "wd-1006",
+    entityLabel: "Payout request: Kala Collective",
+    createdAt: daysAgo(29),
+  },
+  {
+    id: "audit-0013",
+    adminName: "Sneha Kulkarni",
+    action: "kyc.rejected",
+    entityType: "user",
+    entityId: "user-artist-lata-menon",
+    entityLabel: "Lata Menon",
+    detail: "Submitted document was illegible; re-submission requested.",
+    createdAt: daysAgo(29),
+  },
+  {
+    id: "audit-0014",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "last-show-at-metro-talkies",
+    entityLabel: "Last Show at Metro Talkies",
+    createdAt: daysAgo(30),
+  },
+  {
+    id: "audit-0015",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "rust-and-ochre-wall-piece",
+    entityLabel: "Rust and Ochre Wall Piece",
+    createdAt: daysAgo(32),
+  },
+  {
+    id: "audit-0016",
+    adminName: "Sneha Kulkarni",
+    action: "kyc.approved",
+    entityType: "user",
+    entityId: "user-artist-devika-rao",
+    entityLabel: "Devika Rao",
+    createdAt: daysAgo(34),
+  },
+  {
+    id: "audit-0017",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "college-street-folio",
+    entityLabel: "College Street Folio",
+    createdAt: daysAgo(38),
+  },
+  {
+    id: "audit-0018",
+    adminName: "Sneha Kulkarni",
+    action: "kyc.approved",
+    entityType: "user",
+    entityId: "user-rohan-bhattacharya",
+    entityLabel: "Rohan Bhattacharya",
+    createdAt: daysAgo(41),
+  },
+  {
+    id: "audit-0019",
+    adminName: "Ops Console",
+    action: "user.activated",
+    entityType: "user",
+    entityId: "user-customer-vikram-desai",
+    entityLabel: "Vikram Desai",
+    detail: "Payment dispute resolved; account restored.",
+    createdAt: daysAgo(44),
+  },
+  {
+    id: "audit-0020",
+    adminName: "Ops Console",
+    action: "artwork.approved",
+    entityType: "artwork",
+    entityId: "reclaimed-stone-vessel",
+    entityLabel: "Reclaimed Stone Vessel",
+    createdAt: daysAgo(47),
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -870,10 +1415,50 @@ export const mockAuditLog: AuditLogEntry[] = [
 // ---------------------------------------------------------------------------
 
 export const mockReports: GeneratedReport[] = [
-  { id: "rpt-0104", type: "sales", label: "Marketplace sales — July 2026", from: "2026-07-01T00:00:00.000Z", to: "2026-07-31T00:00:00.000Z", generatedAt: daysAgo(11), generatedBy: "Ops Console", rowCount: 58, status: "ready" },
-  { id: "rpt-0103", type: "artist_payouts", label: "Artist payouts — H1 2026", from: "2026-01-01T00:00:00.000Z", to: "2026-06-30T00:00:00.000Z", generatedAt: daysAgo(26), generatedBy: "Ops Console", rowCount: 244, status: "ready" },
-  { id: "rpt-0102", type: "settlements", label: "Settlement register — Apr–Jun 2026", from: "2026-04-01T00:00:00.000Z", to: "2026-06-30T00:00:00.000Z", generatedAt: daysAgo(38), generatedBy: "Rahul Verma", rowCount: 140, status: "ready" },
-  { id: "rpt-0101", type: "gst", label: "GST summary — June 2026", from: "2026-06-01T00:00:00.000Z", to: "2026-06-30T00:00:00.000Z", generatedAt: daysAgo(41), generatedBy: "Sneha Kulkarni", rowCount: 52, status: "ready" },
+  {
+    id: "rpt-0104",
+    type: "sales",
+    label: "Marketplace sales (July 2026)",
+    from: "2026-07-01T00:00:00.000Z",
+    to: "2026-07-31T00:00:00.000Z",
+    generatedAt: daysAgo(11),
+    generatedBy: "Ops Console",
+    rowCount: 58,
+    status: "ready",
+  },
+  {
+    id: "rpt-0103",
+    type: "artist_payouts",
+    label: "Artist payouts (H1 2026)",
+    from: "2026-01-01T00:00:00.000Z",
+    to: "2026-06-30T00:00:00.000Z",
+    generatedAt: daysAgo(26),
+    generatedBy: "Ops Console",
+    rowCount: 244,
+    status: "ready",
+  },
+  {
+    id: "rpt-0102",
+    type: "settlements",
+    label: "Settlement register (Apr–Jun 2026)",
+    from: "2026-04-01T00:00:00.000Z",
+    to: "2026-06-30T00:00:00.000Z",
+    generatedAt: daysAgo(38),
+    generatedBy: "Rahul Verma",
+    rowCount: 140,
+    status: "ready",
+  },
+  {
+    id: "rpt-0101",
+    type: "gst",
+    label: "GST summary (June 2026)",
+    from: "2026-06-01T00:00:00.000Z",
+    to: "2026-06-30T00:00:00.000Z",
+    generatedAt: daysAgo(41),
+    generatedBy: "Sneha Kulkarni",
+    rowCount: 52,
+    status: "ready",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -909,21 +1494,38 @@ export const defaultPlatformSettings: PlatformSettings = {
 // purchases, not the platform's ledger.
 // ---------------------------------------------------------------------------
 
-const total12mGmv = revenueSeries["12m"].reduce((sum, point) => sum + point.gmv, 0);
-const total12mPlatform = revenueSeries["12m"].reduce((sum, point) => sum + point.platform, 0);
-const total12mArtist = revenueSeries["12m"].reduce((sum, point) => sum + point.artist, 0);
-const total12mOrders = volumeSeries["12m"].reduce((sum, point) => sum + point.orders, 0);
+const total12mGmv = revenueSeries["12m"].reduce(
+  (sum, point) => sum + point.gmv,
+  0,
+);
+const total12mPlatform = revenueSeries["12m"].reduce(
+  (sum, point) => sum + point.platform,
+  0,
+);
+const total12mArtist = revenueSeries["12m"].reduce(
+  (sum, point) => sum + point.artist,
+  0,
+);
+const total12mOrders = volumeSeries["12m"].reduce(
+  (sum, point) => sum + point.orders,
+  0,
+);
 
 export const mockAdminKpis: AdminKpis = {
   gmv: total12mGmv,
   platformRevenue: total12mPlatform,
   artistPayouts: total12mArtist,
   totalOrders: total12mOrders,
-  activeArtworks: allArtworksForCounts.filter((artwork) => artwork.status === "marketplace").length,
+  activeArtworks: allArtworksForCounts.filter(
+    (artwork) => artwork.status === "marketplace",
+  ).length,
   totalUsers: mockAdminUsers.length,
-  pendingArtworkApprovals: mockPendingArtworks.filter((a) => a.status === "pending_approval").length,
+  pendingArtworkApprovals: mockPendingArtworks.filter(
+    (a) => a.status === "pending_approval",
+  ).length,
   pendingKyc: mockAdminUsers.filter(isInKycQueue).length,
-  pendingWithdrawals: mockWithdrawals.filter((w) => w.status === "pending").length,
+  pendingWithdrawals: mockWithdrawals.filter((w) => w.status === "pending")
+    .length,
 };
 
 // ---------------------------------------------------------------------------
@@ -934,17 +1536,83 @@ export const mockAdminKpis: AdminKpis = {
 // ---------------------------------------------------------------------------
 
 export const mockAdminActivity: AdminActivityEvent[] = [
-  { id: "act-01", kind: "artwork", label: "Artwork submitted for review", detail: "“Salt Flat Nocturne” by Kavya Iyer", at: daysAgo(0) },
-  { id: "act-02", kind: "order", label: "New order placed", detail: "Carved Marble Torso · Aarav Shah", at: daysAgo(0) },
-  { id: "act-03", kind: "order", label: "Payment confirmed", detail: "Ancestral Bronze Study · Aarav Shah", at: daysAgo(1) },
-  { id: "act-04", kind: "withdrawal", label: "Payout requested", detail: "Verandah Art House — exceeds available balance", at: daysAgo(1) },
-  { id: "act-05", kind: "artwork", label: "Artwork submitted for review", detail: "“Wildfire Sutra” by Ishaan Kapoor", at: daysAgo(1) },
-  { id: "act-06", kind: "order", label: "Order confirmed", detail: "Tide Line, Dusk · Aarav Shah", at: daysAgo(2) },
-  { id: "act-07", kind: "withdrawal", label: "Payout requested", detail: "Meera Nair · artist wallet", at: daysAgo(2) },
-  { id: "act-08", kind: "user", label: "New collector registered", detail: "Tara Mathew", at: daysAgo(3) },
-  { id: "act-09", kind: "user", label: "New artist registered", detail: "Tenzin Norbu · verification not started", at: daysAgo(4) },
-  { id: "act-10", kind: "artwork", label: "Artwork returned to artist", detail: "“Chromatic Drift Study” — rejected at review", at: daysAgo(5) },
-  { id: "act-11", kind: "settlement", label: "Settlement processed", detail: "Salvaged Frequencies · Priya Subramaniam", at: daysAgo(6) },
+  {
+    id: "act-01",
+    kind: "artwork",
+    label: "Artwork submitted for review",
+    detail: "“Salt Flat Nocturne” by Kavya Iyer",
+    at: daysAgo(0),
+  },
+  {
+    id: "act-02",
+    kind: "order",
+    label: "New order placed",
+    detail: "Carved Marble Torso · Aarav Shah",
+    at: daysAgo(0),
+  },
+  {
+    id: "act-03",
+    kind: "order",
+    label: "Payment confirmed",
+    detail: "Ancestral Bronze Study · Aarav Shah",
+    at: daysAgo(1),
+  },
+  {
+    id: "act-04",
+    kind: "withdrawal",
+    label: "Payout requested",
+    detail: "Verandah Art House · exceeds available balance",
+    at: daysAgo(1),
+  },
+  {
+    id: "act-05",
+    kind: "artwork",
+    label: "Artwork submitted for review",
+    detail: "“Wildfire Sutra” by Ishaan Kapoor",
+    at: daysAgo(1),
+  },
+  {
+    id: "act-06",
+    kind: "order",
+    label: "Order confirmed",
+    detail: "Tide Line, Dusk · Aarav Shah",
+    at: daysAgo(2),
+  },
+  {
+    id: "act-07",
+    kind: "withdrawal",
+    label: "Payout requested",
+    detail: "Meera Nair · artist wallet",
+    at: daysAgo(2),
+  },
+  {
+    id: "act-08",
+    kind: "user",
+    label: "New collector registered",
+    detail: "Tara Mathew",
+    at: daysAgo(3),
+  },
+  {
+    id: "act-09",
+    kind: "user",
+    label: "New artist registered",
+    detail: "Tenzin Norbu · verification not started",
+    at: daysAgo(4),
+  },
+  {
+    id: "act-10",
+    kind: "artwork",
+    label: "Artwork returned to artist",
+    detail: "“Chromatic Drift Study” · rejected at review",
+    at: daysAgo(5),
+  },
+  {
+    id: "act-11",
+    kind: "settlement",
+    label: "Settlement processed",
+    detail: "Salvaged Frequencies · Priya Subramaniam",
+    at: daysAgo(6),
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -958,11 +1626,15 @@ export const mockAdminActivity: AdminActivityEvent[] = [
 const artworkIds = new Set<string>();
 for (const artwork of allArtworksForCounts) {
   if (artworkIds.has(artwork.id)) {
-    throw new Error(`mock-data/admin: duplicate artwork id "${artwork.id}" across the public and admin sets`);
+    throw new Error(
+      `mock-data/admin: duplicate artwork id "${artwork.id}" across the public and admin sets`,
+    );
   }
   artworkIds.add(artwork.id);
   if (artwork.images.length < 3 || artwork.images.length > 8) {
-    throw new Error(`mock-data/admin: artwork "${artwork.id}" must carry 3-8 images`);
+    throw new Error(
+      `mock-data/admin: artwork "${artwork.id}" must carry 3-8 images`,
+    );
   }
 }
 
@@ -973,24 +1645,33 @@ if (userIds.size !== mockAdminUsers.length) {
 
 for (const withdrawal of mockWithdrawals) {
   if (withdrawal.amount < defaultPlatformSettings.minWithdrawalAmount) {
-    throw new Error(`mock-data/admin: withdrawal "${withdrawal.id}" is below the platform minimum`);
+    throw new Error(
+      `mock-data/admin: withdrawal "${withdrawal.id}" is below the platform minimum`,
+    );
   }
   if (!/^X{8}\d{4}$/.test(withdrawal.bankAccountMasked)) {
-    throw new Error(`mock-data/admin: withdrawal "${withdrawal.id}" bank reference is not masked`);
+    throw new Error(
+      `mock-data/admin: withdrawal "${withdrawal.id}" bank reference is not masked`,
+    );
   }
 }
 
 for (const settlement of mockSettlements) {
-  const total = settlement.artistAmount + settlement.aggregatorCommission + settlement.platformRevenue;
+  const total =
+    settlement.artistAmount +
+    settlement.aggregatorCommission +
+    settlement.platformRevenue;
   const order = mockOrders.find((o) => o.id === settlement.orderId);
   if (order && total !== order.amount) {
     throw new Error(
-      `mock-data/admin: settlement "${settlement.id}" (${total}) does not reconcile against order "${order.id}" (${order.amount})`
+      `mock-data/admin: settlement "${settlement.id}" (${total}) does not reconcile against order "${order.id}" (${order.amount})`,
     );
   }
   const artwork = mockArtworks.find((a) => a.title === settlement.artworkTitle);
   if (!artwork || artwork.artistName !== settlement.artistName) {
-    throw new Error(`mock-data/admin: settlement "${settlement.id}" artist does not match its artwork`);
+    throw new Error(
+      `mock-data/admin: settlement "${settlement.id}" artist does not match its artwork`,
+    );
   }
 }
 
@@ -999,12 +1680,13 @@ for (const entry of mockAuditLog) {
   const resolved =
     (entry.entityType === "artwork" && artworkIds.has(entry.entityId)) ||
     (entry.entityType === "user" && userIds.has(entry.entityId)) ||
-    (entry.entityType === "withdrawal" && mockWithdrawals.some((w) => w.id === entry.entityId)) ||
+    (entry.entityType === "withdrawal" &&
+      mockWithdrawals.some((w) => w.id === entry.entityId)) ||
     (entry.entityType === "category" && categoryIds.has(entry.entityId)) ||
     entry.entityType === "settings";
   if (!resolved) {
     throw new Error(
-      `mock-data/admin: audit entry "${entry.id}" references missing ${entry.entityType} "${entry.entityId}"`
+      `mock-data/admin: audit entry "${entry.id}" references missing ${entry.entityType} "${entry.entityId}"`,
     );
   }
 }
@@ -1024,31 +1706,49 @@ for (const range of ["30d", "90d", "12m"] as const) {
     last.customers !== roleCounts.customers
   ) {
     throw new Error(
-      `mock-data/admin: userGrowthSeries["${range}"] does not end on the real per-role counts in mockAdminUsers`
+      `mock-data/admin: userGrowthSeries["${range}"] does not end on the real per-role counts in mockAdminUsers`,
     );
   }
 }
 
-if (verificationTiers.reduce((sum, tier) => sum + tier.count, 0) !== roleCounts.artists) {
-  throw new Error("mock-data/admin: verificationTiers does not sum to the number of artists in mockAdminUsers");
+if (
+  verificationTiers.reduce((sum, tier) => sum + tier.count, 0) !==
+  roleCounts.artists
+) {
+  throw new Error(
+    "mock-data/admin: verificationTiers does not sum to the number of artists in mockAdminUsers",
+  );
 }
 
-const artistNames = new Set(mockAdminUsers.filter((u) => u.role === "artist").map((u) => u.name));
+const artistNames = new Set(
+  mockAdminUsers.filter((u) => u.role === "artist").map((u) => u.name),
+);
 for (const performer of topArtists) {
   if (!artistNames.has(performer.name)) {
-    throw new Error(`mock-data/admin: topArtists entry "${performer.name}" is not a real artist`);
+    throw new Error(
+      `mock-data/admin: topArtists entry "${performer.name}" is not a real artist`,
+    );
   }
 }
 
 const aggregatorNames = new Set(
-  mockAdminUsers.filter((u) => u.role === "aggregator").map((u) => u.companyName ?? u.name)
+  mockAdminUsers
+    .filter((u) => u.role === "aggregator")
+    .map((u) => u.companyName ?? u.name),
 );
 for (const performer of topAggregators) {
   if (!aggregatorNames.has(performer.name)) {
-    throw new Error(`mock-data/admin: topAggregators entry "${performer.name}" is not a real aggregator`);
+    throw new Error(
+      `mock-data/admin: topAggregators entry "${performer.name}" is not a real aggregator`,
+    );
   }
 }
 
-if (mockCategories.reduce((sum, category) => sum + category.artworkCount, 0) !== allArtworksForCounts.length) {
-  throw new Error("mock-data/admin: category artwork counts do not sum to the total number of artworks");
+if (
+  mockCategories.reduce((sum, category) => sum + category.artworkCount, 0) !==
+  allArtworksForCounts.length
+) {
+  throw new Error(
+    "mock-data/admin: category artwork counts do not sum to the total number of artworks",
+  );
 }

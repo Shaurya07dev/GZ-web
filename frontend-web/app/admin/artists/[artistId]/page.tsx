@@ -20,7 +20,9 @@ export default async function AdminArtistDetailPage(
   props: PageProps<"/admin/artists/[artistId]">,
 ) {
   const { artistId } = await props.params;
-  const user = mockAdminUsers.find((u) => u.id === artistId && u.role === "artist");
+  const user = mockAdminUsers.find(
+    (u) => u.id === artistId && u.role === "artist",
+  );
   if (!user) notFound();
 
   // The AdminUser row and the public ArtistProfile are separate fixtures; match
@@ -49,11 +51,15 @@ export default async function AdminArtistDetailPage(
               <h2 className="font-display text-base font-semibold text-foreground">
                 Verification
               </h2>
-              <span className="text-xs tabular-nums text-muted-foreground">{tier} of 3</span>
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {tier} of 3
+              </span>
             </div>
             <ul className="mt-3 space-y-2.5">
               {TIER_LABELS.map((entry) => {
-                const cleared = profile ? profile.verification[entry.key] : false;
+                const cleared = profile
+                  ? profile.verification[entry.key]
+                  : false;
                 return (
                   <li key={entry.key} className="flex items-center gap-2.5">
                     <span
@@ -77,23 +83,29 @@ export default async function AdminArtistDetailPage(
           </section>
 
           <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">KYC</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              KYC
+            </h2>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-sm text-muted-foreground">Identity check</span>
+              <span className="text-sm text-muted-foreground">
+                Identity check
+              </span>
               {user.kycStatus ? (
                 <AdminStatusBadge status={user.kycStatus} size="sm" />
               ) : (
-                <span className="text-sm text-muted-foreground">—</span>
+                <span className="text-sm text-muted-foreground">Not set</span>
               )}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Identity documents are never exposed in this console. Review submissions
-              from the KYC queue.
+              Identity documents are never exposed in this console. Review
+              submissions from the KYC queue.
             </p>
           </section>
 
           <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">Catalogue</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Catalogue
+            </h2>
             <dl className="mt-3 grid grid-cols-2 gap-4">
               <div>
                 <dt className="text-xs text-muted-foreground">Works listed</dt>

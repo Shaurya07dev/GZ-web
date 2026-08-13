@@ -18,7 +18,10 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 // other aggregator fixture's fixed anchor -- see aggregator-data.ts's
 // comment on why real wall-clock time would silently drift the seeded
 // "expires in 2..25 days" spread as actual time passes.
-export function ExpiryCountdown({ expiresAt, className }: ExpiryCountdownProps) {
+export function ExpiryCountdown({
+  expiresAt,
+  className,
+}: ExpiryCountdownProps) {
   const expires = new Date(expiresAt).getTime();
   const assigned = expires - THIRTY_DAYS_MS;
   const now = MOCK_TODAY.getTime();
@@ -43,16 +46,18 @@ export function ExpiryCountdown({ expiresAt, className }: ExpiryCountdownProps) 
           "gap-0 **:data-[slot=progress-track]:h-1.5",
           urgent
             ? "**:data-[slot=progress-indicator]:bg-destructive"
-            : "**:data-[slot=progress-indicator]:bg-gold"
+            : "**:data-[slot=progress-indicator]:bg-gold",
         )}
       />
       <span
         className={cn(
           "text-xs font-medium tabular-nums",
-          urgent ? "text-destructive" : "text-muted-foreground"
+          urgent ? "text-destructive" : "text-muted-foreground",
         )}
       >
-        {daysLeft === 0 ? "Expires today" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
+        {daysLeft === 0
+          ? "Expires today"
+          : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
       </span>
     </div>
   );

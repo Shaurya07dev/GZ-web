@@ -10,7 +10,13 @@ import { ArrowLeft, Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Field, FieldContent, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
+import {
+  Field,
+  FieldContent,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+} from "@/components/ui/field";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
@@ -32,7 +38,7 @@ const STEP_TRANSITION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 
 export function RegisterForm({ initialRole }: RegisterFormProps) {
   const [step, setStep] = useState<"role" | "details">(
-    initialRole ? "details" : "role"
+    initialRole ? "details" : "role",
   );
   const [simulateError, setSimulateError] = useState(false);
   const registerMutation = useRegisterMutation();
@@ -73,10 +79,10 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
       {
         onError: (error) => {
           toast.error(
-            error instanceof Error ? error.message : "Something went wrong."
+            error instanceof Error ? error.message : "Something went wrong.",
           );
         },
-      }
+      },
     );
   }
 
@@ -233,14 +239,20 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
                 control={form.control}
                 name="acceptedTerms"
                 render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid} orientation="horizontal">
+                  <Field
+                    data-invalid={fieldState.invalid}
+                    orientation="horizontal"
+                  >
                     <Checkbox
                       id="acceptedTerms"
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
                     <FieldContent>
-                      <FieldLabel htmlFor="acceptedTerms" className="font-normal">
+                      <FieldLabel
+                        htmlFor="acceptedTerms"
+                        className="font-normal"
+                      >
                         I agree to the{" "}
                         <Link
                           href="/terms"

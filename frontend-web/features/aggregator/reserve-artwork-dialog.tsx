@@ -16,7 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PriceTag } from "@/components/shared/price-tag";
 import { formatINR } from "@/lib/utils";
-import { advancePercentFor, advanceAmountFor } from "@/services/aggregatorService";
+import {
+  advancePercentFor,
+  advanceAmountFor,
+} from "@/services/aggregatorService";
 import { useReserveArtworkMutation } from "@/hooks/useAggregatorInventory";
 import type { ArtworkSummary } from "@/types/artwork";
 
@@ -65,7 +68,7 @@ export function ReserveArtworkDialog({
           onOpenChange(false);
           setSimulateConflict(false);
         },
-      }
+      },
     );
   }
 
@@ -128,7 +131,10 @@ export function ReserveArtworkDialog({
           />
           <span className="flex flex-col gap-0.5">
             <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-              <AlertTriangle className="size-3 text-muted-foreground" strokeWidth={2} />
+              <AlertTriangle
+                className="size-3 text-muted-foreground"
+                strokeWidth={2}
+              />
               Simulate reservation conflict
               <span className="rounded-sm border border-border px-1 py-px text-[9px] font-semibold tracking-wide text-muted-foreground uppercase">
                 Dev

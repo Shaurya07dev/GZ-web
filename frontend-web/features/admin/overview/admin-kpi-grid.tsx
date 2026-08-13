@@ -69,9 +69,24 @@ const MONEY_TILES: StatTile[] = [
 ];
 
 const COUNT_TILES: StatTile[] = [
-  { key: "totalOrders", label: "Orders", icon: ShoppingBag, value: (k) => formatCount(k.totalOrders) },
-  { key: "activeArtworks", label: "Live artworks", icon: Palette, value: (k) => formatCount(k.activeArtworks) },
-  { key: "totalUsers", label: "Users", icon: Users, value: (k) => formatCount(k.totalUsers) },
+  {
+    key: "totalOrders",
+    label: "Orders",
+    icon: ShoppingBag,
+    value: (k) => formatCount(k.totalOrders),
+  },
+  {
+    key: "activeArtworks",
+    label: "Live artworks",
+    icon: Palette,
+    value: (k) => formatCount(k.activeArtworks),
+  },
+  {
+    key: "totalUsers",
+    label: "Users",
+    icon: Users,
+    value: (k) => formatCount(k.totalUsers),
+  },
 ];
 
 interface QueueTile {
@@ -166,7 +181,10 @@ function StatCard({
         <p className="text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
           {tile.label}
         </p>
-        <Icon className="size-4 shrink-0 text-muted-foreground/70" strokeWidth={1.75} />
+        <Icon
+          className="size-4 shrink-0 text-muted-foreground/70"
+          strokeWidth={1.75}
+        />
       </div>
       <p
         className={cn(
@@ -200,7 +218,9 @@ function QueueCard({ tile, count }: { tile: QueueTile; count: number }) {
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-lg",
-          waiting ? "bg-gold/15 text-gold-bright" : "bg-muted text-muted-foreground",
+          waiting
+            ? "bg-gold/15 text-gold-bright"
+            : "bg-muted text-muted-foreground",
         )}
       >
         <Icon className="size-5" strokeWidth={1.75} />

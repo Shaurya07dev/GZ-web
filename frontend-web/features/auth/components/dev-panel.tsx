@@ -16,7 +16,7 @@ export function DevPanel({ children, className }: DevPanelProps) {
     <div
       className={cn(
         "flex items-center gap-3 rounded-lg border border-dashed border-gold/35 bg-gold/[0.04] px-3.5 py-3",
-        className
+        className,
       )}
     >
       <span className="shrink-0 rounded border border-gold/40 px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-gold-bright">

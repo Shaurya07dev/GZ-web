@@ -24,7 +24,8 @@ export const orderService = {
     const artwork = getArtworkById(payload.artworkId);
     if (!artwork) return mockError("Artwork not found");
 
-    const gstAmount = Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100;
+    const gstAmount =
+      Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100;
     const now = new Date().toISOString();
     const order: Order = {
       id: `order-${crypto.randomUUID()}`,

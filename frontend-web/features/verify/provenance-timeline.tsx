@@ -33,7 +33,7 @@ interface ProvenanceTimelineProps {
 // certificate, sourced straight from artwork_status_history per the spec.
 export function ProvenanceTimeline({ history }: ProvenanceTimelineProps) {
   const ordered = [...history].sort(
-    (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime()
+    (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
   );
 
   if (ordered.length === 0) return null;
@@ -47,7 +47,10 @@ export function ProvenanceTimeline({ history }: ProvenanceTimelineProps) {
         {ordered.map((event, index) => {
           const isLast = index === ordered.length - 1;
           return (
-            <li key={`${event.status}-${event.changedAt}`} className="relative flex gap-4 pb-7 last:pb-0">
+            <li
+              key={`${event.status}-${event.changedAt}`}
+              className="relative flex gap-4 pb-7 last:pb-0"
+            >
               {!isLast && (
                 <span
                   className="absolute top-6 left-[11px] h-full w-px bg-border"

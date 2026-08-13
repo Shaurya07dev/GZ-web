@@ -24,7 +24,11 @@ import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
 import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
-import { loginSchema, type LoginInput, type Role } from "@/features/auth/schemas/auth-schemas";
+import {
+  loginSchema,
+  type LoginInput,
+  type Role,
+} from "@/features/auth/schemas/auth-schemas";
 
 // `rememberMe`'s `.default(false)` in the schema makes it optional on the
 // Zod *input* type but required on the parsed *output* type (LoginInput).
@@ -97,10 +101,10 @@ export function LoginForm() {
         },
         onError: (error) => {
           setFormError(
-            error instanceof Error ? error.message : "Something went wrong."
+            error instanceof Error ? error.message : "Something went wrong.",
           );
         },
-      }
+      },
     );
   }
 
@@ -189,13 +193,18 @@ export function LoginForm() {
           disabled={loginMutation.isPending}
           className="mt-1 h-10 w-full"
         >
-          {loginMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+          {loginMutation.isPending && (
+            <Loader2 className="size-4 animate-spin" />
+          )}
           Sign in
         </Button>
 
         <DevPanel className="flex-wrap">
           <span className="text-xs text-muted-foreground">Sign in as</span>
-          <Select value={demoRole} onValueChange={(v) => setDemoRole(v as DemoRole)}>
+          <Select
+            value={demoRole}
+            onValueChange={(v) => setDemoRole(v as DemoRole)}
+          >
             <SelectTrigger className="h-8 w-[140px]" size="sm">
               <SelectValue>
                 {(value: unknown) => ROLE_LABELS[value as DemoRole] ?? "Artist"}
@@ -227,7 +236,10 @@ export function LoginForm() {
         className="text-center text-sm text-muted-foreground"
       >
         Don&rsquo;t have an account?{" "}
-        <Link href="/register" className="font-medium text-gold-bright hover:underline">
+        <Link
+          href="/register"
+          className="font-medium text-gold-bright hover:underline"
+        >
           Create one
         </Link>
       </motion.p>

@@ -29,7 +29,10 @@ export function advancePercentFor(customerPrice: number): 5 | 3 {
   return customerPrice < ADVANCE_THRESHOLD ? 5 : 3;
 }
 
-export function advanceAmountFor(customerPrice: number, advancePercent: 5 | 3): number {
+export function advanceAmountFor(
+  customerPrice: number,
+  advancePercent: 5 | 3,
+): number {
   return Math.round((advancePercent / 100) * customerPrice);
 }
 
@@ -53,11 +56,13 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 let holdings: AggregatorHolding[] = [...mockAggregatorHoldings];
 let nextHoldingSeq = holdings.length + 1;
 
-function withArtwork(holding: AggregatorHolding): AggregatorHolding & { artwork: ArtworkSummary } {
+function withArtwork(
+  holding: AggregatorHolding,
+): AggregatorHolding & { artwork: ArtworkSummary } {
   const artwork = getArtworkById(holding.artworkId);
   if (!artwork) {
     throw new Error(
-      `aggregatorService: holding "${holding.id}" references missing artwork "${holding.artworkId}"`
+      `aggregatorService: holding "${holding.id}" references missing artwork "${holding.artworkId}"`,
     );
   }
   return { ...holding, artwork: toSummary(artwork) };
@@ -75,7 +80,7 @@ export const aggregatorService = {
       (artwork) =>
         artwork.listingType === "marketplace_and_aggregator" &&
         artwork.status === "marketplace" &&
-        !claimedArtworkIds.has(artwork.id)
+        !claimedArtworkIds.has(artwork.id),
     );
     return mockDelay(reservable.map(toSummary));
   },
@@ -83,7 +88,10 @@ export const aggregatorService = {
   // simulateConflict mirrors the real, documented 409 race condition (SAD
   // §3.5: "Response 409 Conflict (lost the race to another aggregator)")
   // rather than an invented error path.
-  reserve(artworkId: string, simulateConflict = false): Promise<AggregatorHolding> {
+  reserve(
+    artworkId: string,
+    simulateConflict = false,
+  ): Promise<AggregatorHolding> {
     if (simulateConflict) {
       return mockError("Artwork no longer available");
     }
@@ -112,7 +120,9 @@ export const aggregatorService = {
     return mockDelay(holding);
   },
 
-  listCollection(): Promise<Array<AggregatorHolding & { artwork: ArtworkSummary }>> {
+  listCollection(): Promise<
+    Array<AggregatorHolding & { artwork: ArtworkSummary }>
+  > {
     return mockDelay(holdings.map(withArtwork));
   },
 
@@ -121,12 +131,15 @@ export const aggregatorService = {
   // visible (and editable-price-locked) in the Collection table per spec §7.
   recordSale(payload: RecordSalePayload): Promise<AggregatorHolding> {
     const index = holdings.findIndex(
-      (h) => h.artworkId === payload.artworkId && h.status === "reserved"
+      (h) => h.artworkId === payload.artworkId && h.status === "reserved",
     );
     if (index === -1) {
       return mockError("No active reservation found for this artwork");
     }
-    const updated: AggregatorHolding = { ...holdings[index], status: "sold_pending_settlement" };
+    const updated: AggregatorHolding = {
+      ...holdings[index],
+      status: "sold_pending_settlement",
+    };
     holdings = holdings.map((h, i) => (i === index ? updated : h));
     return mockDelay(updated);
   },
@@ -140,7 +153,10 @@ export const aggregatorService = {
   // different holding) would silently revert the edited price back to
   // whatever this service last held, since setQueryData alone never tells
   // the "server" about the change.
-  updateDisplayPrice(holdingId: string, displayPrice: number): AggregatorHolding {
+  updateDisplayPrice(
+    holdingId: string,
+    displayPrice: number,
+  ): AggregatorHolding {
     const index = holdings.findIndex((h) => h.id === holdingId);
     if (index === -1) {
       throw new Error(`aggregatorService: no holding "${holdingId}"`);
@@ -167,13 +183,20 @@ export const aggregatorService = {
     commissionEarned: number;
     pendingSettlements: number;
   }> {
-    const activeReservations = holdings.filter((h) => h.status === "reserved").length;
-    const soldHoldings = holdings.filter((h) => h.status === "sold_pending_settlement");
+    const activeReservations = holdings.filter(
+      (h) => h.status === "reserved",
+    ).length;
+    const soldHoldings = holdings.filter(
+      (h) => h.status === "sold_pending_settlement",
+    );
     const pendingSettlements = soldHoldings.length;
     const commissionEarned = soldHoldings.reduce((sum, holding) => {
       const artwork = getArtworkById(holding.artworkId);
       if (!artwork) return sum;
-      const aggregatorMarkup = Math.max(0, holding.displayPrice - artwork.customerPrice);
+      const aggregatorMarkup = Math.max(
+        0,
+        holding.displayPrice - artwork.customerPrice,
+      );
       return sum + 0.2 * aggregatorMarkup;
     }, 0);
 

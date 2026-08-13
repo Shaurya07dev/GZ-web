@@ -79,7 +79,7 @@ export function ArtistSurveyForm() {
     setTimeout(() => {
       setIsSubmitting(false);
       setSubmitted(true);
-      toast.success("Thanks — your artist survey is in.");
+      toast.success("Thanks, your artist survey is in.");
     }, 1000);
   }
 
@@ -94,8 +94,8 @@ export function ArtistSurveyForm() {
             Thanks for filling this in
           </h1>
           <p className="text-balance text-sm leading-relaxed text-muted-foreground">
-            Your details now have what our curation team needs to feature
-            your work well on GalleryZone.
+            Your details now have what our curation team needs to feature your
+            work well on GalleryZone.
           </p>
         </div>
       </div>
@@ -239,7 +239,10 @@ export function ArtistSurveyForm() {
                       id={`method-${method}`}
                       checked={data.paintingMethods.includes(method)}
                       onCheckedChange={() =>
-                        update("paintingMethods", toggle(data.paintingMethods, method))
+                        update(
+                          "paintingMethods",
+                          toggle(data.paintingMethods, method),
+                        )
                       }
                     />
                     <Label
@@ -255,10 +258,16 @@ export function ArtistSurveyForm() {
                     id="method-other"
                     checked={data.paintingMethods.includes("Other")}
                     onCheckedChange={() =>
-                      update("paintingMethods", toggle(data.paintingMethods, "Other"))
+                      update(
+                        "paintingMethods",
+                        toggle(data.paintingMethods, "Other"),
+                      )
                     }
                   />
-                  <Label htmlFor="method-other" className="cursor-pointer font-normal">
+                  <Label
+                    htmlFor="method-other"
+                    className="cursor-pointer font-normal"
+                  >
                     Other
                   </Label>
                 </div>
@@ -267,7 +276,9 @@ export function ArtistSurveyForm() {
                 <Input
                   placeholder="Other (please specify)"
                   value={data.paintingMethodOther}
-                  onChange={(e) => update("paintingMethodOther", e.target.value)}
+                  onChange={(e) =>
+                    update("paintingMethodOther", e.target.value)
+                  }
                 />
               )}
             </div>
@@ -283,7 +294,10 @@ export function ArtistSurveyForm() {
                       id={`style-${style}`}
                       checked={data.regionalStyles.includes(style)}
                       onCheckedChange={() =>
-                        update("regionalStyles", toggle(data.regionalStyles, style))
+                        update(
+                          "regionalStyles",
+                          toggle(data.regionalStyles, style),
+                        )
                       }
                     />
                     <Label
@@ -299,10 +313,16 @@ export function ArtistSurveyForm() {
                     id="style-other"
                     checked={data.regionalStyles.includes("Other")}
                     onCheckedChange={() =>
-                      update("regionalStyles", toggle(data.regionalStyles, "Other"))
+                      update(
+                        "regionalStyles",
+                        toggle(data.regionalStyles, "Other"),
+                      )
                     }
                   />
-                  <Label htmlFor="style-other" className="cursor-pointer font-normal">
+                  <Label
+                    htmlFor="style-other"
+                    className="cursor-pointer font-normal"
+                  >
                     Other
                   </Label>
                 </div>
@@ -352,8 +372,8 @@ export function ArtistSurveyForm() {
       <Question last>
         <div className="space-y-3">
           <Label>
-            How would you rate your overall satisfaction with your current
-            art career?
+            How would you rate your overall satisfaction with your current art
+            career?
           </Label>
           <div className="flex gap-2">
             {[1, 2, 3, 4, 5].map((n) => (
@@ -361,7 +381,9 @@ export function ArtistSurveyForm() {
                 key={n}
                 type="button"
                 aria-label={`${n} star${n > 1 ? "s" : ""}`}
-                onClick={() => update("satisfaction", n === data.satisfaction ? 0 : n)}
+                onClick={() =>
+                  update("satisfaction", n === data.satisfaction ? 0 : n)
+                }
                 className="rounded-md p-0.5 transition-transform hover:scale-110"
               >
                 <Star
@@ -369,7 +391,7 @@ export function ArtistSurveyForm() {
                     "size-6",
                     n <= data.satisfaction
                       ? "fill-gold-bright text-gold-bright"
-                      : "text-muted-foreground/40"
+                      : "text-muted-foreground/40",
                   )}
                   strokeWidth={1.5}
                 />
@@ -380,7 +402,11 @@ export function ArtistSurveyForm() {
       </Question>
 
       <div className="flex flex-col items-center gap-3 px-8 py-8 sm:px-12">
-        <Button type="submit" disabled={isSubmitting} className="h-11 w-full max-w-xs">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="h-11 w-full max-w-xs"
+        >
           {isSubmitting && <Loader2 className="size-4 animate-spin" />}
           Submit
         </Button>
@@ -400,7 +426,9 @@ function Question({
   last?: boolean;
 }) {
   return (
-    <div className={cn("px-8 py-6 sm:px-12", !last && "border-b border-border")}>
+    <div
+      className={cn("px-8 py-6 sm:px-12", !last && "border-b border-border")}
+    >
       {children}
     </div>
   );

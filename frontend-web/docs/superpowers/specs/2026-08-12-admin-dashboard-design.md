@@ -77,12 +77,14 @@ Grouped sidebar nav, `AdminShell` following the `DashboardShell` /
 independent shell — not a forced generalization of three working ones).
 
 ### Overview — `/admin`
+
 KPI tiles (GMV, platform revenue, artist payouts, orders, active artworks,
 total users, and the three pending-queue counts), recent-activity feed, and
 direct shortcuts into whichever queues have items waiting. Redirects from
-`/admin` are unnecessary — this *is* `/admin`.
+`/admin` are unnecessary — this _is_ `/admin`.
 
 ### Analytics — `/admin/analytics`
+
 The deep view, Recharts-based (see §5): revenue over time split by
 destination (platform / artist / aggregator), order volume, category
 performance, artwork status funnel, user growth by role, verification-tier
@@ -90,11 +92,12 @@ distribution, top artists and aggregators by revenue. Date-range selector
 (30d / 90d / 12m) switching between pre-baked series.
 
 ### Moderation — the three approval workflows
+
 - **`/admin/moderation/artworks`** — queue of `pending_approval` artworks.
 - **`/admin/moderation/artworks/[artworkId]`** — full review: every image at
   size, complete metadata, artist context (verification tier, prior
   approvals), and the real eligibility checklist from `Artist Complete
-  workflow.md` (100% handmade · no replicas · no AI/digital prints/NFTs ·
+workflow.md` (100% handmade · no replicas · no AI/digital prints/NFTs ·
   artist owns all rights · no IP infringement) rendered as a reviewer
   checklist. **Approve** → status becomes `marketplace`. **Reject** →
   requires a reason (free text + common-reason presets), status becomes
@@ -109,6 +112,7 @@ distribution, top artists and aggregators by revenue. Date-range selector
   Approve/reject.
 
 ### Catalog
+
 - **`/admin/artworks`** — every artwork regardless of status, with status
   filter, category filter, search, sort, pagination.
 - **`/admin/artworks/[artworkId]`** — admin view of a single artwork: full
@@ -119,6 +123,7 @@ distribution, top artists and aggregators by revenue. Date-range selector
   that still has artworks.
 
 ### People
+
 - **`/admin/artists`**, **`/admin/aggregators`**, **`/admin/customers`** —
   one table each (search, status filter, pagination), each row linking to a
   detail page.
@@ -130,6 +135,7 @@ distribution, top artists and aggregators by revenue. Date-range selector
   suspend/activate.
 
 ### Commerce
+
 - **`/admin/orders`** — all orders, status filter, search, pagination;
   row → detail.
 - **`/admin/orders/[orderId]`** — full order: artwork, buyer, delivery
@@ -139,6 +145,7 @@ distribution, top artists and aggregators by revenue. Date-range selector
   a separate route, and a "retry" action on `failed` rows.
 
 ### System
+
 - **`/admin/audit-logs`** — read-only, immutable, filterable by action type,
   entity type, and admin user. Never editable or deletable from the UI —
   the SAD (§8.8) is explicit that no API path exists to mutate audit rows,

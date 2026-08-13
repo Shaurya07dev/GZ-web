@@ -12,7 +12,8 @@ export function useAddresses() {
 export function useAddAddressMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (address: Omit<Address, "id">) => customerService.addAddress(address),
+    mutationFn: (address: Omit<Address, "id">) =>
+      customerService.addAddress(address),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses"] });
     },

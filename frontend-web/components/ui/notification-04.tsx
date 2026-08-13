@@ -54,7 +54,10 @@ const defaultGroups: NotificationGroup[] = [
     items: [
       {
         id: "artwork-approved",
-        source: { name: "Monsoon Over Madurai", ...artworkAvatar("monsoon-over-madurai") },
+        source: {
+          name: "Monsoon Over Madurai",
+          ...artworkAvatar("monsoon-over-madurai"),
+        },
         title: "Your artwork was approved",
         subtitle: "Monsoon Over Madurai is now live on the marketplace",
         timestamp: "12m ago",
@@ -62,9 +65,12 @@ const defaultGroups: NotificationGroup[] = [
       },
       {
         id: "new-order",
-        source: { name: "Ancestral Bronze Study", ...artworkAvatar("ancestral-bronze-study") },
+        source: {
+          name: "Ancestral Bronze Study",
+          ...artworkAvatar("ancestral-bronze-study"),
+        },
         title: "You have a new order",
-        subtitle: "Ancestral Bronze Study — payment confirmed",
+        subtitle: "Ancestral Bronze Study: payment confirmed",
         timestamp: "24m ago",
         unread: true,
       },
@@ -114,12 +120,15 @@ export default function Notification4({
 }: Notification4Props) {
   const unreadCount = groups.reduce(
     (total, group) => total + group.items.filter((item) => item.unread).length,
-    0
+    0,
   );
 
   return (
     <section
-      className={cn("flex items-center justify-center bg-background", className)}
+      className={cn(
+        "flex items-center justify-center bg-background",
+        className,
+      )}
     >
       <Card className="w-full max-w-sm gap-0 rounded-3xl bg-muted pb-2 ring-0">
         <CardHeader className="flex flex-row items-center justify-between px-3">
@@ -162,7 +171,9 @@ function NotificationGroupCard({ group }: { group: NotificationGroup }) {
   return (
     <section className="overflow-hidden rounded-2xl bg-card">
       <div className="px-5 pt-4">
-        <p className="text-sm font-medium text-muted-foreground">{group.label}</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          {group.label}
+        </p>
       </div>
 
       <div className="px-4 pt-2 pb-2">

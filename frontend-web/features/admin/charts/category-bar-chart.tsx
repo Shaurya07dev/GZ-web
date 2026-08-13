@@ -87,8 +87,12 @@ export function CategoryBarChart({
               formatValue={formatINR}
               nameByKey={{ revenue: "Revenue" }}
               note={(entry) => {
-                const orders = (entry.payload as CategoryPerformance | undefined)?.orders;
-                return orders === undefined ? undefined : `${formatCount(orders)} orders`;
+                const orders = (
+                  entry.payload as CategoryPerformance | undefined
+                )?.orders;
+                return orders === undefined
+                  ? undefined
+                  : `${formatCount(orders)} orders`;
               }}
             />
           }

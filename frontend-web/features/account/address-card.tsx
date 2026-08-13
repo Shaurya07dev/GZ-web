@@ -9,7 +9,12 @@ interface AddressCardProps {
   isDeleting?: boolean;
 }
 
-export function AddressCard({ address, onEdit, onDelete, isDeleting }: AddressCardProps) {
+export function AddressCard({
+  address,
+  onEdit,
+  onDelete,
+  isDeleting,
+}: AddressCardProps) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">

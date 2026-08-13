@@ -1,15 +1,27 @@
 "use client";
 
 import { ShoppingBag } from "lucide-react";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
-import { AdminStatusBadge, adminStatusLabel } from "@/features/admin/admin-status-badge";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
+import {
+  AdminStatusBadge,
+  adminStatusLabel,
+} from "@/features/admin/admin-status-badge";
 import { useAdminOrders } from "@/hooks/useAdminCommerce";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import { formatINR } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types/order";
 
 const STATUSES: OrderStatus[] = [
-  "pending", "paid", "confirmed", "packed", "transit", "delivered", "cancelled",
+  "pending",
+  "paid",
+  "confirmed",
+  "packed",
+  "transit",
+  "delivered",
+  "cancelled",
 ];
 
 function orderTotal(order: Order): number {
@@ -83,12 +95,17 @@ export function OrderAdminTable() {
       getRowHref={(row) => `/admin/orders/${row.id}`}
       getRowLabel={(row) => `Open order ${row.id}`}
       searchPlaceholder="Search by artwork or order id"
-      searchValue={(row) => `${row.id} ${getArtworkById(row.artworkId)?.title ?? ""}`}
+      searchValue={(row) =>
+        `${row.id} ${getArtworkById(row.artworkId)?.title ?? ""}`
+      }
       filters={[
         {
           key: "status",
           label: "Status",
-          options: STATUSES.map((s) => ({ value: s, label: adminStatusLabel(s) })),
+          options: STATUSES.map((s) => ({
+            value: s,
+            label: adminStatusLabel(s),
+          })),
           matches: (row, value) => row.status === value,
         },
       ]}

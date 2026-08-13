@@ -13,14 +13,17 @@ import { cn } from "@/lib/utils";
 // root export, so that import is swapped for "framer-motion" everywhere in
 // this codebase (see switch-mode.tsx, login-form.tsx, etc.).
 //
-// Also fixes a real bug in the source: its scroll handler called
-// `setOpen(true)` unconditionally whenever `hideOnScroll` was false, which
-// silently re-opened the banner on the very next scroll tick after a user
-// clicked the close button. Dismissal is now its own `dismissed` state that
-// nothing but the close button can flip, and the banner unmounts (via
-// AnimatePresence) rather than just animating to an invisible-but-still
-// -occupying-layout-space state, so a dismissed banner doesn't leave a dead
-// gap above whatever sticky header sits below it.
+// Also fixes two real bugs in the source:
+// 1. Its scroll handler called `setOpen(true)` unconditionally whenever
+//    `hideOnScroll` was false, which silently re-opened the banner on the
+//    very next scroll tick after a user clicked the close button.
+// 2. It only ever animated `y`/`opacity` (a transform), which doesn't
+//    remove the element from layout — so hiding on scroll left its
+//    `min-h-14` box still reserving space, showing up as a dead gap above
+//    whatever sticky header sits below it. The banner now unmounts (via
+//    AnimatePresence) whenever it's not visible for ANY reason —
+//    dismissed OR scrolled past — so the layout actually collapses once
+//    the hide transition finishes, not just visually fades.
 export const StickyBanner = ({
   className,
   children,
@@ -44,14 +47,14 @@ export const StickyBanner = ({
 
   return (
     <AnimatePresence>
-      {!dismissed && (
+      {visible && (
         <motion.div
           className={cn(
             "sticky inset-x-0 top-0 z-40 flex min-h-14 w-full items-center justify-center bg-transparent px-4 py-1",
-            className
+            className,
           )}
           initial={{ y: -100, opacity: 0 }}
-          animate={{ y: visible ? 0 : -100, opacity: visible ? 1 : 0 }}
+          animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
         >

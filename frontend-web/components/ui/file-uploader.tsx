@@ -14,7 +14,12 @@ import {
   FaShieldAlt,
   FaArrowRight,
 } from "react-icons/fa";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -59,7 +64,8 @@ function FileTypeIcon({ extension }: { extension: string }) {
   if (["jpg", "jpeg", "png", "svg", "gif", "webp"].includes(extension))
     return <FaFileImage className="size-4" />;
   if (extension === "pdf") return <FaFilePdf className="size-4" />;
-  if (["doc", "docx"].includes(extension)) return <FaFileWord className="size-4" />;
+  if (["doc", "docx"].includes(extension))
+    return <FaFileWord className="size-4" />;
   return <FaFileAlt className="size-4" />;
 }
 
@@ -88,11 +94,11 @@ export function FileUploader({
   const accept = acceptedFormats.map((format) => `.${format}`).join(",");
   const acceptedSet = React.useMemo(
     () => new Set(acceptedFormats.map((f) => f.toLowerCase())),
-    [acceptedFormats]
+    [acceptedFormats],
   );
 
   const hasUploadingFiles = files.some(
-    (f) => f.status === "uploading" || f.status === "queued"
+    (f) => f.status === "uploading" || f.status === "queued",
   );
   const allDone = files.length > 0 && files.every((f) => f.status === "done");
   const isAtLimit = files.length >= maxFiles;
@@ -105,13 +111,16 @@ export function FileUploader({
       setFiles((current) =>
         current.map((f) => {
           if (f.status !== "uploading" && f.status !== "queued") return f;
-          const nextProgress = Math.min(f.progress + 8 + Math.random() * 14, 100);
+          const nextProgress = Math.min(
+            f.progress + 8 + Math.random() * 14,
+            100,
+          );
           return {
             ...f,
             progress: nextProgress,
             status: nextProgress >= 100 ? "done" : "uploading",
           };
-        })
+        }),
       );
     }, 350);
 
@@ -132,7 +141,10 @@ export function FileUploader({
           id: generateId(),
           file,
           progress: 0,
-          status: isAccepted && !isTooLarge ? ("queued" as const) : ("error" as const),
+          status:
+            isAccepted && !isTooLarge
+              ? ("queued" as const)
+              : ("error" as const),
         };
       });
 
@@ -207,13 +219,13 @@ export function FileUploader({
                 "flex w-full flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-muted/30 py-10 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 isDragging
                   ? "border-primary bg-primary/5"
-                  : "hover:border-primary/50 hover:bg-muted/50"
+                  : "hover:border-primary/50 hover:bg-muted/50",
               )}
             >
               <FaCloudUploadAlt
                 className={cn(
                   "mb-3 size-10 transition-colors",
-                  isDragging ? "text-primary" : "text-muted-foreground/40"
+                  isDragging ? "text-primary" : "text-muted-foreground/40",
                 )}
               />
               <span className="text-base font-medium text-foreground">
@@ -275,7 +287,8 @@ export function FileUploader({
             <div className="flex flex-col gap-2">
               {files.map((f) => {
                 const extension = getExtension(f.file.name);
-                const inProgress = f.status === "uploading" || f.status === "queued";
+                const inProgress =
+                  f.status === "uploading" || f.status === "queued";
 
                 return (
                   <div
@@ -290,7 +303,7 @@ export function FileUploader({
                             ? "text-destructive"
                             : f.status === "done"
                               ? "text-primary"
-                              : "text-muted-foreground"
+                              : "text-muted-foreground",
                         )}
                       >
                         <FileTypeIcon extension={extension} />

@@ -85,6 +85,28 @@ const ARTWORKS: ArtworkAnchor[] = [
     revealTo: 0.78,
     rotate: 3,
   },
+  {
+    src: "/identity/identity-card.png",
+    alt: "Vintage artwork photograph with a digital ID tag",
+    leftPct: 25,
+    topPct: 14,
+    width: 118,
+    height: 140,
+    revealFrom: 0.6,
+    revealTo: 0.86,
+    rotate: -2,
+  },
+  {
+    src: "/identity/certificate-card.png",
+    alt: "Certificate of authenticity document",
+    leftPct: 91,
+    topPct: 52,
+    width: 134,
+    height: 134,
+    revealFrom: 0.68,
+    revealTo: 0.94,
+    rotate: 2,
+  },
 ];
 
 export function HeroSection() {
@@ -100,7 +122,7 @@ export function HeroSection() {
   });
 
   return (
-    <section ref={driverRef} className="relative h-[260vh]">
+    <section ref={driverRef} className="relative h-[300vh]">
       <div className="sticky top-20 flex h-[calc(100vh-5rem)] w-full flex-col items-center justify-center overflow-hidden">
         {ARTWORKS.map((artwork) => (
           <HeroArtwork

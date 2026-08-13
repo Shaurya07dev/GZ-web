@@ -6,14 +6,16 @@ import { JOURNEY_STEPS } from "./journey-data";
 
 // Shared with journey-section.tsx's auto-advance timer so the visual fill
 // and the actual step change never drift out of sync.
-export const JOURNEY_STEP_DURATION_MS = 3000;
+export const JOURNEY_STEP_DURATION_MS = 7000;
 
 export function JourneyStepper({
   activeIndex,
   onSelect,
+  autoAdvancing,
 }: {
   activeIndex: number;
   onSelect: (index: number) => void;
+  autoAdvancing: boolean;
 }) {
   return (
     <div className="flex gap-1 overflow-x-auto border-b border-border">
@@ -42,16 +44,23 @@ export function JourneyStepper({
                 className="absolute inset-x-3 -bottom-px h-[2px] overflow-hidden rounded-full bg-border"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               >
-                <motion.span
-                  key={activeIndex}
-                  className="block h-full rounded-full bg-gold-bright"
-                  initial={{ width: "0%" }}
-                  animate={{ width: "100%" }}
-                  transition={{
-                    duration: JOURNEY_STEP_DURATION_MS / 1000,
-                    ease: "linear",
-                  }}
-                />
+                {autoAdvancing ? (
+                  <motion.span
+                    key={activeIndex}
+                    className="block h-full rounded-full bg-gold-bright"
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{
+                      duration: JOURNEY_STEP_DURATION_MS / 1000,
+                      ease: "linear",
+                    }}
+                  />
+                ) : (
+                  // Paused (a tab was clicked): a static full bar rather
+                  // than a fill animation that would imply it's still
+                  // counting down toward a step change that isn't coming.
+                  <span className="block h-full w-full rounded-full bg-gold-bright" />
+                )}
               </motion.span>
             )}
           </button>

@@ -12,7 +12,9 @@ export default async function AdminCustomerDetailPage(
   props: PageProps<"/admin/customers/[customerId]">,
 ) {
   const { customerId } = await props.params;
-  const user = mockAdminUsers.find((u) => u.id === customerId && u.role === "customer");
+  const user = mockAdminUsers.find(
+    (u) => u.id === customerId && u.role === "customer",
+  );
   if (!user) notFound();
 
   // One customer fixture set exists platform-wide in this mock build, so the
@@ -55,7 +57,8 @@ export default async function AdminCustomerDetailPage(
           <ul className="divide-y divide-border">
             {orders.map((order) => {
               const artwork = getArtworkById(order.artworkId);
-              const total = order.amount + order.gstAmount + order.deliveryCharge;
+              const total =
+                order.amount + order.gstAmount + order.deliveryCharge;
               return (
                 <li key={order.id}>
                   <Link

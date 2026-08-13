@@ -6,11 +6,25 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Receipt, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
-import { AdminStatusBadge, adminStatusLabel } from "@/features/admin/admin-status-badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
+import {
+  AdminStatusBadge,
+  adminStatusLabel,
+} from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
-import { useAdminSettlements, useRetrySettlementMutation } from "@/hooks/useAdminCommerce";
+import {
+  useAdminSettlements,
+  useRetrySettlementMutation,
+} from "@/hooks/useAdminCommerce";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
@@ -32,8 +46,12 @@ export function SettlementTable() {
       header: "Artwork",
       render: (row) => (
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{row.artworkTitle}</p>
-          <p className="truncate text-xs text-muted-foreground">{row.artistName}</p>
+          <p className="truncate text-sm font-medium text-foreground">
+            {row.artworkTitle}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {row.artistName}
+          </p>
         </div>
       ),
       sortable: true,
@@ -43,7 +61,9 @@ export function SettlementTable() {
       key: "artist",
       header: "Artist",
       render: (row) => (
-        <span className="text-sm tabular-nums text-foreground">{formatINR(row.artistAmount)}</span>
+        <span className="text-sm tabular-nums text-foreground">
+          {formatINR(row.artistAmount)}
+        </span>
       ),
       sortable: true,
       sortValue: (row) => row.artistAmount,
@@ -53,7 +73,9 @@ export function SettlementTable() {
       header: "Aggregator",
       render: (row) => (
         <span className="text-sm tabular-nums text-muted-foreground">
-          {row.aggregatorCommission > 0 ? formatINR(row.aggregatorCommission) : "—"}
+          {row.aggregatorCommission > 0
+            ? formatINR(row.aggregatorCommission)
+            : "N/A"}
         </span>
       ),
       sortable: true,
@@ -89,12 +111,17 @@ export function SettlementTable() {
         onRowClick={(row) => setActive(row)}
         getRowLabel={(row) => `Open settlement for ${row.artworkTitle}`}
         searchPlaceholder="Search by artwork or artist"
-        searchValue={(row) => `${row.artworkTitle} ${row.artistName} ${row.orderId}`}
+        searchValue={(row) =>
+          `${row.artworkTitle} ${row.artistName} ${row.orderId}`
+        }
         filters={[
           {
             key: "status",
             label: "Status",
-            options: STATUSES.map((s) => ({ value: s, label: adminStatusLabel(s) })),
+            options: STATUSES.map((s) => ({
+              value: s,
+              label: adminStatusLabel(s),
+            })),
             matches: (row, value) => row.status === value,
           },
         ]}
@@ -103,7 +130,10 @@ export function SettlementTable() {
         emptyIcon={Receipt}
       />
 
-      <SettlementDetailDrawer settlement={active} onClose={() => setActive(null)} />
+      <SettlementDetailDrawer
+        settlement={active}
+        onClose={() => setActive(null)}
+      />
     </>
   );
 }
@@ -127,7 +157,11 @@ function SettlementDetailDrawer({
       queryClient.setQueryData<Settlement[]>(["admin-settlements"], (prev) =>
         (prev ?? []).map((s) =>
           s.id === settlement.id
-            ? { ...s, status: "processed", processedAt: new Date().toISOString() }
+            ? {
+                ...s,
+                status: "processed",
+                processedAt: new Date().toISOString(),
+              }
             : s,
         ),
       );
@@ -169,15 +203,25 @@ function SettlementDetailDrawer({
               </div>
 
               <dl className="space-y-2.5">
-                <Split label="Artist payout" value={settlement.artistAmount} total={total} />
+                <Split
+                  label="Artist payout"
+                  value={settlement.artistAmount}
+                  total={total}
+                />
                 <Split
                   label="Aggregator commission"
                   value={settlement.aggregatorCommission}
                   total={total}
                 />
-                <Split label="Platform revenue" value={settlement.platformRevenue} total={total} />
+                <Split
+                  label="Platform revenue"
+                  value={settlement.platformRevenue}
+                  total={total}
+                />
                 <div className="flex items-baseline justify-between border-t border-border pt-2.5">
-                  <dt className="text-sm font-medium text-foreground">Order total</dt>
+                  <dt className="text-sm font-medium text-foreground">
+                    Order total
+                  </dt>
                   <dd className="font-display text-lg font-semibold tabular-nums text-foreground">
                     {formatINR(total)}
                   </dd>
@@ -200,11 +244,14 @@ function SettlementDetailDrawer({
                   <dt className="text-xs text-muted-foreground">Processed</dt>
                   <dd className="truncate text-sm text-foreground">
                     {settlement.processedAt
-                      ? new Date(settlement.processedAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
+                      ? new Date(settlement.processedAt).toLocaleDateString(
+                          "en-IN",
+                          {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )
                       : "Not yet"}
                   </dd>
                 </div>
@@ -229,7 +276,7 @@ function SettlementDetailDrawer({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Retry this settlement?"
-        description="Reprocessing is safe to repeat — the platform guards against double-crediting a wallet."
+        description="Reprocessing is safe to repeat. The platform guards against double-crediting a wallet."
         confirmLabel="Retry"
         isPending={retryMutation.isPending}
         onConfirm={handleRetry}
@@ -238,15 +285,27 @@ function SettlementDetailDrawer({
   );
 }
 
-function Split({ label, value, total }: { label: string; value: number; total: number }) {
+function Split({
+  label,
+  value,
+  total,
+}: {
+  label: string;
+  value: number;
+  total: number;
+}) {
   const share = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-sm text-muted-foreground">
         {label}
-        <span className="ml-1.5 text-xs text-muted-foreground/70">{share}%</span>
+        <span className="ml-1.5 text-xs text-muted-foreground/70">
+          {share}%
+        </span>
       </dt>
-      <dd className="text-sm tabular-nums text-foreground">{formatINR(value)}</dd>
+      <dd className="text-sm tabular-nums text-foreground">
+        {formatINR(value)}
+      </dd>
     </div>
   );
 }

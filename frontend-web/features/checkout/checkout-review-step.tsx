@@ -4,7 +4,10 @@ import Image from "next/image";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
-import { CHECKOUT_GST_RATE, CHECKOUT_DELIVERY_CHARGE } from "@/services/orderService";
+import {
+  CHECKOUT_GST_RATE,
+  CHECKOUT_DELIVERY_CHARGE,
+} from "@/services/orderService";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
 
@@ -26,7 +29,8 @@ export function CheckoutReviewStep({
   onBack,
   onContinue,
 }: CheckoutReviewStepProps) {
-  const gstAmount = Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100;
+  const gstAmount =
+    Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100;
   const total = artwork.customerPrice + gstAmount + CHECKOUT_DELIVERY_CHARGE;
 
   return (
@@ -36,7 +40,8 @@ export function CheckoutReviewStep({
           Review your order
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Confirm the artwork, delivery address, and total before placing your order.
+          Confirm the artwork, delivery address, and total before placing your
+          order.
         </p>
       </div>
 
@@ -75,11 +80,15 @@ export function CheckoutReviewStep({
       <dl className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-4 text-sm">
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Artwork price</dt>
-          <dd className="tabular-nums text-foreground">{formatINR(artwork.customerPrice)}</dd>
+          <dd className="tabular-nums text-foreground">
+            {formatINR(artwork.customerPrice)}
+          </dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">GST (5%)</dt>
-          <dd className="tabular-nums text-foreground">{formatINR(gstAmount)}</dd>
+          <dd className="tabular-nums text-foreground">
+            {formatINR(gstAmount)}
+          </dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-muted-foreground">Delivery</dt>

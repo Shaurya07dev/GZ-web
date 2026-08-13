@@ -5,6 +5,10 @@ import { AggregatorShell } from "@/features/aggregator/aggregator-shell";
 // (requires a `next dev` run against these files) — see Task 6's identical
 // note for the auth layout. Using the plain React.ReactNode signature until
 // then, per the plan's Global Constraints fallback guidance.
-export default function AggregatorLayout({ children }: { children: React.ReactNode }) {
+export default function AggregatorLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <AggregatorShell>{children}</AggregatorShell>;
 }

@@ -25,8 +25,8 @@ export function TechFeaturesSection() {
             Technology built into every artwork.
           </h2>
           <p className="mt-4 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-            Every listing carries a growing layer of technology, tracked
-            through the artwork&rsquo;s life on the platform.
+            Every listing carries a growing layer of technology, tracked through
+            the artwork&rsquo;s life on the platform.
           </p>
         </motion.div>
 

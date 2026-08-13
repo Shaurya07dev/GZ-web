@@ -19,5 +19,7 @@ export interface ArtistProfile {
 }
 
 export function verifiedTierCount(v: ArtistVerificationState): 0 | 1 | 2 | 3 {
-  return ([v.tier1SocialMedia, v.tier2ActivePlan, v.tier3FirstSale].filter(Boolean).length) as 0 | 1 | 2 | 3;
+  return [v.tier1SocialMedia, v.tier2ActivePlan, v.tier3FirstSale].filter(
+    Boolean,
+  ).length as 0 | 1 | 2 | 3;
 }

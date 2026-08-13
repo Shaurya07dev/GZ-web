@@ -1,8 +1,14 @@
 "use client";
 
 import { Users } from "lucide-react";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
-import { AdminStatusBadge, adminStatusLabel } from "@/features/admin/admin-status-badge";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
+import {
+  AdminStatusBadge,
+  adminStatusLabel,
+} from "@/features/admin/admin-status-badge";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { ADMIN_TODAY } from "@/features/admin/admin-data";
 import type { AdminUser, UserRole, UserStatus } from "@/types/admin";
@@ -27,7 +33,9 @@ const DETAIL_BASE: Record<Exclude<UserRole, "admin">, string> = {
 function joinedDays(user: AdminUser): number {
   return Math.max(
     0,
-    Math.round((ADMIN_TODAY.getTime() - new Date(user.createdAt).getTime()) / 86_400_000),
+    Math.round(
+      (ADMIN_TODAY.getTime() - new Date(user.createdAt).getTime()) / 86_400_000,
+    ),
   );
 }
 
@@ -55,7 +63,8 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
       </div>
     ),
     sortable: true,
-    sortValue: (row) => (role === "aggregator" ? (row.companyName ?? row.name) : row.name),
+    sortValue: (row) =>
+      role === "aggregator" ? (row.companyName ?? row.name) : row.name,
   };
 
   const roleSpecific: AdminDataTableColumn<AdminUser>[] =
@@ -65,8 +74,10 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
             key: "kyc",
             header: "KYC",
             render: (row) =>
-              row.kycStatus ? <AdminStatusBadge status={row.kycStatus} size="sm" /> : (
-                <span className="text-xs text-muted-foreground">—</span>
+              row.kycStatus ? (
+                <AdminStatusBadge status={row.kycStatus} size="sm" />
+              ) : (
+                <span className="text-xs text-muted-foreground">Not set</span>
               ),
             sortable: true,
             sortValue: (row) => row.kycStatus ?? "",
@@ -77,7 +88,11 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
             {
               key: "contact",
               header: "Contact",
-              render: (row) => <span className="text-sm text-muted-foreground">{row.name}</span>,
+              render: (row) => (
+                <span className="text-sm text-muted-foreground">
+                  {row.name}
+                </span>
+              ),
               sortable: true,
               sortValue: (row) => row.name,
             },
@@ -108,7 +123,9 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
       key: "joined",
       header: "Joined",
       render: (row) => (
-        <span className="text-sm text-muted-foreground">{formatJoined(row)}</span>
+        <span className="text-sm text-muted-foreground">
+          {formatJoined(row)}
+        </span>
       ),
       sortable: true,
       sortValue: (row) => -joinedDays(row),
@@ -131,7 +148,10 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
         {
           key: "status",
           label: "Status",
-          options: STATUSES.map((s) => ({ value: s, label: adminStatusLabel(s) })),
+          options: STATUSES.map((s) => ({
+            value: s,
+            label: adminStatusLabel(s),
+          })),
           matches: (row, value) => row.status === value,
         },
       ]}

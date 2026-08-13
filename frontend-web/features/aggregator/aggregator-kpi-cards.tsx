@@ -15,7 +15,11 @@ import { useAggregatorDashboard } from "@/hooks/useAggregatorDashboard";
 // fixture, so it needs its own loading/error handling that the artist
 // version never had to worry about.
 const METRIC_META = [
-  { key: "activeReservations", label: "Active reservations", icon: BookmarkCheck },
+  {
+    key: "activeReservations",
+    label: "Active reservations",
+    icon: BookmarkCheck,
+  },
   { key: "commissionEarned", label: "Commission earned", icon: IndianRupee },
   { key: "pendingSettlements", label: "Pending settlements", icon: Banknote },
 ] as const;
@@ -34,8 +38,13 @@ export function AggregatorKpiCards() {
           className="rounded-lg border border-border bg-card p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">{metric.label}</span>
-            <metric.icon className="size-4 text-gold-bright" strokeWidth={1.75} />
+            <span className="text-sm text-muted-foreground">
+              {metric.label}
+            </span>
+            <metric.icon
+              className="size-4 text-gold-bright"
+              strokeWidth={1.75}
+            />
           </div>
 
           {isPending ? (

@@ -5,7 +5,7 @@ import { LegalSectionBlock } from "@/features/legal/legal-section";
 import { termsSections } from "@/features/legal/data/terms-sections";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — GalleryZone",
+  title: "Terms of Service | GalleryZone",
   description:
     "The terms governing artists, aggregators, and customers using GalleryZone.",
 };

@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { ArtworkAdminTable } from "@/features/admin/catalog/artwork-admin-table";
 
 export const metadata = {
-  title: "Artworks — GalleryZone Admin",
+  title: "Artworks | GalleryZone Admin",
 };
 
 export default function AdminArtworksPage() {

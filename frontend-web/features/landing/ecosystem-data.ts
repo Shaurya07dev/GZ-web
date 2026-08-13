@@ -110,7 +110,7 @@ export const ECOSYSTEM_PERSONAS: EcosystemPersona[] = [
     navIcon: Network,
     eyebrow: "THE NETWORK",
     headline: "One ecosystem. Every collector.",
-    body: "Artists, collectors, and galleries share one trusted network — verified identity, transparent history, global reach.",
+    body: "Artists, collectors, and galleries share one trusted network: verified identity, transparent history, global reach.",
     bullets: [
       {
         icon: Upload,

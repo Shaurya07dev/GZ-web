@@ -3,7 +3,7 @@ import { RegisterForm } from "@/features/auth/components/register-form";
 import { roleSchema } from "@/features/auth/schemas/auth-schemas";
 
 export const metadata: Metadata = {
-  title: "Create your account — GalleryZone",
+  title: "Create your account | GalleryZone",
   description:
     "Join GalleryZone as an artist, aggregator, or collector of verified original artwork.",
 };
@@ -19,6 +19,8 @@ export default async function RegisterPage(props: PageProps<"/register">) {
   const parsedRole = roleSchema.safeParse(role);
 
   return (
-    <RegisterForm initialRole={parsedRole.success ? parsedRole.data : undefined} />
+    <RegisterForm
+      initialRole={parsedRole.success ? parsedRole.data : undefined}
+    />
   );
 }

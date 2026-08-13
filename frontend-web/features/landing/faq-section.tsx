@@ -33,8 +33,7 @@ export function FaqSection() {
                 .
               </h2>
               <p className="mt-5 max-w-sm text-balance text-sm leading-relaxed text-muted-foreground">
-                A few clear answers to help you understand how everything
-                works.
+                A few clear answers to help you understand how everything works.
               </p>
             </motion.div>
           </div>
@@ -59,11 +58,7 @@ export function FaqSection() {
   );
 }
 
-function FaqAccordionItem({
-  item,
-}: {
-  item: (typeof FAQ_ITEMS)[number];
-}) {
+function FaqAccordionItem({ item }: { item: (typeof FAQ_ITEMS)[number] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -85,11 +80,7 @@ function FaqAccordionItem({
           {item.question}
         </span>
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
-          {open ? (
-            <Minus className="size-4" />
-          ) : (
-            <Plus className="size-4" />
-          )}
+          {open ? <Minus className="size-4" /> : <Plus className="size-4" />}
         </span>
       </button>
 

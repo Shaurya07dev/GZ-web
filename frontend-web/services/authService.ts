@@ -44,7 +44,9 @@ export const authService = {
   // account, and the simulated-error path (unused by the UI in this phase,
   // see ForgotPasswordForm) is a generic transient failure, never an
   // "account not found" message — real security practice, not a shortcut.
-  forgotPassword: (input: ForgotPasswordInput & { simulateError?: boolean }) => {
+  forgotPassword: (
+    input: ForgotPasswordInput & { simulateError?: boolean },
+  ) => {
     if (input.simulateError) {
       return mockError("Something went wrong. Please try again.");
     }
@@ -52,7 +54,7 @@ export const authService = {
   },
 
   resetPassword: (
-    input: ResetPasswordInput & { token?: string; simulateError?: boolean }
+    input: ResetPasswordInput & { token?: string; simulateError?: boolean },
   ) => {
     if (input.simulateError) {
       return mockError("This reset link has expired. Request a new one.");

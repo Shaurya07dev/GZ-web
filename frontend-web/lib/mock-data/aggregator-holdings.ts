@@ -90,11 +90,13 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
 for (const holding of mockAggregatorHoldings) {
   const artwork = mockArtworks.find((a) => a.id === holding.artworkId);
   if (!artwork) {
-    throw new Error(`mock-data/aggregator-holdings: "${holding.artworkId}" does not exist in mockArtworks`);
+    throw new Error(
+      `mock-data/aggregator-holdings: "${holding.artworkId}" does not exist in mockArtworks`,
+    );
   }
   if (artwork.listingType !== "marketplace_and_aggregator") {
     throw new Error(
-      `mock-data/aggregator-holdings: "${holding.artworkId}" must have listingType "marketplace_and_aggregator" (got "${artwork.listingType}")`
+      `mock-data/aggregator-holdings: "${holding.artworkId}" must have listingType "marketplace_and_aggregator" (got "${artwork.listingType}")`,
     );
   }
 }

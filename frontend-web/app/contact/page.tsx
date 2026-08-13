@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { ContactSection } from "@/features/contact/contact-section";
 
 export const metadata: Metadata = {
-  title: "Contact — GalleryZone",
+  title: "Contact | GalleryZone",
   description:
     "Questions about listing art, buying a piece, or partnering with GalleryZone as a gallery. Get in touch with our team.",
 };

@@ -13,7 +13,9 @@ export default async function AdminAggregatorDetailPage(
   props: PageProps<"/admin/aggregators/[aggregatorId]">,
 ) {
   const { aggregatorId } = await props.params;
-  const user = mockAdminUsers.find((u) => u.id === aggregatorId && u.role === "aggregator");
+  const user = mockAdminUsers.find(
+    (u) => u.id === aggregatorId && u.role === "aggregator",
+  );
   if (!user) notFound();
 
   // One aggregator fixture set exists platform-wide in this mock build, so
@@ -25,7 +27,11 @@ export default async function AdminAggregatorDetailPage(
     const artwork = getArtworkById(holding.artworkId);
     if (!artwork) return sum;
     const markup = holding.displayPrice - artwork.customerPrice;
-    return sum + Math.max(0, markup) * (defaultPlatformSettings.aggregatorCommissionPercent / 100);
+    return (
+      sum +
+      Math.max(0, markup) *
+        (defaultPlatformSettings.aggregatorCommissionPercent / 100)
+    );
   }, 0);
 
   return (
@@ -40,9 +46,15 @@ export default async function AdminAggregatorDetailPage(
       <UserDetailHeader user={user} />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Active holdings" value={String(holdings.filter((h) => h.status === "reserved").length)} />
+        <Stat
+          label="Active holdings"
+          value={String(holdings.filter((h) => h.status === "reserved").length)}
+        />
         <Stat label="Sales closed" value={String(sold.length)} />
-        <Stat label="Commission earned" value={formatINR(Math.round(commissionEarned))} />
+        <Stat
+          label="Commission earned"
+          value={formatINR(Math.round(commissionEarned))}
+        />
       </div>
 
       <section className="rounded-xl border border-border bg-card">
@@ -66,7 +78,9 @@ export default async function AdminAggregatorDetailPage(
               const daysLeft = Math.max(
                 0,
                 Math.round(
-                  (new Date(holding.expiresAt).getTime() - ADMIN_TODAY.getTime()) / 86_400_000,
+                  (new Date(holding.expiresAt).getTime() -
+                    ADMIN_TODAY.getTime()) /
+                    86_400_000,
                 ),
               );
               return (
@@ -94,7 +108,9 @@ export default async function AdminAggregatorDetailPage(
                         ? "Sold"
                         : `${daysLeft}d left`}
                     </span>
-                    {artwork ? <AdminStatusBadge status={artwork.status} size="sm" /> : null}
+                    {artwork ? (
+                      <AdminStatusBadge status={artwork.status} size="sm" />
+                    ) : null}
                   </Link>
                 </li>
               );

@@ -15,6 +15,11 @@ export interface RecordSalePayload {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
-  deliveryAddress: { line1: string; city: string; state: string; pincode: string };
+  deliveryAddress: {
+    line1: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
   deliveryMode: "courier" | "self_pickup";
 }

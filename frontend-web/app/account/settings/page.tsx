@@ -9,8 +9,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
-import { useCustomerProfile, useUpdateProfileMutation } from "@/hooks/useCustomerProfile";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+} from "@/components/ui/field";
+import {
+  useCustomerProfile,
+  useUpdateProfileMutation,
+} from "@/hooks/useCustomerProfile";
 import type { CustomerProfile } from "@/types/customer";
 
 // Deliberately small, per the spec (§4): name/email/phone only. No password
@@ -29,10 +37,11 @@ export default function AccountSettingsPage() {
   const updateMutation = useUpdateProfileMutation();
   const queryClient = useQueryClient();
 
-  const { control, handleSubmit, reset, formState } = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: { name: "", email: "", phone: "" },
-  });
+  const { control, handleSubmit, reset, formState } =
+    useForm<ProfileFormValues>({
+      resolver: zodResolver(profileSchema),
+      defaultValues: { name: "", email: "", phone: "" },
+    });
 
   useEffect(() => {
     if (profile) {
@@ -52,7 +61,10 @@ export default function AccountSettingsPage() {
   function onSubmit(values: ProfileFormValues) {
     updateMutation.mutate(values, {
       onSuccess: (updated) => {
-        queryClient.setQueryData<CustomerProfile>(["customer-profile"], updated);
+        queryClient.setQueryData<CustomerProfile>(
+          ["customer-profile"],
+          updated,
+        );
         reset(values);
         toast.success("Profile updated");
       },
@@ -81,7 +93,10 @@ export default function AccountSettingsPage() {
             <Skeleton className="h-14 w-full rounded-md" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-5"
+          >
             <FieldGroup className="gap-4">
               <Controller
                 control={control}
@@ -89,7 +104,12 @@ export default function AccountSettingsPage() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="name">Full name</FieldLabel>
-                    <Input id="name" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="name"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -119,7 +139,12 @@ export default function AccountSettingsPage() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
                     <FieldLabel htmlFor="phone">Phone</FieldLabel>
-                    <Input id="phone" className="h-10" {...field} aria-invalid={fieldState.invalid} />
+                    <Input
+                      id="phone"
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
                     <FieldError errors={[fieldState.error]} />
                   </Field>
                 )}
@@ -127,7 +152,10 @@ export default function AccountSettingsPage() {
             </FieldGroup>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={updateMutation.isPending || !formState.isDirty}>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending || !formState.isDirty}
+              >
                 {updateMutation.isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>

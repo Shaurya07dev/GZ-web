@@ -29,7 +29,7 @@ interface OrderStatusTimelineProps {
 
 export function OrderStatusTimeline({ history }: OrderStatusTimelineProps) {
   const ordered = [...history].sort(
-    (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime()
+    (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
   );
 
   if (ordered.length === 0) return null;
@@ -46,7 +46,10 @@ export function OrderStatusTimeline({ history }: OrderStatusTimelineProps) {
           const isLast = index === ordered.length - 1;
           const isCancelledStep = event.status === "cancelled";
           return (
-            <li key={`${event.status}-${event.changedAt}`} className="relative flex gap-4 pb-7 last:pb-0">
+            <li
+              key={`${event.status}-${event.changedAt}`}
+              className="relative flex gap-4 pb-7 last:pb-0"
+            >
               {!isLast && (
                 <span
                   className="absolute top-6 left-[11px] h-full w-px bg-border"

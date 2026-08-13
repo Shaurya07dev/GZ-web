@@ -4,7 +4,14 @@ import type { ReactElement, ReactNode } from "react";
 import { ChartNoAxesColumn } from "lucide-react";
 import { ResponsiveContainer } from "recharts";
 
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { cn } from "@/lib/utils";
@@ -100,7 +107,7 @@ export function ChartCard({
             style={{ height }}
             className={cn(
               "relative w-full transition-opacity duration-200",
-              isRefreshing && "opacity-60"
+              isRefreshing && "opacity-60",
             )}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -146,7 +153,9 @@ export function ChartLegend({
   if (items.length < 2) return null;
 
   return (
-    <ul className={cn("flex flex-wrap items-center gap-x-5 gap-y-2", className)}>
+    <ul
+      className={cn("flex flex-wrap items-center gap-x-5 gap-y-2", className)}
+    >
       {items.map((item) => (
         <li key={item.label} className="flex items-center gap-2">
           <span
@@ -206,10 +215,15 @@ export function ChartTooltipContent({
 }: ChartTooltipContentProps) {
   if (!active || !payload?.length) return null;
 
-  const rows = payload.filter((entry) => typeof toNumber(entry.value) === "number");
+  const rows = payload.filter(
+    (entry) => typeof toNumber(entry.value) === "number",
+  );
   if (!rows.length) return null;
 
-  const total = rows.reduce((sum, entry) => sum + (toNumber(entry.value) ?? 0), 0);
+  const total = rows.reduce(
+    (sum, entry) => sum + (toNumber(entry.value) ?? 0),
+    0,
+  );
 
   return (
     <div className="min-w-40 rounded-lg bg-popover px-3 py-2.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10">
@@ -230,7 +244,11 @@ export function ChartTooltipContent({
               />
               <span className="mr-auto text-xs text-muted-foreground">
                 {nameByKey?.[key] ?? String(entry.name ?? key)}
-                {extra && <span className="ml-1.5 text-muted-foreground/70">{extra}</span>}
+                {extra && (
+                  <span className="ml-1.5 text-muted-foreground/70">
+                    {extra}
+                  </span>
+                )}
               </span>
               <span className="text-xs font-medium text-foreground tabular-nums">
                 {formatValue(value)}
@@ -241,7 +259,9 @@ export function ChartTooltipContent({
       </ul>
       {totalLabel && rows.length > 1 && (
         <div className="mt-2 flex items-center gap-2.5 border-t border-border pt-1.5">
-          <span className="mr-auto text-xs text-muted-foreground">{totalLabel}</span>
+          <span className="mr-auto text-xs text-muted-foreground">
+            {totalLabel}
+          </span>
           <span className="text-xs font-semibold text-foreground tabular-nums">
             {formatValue(total)}
           </span>

@@ -5,9 +5,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Banknote, Check, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
-import { AdminStatusBadge, adminStatusLabel } from "@/features/admin/admin-status-badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
+import {
+  AdminStatusBadge,
+  adminStatusLabel,
+} from "@/features/admin/admin-status-badge";
 import { RejectReasonDialog } from "@/features/admin/reject-reason-dialog";
 import {
   useAdminWithdrawals,
@@ -27,12 +38,20 @@ const REJECT_PRESETS = [
   "Suspected duplicate request",
 ];
 
-const STATUSES: WithdrawalStatus[] = ["pending", "completed", "rejected", "failed"];
+const STATUSES: WithdrawalStatus[] = [
+  "pending",
+  "completed",
+  "rejected",
+  "failed",
+];
 
 function waitingDays(row: WithdrawalRequest): number {
   return Math.max(
     0,
-    Math.round((ADMIN_TODAY.getTime() - new Date(row.requestedAt).getTime()) / 86_400_000),
+    Math.round(
+      (ADMIN_TODAY.getTime() - new Date(row.requestedAt).getTime()) /
+        86_400_000,
+    ),
   );
 }
 
@@ -46,8 +65,12 @@ export function WithdrawalQueueTable() {
       header: "Requested by",
       render: (row) => (
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{row.userName}</p>
-          <p className="text-xs capitalize text-muted-foreground">{row.userRole}</p>
+          <p className="truncate text-sm font-medium text-foreground">
+            {row.userName}
+          </p>
+          <p className="text-xs capitalize text-muted-foreground">
+            {row.userRole}
+          </p>
         </div>
       ),
       sortable: true,
@@ -137,7 +160,10 @@ export function WithdrawalQueueTable() {
           {
             key: "status",
             label: "Status",
-            options: STATUSES.map((s) => ({ value: s, label: adminStatusLabel(s) })),
+            options: STATUSES.map((s) => ({
+              value: s,
+              label: adminStatusLabel(s),
+            })),
             matches: (row, value) => row.status === value,
             // Opens on the work that needs doing, while still offering the full list.
             defaultValue: "pending",
@@ -148,7 +174,10 @@ export function WithdrawalQueueTable() {
         emptyIcon={Banknote}
       />
 
-      <WithdrawalReviewDialog request={active} onClose={() => setActive(null)} />
+      <WithdrawalReviewDialog
+        request={active}
+        onClose={() => setActive(null)}
+      />
     </>
   );
 }
@@ -168,13 +197,19 @@ function WithdrawalReviewDialog({
 
   const isBusy = approveMutation.isPending || rejectMutation.isPending;
   const insufficient = request ? request.amount > request.walletBalance : false;
-  const belowMinimum = request ? request.amount < defaultPlatformSettings.minWithdrawalAmount : false;
+  const belowMinimum = request
+    ? request.amount < defaultPlatformSettings.minWithdrawalAmount
+    : false;
 
   function patchStatus(id: string, status: WithdrawalStatus) {
-    queryClient.setQueryData<WithdrawalRequest[]>(["admin-withdrawals"], (prev) =>
-      (prev ?? []).map((w) =>
-        w.id === id ? { ...w, status, processedAt: new Date().toISOString() } : w,
-      ),
+    queryClient.setQueryData<WithdrawalRequest[]>(
+      ["admin-withdrawals"],
+      (prev) =>
+        (prev ?? []).map((w) =>
+          w.id === id
+            ? { ...w, status, processedAt: new Date().toISOString() }
+            : w,
+        ),
     );
   }
 
@@ -213,7 +248,9 @@ function WithdrawalReviewDialog({
         detail: reason,
       });
       setRejectOpen(false);
-      toast.success("Withdrawal rejected", { description: "The funds stay in the wallet." });
+      toast.success("Withdrawal rejected", {
+        description: "The funds stay in the wallet.",
+      });
       onClose();
     } catch {
       toast.error("Could not reject withdrawal. Try again.");
@@ -222,7 +259,10 @@ function WithdrawalReviewDialog({
 
   return (
     <>
-      <Dialog open={Boolean(request) && !rejectOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog
+        open={Boolean(request) && !rejectOpen}
+        onOpenChange={(open) => !open && onClose()}
+      >
         <DialogContent className="max-w-lg">
           {request ? (
             <>
@@ -244,8 +284,16 @@ function WithdrawalReviewDialog({
 
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border py-4">
                 <Field label="Requested by" value={request.userName} />
-                <Field label="Role" value={request.userRole} className="capitalize" />
-                <Field label="Bank account" value={request.bankAccountMasked} mono />
+                <Field
+                  label="Role"
+                  value={request.userRole}
+                  className="capitalize"
+                />
+                <Field
+                  label="Bank account"
+                  value={request.bankAccountMasked}
+                  mono
+                />
                 <Field
                   label="Minimum payout"
                   value={formatINR(defaultPlatformSettings.minWithdrawalAmount)}
@@ -255,8 +303,8 @@ function WithdrawalReviewDialog({
               {insufficient ? (
                 <p className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/[0.06] p-3 text-xs text-foreground">
                   <TriangleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
-                  Requested amount exceeds the available wallet balance. Approving this
-                  would overdraw the account.
+                  Requested amount exceeds the available wallet balance.
+                  Approving this would overdraw the account.
                 </p>
               ) : null}
 
@@ -268,7 +316,11 @@ function WithdrawalReviewDialog({
               ) : null}
 
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <Button onClick={handleApprove} disabled={isBusy} className="flex-1">
+                <Button
+                  onClick={handleApprove}
+                  disabled={isBusy}
+                  className="flex-1"
+                >
                   <Check className="size-4" />
                   {approveMutation.isPending ? "Approving…" : "Approve payout"}
                 </Button>

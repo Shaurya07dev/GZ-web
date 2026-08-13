@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CollectionTable } from "@/features/aggregator/collection-table";
 
 export const metadata: Metadata = {
-  title: "Collection — GalleryZone Aggregator Portal",
+  title: "Collection | GalleryZone Aggregator Portal",
 };
 
 export default function AggregatorCollectionPage() {

@@ -80,7 +80,9 @@ export function EligibilityChecklist({
               >
                 <Checkbox
                   checked={isChecked}
-                  onCheckedChange={(next) => onToggle(criterion.id, next === true)}
+                  onCheckedChange={(next) =>
+                    onToggle(criterion.id, next === true)
+                  }
                   disabled={disabled}
                   className="mt-0.5"
                 />

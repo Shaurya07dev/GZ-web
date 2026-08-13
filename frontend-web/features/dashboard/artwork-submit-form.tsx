@@ -71,7 +71,10 @@ export function ArtworkSubmitForm() {
     [artistPriceNumber],
   );
 
-  function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
+  function updateField<K extends keyof FormState>(
+    field: K,
+    value: FormState[K],
+  ) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -91,7 +94,10 @@ export function ArtworkSubmitForm() {
     setImages((prev) => prev.filter((img) => img.id !== id));
   }
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>, mode: "draft" | "review") {
+  function handleSubmit(
+    e: FormEvent<HTMLFormElement>,
+    mode: "draft" | "review",
+  ) {
     e.preventDefault();
     setSubmitted(mode);
   }
@@ -108,14 +114,12 @@ export function ArtworkSubmitForm() {
           <Check className="size-5 text-gold-bright" />
         </span>
         <h2 className="font-display text-xl font-semibold text-foreground">
-          {submitted === "draft"
-            ? "Saved as draft."
-            : "Submitted for review."}
+          {submitted === "draft" ? "Saved as draft." : "Submitted for review."}
         </h2>
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
           {submitted === "draft"
             ? `“${form.title || "Your artwork"}” has been saved. You can continue editing it any time from My Artworks.`
-            : `“${form.title || "Your artwork"}” is now with our team. Verification usually takes 1–3 days — you'll be notified the moment it's approved and goes live.`}
+            : `“${form.title || "Your artwork"}” is now with our team. Verification usually takes 1–3 days. You'll be notified the moment it's approved and goes live.`}
         </p>
         <Link
           href="/dashboard/artworks"
@@ -139,8 +143,8 @@ export function ArtworkSubmitForm() {
             Artwork images
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Upload up to {MAX_ARTWORK_IMAGES} high-resolution photos. The
-            first image is used as the cover.
+            Upload up to {MAX_ARTWORK_IMAGES} high-resolution photos. The first
+            image is used as the cover.
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -219,8 +223,8 @@ export function ArtworkSubmitForm() {
             />
             <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <Info className="mt-0.5 size-3 shrink-0" />
-              Don&rsquo;t mention price here — your listed price stays
-              private and only the marketplace price is shown to buyers.
+              Don&rsquo;t mention price here. Your listed price stays private
+              and only the marketplace price is shown to buyers.
             </p>
           </div>
 
@@ -234,8 +238,8 @@ export function ArtworkSubmitForm() {
                 <SelectTrigger id="category" className="h-10 w-full">
                   <SelectValue placeholder="Select category">
                     {(value: string | null) =>
-                      ARTWORK_CATEGORIES.find((c) => c.value === value)?.label ??
-                      "Select category"
+                      ARTWORK_CATEGORIES.find((c) => c.value === value)
+                        ?.label ?? "Select category"
                     }
                   </SelectValue>
                 </SelectTrigger>
@@ -321,8 +325,8 @@ export function ArtworkSubmitForm() {
               className="h-10"
             />
             <p className="text-xs text-muted-foreground">
-              This stays private. You receive 100% of this amount, paid
-              within 7 days of a confirmed sale.
+              This stays private. You receive 100% of this amount, paid within 7
+              days of a confirmed sale.
             </p>
           </div>
 
@@ -397,10 +401,7 @@ export function ArtworkSubmitForm() {
           <button
             type="button"
             onClick={(e) =>
-              handleSubmit(
-                e as unknown as FormEvent<HTMLFormElement>,
-                "draft",
-              )
+              handleSubmit(e as unknown as FormEvent<HTMLFormElement>, "draft")
             }
             className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
           >
@@ -447,11 +448,11 @@ export function ArtworkSubmitForm() {
               <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
                 {artistPriceNumber > 0
                   ? `₹${customerPrice.toLocaleString("en-IN")}`
-                  : "—"}
+                  : "N/A"}
               </span>
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Your price × 1.30 — this is what collectors see.
+              Your price × 1.30: this is what collectors see.
             </p>
 
             {form.insuranceOpted && (

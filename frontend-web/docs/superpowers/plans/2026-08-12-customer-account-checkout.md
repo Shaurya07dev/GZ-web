@@ -28,22 +28,30 @@ All constraints from `docs/superpowers/plans/2026-08-11-frontend-remaining-pages
 ## Task 1: Order/customer types, mock data, services, hooks (Foundation — do this first)
 
 **Files:**
+
 - Create: `types/order.ts`, `types/customer.ts`
 - Create: `lib/mock-data/customer.ts`
 - Create: `services/customerService.ts`, `services/orderService.ts`
 - Create: `hooks/useOrders.ts`, `hooks/useAddresses.ts`, `hooks/useCustomerProfile.ts`
 
 **Interfaces:**
+
 - Consumes: `mockDelay`, `mockError` (`lib/mock-utils.ts`), `getArtworkById` (`lib/mock-data/helpers.ts`) — all pre-existing.
 - Produces: every type/fixture/service/hook listed below — both downstream tracks (Account pages, Checkout) import from here.
 
 - [ ] **Step 1: Write the types**
 
 `types/order.ts`:
+
 ```ts
 export type OrderStatus =
-  | "pending" | "paid" | "confirmed" | "packed" | "transit"
-  | "delivered" | "cancelled";
+  | "pending"
+  | "paid"
+  | "confirmed"
+  | "packed"
+  | "transit"
+  | "delivered"
+  | "cancelled";
 
 export interface OrderStatusEvent {
   status: OrderStatus;
@@ -64,6 +72,7 @@ export interface Order {
 ```
 
 `types/customer.ts`:
+
 ```ts
 export interface Address {
   id: string;
@@ -91,13 +100,17 @@ Export `mockCustomer: CustomerProfile`, `mockAddresses: Address[]` (2-3 entries,
 ```ts
 export const customerService = {
   getProfile: () => mockDelay(mockCustomer),
-  updateProfile: (patch: Partial<CustomerProfile>) => mockDelay({ ...mockCustomer, ...patch }),
+  updateProfile: (patch: Partial<CustomerProfile>) =>
+    mockDelay({ ...mockCustomer, ...patch }),
   listAddresses: () => mockDelay(mockAddresses),
-  addAddress: (address: Omit<Address, "id">) => mockDelay({ ...address, id: crypto.randomUUID() }),
-  updateAddress: (id: string, patch: Partial<Address>) => mockDelay({ ...mockAddresses.find(a => a.id === id)!, ...patch }),
+  addAddress: (address: Omit<Address, "id">) =>
+    mockDelay({ ...address, id: crypto.randomUUID() }),
+  updateAddress: (id: string, patch: Partial<Address>) =>
+    mockDelay({ ...mockAddresses.find((a) => a.id === id)!, ...patch }),
   deleteAddress: (id: string) => mockDelay(undefined),
 };
 ```
+
 (Write the real filter/find logic — this is a sketch, not literal final code. `updateProfile`/`addAddress`/etc. don't need to actually mutate the shared `mockCustomer`/`mockAddresses` module-level arrays for correctness — the consuming components manage their own local/query-cache state after a successful mutation, same pattern as `aggregatorService.reserve` in the prior plan.)
 
 - [ ] **Step 4: Write `services/orderService.ts`**
@@ -105,7 +118,7 @@ export const customerService = {
 ```ts
 export const orderService = {
   list: () => mockDelay(mockOrders),
-  get: (id: string) => mockDelay(mockOrders.find(o => o.id === id)),
+  get: (id: string) => mockDelay(mockOrders.find((o) => o.id === id)),
   create: (payload: { artworkId: string; addressId: string }) => {
     const artwork = getArtworkById(payload.artworkId);
     if (!artwork) return mockError("Artwork not found");
@@ -120,7 +133,9 @@ export const orderService = {
       deliveryCharge,
       status: "pending",
       createdAt: new Date().toISOString(),
-      statusHistory: [{ status: "pending", changedAt: new Date().toISOString() }],
+      statusHistory: [
+        { status: "pending", changedAt: new Date().toISOString() },
+      ],
     };
     return mockDelay(order);
   },
@@ -151,10 +166,12 @@ git commit -m "feat: add order/customer mock data layer"
 ### Task 2: AccountShell + layout
 
 **Files:**
+
 - Create: `app/account/layout.tsx`
 - Create: `features/account/account-shell.tsx`, `features/account/account-data.ts`
 
 **Interfaces:**
+
 - Consumes: `useCustomerProfile` (Task 1).
 - Produces: shared shell wrapping every page in Tasks 3-6.
 
@@ -164,7 +181,7 @@ Copy-and-adapt the `DashboardShell`/`AggregatorShell` structural pattern again (
 
 - [ ] **Step 2: Implement `app/account/layout.tsx`** — one-line wrapper, same pattern as `app/dashboard/layout.tsx`/`app/aggregator/layout.tsx`.
 
-**Important — this replaces the existing stub.** `app/account/page.tsx` currently exists as a standalone "coming soon" page (built in the original plan's Task 4) that does *not* use this new layout. Once this layout exists, either redirect `/account` to `/account/orders` (delete the stub's content and replace with a `redirect()`) or keep a minimal `/account` landing page inside the new shell — pick whichever is less code; a redirect is simpler and there's no real need for a distinct `/account` overview separate from Orders.
+**Important — this replaces the existing stub.** `app/account/page.tsx` currently exists as a standalone "coming soon" page (built in the original plan's Task 4) that does _not_ use this new layout. Once this layout exists, either redirect `/account` to `/account/orders` (delete the stub's content and replace with a `redirect()`) or keep a minimal `/account` landing page inside the new shell — pick whichever is less code; a redirect is simpler and there's no real need for a distinct `/account` overview separate from Orders.
 
 - [ ] **Step 3: Verify**
 
@@ -182,10 +199,12 @@ git commit -m "feat: add customer account shell, replace account stub"
 ### Task 3: Orders list + detail
 
 **Files:**
+
 - Create: `app/account/orders/page.tsx`, `app/account/orders/[orderId]/page.tsx`
 - Create: `features/account/order-list.tsx`, `features/account/order-status-timeline.tsx`, `features/account/order-price-breakdown.tsx`
 
 **Interfaces:**
+
 - Consumes: `useOrders`, `useOrder` (Task 1); `getArtworkById` (`lib/mock-data/helpers.ts`); `formatINR` (`lib/utils.ts`).
 - Produces: working `/account/orders`, `/account/orders/[orderId]`.
 
@@ -213,9 +232,11 @@ git commit -m "feat: add order list and detail pages"
 ### Task 4: Wishlist page
 
 **Files:**
+
 - Create: `app/account/wishlist/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `useWishlistStore` (`store/useWishlistStore.ts`); `getArtworkById`, `toSummary` (`lib/mock-data/helpers.ts`); `ArtworkCard`, `EmptyState` (`components/shared/`) — all pre-existing from the prior plan.
 - Produces: working `/account/wishlist`.
 
@@ -239,10 +260,12 @@ git commit -m "feat: add wishlist account page"
 ### Task 5: Addresses page
 
 **Files:**
+
 - Create: `app/account/addresses/page.tsx`
 - Create: `features/account/address-card.tsx`, `features/account/address-form-dialog.tsx`
 
 **Interfaces:**
+
 - Consumes: `useAddresses`, `useAddAddressMutation`, `useUpdateAddressMutation`, `useDeleteAddressMutation` (Task 1); `Dialog`, `Field`/`FieldLabel`/`FieldError`, `Checkbox` (`components/ui/`) — pre-existing.
 - Produces: working `/account/addresses`.
 
@@ -272,9 +295,11 @@ git commit -m "feat: add addresses account page"
 ### Task 6: Settings page
 
 **Files:**
+
 - Create: `app/account/settings/page.tsx`
 
 **Interfaces:**
+
 - Consumes: `useCustomerProfile`, `useUpdateProfileMutation` (Task 1); `Field`/`FieldLabel`/`FieldError` (`components/ui/field.tsx`).
 - Produces: working `/account/settings`.
 
@@ -300,11 +325,13 @@ git commit -m "feat: add account settings page"
 ### Task 7: Checkout flow + Buy Now link update
 
 **Files:**
+
 - Create: `app/checkout/page.tsx` (replaces the existing stub's content entirely)
 - Create: `features/checkout/checkout-address-step.tsx`, `features/checkout/checkout-review-step.tsx`, `features/checkout/checkout-confirm-step.tsx`
 - Modify: `features/marketplace/artwork-info-panel.tsx` (Buy Now link)
 
 **Interfaces:**
+
 - Consumes: `useAddresses`, `useAddAddressMutation` (Task 1, reuse for the inline "add new address" option); `useCreateOrderMutation` (Task 1); `getArtworkById` (`lib/mock-data/helpers.ts`); `formatINR` (`lib/utils.ts`); `Field`/`FieldLabel`/`FieldError` (`components/ui/field.tsx`).
 - Produces: working `/checkout?artworkId=...`.
 

@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { AuditLogTable } from "@/features/admin/system/audit-log-table";
 
 export const metadata = {
-  title: "Audit logs — GalleryZone Admin",
+  title: "Audit logs | GalleryZone Admin",
 };
 
 export default function AdminAuditLogsPage() {

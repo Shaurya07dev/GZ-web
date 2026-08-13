@@ -112,11 +112,7 @@ export const VERIFICATION_TIERS = [
 ];
 
 export type ArtworkStatus =
-  | "draft"
-  | "pending_approval"
-  | "live"
-  | "reserved"
-  | "sold";
+  "draft" | "pending_approval" | "live" | "reserved" | "sold";
 
 export type Artwork = {
   id: string;
@@ -229,7 +225,7 @@ export const WALLET_TRANSACTIONS: WalletTransaction[] = [
   {
     id: "wt-1",
     type: "settlement",
-    label: "Settlement — “Monsoon Reverie”",
+    label: "Settlement: “Monsoon Reverie”",
     amount: 25200,
     date: "2026-08-09",
     status: "completed",
@@ -245,7 +241,7 @@ export const WALLET_TRANSACTIONS: WalletTransaction[] = [
   {
     id: "wt-3",
     type: "settlement",
-    label: "Settlement — “Fragments of Dawn”",
+    label: "Settlement: “Fragments of Dawn”",
     amount: 17550,
     date: "2026-07-30",
     status: "completed",
@@ -253,7 +249,7 @@ export const WALLET_TRANSACTIONS: WalletTransaction[] = [
   {
     id: "wt-4",
     type: "settlement",
-    label: "Settlement — “Whispers in Bronze”",
+    label: "Settlement: “Whispers in Bronze”",
     amount: 6400,
     date: "2026-08-10",
     status: "pending",

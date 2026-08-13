@@ -141,7 +141,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     description: "Collectors discover original art across our ecosystem.",
     badge: "STEP 04 OF 05",
     detailDescription:
-      "Collectors browse, wishlist and inquire — your artwork's reach grows across our ecosystem.",
+      "Collectors browse, wishlist and inquire. Your artwork's reach grows across our ecosystem.",
     requirements: [
       { icon: Eye, label: "Marketplace impressions" },
       { icon: Heart, label: "Wishlist saves" },

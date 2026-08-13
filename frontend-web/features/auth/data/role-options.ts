@@ -16,8 +16,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
   {
     role: "artist",
     label: "Artist",
-    description:
-      "List and sell your original artwork with full price privacy.",
+    description: "List and sell your original artwork with full price privacy.",
     icon: Palette,
   },
   {

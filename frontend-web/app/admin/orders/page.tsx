@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { OrderAdminTable } from "@/features/admin/commerce/order-admin-table";
 
 export const metadata = {
-  title: "Orders — GalleryZone Admin",
+  title: "Orders | GalleryZone Admin",
 };
 
 export default function AdminOrdersPage() {

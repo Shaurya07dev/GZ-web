@@ -1,6 +1,9 @@
 import { BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { verifiedTierCount, type ArtistVerificationState } from "@/types/artist";
+import {
+  verifiedTierCount,
+  type ArtistVerificationState,
+} from "@/types/artist";
 
 interface VerifiedBadgeProps {
   verification: ArtistVerificationState;
@@ -37,7 +40,7 @@ export function VerifiedBadge({
           "inline-flex items-center whitespace-nowrap rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 font-medium text-gold-bright",
           sizing.gap,
           sizing.text,
-          className
+          className,
         )}
       >
         <span>Gold</span>
@@ -53,10 +56,13 @@ export function VerifiedBadge({
         "inline-flex items-center whitespace-nowrap font-medium text-muted-foreground",
         sizing.gap,
         sizing.text,
-        className
+        className,
       )}
     >
-      <BadgeCheck className={cn(sizing.icon, "shrink-0 text-gold-bright")} strokeWidth={2} />
+      <BadgeCheck
+        className={cn(sizing.icon, "shrink-0 text-gold-bright")}
+        strokeWidth={2}
+      />
       Verified
     </span>
   );

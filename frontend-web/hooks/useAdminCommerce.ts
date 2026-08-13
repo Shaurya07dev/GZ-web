@@ -20,7 +20,8 @@ export function useAdminSettlements() {
 export function useRetrySettlementMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (settlementId: string) => adminService.retrySettlement(settlementId),
+    mutationFn: (settlementId: string) =>
+      adminService.retrySettlement(settlementId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-settlements"] });
     },

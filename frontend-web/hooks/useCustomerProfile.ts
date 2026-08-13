@@ -12,7 +12,8 @@ export function useCustomerProfile() {
 export function useUpdateProfileMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (patch: Partial<CustomerProfile>) => customerService.updateProfile(patch),
+    mutationFn: (patch: Partial<CustomerProfile>) =>
+      customerService.updateProfile(patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer-profile"] });
     },

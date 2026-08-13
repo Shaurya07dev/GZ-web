@@ -48,7 +48,10 @@ import { ADMIN } from "@/features/admin/admin-data";
 // ---------------------------------------------------------------------------
 
 function findArtwork(id: string): Artwork | undefined {
-  return mockArtworks.find((a) => a.id === id) ?? mockPendingArtworks.find((a) => a.id === id);
+  return (
+    mockArtworks.find((a) => a.id === id) ??
+    mockPendingArtworks.find((a) => a.id === id)
+  );
 }
 
 function slugify(name: string): string {
@@ -70,7 +73,12 @@ const REPORT_TYPE_LABELS: Record<ReportType, string> = {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function formatReportRange(from: string, to: string): string {
-  const options: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" };
+  const options: Intl.DateTimeFormatOptions = {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  };
   return `${new Date(from).toLocaleDateString("en-IN", options)} – ${new Date(to).toLocaleDateString("en-IN", options)}`;
 }
 
@@ -78,25 +86,33 @@ export const adminService = {
   // --- overview + analytics ------------------------------------------------
   getKpis: (): Promise<AdminKpis> => mockDelay(mockAdminKpis),
 
-  getActivity: (): Promise<AdminActivityEvent[]> => mockDelay(mockAdminActivity),
+  getActivity: (): Promise<AdminActivityEvent[]> =>
+    mockDelay(mockAdminActivity),
 
   // --- moderation ----------------------------------------------------------
   listPendingArtworks: (): Promise<Artwork[]> =>
-    mockDelay(mockPendingArtworks.filter((a) => a.status === "pending_approval")),
+    mockDelay(
+      mockPendingArtworks.filter((a) => a.status === "pending_approval"),
+    ),
 
   // Resolves undefined (rather than rejecting) for an unknown id so the review
   // page can call notFound() on it, matching customerService.getProfile's shape.
   getPendingArtwork: (id: string): Promise<Artwork | undefined> =>
     mockDelay(mockPendingArtworks.find((a) => a.id === id)),
 
-  approveArtwork: (id: string): Promise<{ id: string; status: "marketplace" }> => {
+  approveArtwork: (
+    id: string,
+  ): Promise<{ id: string; status: "marketplace" }> => {
     if (!mockPendingArtworks.some((a) => a.id === id)) {
       return mockError(`Artwork "${id}" is not awaiting approval`);
     }
     return mockDelay({ id, status: "marketplace" as const });
   },
 
-  rejectArtwork: (id: string, reason: string): Promise<{ id: string; status: "returned"; reason: string }> => {
+  rejectArtwork: (
+    id: string,
+    reason: string,
+  ): Promise<{ id: string; status: "returned"; reason: string }> => {
     if (!mockPendingArtworks.some((a) => a.id === id)) {
       return mockError(`Artwork "${id}" is not awaiting approval`);
     }
@@ -106,35 +122,48 @@ export const adminService = {
 
   // The queue definition (artists sitting in submitted / under_review) lives in
   // the fixture module so the table, the nav badge and the KPI tile can't drift.
-  listKycQueue: (): Promise<AdminUser[]> => mockDelay(mockAdminUsers.filter(isInKycQueue)),
+  listKycQueue: (): Promise<AdminUser[]> =>
+    mockDelay(mockAdminUsers.filter(isInKycQueue)),
 
-  approveKyc: (userId: string): Promise<{ userId: string; kycStatus: "approved" }> => {
-    if (!mockAdminUsers.some((u) => u.id === userId)) return mockError(`User "${userId}" not found`);
+  approveKyc: (
+    userId: string,
+  ): Promise<{ userId: string; kycStatus: "approved" }> => {
+    if (!mockAdminUsers.some((u) => u.id === userId))
+      return mockError(`User "${userId}" not found`);
     return mockDelay({ userId, kycStatus: "approved" as const });
   },
 
   rejectKyc: (
     userId: string,
-    reason: string
+    reason: string,
   ): Promise<{ userId: string; kycStatus: "rejected"; reason: string }> => {
-    if (!mockAdminUsers.some((u) => u.id === userId)) return mockError(`User "${userId}" not found`);
+    if (!mockAdminUsers.some((u) => u.id === userId))
+      return mockError(`User "${userId}" not found`);
     if (!reason.trim()) return mockError("A rejection reason is required");
     return mockDelay({ userId, kycStatus: "rejected" as const, reason });
   },
 
-  listWithdrawals: (): Promise<WithdrawalRequest[]> => mockDelay(mockWithdrawals),
+  listWithdrawals: (): Promise<WithdrawalRequest[]> =>
+    mockDelay(mockWithdrawals),
 
-  approveWithdrawal: (id: string): Promise<{ id: string; status: "completed" }> => {
+  approveWithdrawal: (
+    id: string,
+  ): Promise<{ id: string; status: "completed" }> => {
     const withdrawal = mockWithdrawals.find((w) => w.id === id);
     if (!withdrawal) return mockError(`Withdrawal "${id}" not found`);
-    if (withdrawal.status !== "pending") return mockError("Only pending withdrawals can be approved");
+    if (withdrawal.status !== "pending")
+      return mockError("Only pending withdrawals can be approved");
     return mockDelay({ id, status: "completed" as const });
   },
 
-  rejectWithdrawal: (id: string, reason: string): Promise<{ id: string; status: "rejected"; reason: string }> => {
+  rejectWithdrawal: (
+    id: string,
+    reason: string,
+  ): Promise<{ id: string; status: "rejected"; reason: string }> => {
     const withdrawal = mockWithdrawals.find((w) => w.id === id);
     if (!withdrawal) return mockError(`Withdrawal "${id}" not found`);
-    if (withdrawal.status !== "pending") return mockError("Only pending withdrawals can be rejected");
+    if (withdrawal.status !== "pending")
+      return mockError("Only pending withdrawals can be rejected");
     if (!reason.trim()) return mockError("A rejection reason is required");
     return mockDelay({ id, status: "rejected" as const, reason });
   },
@@ -142,9 +171,11 @@ export const adminService = {
   // --- catalog -------------------------------------------------------------
   // Public + admin-only sets combined: admin is the one view that sees every
   // artwork regardless of status.
-  listAllArtworks: (): Promise<Artwork[]> => mockDelay([...mockArtworks, ...mockPendingArtworks]),
+  listAllArtworks: (): Promise<Artwork[]> =>
+    mockDelay([...mockArtworks, ...mockPendingArtworks]),
 
-  getArtworkAdmin: (id: string): Promise<Artwork | undefined> => mockDelay(findArtwork(id)),
+  getArtworkAdmin: (id: string): Promise<Artwork | undefined> =>
+    mockDelay(findArtwork(id)),
 
   delistArtwork: (id: string): Promise<{ id: string; status: "returned" }> => {
     const artwork = findArtwork(id);
@@ -160,7 +191,12 @@ export const adminService = {
     if (mockCategories.some((c) => c.slug === slug)) {
       return mockError(`A category with the slug "${slug}" already exists`);
     }
-    return mockDelay({ id: `cat-${slug}`, name: name.trim(), slug, artworkCount: 0 });
+    return mockDelay({
+      id: `cat-${slug}`,
+      name: name.trim(),
+      slug,
+      artworkCount: 0,
+    });
   },
 
   updateCategory: (id: string, name: string): Promise<Category> => {
@@ -182,7 +218,7 @@ export const adminService = {
     if (!existing) return mockError(`Category "${id}" not found`);
     if (existing.artworkCount > 0) {
       return mockError(
-        `"${existing.name}" still has ${existing.artworkCount} artwork${existing.artworkCount === 1 ? "" : "s"}. Move or delist them before deleting the category.`
+        `"${existing.name}" still has ${existing.artworkCount} artwork${existing.artworkCount === 1 ? "" : "s"}. Move or delist them before deleting the category.`,
       );
     }
     return mockDelay({ id });
@@ -190,12 +226,19 @@ export const adminService = {
 
   // --- people --------------------------------------------------------------
   listUsers: (role?: UserRole): Promise<AdminUser[]> =>
-    mockDelay(role ? mockAdminUsers.filter((u) => u.role === role) : mockAdminUsers),
+    mockDelay(
+      role ? mockAdminUsers.filter((u) => u.role === role) : mockAdminUsers,
+    ),
 
-  getUser: (id: string): Promise<AdminUser | undefined> => mockDelay(mockAdminUsers.find((u) => u.id === id)),
+  getUser: (id: string): Promise<AdminUser | undefined> =>
+    mockDelay(mockAdminUsers.find((u) => u.id === id)),
 
-  setUserStatus: (id: string, status: UserStatus): Promise<{ id: string; status: UserStatus }> => {
-    if (!mockAdminUsers.some((u) => u.id === id)) return mockError(`User "${id}" not found`);
+  setUserStatus: (
+    id: string,
+    status: UserStatus,
+  ): Promise<{ id: string; status: UserStatus }> => {
+    if (!mockAdminUsers.some((u) => u.id === id))
+      return mockError(`User "${id}" not found`);
     return mockDelay({ id, status });
   },
 
@@ -204,19 +247,25 @@ export const adminService = {
 
   listSettlements: (): Promise<Settlement[]> => mockDelay(mockSettlements),
 
-  retrySettlement: (id: string): Promise<{ id: string; status: "processed" }> => {
+  retrySettlement: (
+    id: string,
+  ): Promise<{ id: string; status: "processed" }> => {
     const settlement = mockSettlements.find((s) => s.id === id);
     if (!settlement) return mockError(`Settlement "${id}" not found`);
-    if (settlement.status !== "failed") return mockError("Only failed settlements can be retried");
+    if (settlement.status !== "failed")
+      return mockError("Only failed settlements can be retried");
     return mockDelay({ id, status: "processed" as const });
   },
 
   // --- system --------------------------------------------------------------
   listAuditLog: (): Promise<AuditLogEntry[]> => mockDelay(mockAuditLog),
 
-  getSettings: (): Promise<PlatformSettings> => mockDelay(defaultPlatformSettings),
+  getSettings: (): Promise<PlatformSettings> =>
+    mockDelay(defaultPlatformSettings),
 
-  updateSettings: (patch: Partial<PlatformSettings>): Promise<PlatformSettings> =>
+  updateSettings: (
+    patch: Partial<PlatformSettings>,
+  ): Promise<PlatformSettings> =>
     mockDelay({ ...defaultPlatformSettings, ...patch }),
 
   listReports: (): Promise<GeneratedReport[]> => mockDelay(mockReports),
@@ -227,16 +276,20 @@ export const adminService = {
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
       return mockError("Enter a valid date range");
     }
-    if (to.getTime() < from.getTime()) return mockError("The end date must fall after the start date");
+    if (to.getTime() < from.getTime())
+      return mockError("The end date must fall after the start date");
 
     // Row count is a plausible stand-in derived from the range length — there
     // is no ledger to count, and pretending otherwise would be a fake number
     // dressed up as a real one.
-    const spanDays = Math.max(1, Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1);
+    const spanDays = Math.max(
+      1,
+      Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1,
+    );
     return mockDelay({
       id: `rpt-${crypto.randomUUID().slice(0, 8)}`,
       type: input.type,
-      label: `${REPORT_TYPE_LABELS[input.type]} — ${formatReportRange(input.from, input.to)}`,
+      label: `${REPORT_TYPE_LABELS[input.type]} (${formatReportRange(input.from, input.to)})`,
       from: input.from,
       to: input.to,
       generatedAt: new Date().toISOString(),

@@ -1,7 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Bar, BarChart, Cell, LabelList, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  LabelList,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import type { FunnelStage } from "@/lib/mock-data/admin-analytics";
 

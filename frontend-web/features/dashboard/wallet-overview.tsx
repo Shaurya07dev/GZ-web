@@ -60,7 +60,9 @@ export function WalletOverview() {
             className="rounded-lg border border-border bg-card p-5"
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{card.label}</span>
+              <span className="text-sm text-muted-foreground">
+                {card.label}
+              </span>
               <card.icon
                 className={`size-4 ${card.tone === "gold" ? "text-gold-bright" : "text-muted-foreground"}`}
                 strokeWidth={1.75}
@@ -113,8 +115,8 @@ function WithdrawCard() {
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           ₹{amountNumber.toLocaleString("en-IN")} will be sent to your bank
-          account ending {PROFILE.bankAccountMasked.slice(-4)}. This
-          typically takes 1–2 business days.
+          account ending {PROFILE.bankAccountMasked.slice(-4)}. This typically
+          takes 1–2 business days.
         </p>
         <button
           type="button"

@@ -47,7 +47,9 @@ function PerformerPanel({
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="border-b border-border px-5 py-4">
-        <h3 className="font-display text-base font-semibold text-foreground">{title}</h3>
+        <h3 className="font-display text-base font-semibold text-foreground">
+          {title}
+        </h3>
         <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
       </div>
 
@@ -59,14 +61,18 @@ function PerformerPanel({
             <span
               aria-hidden
               className="absolute inset-y-0 left-0 bg-gold/[0.07]"
-              style={{ width: leader > 0 ? `${(row.revenue / leader) * 100}%` : "0%" }}
+              style={{
+                width: leader > 0 ? `${(row.revenue / leader) * 100}%` : "0%",
+              }}
             />
             <div className="relative flex items-baseline gap-3">
               <span className="w-4 shrink-0 text-xs tabular-nums text-muted-foreground/70">
                 {index + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{row.name}</p>
+                <p className="truncate text-sm font-medium text-foreground">
+                  {row.name}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {row.count} {countLabel}
                 </p>

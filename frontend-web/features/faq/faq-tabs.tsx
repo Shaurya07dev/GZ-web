@@ -9,7 +9,12 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { FAQ_AUDIENCES, FAQ_ITEMS, type FaqAudience, type FaqItem } from "./faq-data";
+import {
+  FAQ_AUDIENCES,
+  FAQ_ITEMS,
+  type FaqAudience,
+  type FaqItem,
+} from "./faq-data";
 
 export function FaqTabs() {
   const grouped = useMemo(() => {
@@ -36,7 +41,11 @@ export function FaqTabs() {
       {FAQ_AUDIENCES.map((audience) => {
         const items = grouped.get(audience.value) ?? [];
         return (
-          <TabsContent key={audience.value} value={audience.value} className="mt-8">
+          <TabsContent
+            key={audience.value}
+            value={audience.value}
+            className="mt-8"
+          >
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -45,7 +54,10 @@ export function FaqTabs() {
             >
               <Accordion multiple>
                 {items.map((item, index) => (
-                  <AccordionItem key={item.question} value={`${audience.value}-${index}`}>
+                  <AccordionItem
+                    key={item.question}
+                    value={`${audience.value}-${index}`}
+                  >
                     <AccordionTrigger className="py-5 text-base font-medium text-foreground hover:text-gold-bright hover:no-underline">
                       {item.question}
                     </AccordionTrigger>

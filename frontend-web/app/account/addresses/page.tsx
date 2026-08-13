@@ -17,7 +17,9 @@ export default function AccountAddressesPage() {
   const queryClient = useQueryClient();
   const deleteMutation = useDeleteAddressMutation();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | undefined>(undefined);
+  const [editingAddress, setEditingAddress] = useState<Address | undefined>(
+    undefined,
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function openCreate() {
@@ -44,7 +46,11 @@ export default function AccountAddressesPage() {
       onSuccess: () => {
         queryClient.setQueryData<Address[]>(["addresses"], (prev) => {
           const remaining = (prev ?? []).filter((a) => a.id !== address.id);
-          if (address.isDefault && remaining.length > 0 && !remaining.some((a) => a.isDefault)) {
+          if (
+            address.isDefault &&
+            remaining.length > 0 &&
+            !remaining.some((a) => a.isDefault)
+          ) {
             remaining[0] = { ...remaining[0]!, isDefault: true };
           }
           return remaining;

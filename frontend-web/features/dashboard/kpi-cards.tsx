@@ -15,8 +15,13 @@ export function KpiCards() {
           className="rounded-lg border border-border bg-card p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">{metric.label}</span>
-            <metric.icon className="size-4 text-gold-bright" strokeWidth={1.75} />
+            <span className="text-sm text-muted-foreground">
+              {metric.label}
+            </span>
+            <metric.icon
+              className="size-4 text-gold-bright"
+              strokeWidth={1.75}
+            />
           </div>
           <p className="mt-3 font-display text-3xl font-semibold tabular-nums text-foreground">
             {metric.value}

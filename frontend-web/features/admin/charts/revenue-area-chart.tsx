@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import type { RevenuePoint } from "@/lib/mock-data/admin-analytics";
 import { formatINR } from "@/lib/utils";
@@ -68,7 +75,10 @@ export function RevenueAreaChart({
       ariaLabel={buildAriaLabel(points)}
       footer={
         <ChartLegend
-          items={SERIES.map((series) => ({ label: series.label, color: series.color }))}
+          items={SERIES.map((series) => ({
+            label: series.label,
+            color: series.color,
+          }))}
         />
       }
       className={className}

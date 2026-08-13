@@ -1,4 +1,9 @@
-import type { Artwork, ArtworkImage, ArtworkStatus, SocialProofLink } from "@/types/artwork";
+import type {
+  Artwork,
+  ArtworkImage,
+  ArtworkStatus,
+  SocialProofLink,
+} from "@/types/artwork";
 import { verifiedTierCount } from "@/types/artist";
 import { mockArtists } from "./artists";
 
@@ -29,13 +34,23 @@ function daysAgo(days: number): string {
 }
 
 function history(...entries: Array<[ArtworkStatus, number]>) {
-  return entries.map(([status, days]) => ({ status, changedAt: daysAgo(days) }));
+  return entries.map(([status, days]) => ({
+    status,
+    changedAt: daysAgo(days),
+  }));
 }
 
-function artistMeta(artistId: string): { artistName: string; verifiedArtist: boolean } {
+function artistMeta(artistId: string): {
+  artistName: string;
+  verifiedArtist: boolean;
+} {
   const artist = mockArtists.find((a) => a.id === artistId);
-  if (!artist) throw new Error(`mock-data/artworks: unknown artistId "${artistId}"`);
-  return { artistName: artist.name, verifiedArtist: verifiedTierCount(artist.verification) > 0 };
+  if (!artist)
+    throw new Error(`mock-data/artworks: unknown artistId "${artistId}"`);
+  return {
+    artistName: artist.name,
+    verifiedArtist: verifiedTierCount(artist.verification) > 0,
+  };
 }
 
 const IMG = {
@@ -69,7 +84,7 @@ function images(title: string, files: string[]): ArtworkImage[] {
     url,
     thumbnailUrl: url,
     sortOrder: i,
-    altText: `${title} — ${STAGE_LABELS[i] ?? `detail view ${i + 1}`}`,
+    altText: `${title}, ${STAGE_LABELS[i] ?? `detail view ${i + 1}`}`,
   }));
 }
 
@@ -95,11 +110,25 @@ export const mockArtworks: Artwork[] = [
       "Painted over three sittings during the 2025 monsoon, this canvas builds the Madurai coastline in layered oil washes, working wet-into-wet to catch the exact grey-gold light that appears just as the rain breaks. The palette-knife work in the foreground surf is left deliberately raw against the smoother sky. Ships with a signed Certificate of Authenticity and a linked studio video of the final varnishing pass.",
     dimensions: "24x36 in",
     yearCreated: 2025,
-    images: images("Monsoon Over Madurai", [IMG.landscape, IMG.framed, IMG.journey, IMG.idPaint]),
+    images: images("Monsoon Over Madurai", [
+      IMG.landscape,
+      IMG.framed,
+      IMG.journey,
+      IMG.idPaint,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0001",
     coaIssueDate: daysAgo(199),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-monsoon-madurai/" }]),
-    statusHistory: history(["draft", 210], ["pending_approval", 204], ["marketplace", 196]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-monsoon-madurai/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 210],
+      ["pending_approval", 204],
+      ["marketplace", 196],
+    ),
   },
   {
     id: "backwater-light-early-hours",
@@ -117,11 +146,24 @@ export const mockArtworks: Artwork[] = [
       "A quieter companion to Meera's coastal series, painted at first light on the Kerala backwaters before the water traffic begins. Built in thin, transparent oil glazes over a warm underpainting so the canvas grain shows through in the shadow passages. Unframed and ready to hang, signed and dated on the reverse.",
     dimensions: "20x30 in",
     yearCreated: 2026,
-    images: images("Backwater Light, Early Hours", [IMG.framed, IMG.landscape, IMG.eco1]),
+    images: images("Backwater Light, Early Hours", [
+      IMG.framed,
+      IMG.landscape,
+      IMG.eco1,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0002",
     coaIssueDate: daysAgo(141),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-backwater-light" }]),
-    statusHistory: history(["draft", 150], ["pending_approval", 145], ["marketplace", 138]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-backwater-light",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 150],
+      ["pending_approval", 145],
+      ["marketplace", 138],
+    ),
   },
   {
     id: "tide-line-dusk",
@@ -139,11 +181,26 @@ export const mockArtworks: Artwork[] = [
       "One of the earliest paintings in Meera's current coastal body of work, revisiting a stretch of shoreline she has returned to for three years running. The tideline itself is built up in a heavier impasto than the rest of the canvas, marking where land and water meet. Eligible for gallery display through GalleryZone's aggregator network as well as direct marketplace sale.",
     dimensions: "18x24 in",
     yearCreated: 2024,
-    images: images("Tide Line, Dusk", [IMG.idPaint, IMG.landscape, IMG.framed, IMG.eco2, IMG.journey]),
+    images: images("Tide Line, Dusk", [
+      IMG.idPaint,
+      IMG.landscape,
+      IMG.framed,
+      IMG.eco2,
+      IMG.journey,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0003",
     coaIssueDate: daysAgo(85),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-tide-line-dusk/" }]),
-    statusHistory: history(["draft", 95], ["pending_approval", 90], ["marketplace", 82]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-tide-line-dusk/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 95],
+      ["pending_approval", 90],
+      ["marketplace", 82],
+    ),
   },
 
   // --- Arjun Mehta (Gold, sculpture) -----------------------------------
@@ -163,11 +220,28 @@ export const mockArtworks: Artwork[] = [
       "Cast using the lost-wax method in Arjun's family workshop, this study reworks a seated-figure motif that recurs across four generations of his family's carving practice. The bronze is left in its natural patina rather than polished, so the surface will keep shifting tone over years of handling. Currently reserved through a partner aggregator ahead of gallery display.",
     dimensions: "18 in H x 9 in W x 7 in D",
     yearCreated: 2025,
-    images: images("Ancestral Bronze Study", [IMG.busts, IMG.drape, IMG.pyramid, IMG.eco3, IMG.bird, IMG.portrait]),
+    images: images("Ancestral Bronze Study", [
+      IMG.busts,
+      IMG.drape,
+      IMG.pyramid,
+      IMG.eco3,
+      IMG.bird,
+      IMG.portrait,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0004",
     coaIssueDate: daysAgo(128),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-ancestral-bronze" }]),
-    statusHistory: history(["draft", 140], ["pending_approval", 133], ["marketplace", 125], ["reserved", 5]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-ancestral-bronze",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 140],
+      ["pending_approval", 133],
+      ["marketplace", 125],
+      ["reserved", 5],
+    ),
   },
   {
     id: "carved-marble-torso",
@@ -185,11 +259,25 @@ export const mockArtworks: Artwork[] = [
       "A single block of Makrana marble, carved entirely by hand over four months with no mechanical finishing on the final surface passes. The torso form continues a study Arjun has returned to several times, each version testing a different balance of rough-cut and polished stone. Base included.",
     dimensions: "22 in H x 10 in W x 8 in D",
     yearCreated: 2023,
-    images: images("Carved Marble Torso", [IMG.drape, IMG.busts, IMG.pyramid, IMG.eco1]),
+    images: images("Carved Marble Torso", [
+      IMG.drape,
+      IMG.busts,
+      IMG.pyramid,
+      IMG.eco1,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0005",
     coaIssueDate: daysAgo(284),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-marble-torso/" }]),
-    statusHistory: history(["draft", 300], ["pending_approval", 292], ["marketplace", 280]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-marble-torso/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 300],
+      ["pending_approval", 292],
+      ["marketplace", 280],
+    ),
   },
   {
     id: "reclaimed-stone-vessel",
@@ -210,8 +298,17 @@ export const mockArtworks: Artwork[] = [
     images: images("Reclaimed Stone Vessel", [IMG.busts, IMG.drape, IMG.eco2]),
     coaCertificateNumber: "GZ-COA-2026-0006",
     coaIssueDate: daysAgo(50),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-stone-vessel" }]),
-    statusHistory: history(["draft", 60], ["pending_approval", 55], ["marketplace", 47]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-stone-vessel",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 60],
+      ["pending_approval", 55],
+      ["marketplace", 47],
+    ),
   },
 
   // --- Kavya Iyer (tier1 only, photography) ----------------------------
@@ -231,11 +328,25 @@ export const mockArtworks: Artwork[] = [
       "Shot on medium-format film on the final night Metro Talkies screened a film before closing for good, printed as edition 2 of 9 on archival cotton rag paper. Kavya hand-processes every negative herself and scans at high resolution before printing, so grain and tonal range stay true to the original film stock. Signed and numbered on the reverse.",
     dimensions: "16x20 in",
     yearCreated: 2026,
-    images: images("Last Show at Metro Talkies", [IMG.portrait, IMG.bird, IMG.eco3, IMG.journey]),
+    images: images("Last Show at Metro Talkies", [
+      IMG.portrait,
+      IMG.bird,
+      IMG.eco3,
+      IMG.journey,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0007",
     coaIssueDate: daysAgo(33),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-metro-talkies/" }]),
-    statusHistory: history(["draft", 40], ["pending_approval", 36], ["marketplace", 30]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-metro-talkies/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 40],
+      ["pending_approval", 36],
+      ["marketplace", 30],
+    ),
   },
   {
     id: "balcony-seats-empty-reel",
@@ -253,14 +364,29 @@ export const mockArtworks: Artwork[] = [
       "Part of Kavya's ongoing series on Bengaluru's disappearing single-screen cinemas, this print looks down from an empty balcony section onto a projector booth mid reel-change. Edition of 9, printed on archival cotton rag paper from a hand-processed medium-format negative. Currently on reserve for gallery display.",
     dimensions: "20x24 in",
     yearCreated: 2026,
-    images: images("Balcony Seats, Empty Reel", [IMG.bird, IMG.portrait, IMG.eco1]),
+    images: images("Balcony Seats, Empty Reel", [
+      IMG.bird,
+      IMG.portrait,
+      IMG.eco1,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0008",
     coaIssueDate: daysAgo(23),
     socialProofLinks: social([
-      { platform: "instagram", url: "https://www.instagram.com/reel/gz-balcony-seats/" },
-      { platform: "x", url: "https://x.com/kavyaiyerphoto/status/1234567890123456789" },
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-balcony-seats/",
+      },
+      {
+        platform: "x",
+        url: "https://x.com/kavyaiyerphoto/status/1234567890123456789",
+      },
     ]),
-    statusHistory: history(["draft", 30], ["pending_approval", 25], ["marketplace", 20], ["reserved", 18]),
+    statusHistory: history(
+      ["draft", 30],
+      ["pending_approval", 25],
+      ["marketplace", 20],
+      ["reserved", 18],
+    ),
   },
 
   // --- Rohan Bhattacharya (tier1+tier2, printmaking) -------------------
@@ -283,8 +409,17 @@ export const mockArtworks: Artwork[] = [
     images: images("Howrah Line, Evening", [IMG.pyramid, IMG.busts, IMG.eco2]),
     coaCertificateNumber: "GZ-COA-2026-0009",
     coaIssueDate: daysAgo(63),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-howrah-line/" }]),
-    statusHistory: history(["draft", 70], ["pending_approval", 66], ["marketplace", 60]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-howrah-line/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 70],
+      ["pending_approval", 66],
+      ["marketplace", 60],
+    ),
   },
   {
     id: "ghat-steps-no-7",
@@ -302,11 +437,25 @@ export const mockArtworks: Artwork[] = [
       "The seventh in an ongoing series studying the ferry ghats of the Hooghly at different times of day, etched on a copper plate and hand-inked for each pull. This impression uses a heavier plate tone than earlier editions in the series, pushing the steps further into shadow. Eligible for aggregator display alongside its marketplace listing.",
     dimensions: "14x18 in",
     yearCreated: 2025,
-    images: images("Ghat Steps No. 7", [IMG.pyramid, IMG.eco3, IMG.busts, IMG.journey]),
+    images: images("Ghat Steps No. 7", [
+      IMG.pyramid,
+      IMG.eco3,
+      IMG.busts,
+      IMG.journey,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0010",
     coaIssueDate: daysAgo(89),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-ghat-steps" }]),
-    statusHistory: history(["draft", 100], ["pending_approval", 94], ["marketplace", 86]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-ghat-steps",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 100],
+      ["pending_approval", 94],
+      ["marketplace", 86],
+    ),
   },
   {
     id: "college-street-folio",
@@ -327,8 +476,18 @@ export const mockArtworks: Artwork[] = [
     images: images("College Street Folio", [IMG.busts, IMG.pyramid, IMG.eco1]),
     coaCertificateNumber: "GZ-COA-2026-0011",
     coaIssueDate: daysAgo(41),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-college-street/" }]),
-    statusHistory: history(["draft", 50], ["pending_approval", 45], ["marketplace", 38], ["reserved", 24]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-college-street/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 50],
+      ["pending_approval", 45],
+      ["marketplace", 38],
+      ["reserved", 24],
+    ),
   },
 
   // --- Ananya Deshmukh (zero tiers, textile art) ------------------------
@@ -351,8 +510,17 @@ export const mockArtworks: Artwork[] = [
     images: images("Field of Kusum Dye", [IMG.drape, IMG.eco2, IMG.journey]),
     coaCertificateNumber: "GZ-COA-2026-0012",
     coaIssueDate: daysAgo(13),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-kusum-dye/" }]),
-    statusHistory: history(["draft", 20], ["pending_approval", 16], ["marketplace", 10]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-kusum-dye/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 20],
+      ["pending_approval", 16],
+      ["marketplace", 10],
+    ),
   },
   {
     id: "grandmothers-stitch-revisited",
@@ -370,11 +538,25 @@ export const mockArtworks: Artwork[] = [
       "Ananya's largest piece to date, reworking a border-stitch pattern her grandmother taught her as a continuous field across the full canvas rather than a framing edge. Every dye bath in this piece was mixed from marigold and pomegranate rind sourced from her family's own kitchen garden. Her first major listing on GalleryZone.",
     dimensions: "24x36 in",
     yearCreated: 2026,
-    images: images("Grandmother's Stitch, Revisited", [IMG.drape, IMG.journey, IMG.eco3, IMG.idPaint]),
+    images: images("Grandmother's Stitch, Revisited", [
+      IMG.drape,
+      IMG.journey,
+      IMG.eco3,
+      IMG.idPaint,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0013",
     coaIssueDate: daysAgo(9),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-grandmothers-stitch" }]),
-    statusHistory: history(["draft", 15], ["pending_approval", 12], ["marketplace", 6]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-grandmothers-stitch",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 15],
+      ["pending_approval", 12],
+      ["marketplace", 6],
+    ),
   },
 
   // --- Ishaan Kapoor (tier1+tier3, painting) ----------------------------
@@ -394,11 +576,26 @@ export const mockArtworks: Artwork[] = [
       "Built up in thin acrylic layers over several weeks, this canvas fractures a stairwell in Ishaan's own apartment block into overlapping planes of colour until the architecture starts to read as botanical. He works without preparatory sketches, building the composition directly on the canvas and painting out sections that don't hold. Full studio session filmed start to finish.",
     dimensions: "30x30 in",
     yearCreated: 2026,
-    images: images("Concrete Bloom", [IMG.framed, IMG.landscape, IMG.eco1, IMG.journey, IMG.bird]),
+    images: images("Concrete Bloom", [
+      IMG.framed,
+      IMG.landscape,
+      IMG.eco1,
+      IMG.journey,
+      IMG.bird,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0014",
     coaIssueDate: daysAgo(69),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-concrete-bloom" }]),
-    statusHistory: history(["draft", 80], ["pending_approval", 74], ["marketplace", 66]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-concrete-bloom",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 80],
+      ["pending_approval", 74],
+      ["marketplace", 66],
+    ),
   },
   {
     id: "fractured-skyline",
@@ -416,14 +613,31 @@ export const mockArtworks: Artwork[] = [
       "Ishaan's largest canvas to date, breaking the Delhi skyline seen from his studio window into a grid of overlapping vantage points painted in separate sessions and reassembled as one composition. The underlying pencil grid is still faintly visible beneath the paint in several passages, left intentionally. Ships stretched and ready to hang.",
     dimensions: "36x48 in",
     yearCreated: 2025,
-    images: images("Fractured Skyline", [IMG.landscape, IMG.framed, IMG.eco2, IMG.journey, IMG.idPaint, IMG.bird]),
+    images: images("Fractured Skyline", [
+      IMG.landscape,
+      IMG.framed,
+      IMG.eco2,
+      IMG.journey,
+      IMG.idPaint,
+      IMG.bird,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0015",
     coaIssueDate: daysAgo(109),
     socialProofLinks: social([
-      { platform: "youtube", url: "https://www.youtube.com/watch?v=gz-fractured-skyline" },
-      { platform: "tiktok", url: "https://www.tiktok.com/@ishaankapoorstudio/video/7345678901234567890" },
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-fractured-skyline",
+      },
+      {
+        platform: "tiktok",
+        url: "https://www.tiktok.com/@ishaankapoorstudio/video/7345678901234567890",
+      },
     ]),
-    statusHistory: history(["draft", 120], ["pending_approval", 114], ["marketplace", 105]),
+    statusHistory: history(
+      ["draft", 120],
+      ["pending_approval", 114],
+      ["marketplace", 105],
+    ),
   },
   {
     id: "density-study-karol-bagh",
@@ -441,11 +655,25 @@ export const mockArtworks: Artwork[] = [
       "A study of the wholesale market lanes in Karol Bagh at closing time, built from overlapping fractured planes in a tighter, more restrained palette than Ishaan's larger canvases. Painted directly from memory the same evening rather than from photographs. Currently on reserve for gallery display.",
     dimensions: "24x30 in",
     yearCreated: 2026,
-    images: images("Density Study, Karol Bagh", [IMG.framed, IMG.eco3, IMG.landscape]),
+    images: images("Density Study, Karol Bagh", [
+      IMG.framed,
+      IMG.eco3,
+      IMG.landscape,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0016",
     coaIssueDate: daysAgo(41),
-    socialProofLinks: social([{ platform: "instagram", url: "https://www.instagram.com/reel/gz-density-study/" }]),
-    statusHistory: history(["draft", 52], ["pending_approval", 46], ["marketplace", 38], ["reserved", 28]),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-density-study/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 52],
+      ["pending_approval", 46],
+      ["marketplace", 38],
+      ["reserved", 28],
+    ),
   },
 
   // --- Priya Subramaniam (tier2+tier3, mixed media) ---------------------
@@ -465,11 +693,26 @@ export const mockArtworks: Artwork[] = [
       "Built from sheet-metal offcuts sourced from a scrapyard near her studio collective, welded to a plywood panel and finished with layered pigment and controlled oxidation. Priya lets the metal rust naturally over several weeks under wet cloths before sealing the surface, so the final colour is never fully predictable. Currently on reserve for gallery display.",
     dimensions: "30 in H x 40 in W x 4 in D",
     yearCreated: 2025,
-    images: images("Rust and Ochre Wall Piece", [IMG.busts, IMG.pyramid, IMG.eco1, IMG.drape]),
+    images: images("Rust and Ochre Wall Piece", [
+      IMG.busts,
+      IMG.pyramid,
+      IMG.eco1,
+      IMG.drape,
+    ]),
     coaCertificateNumber: "GZ-COA-2026-0017",
     coaIssueDate: daysAgo(35),
-    socialProofLinks: social([{ platform: "youtube", url: "https://www.youtube.com/watch?v=gz-rust-ochre" }]),
-    statusHistory: history(["draft", 45], ["pending_approval", 40], ["marketplace", 32], ["reserved", 12]),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-rust-ochre",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 45],
+      ["pending_approval", 40],
+      ["marketplace", 32],
+      ["reserved", 12],
+    ),
   },
   {
     id: "salvaged-frequencies",
@@ -500,15 +743,21 @@ export const mockArtworks: Artwork[] = [
     coaCertificateNumber: "GZ-COA-2026-0018",
     coaIssueDate: daysAgo(150),
     socialProofLinks: social([
-      { platform: "instagram", url: "https://www.instagram.com/reel/gz-salvaged-frequencies/" },
-      { platform: "youtube", url: "https://www.youtube.com/watch?v=gz-salvaged-frequencies" },
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-salvaged-frequencies/",
+      },
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-salvaged-frequencies",
+      },
     ]),
     statusHistory: history(
       ["draft", 160],
       ["pending_approval", 154],
       ["marketplace", 146],
       ["reserved", 37],
-      ["sold", 10]
+      ["sold", 10],
     ),
   },
 ];

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ReservableInventoryGrid } from "@/features/aggregator/reservable-inventory-grid";
 
 export const metadata: Metadata = {
-  title: "Inventory — GalleryZone Aggregator Portal",
+  title: "Inventory | GalleryZone Aggregator Portal",
 };
 
 export default function AggregatorInventoryPage() {
@@ -13,8 +13,8 @@ export default function AggregatorInventoryPage() {
           Reservable inventory
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Browse artworks available for aggregator display. Reserving pays
-          the advance and moves a piece into your Collection.
+          Browse artworks available for aggregator display. Reserving pays the
+          advance and moves a piece into your Collection.
         </p>
       </div>
 

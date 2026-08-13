@@ -1,4 +1,10 @@
-import { FileEdit, Clock3, Sparkles, BookmarkCheck, CircleCheckBig } from "lucide-react";
+import {
+  FileEdit,
+  Clock3,
+  Sparkles,
+  BookmarkCheck,
+  CircleCheckBig,
+} from "lucide-react";
 import type { ArtworkStatus } from "./dashboard-data";
 
 const STATUS_CONFIG: Record<

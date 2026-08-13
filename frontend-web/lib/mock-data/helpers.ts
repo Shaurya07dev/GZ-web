@@ -52,17 +52,29 @@ export function toSummary(artwork: Artwork): ArtworkSummary {
   };
 }
 
-export function filterArtworks(artworks: Artwork[], filters: ArtworkFilters): Artwork[] {
+export function filterArtworks(
+  artworks: Artwork[],
+  filters: ArtworkFilters,
+): Artwork[] {
   const query = filters.query?.trim().toLowerCase();
 
   return artworks.filter((artwork) => {
     if (filters.category && artwork.category !== filters.category) return false;
     if (filters.medium && artwork.medium !== filters.medium) return false;
-    if (typeof filters.minPrice === "number" && artwork.customerPrice < filters.minPrice) return false;
-    if (typeof filters.maxPrice === "number" && artwork.customerPrice > filters.maxPrice) return false;
+    if (
+      typeof filters.minPrice === "number" &&
+      artwork.customerPrice < filters.minPrice
+    )
+      return false;
+    if (
+      typeof filters.maxPrice === "number" &&
+      artwork.customerPrice > filters.maxPrice
+    )
+      return false;
 
     if (query) {
-      const haystack = `${artwork.title} ${artwork.artistName} ${artwork.category} ${artwork.medium} ${artwork.description}`.toLowerCase();
+      const haystack =
+        `${artwork.title} ${artwork.artistName} ${artwork.category} ${artwork.medium} ${artwork.description}`.toLowerCase();
       if (!haystack.includes(query)) return false;
     }
 
@@ -76,11 +88,16 @@ export function filterArtworks(artworks: Artwork[], filters: ArtworkFilters): Ar
 // back to the earliest recorded event for the rare artwork that doesn't
 // have one yet.
 function listedAt(artwork: Artwork): string {
-  const listedEvent = artwork.statusHistory.find((event) => event.status === "marketplace");
+  const listedEvent = artwork.statusHistory.find(
+    (event) => event.status === "marketplace",
+  );
   return listedEvent?.changedAt ?? artwork.statusHistory[0]?.changedAt ?? "";
 }
 
-export function sortArtworks(artworks: Artwork[], sortBy: ArtworkFilters["sortBy"]): Artwork[] {
+export function sortArtworks(
+  artworks: Artwork[],
+  sortBy: ArtworkFilters["sortBy"],
+): Artwork[] {
   const sorted = [...artworks];
 
   switch (sortBy) {

@@ -28,7 +28,9 @@ interface ArtworkCardProps {
 // exists only as a statusHistory entry, never as the artwork's *current*
 // status. The fallback below keeps this honest and non-broken if that ever
 // changes rather than assuming only two statuses are possible.
-const STATUS_BADGE: Partial<Record<ArtworkStatus, { label: string; icon: LucideIcon }>> = {
+const STATUS_BADGE: Partial<
+  Record<ArtworkStatus, { label: string; icon: LucideIcon }>
+> = {
   reserved: { label: "Reserved", icon: BookmarkCheck },
   sold: { label: "Sold", icon: CircleCheckBig },
 };
@@ -64,7 +66,7 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
       href={`/marketplace/${artwork.id}`}
       className={cn(
         "group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-[border-color,transform] duration-200 ease-out hover:border-gold/50 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        className
+        className,
       )}
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-muted">
@@ -75,7 +77,7 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className={cn(
             "object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]",
-            !isAvailable && "opacity-75 grayscale-[55%]"
+            !isAvailable && "opacity-75 grayscale-[55%]",
           )}
         />
 
@@ -102,7 +104,7 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           <Heart
             className={cn(
               "size-4 transition-colors",
-              isWishlisted && "fill-gold-bright text-gold-bright"
+              isWishlisted && "fill-gold-bright text-gold-bright",
             )}
             strokeWidth={1.75}
           />

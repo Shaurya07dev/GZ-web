@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { ArtworkQueueTable } from "@/features/admin/moderation/artwork-queue-table";
 
 export const metadata = {
-  title: "Artwork queue — GalleryZone Admin",
+  title: "Artwork queue | GalleryZone Admin",
 };
 
 export default function AdminArtworkQueuePage() {

@@ -4,9 +4,9 @@ import { SiteFooter } from "@/components/site-footer";
 import { ArtistSurveyForm } from "@/features/artist-survey/artist-survey-form";
 
 export const metadata: Metadata = {
-  title: "Artist Information and Art Type Survey — GalleryZone",
+  title: "Artist Information and Art Type Survey | GalleryZone",
   description:
-    "A short survey for artists — no GalleryZone account needed to fill it out.",
+    "A short survey for artists. No GalleryZone account needed to fill it out.",
 };
 
 export default function ArtistSurveyPage() {

@@ -10,7 +10,10 @@ interface RelatedArtworksRailProps {
 // caller is responsible for excluding the current artwork and slicing to
 // 4 — see app/marketplace/[artworkId]/page.tsx). Renders nothing if the
 // artist has no other listed work, per Task 15 Step 3.
-export function RelatedArtworksRail({ artworks, artistName }: RelatedArtworksRailProps) {
+export function RelatedArtworksRail({
+  artworks,
+  artistName,
+}: RelatedArtworksRailProps) {
   if (artworks.length === 0) return null;
 
   return (

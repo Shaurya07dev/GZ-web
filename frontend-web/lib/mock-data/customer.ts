@@ -21,7 +21,10 @@ function daysAgo(days: number): string {
 }
 
 function history(...entries: Array<[OrderStatus, number]>) {
-  return entries.map(([status, days]) => ({ status, changedAt: daysAgo(days) }));
+  return entries.map(([status, days]) => ({
+    status,
+    changedAt: daysAgo(days),
+  }));
 }
 
 export const mockCustomer: CustomerProfile = {

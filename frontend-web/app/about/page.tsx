@@ -8,7 +8,7 @@ import { VerificationTiersSection } from "@/features/about/verification-tiers-se
 import { TechFeaturesSection } from "@/features/about/tech-features-section";
 
 export const metadata: Metadata = {
-  title: "About — GalleryZone",
+  title: "About | GalleryZone",
   description:
     "How GalleryZone protects artist pricing, verifies authenticity, and connects original art to collectors and galleries worldwide.",
 };

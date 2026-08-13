@@ -88,8 +88,8 @@ export function IdentitySection() {
             <span className="text-gold-bright">We give it an identity.</span>
           </h2>
           <p className="mt-5 text-balance text-base text-muted-foreground">
-            GalleryZone connects original art to a trusted digital identity
-            that stays with it forever.
+            GalleryZone connects original art to a trusted digital identity that
+            stays with it forever.
           </p>
         </motion.div>
 
@@ -167,17 +167,13 @@ export function IdentitySection() {
           <QrCode className="size-9 text-gold-bright" strokeWidth={1.25} />
           <div className="text-left">
             <p className="font-mono text-xs tracking-wide text-muted-foreground">
-              DIGITAL ID:{" "}
-              <span className="text-foreground">GZ-8F3A-7021</span>
+              DIGITAL ID: <span className="text-foreground">GZ-8F3A-7021</span>
             </p>
             <p className="text-xs text-muted-foreground">
               Scan to view artwork identity
             </p>
           </div>
-          <AudioLines
-            className="ml-2 size-5 text-gold/70"
-            strokeWidth={1.5}
-          />
+          <AudioLines className="ml-2 size-5 text-gold/70" strokeWidth={1.5} />
         </motion.div>
       </div>
     </section>

@@ -22,17 +22,17 @@ const NO_VERIFICATION: ArtistVerificationState = {
 };
 
 export async function generateMetadata(
-  props: PageProps<"/marketplace/[artworkId]">
+  props: PageProps<"/marketplace/[artworkId]">,
 ): Promise<Metadata> {
   const { artworkId } = await props.params;
   const artwork = await getArtwork(artworkId);
 
   if (!artwork) {
-    return { title: "Artwork not found — GalleryZone" };
+    return { title: "Artwork not found | GalleryZone" };
   }
 
   return {
-    title: `${artwork.title} — GalleryZone`,
+    title: `${artwork.title} | GalleryZone`,
     description: artwork.description.slice(0, 155),
   };
 }
@@ -48,7 +48,7 @@ export async function generateMetadata(
 // full Gold ✦ Verified tier when it applies, not just the boolean lower
 // bound ArtworkCard is stuck with.
 export default async function ArtworkDetailPage(
-  props: PageProps<"/marketplace/[artworkId]">
+  props: PageProps<"/marketplace/[artworkId]">,
 ) {
   const { artworkId } = await props.params;
   const artwork = await getArtwork(artworkId);
@@ -61,15 +61,23 @@ export default async function ArtworkDetailPage(
   const verification = artist?.verification ?? NO_VERIFICATION;
 
   const artistListings = await artworkService.listByArtist(artwork.artistId);
-  const related = artistListings.filter((item) => item.id !== artwork.id).slice(0, 4);
+  const related = artistListings
+    .filter((item) => item.id !== artwork.id)
+    .slice(0, 4);
 
   return (
     <>
       <SiteHeader />
       <main className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-[1200px] px-6 py-10 lg:px-10 lg:py-14">
-          <nav aria-label="Breadcrumb" className="mb-6 text-xs text-muted-foreground">
-            <Link href="/marketplace" className="transition-colors hover:text-gold-bright">
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-6 text-xs text-muted-foreground"
+          >
+            <Link
+              href="/marketplace"
+              className="transition-colors hover:text-gold-bright"
+            >
               Marketplace
             </Link>
             <span className="mx-1.5" aria-hidden="true">
@@ -83,7 +91,10 @@ export default async function ArtworkDetailPage(
             <ArtworkInfoPanel artwork={artwork} verification={verification} />
           </div>
 
-          <RelatedArtworksRail artworks={related} artistName={artwork.artistName} />
+          <RelatedArtworksRail
+            artworks={related}
+            artistName={artwork.artistName}
+          />
         </div>
       </main>
       <SiteFooter />

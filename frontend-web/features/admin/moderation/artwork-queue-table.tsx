@@ -2,13 +2,17 @@
 
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
 import { useAdminPendingArtworks } from "@/hooks/useAdminModeration";
 import { ADMIN_TODAY } from "@/features/admin/admin-data";
 import type { Artwork } from "@/types/artwork";
 
 function waitingDays(artwork: Artwork): number {
-  const submitted = artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
+  const submitted =
+    artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
   const diff = ADMIN_TODAY.getTime() - new Date(submitted).getTime();
   return Math.max(0, Math.round(diff / 86_400_000));
 }
@@ -34,7 +38,9 @@ export function ArtworkQueueTable() {
             ) : null}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">{row.title}</p>
+            <p className="truncate text-sm font-medium text-foreground">
+              {row.title}
+            </p>
             <p className="truncate text-xs text-muted-foreground">
               {row.medium} · {row.dimensions ?? "Dimensions not given"}
             </p>
@@ -47,14 +53,20 @@ export function ArtworkQueueTable() {
     {
       key: "artist",
       header: "Artist",
-      render: (row) => <span className="text-sm text-foreground">{row.artistName}</span>,
+      render: (row) => (
+        <span className="text-sm text-foreground">{row.artistName}</span>
+      ),
       sortable: true,
       sortValue: (row) => row.artistName,
     },
     {
       key: "category",
       header: "Category",
-      render: (row) => <span className="text-sm capitalize text-muted-foreground">{row.category}</span>,
+      render: (row) => (
+        <span className="text-sm capitalize text-muted-foreground">
+          {row.category}
+        </span>
+      ),
       sortable: true,
       sortValue: (row) => row.category,
     },
@@ -63,7 +75,9 @@ export function ArtworkQueueTable() {
       header: "Listing",
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.listingType === "marketplace_and_aggregator" ? "Marketplace + aggregator" : "Marketplace only"}
+          {row.listingType === "marketplace_and_aggregator"
+            ? "Marketplace + aggregator"
+            : "Marketplace only"}
         </span>
       ),
       sortable: true,
@@ -88,7 +102,9 @@ export function ArtworkQueueTable() {
     },
   ];
 
-  const categories = Array.from(new Set((artworks ?? []).map((a) => a.category))).sort();
+  const categories = Array.from(
+    new Set((artworks ?? []).map((a) => a.category)),
+  ).sort();
 
   return (
     <AdminDataTable

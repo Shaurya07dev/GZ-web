@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { SettlementTable } from "@/features/admin/commerce/settlement-table";
 
 export const metadata = {
-  title: "Settlements — GalleryZone Admin",
+  title: "Settlements | GalleryZone Admin",
 };
 
 export default function AdminSettlementsPage() {

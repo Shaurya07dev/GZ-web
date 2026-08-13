@@ -37,7 +37,9 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isLive = artwork.status === "marketplace";
-  const sortedImages = [...artwork.images].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sortedImages = [...artwork.images].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
   const history = [...artwork.statusHistory].sort(
     (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
   );
@@ -46,7 +48,9 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
     try {
       await delistMutation.mutateAsync(artwork.id);
       queryClient.setQueryData<Artwork[]>(["admin-artworks"], (prev) =>
-        (prev ?? []).map((a) => (a.id === artwork.id ? { ...a, status: "returned" } : a)),
+        (prev ?? []).map((a) =>
+          a.id === artwork.id ? { ...a, status: "returned" } : a,
+        ),
       );
       appendAudit({
         adminName: ADMIN.name,
@@ -94,9 +98,15 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
             {history.map((event, index) => {
               const isLast = index === history.length - 1;
               return (
-                <li key={`${event.status}-${event.changedAt}`} className="relative flex gap-4 pb-5 last:pb-0">
+                <li
+                  key={`${event.status}-${event.changedAt}`}
+                  className="relative flex gap-4 pb-5 last:pb-0"
+                >
                   {!isLast ? (
-                    <span aria-hidden className="absolute top-3 left-[5px] h-full w-px bg-border" />
+                    <span
+                      aria-hidden
+                      className="absolute top-3 left-[5px] h-full w-px bg-border"
+                    />
                   ) : null}
                   <span
                     aria-hidden
@@ -108,7 +118,10 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
                     <p className="text-sm font-medium text-foreground">
                       {STATUS_LABEL[event.status]}
                     </p>
-                    <time dateTime={event.changedAt} className="text-xs text-muted-foreground">
+                    <time
+                      dateTime={event.changedAt}
+                      className="text-xs text-muted-foreground"
+                    >
                       {new Date(event.changedAt).toLocaleDateString("en-IN", {
                         day: "numeric",
                         month: "short",
@@ -127,18 +140,35 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
         <section className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="font-display text-lg font-semibold text-foreground">{artwork.title}</h1>
-              <p className="mt-0.5 text-sm text-muted-foreground">{artwork.artistName}</p>
+              <h1 className="font-display text-lg font-semibold text-foreground">
+                {artwork.title}
+              </h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {artwork.artistName}
+              </p>
             </div>
             <AdminStatusBadge status={artwork.status} />
           </div>
 
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4">
-            <Detail label="Category" value={artwork.category} className="capitalize" />
+            <Detail
+              label="Category"
+              value={artwork.category}
+              className="capitalize"
+            />
             <Detail label="Medium" value={artwork.medium} />
-            <Detail label="Dimensions" value={artwork.dimensions ?? "—"} />
-            <Detail label="Year" value={artwork.yearCreated?.toString() ?? "—"} />
-            <Detail label="Customer price" value={formatINR(artwork.customerPrice)} />
+            <Detail
+              label="Dimensions"
+              value={artwork.dimensions ?? "Not set"}
+            />
+            <Detail
+              label="Year"
+              value={artwork.yearCreated?.toString() ?? "Not set"}
+            />
+            <Detail
+              label="Customer price"
+              value={formatINR(artwork.customerPrice)}
+            />
             <Detail label="Insured" value={artwork.insured ? "Yes" : "No"} />
           </dl>
         </section>
@@ -148,14 +178,21 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
             Identity & provenance
           </h2>
           <dl className="mt-3 space-y-3">
-            <Detail label="COA certificate" value={artwork.coaCertificateNumber} mono />
+            <Detail
+              label="COA certificate"
+              value={artwork.coaCertificateNumber}
+              mono
+            />
             <Detail
               label="COA issued"
-              value={new Date(artwork.coaIssueDate).toLocaleDateString("en-IN", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
+              value={new Date(artwork.coaIssueDate).toLocaleDateString(
+                "en-IN",
+                {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                },
+              )}
             />
           </dl>
           <Link
@@ -169,7 +206,9 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
         </section>
 
         <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="font-display text-base font-semibold text-foreground">Admin actions</h2>
+          <h2 className="font-display text-base font-semibold text-foreground">
+            Admin actions
+          </h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {isLive
               ? "Delisting pulls this work from the marketplace immediately."

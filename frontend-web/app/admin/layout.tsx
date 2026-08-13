@@ -5,6 +5,10 @@ import { AdminShell } from "@/features/admin/admin-shell";
 // (requires a `next dev` run against these files) -- identical to the note on
 // app/aggregator/layout.tsx and the auth layout. Plain React.ReactNode until
 // then, per the plan's Global Constraints fallback guidance.
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <AdminShell>{children}</AdminShell>;
 }

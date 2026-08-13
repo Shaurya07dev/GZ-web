@@ -7,7 +7,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Is there a fee to list my artwork?",
     answer:
-      "No — listing is completely free. GalleryZone takes its margin from the markup on the customer-facing price, never a fee for submission or listing.",
+      "No, listing is completely free. GalleryZone takes its margin from the markup on the customer-facing price, never a fee for submission or listing.",
   },
   {
     question: "How long does verification take?",
@@ -17,7 +17,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "How and when do I get paid?",
     answer:
-      "You receive 100% of your listed price, paid directly to your bank account within 7 days of a confirmed sale — shipping and platform costs are never deducted from your payout.",
+      "You receive 100% of your listed price, paid directly to your bank account within 7 days of a confirmed sale. Shipping and platform costs are never deducted from your payout.",
   },
   {
     question: "What happens if my artwork doesn't sell?",

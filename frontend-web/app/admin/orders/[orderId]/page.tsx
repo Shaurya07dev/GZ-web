@@ -3,7 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
-import { mockOrders, mockAddresses, mockCustomer } from "@/lib/mock-data/customer";
+import {
+  mockOrders,
+  mockAddresses,
+  mockCustomer,
+} from "@/lib/mock-data/customer";
 import { mockSettlements } from "@/lib/mock-data/admin";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import { formatINR } from "@/lib/utils";
@@ -96,7 +100,10 @@ export default async function AdminOrderDetailPage(
                     className="relative flex gap-4 pb-5 last:pb-0"
                   >
                     {!isLast ? (
-                      <span aria-hidden className="absolute top-3 left-[5px] h-full w-px bg-border" />
+                      <span
+                        aria-hidden
+                        className="absolute top-3 left-[5px] h-full w-px bg-border"
+                      />
                     ) : null}
                     <span
                       aria-hidden
@@ -108,7 +115,10 @@ export default async function AdminOrderDetailPage(
                       <p className="text-sm font-medium text-foreground">
                         {STATUS_LABEL[event.status]}
                       </p>
-                      <time dateTime={event.changedAt} className="text-xs text-muted-foreground">
+                      <time
+                        dateTime={event.changedAt}
+                        className="text-xs text-muted-foreground"
+                      >
                         {new Date(event.changedAt).toLocaleDateString("en-IN", {
                           day: "numeric",
                           month: "short",
@@ -125,7 +135,9 @@ export default async function AdminOrderDetailPage(
 
         <div className="space-y-4">
           <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">Payment</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Payment
+            </h2>
             <dl className="mt-3 space-y-2 border-t border-border pt-3">
               <Line label="Artwork" value={formatINR(order.amount)} />
               <Line label="GST" value={formatINR(order.gstAmount)} />
@@ -140,9 +152,13 @@ export default async function AdminOrderDetailPage(
           </section>
 
           <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">Buyer</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Buyer
+            </h2>
             <p className="mt-2 text-sm text-foreground">{mockCustomer.name}</p>
-            <p className="text-xs text-muted-foreground">{mockCustomer.email}</p>
+            <p className="text-xs text-muted-foreground">
+              {mockCustomer.email}
+            </p>
             {address ? (
               <address className="mt-3 border-t border-border pt-3 text-sm leading-relaxed not-italic text-muted-foreground">
                 {address.line1}
@@ -154,7 +170,9 @@ export default async function AdminOrderDetailPage(
           </section>
 
           <section className="rounded-xl border border-border bg-card p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">Settlement</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Settlement
+            </h2>
             {settlement ? (
               <>
                 <div className="mt-2 flex items-center justify-between gap-2">
@@ -162,9 +180,18 @@ export default async function AdminOrderDetailPage(
                   <AdminStatusBadge status={settlement.status} size="sm" />
                 </div>
                 <dl className="mt-3 space-y-2 border-t border-border pt-3">
-                  <Line label="Artist" value={formatINR(settlement.artistAmount)} />
-                  <Line label="Aggregator" value={formatINR(settlement.aggregatorCommission)} />
-                  <Line label="Platform" value={formatINR(settlement.platformRevenue)} />
+                  <Line
+                    label="Artist"
+                    value={formatINR(settlement.artistAmount)}
+                  />
+                  <Line
+                    label="Aggregator"
+                    value={formatINR(settlement.aggregatorCommission)}
+                  />
+                  <Line
+                    label="Platform"
+                    value={formatINR(settlement.platformRevenue)}
+                  />
                 </dl>
               </>
             ) : (

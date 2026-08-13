@@ -17,7 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAdminReports, useGenerateReportMutation } from "@/hooks/useAdminSystem";
+import {
+  useAdminReports,
+  useGenerateReportMutation,
+} from "@/hooks/useAdminSystem";
 import type { GeneratedReport, ReportType } from "@/types/admin";
 
 const REPORT_TYPES: Array<{ value: ReportType; label: string }> = [
@@ -30,7 +33,13 @@ const REPORT_TYPES: Array<{ value: ReportType; label: string }> = [
 
 const reportSchema = z
   .object({
-    type: z.enum(["sales", "settlements", "artist_payouts", "aggregator_commission", "gst"]),
+    type: z.enum([
+      "sales",
+      "settlements",
+      "artist_payouts",
+      "aggregator_commission",
+      "gst",
+    ]),
     from: z.string().min(1, "Pick a start date"),
     to: z.string().min(1, "Pick an end date"),
   })
@@ -62,7 +71,11 @@ export function ReportGenerator() {
       ]);
       toast.success("Report generated", { description: report.label });
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Could not generate the report.");
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Could not generate the report.",
+      );
     }
   }
 
@@ -97,7 +110,9 @@ export function ReportGenerator() {
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldError errors={fieldState.error ? [fieldState.error] : undefined} />
+                <FieldError
+                  errors={fieldState.error ? [fieldState.error] : undefined}
+                />
               </Field>
             )}
           />
@@ -110,7 +125,9 @@ export function ReportGenerator() {
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="report-from">From</FieldLabel>
                   <Input {...field} id="report-from" type="date" />
-                  <FieldError errors={fieldState.error ? [fieldState.error] : undefined} />
+                  <FieldError
+                    errors={fieldState.error ? [fieldState.error] : undefined}
+                  />
                 </Field>
               )}
             />
@@ -121,7 +138,9 @@ export function ReportGenerator() {
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="report-to">To</FieldLabel>
                   <Input {...field} id="report-to" type="date" />
-                  <FieldError errors={fieldState.error ? [fieldState.error] : undefined} />
+                  <FieldError
+                    errors={fieldState.error ? [fieldState.error] : undefined}
+                  />
                 </Field>
               )}
             />
@@ -134,7 +153,11 @@ export function ReportGenerator() {
             </p>
           ) : null}
 
-          <Button type="submit" disabled={generateMutation.isPending} className="w-full">
+          <Button
+            type="submit"
+            disabled={generateMutation.isPending}
+            className="w-full"
+          >
             <FileText className="size-4" />
             {generateMutation.isPending ? "Generating…" : "Generate report"}
           </Button>
@@ -149,7 +172,9 @@ export function ReportGenerator() {
         </div>
 
         {isPending ? (
-          <p className="px-5 py-8 text-center text-sm text-muted-foreground">Loading…</p>
+          <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+            Loading…
+          </p>
         ) : (reports ?? []).length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-muted-foreground">
             No reports generated yet.
@@ -157,9 +182,14 @@ export function ReportGenerator() {
         ) : (
           <ul className="divide-y divide-border">
             {(reports ?? []).map((report) => (
-              <li key={report.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
+              <li
+                key={report.id}
+                className="flex flex-wrap items-center gap-3 px-5 py-3.5"
+              >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{report.label}</p>
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {report.label}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {report.rowCount} rows · by {report.generatedBy} ·{" "}
                     {new Date(report.generatedAt).toLocaleDateString("en-IN", {
@@ -172,9 +202,14 @@ export function ReportGenerator() {
                 {/* Honest about being inert: there is no file behind this in a
                     mock build, so it is labelled and disabled rather than
                     dressed up as a working link that silently does nothing. */}
-                <Button size="sm" variant="outline" disabled title="Downloads are not available in this demo build">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  title="Downloads are not available in this demo build"
+                >
                   <Download className="size-3.5" />
-                  Demo — no file
+                  Demo (no file)
                 </Button>
               </li>
             ))}

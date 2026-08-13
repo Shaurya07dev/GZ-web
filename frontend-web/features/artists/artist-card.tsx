@@ -13,7 +13,10 @@ interface ArtistCardProps {
 // exception (that's ArtistStory, Task 16 Step 4, on the full profile page);
 // a stripped-and-truncated string needs no sanitizer.
 function bioExcerpt(bio: string, maxLength = 120): string {
-  const text = bio.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const text = bio
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trimEnd()}…`;
 }

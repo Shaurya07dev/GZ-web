@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { WithdrawalQueueTable } from "@/features/admin/moderation/withdrawal-queue-table";
 
 export const metadata = {
-  title: "Withdrawals — GalleryZone Admin",
+  title: "Withdrawals | GalleryZone Admin",
 };
 
 export default function AdminWithdrawalsPage() {

@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { SettingsForm } from "@/features/admin/system/settings-form";
 
 export const metadata = {
-  title: "Settings — GalleryZone Admin",
+  title: "Settings | GalleryZone Admin",
 };
 
 export default function AdminSettingsPage() {

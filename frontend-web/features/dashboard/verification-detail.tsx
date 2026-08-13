@@ -23,7 +23,10 @@ export function VerificationDetail() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-              <Sparkles className="size-5 text-gold-bright" strokeWidth={1.75} />
+              <Sparkles
+                className="size-5 text-gold-bright"
+                strokeWidth={1.75}
+              />
             </span>
             <div>
               <h2 className="font-display text-lg font-semibold text-foreground">
@@ -102,8 +105,8 @@ export function VerificationDetail() {
 
                 {tier.tier === 1 && tier.status === "complete" && (
                   <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-foreground">
-                    <InstagramGlyph className="size-3.5 text-gold-bright" />
-                    @{PROFILE.instagram}
+                    <InstagramGlyph className="size-3.5 text-gold-bright" />@
+                    {PROFILE.instagram}
                   </div>
                 )}
 

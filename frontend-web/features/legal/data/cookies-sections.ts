@@ -15,7 +15,7 @@ export const cookieCategories: CookieCategory[] = [
     category: "Essential",
     examples: "Session cookie (httpOnly refresh token)",
     purpose:
-      "Keeps you signed in and secures your session. Required for the platform to function — it can't be disabled.",
+      "Keeps you signed in and secures your session. Required for the platform to function; it can't be disabled.",
   },
   {
     category: "Functional",
@@ -30,7 +30,7 @@ export const cookiesSections: LegalSection[] = [
     id: "overview",
     heading: "Overview",
     body: [
-      "GalleryZone uses a small number of cookies and browser storage entries to keep the site working and to remember your preferences. We do not run any analytics or advertising cookies today — the table below is a complete list, not a partial one.",
+      "GalleryZone uses a small number of cookies and browser storage entries to keep the site working and to remember your preferences. We do not run any analytics or advertising cookies today; the table below is a complete list, not a partial one.",
     ],
   },
   {

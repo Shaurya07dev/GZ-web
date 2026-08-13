@@ -17,12 +17,19 @@ interface MarketplaceGridProps {
   onClearFilters: () => void;
 }
 
-export function MarketplaceGrid({ filters, onClearFilters }: MarketplaceGridProps) {
+export function MarketplaceGrid({
+  filters,
+  onClearFilters,
+}: MarketplaceGridProps) {
   const { data: artworks, isPending, isError } = useArtworks(filters);
 
   if (isPending) {
     return (
-      <div className={GRID_CLASS} aria-busy="true" aria-label="Loading artworks">
+      <div
+        className={GRID_CLASS}
+        aria-busy="true"
+        aria-label="Loading artworks"
+      >
         {Array.from({ length: 8 }).map((_, index) => (
           <ArtworkCardSkeleton key={index} />
         ))}

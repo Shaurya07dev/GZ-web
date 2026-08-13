@@ -41,11 +41,12 @@ export const registerBaseSchema = z
   })
   .refine(
     (data) =>
-      data.role !== "aggregator" || (!!data.companyName && !!data.contactPerson),
+      data.role !== "aggregator" ||
+      (!!data.companyName && !!data.contactPerson),
     {
       message: "Company name and contact person are required",
       path: ["companyName"],
-    }
+    },
   );
 export type RegisterInput = z.infer<typeof registerBaseSchema>;
 

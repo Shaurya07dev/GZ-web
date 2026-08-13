@@ -27,7 +27,11 @@ export function SiteFooter() {
           viewport={{ once: true, margin: "-10%" }}
           variants={footerStagger}
         >
-          <motion.div variants={footerFadeItem} transition={{ duration: 0.5, ease: "easeOut" }} className="flex max-w-sm flex-col">
+          <motion.div
+            variants={footerFadeItem}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="flex max-w-sm flex-col"
+          >
             <div className="flex items-baseline gap-2.5">
               <span className="font-display text-2xl font-semibold text-gold-bright italic">
                 GZ
@@ -90,7 +94,10 @@ export function SiteFooter() {
           </motion.div>
         </motion.div>
 
-        <div className="-mb-6 mt-16 overflow-hidden text-center sm:-mb-10 lg:-mb-14" aria-hidden>
+        <div
+          className="-mb-6 mt-16 overflow-hidden text-center sm:-mb-10 lg:-mb-14"
+          aria-hidden
+        >
           <p className="translate-y-[0.1em] bg-gradient-to-b from-gold/25 to-gold/0 bg-clip-text font-display text-[18vw] leading-none font-bold tracking-tight text-transparent select-none sm:text-[14vw] lg:text-[11vw]">
             GALLERYZONE
           </p>
@@ -102,7 +109,10 @@ export function SiteFooter() {
 
 function FooterGlow() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      aria-hidden
+    >
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{

@@ -69,9 +69,7 @@ export function EarlyProgramSection() {
                   <div
                     key={avatar.src}
                     className={`relative shrink-0 overflow-hidden rounded-full border-2 ${
-                      avatar.featured
-                        ? "z-10 border-gold"
-                        : "border-background"
+                      avatar.featured ? "z-10 border-gold" : "border-background"
                     }`}
                     style={{
                       width: avatar.size,
@@ -94,15 +92,13 @@ export function EarlyProgramSection() {
                 BE AMONG THE FIRST
               </p>
               <h2 className="mt-4 text-balance font-display text-4xl leading-[1.2] font-semibold sm:text-[2.6rem]">
-                Join the{" "}
-                <span className="text-gold-bright">GalleryZone</span>
+                Join the <span className="text-gold-bright">GalleryZone</span>
                 <br />
-                <span className="text-gold-bright">Early Artist</span>{" "}
-                Program.
+                <span className="text-gold-bright">Early Artist</span> Program.
               </h2>
               <p className="mt-5 max-w-md text-balance text-sm leading-relaxed text-muted-foreground">
-                Get one year of free access, exclusive verification, and all
-                the tools you need to build your art&rsquo;s presence.
+                Get one year of free access, exclusive verification, and all the
+                tools you need to build your art&rsquo;s presence.
               </p>
 
               <Link

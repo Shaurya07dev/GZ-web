@@ -20,7 +20,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "GalleryZone — Your Art Deserves an Identity",
+  title: "GalleryZone | Your Art Deserves an Identity",
   description:
     "A trusted digital ecosystem for original artwork, artists and collectors.",
 };

@@ -75,7 +75,10 @@ export function TierDonutChart({
       }
       className={className}
     >
-      <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }} accessibilityLayer={false}>
+      <PieChart
+        margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+        accessibilityLayer={false}
+      >
         <Tooltip
           content={
             <ChartTooltipContent
@@ -129,11 +132,14 @@ function DonutTotal({ total, label }: { total: number; label: string }) {
 function buildAriaLabel(
   tiers: TierDistribution[],
   total: number,
-  centerLabel: string
+  centerLabel: string,
 ): string {
   if (!tiers.length) return "Verification tiers. No data.";
   const parts = tiers
-    .map((tier) => `${tier.tier} ${formatCount(tier.count)} (${formatShare(tier.count, total)})`)
+    .map(
+      (tier) =>
+        `${tier.tier} ${formatCount(tier.count)} (${formatShare(tier.count, total)})`,
+    )
     .join(", ");
   return `Donut chart of verification tiers across ${formatCount(total)} ${centerLabel}: ${parts}.`;
 }

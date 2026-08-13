@@ -44,8 +44,13 @@ export function useApproveArtworkMutation() {
 export function useRejectArtworkMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ artworkId, reason }: { artworkId: string; reason: string }) =>
-      adminService.rejectArtwork(artworkId, reason),
+    mutationFn: ({
+      artworkId,
+      reason,
+    }: {
+      artworkId: string;
+      reason: string;
+    }) => adminService.rejectArtwork(artworkId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-pending-artworks"] });
       queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
@@ -102,7 +107,8 @@ export function useAdminWithdrawals() {
 export function useApproveWithdrawalMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (withdrawalId: string) => adminService.approveWithdrawal(withdrawalId),
+    mutationFn: (withdrawalId: string) =>
+      adminService.approveWithdrawal(withdrawalId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
@@ -113,8 +119,13 @@ export function useApproveWithdrawalMutation() {
 export function useRejectWithdrawalMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ withdrawalId, reason }: { withdrawalId: string; reason: string }) =>
-      adminService.rejectWithdrawal(withdrawalId, reason),
+    mutationFn: ({
+      withdrawalId,
+      reason,
+    }: {
+      withdrawalId: string;
+      reason: string;
+    }) => adminService.rejectWithdrawal(withdrawalId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });

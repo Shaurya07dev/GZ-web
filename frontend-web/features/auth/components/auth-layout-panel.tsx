@@ -20,7 +20,7 @@ const SHOWCASE_IDS = [
 ];
 
 const SHOWCASE_ARTWORKS = SHOWCASE_IDS.map((id) =>
-  mockArtworks.find((artwork) => artwork.id === id)
+  mockArtworks.find((artwork) => artwork.id === id),
 ).filter((artwork): artwork is NonNullable<typeof artwork> => Boolean(artwork));
 
 const ROTATE_INTERVAL_MS = 5000;

@@ -27,16 +27,8 @@ export function HeroArtwork({
 }) {
   const { revealFrom, revealTo, rotate } = artwork;
 
-  const opacity = useTransform(
-    progress,
-    [revealFrom, revealTo],
-    [0, 1],
-  );
-  const scale = useTransform(
-    progress,
-    [revealFrom, revealTo],
-    [0.75, 1],
-  );
+  const opacity = useTransform(progress, [revealFrom, revealTo], [0, 1]);
+  const scale = useTransform(progress, [revealFrom, revealTo], [0.75, 1]);
   const y = useTransform(progress, [revealFrom, revealTo], [28, 0]);
 
   return (

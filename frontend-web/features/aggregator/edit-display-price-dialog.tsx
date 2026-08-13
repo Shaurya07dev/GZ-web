@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldDescription,
+} from "@/components/ui/field";
 import { formatINR } from "@/lib/utils";
 import { aggregatorService } from "@/services/aggregatorService";
 import type { AggregatorHolding } from "@/types/aggregator";
@@ -51,14 +56,10 @@ export function EditDisplayPriceDialog({
           .number({ message: "Enter a price" })
           .min(floor, `Cannot be lower than the floor of ${formatINR(floor)}`),
       }),
-    [floor]
+    [floor],
   );
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-  } = useForm<{ displayPrice: number }>({
+  const { control, handleSubmit, reset } = useForm<{ displayPrice: number }>({
     resolver: zodResolver(schema),
     defaultValues: { displayPrice: holding?.displayPrice ?? 0 },
   });
@@ -71,11 +72,16 @@ export function EditDisplayPriceDialog({
 
   function onSubmit(values: { displayPrice: number }) {
     if (!holding) return;
-    const updated = aggregatorService.updateDisplayPrice(holding.id, values.displayPrice);
-    queryClient.setQueryData<Array<AggregatorHolding & { artwork: ArtworkSummary }>>(
-      ["aggregator-collection"],
-      (prev) =>
-        prev?.map((h) => (h.id === holding.id ? { ...h, displayPrice: updated.displayPrice } : h))
+    const updated = aggregatorService.updateDisplayPrice(
+      holding.id,
+      values.displayPrice,
+    );
+    queryClient.setQueryData<
+      Array<AggregatorHolding & { artwork: ArtworkSummary }>
+    >(["aggregator-collection"], (prev) =>
+      prev?.map((h) =>
+        h.id === holding.id ? { ...h, displayPrice: updated.displayPrice } : h,
+      ),
     );
     toast.success("Display price updated");
     onOpenChange(false);
@@ -102,7 +108,9 @@ export function EditDisplayPriceDialog({
             name="displayPrice"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="displayPrice">Display price (₹)</FieldLabel>
+                <FieldLabel htmlFor="displayPrice">
+                  Display price (₹)
+                </FieldLabel>
                 <Input
                   id="displayPrice"
                   type="number"

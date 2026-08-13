@@ -81,8 +81,8 @@ export function ArtworkPassportCard({
 
           <p className="mt-7 max-w-sm text-xs leading-relaxed text-muted-foreground">
             This digital passport confirms the piece above as an original,
-            authenticated work registered with GalleryZone. It resolves the
-            same NFC/QR tag physically attached to the artwork.
+            authenticated work registered with GalleryZone. It resolves the same
+            NFC/QR tag physically attached to the artwork.
           </p>
         </div>
       </div>
@@ -92,7 +92,10 @@ export function ArtworkPassportCard({
 
 function PassportGlow() {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+    <div
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      aria-hidden="true"
+    >
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{

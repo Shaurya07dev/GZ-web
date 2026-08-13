@@ -122,7 +122,9 @@ export function ArtworksBoard() {
                   className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-bright hover:underline"
                 >
                   <Pencil className="size-3.5" />
-                  {artwork.status === "draft" ? "Continue editing" : "View & edit"}
+                  {artwork.status === "draft"
+                    ? "Continue editing"
+                    : "View & edit"}
                 </Link>
               </div>
             </motion.div>

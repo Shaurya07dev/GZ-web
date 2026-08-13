@@ -166,7 +166,9 @@ export function formatCompactCount(value: number): string {
 
 /** Grouped count for tooltips and legends, e.g. "1,284". */
 export function formatCount(value: number): string {
-  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(
+    value,
+  );
 }
 
 /** Share of a total, e.g. "37%". Guards a zero total. */

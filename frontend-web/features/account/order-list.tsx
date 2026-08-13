@@ -21,7 +21,10 @@ import { useOrders } from "@/hooks/useOrders";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import type { OrderStatus } from "@/types/order";
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; icon: LucideIcon; className: string }> = {
+const STATUS_CONFIG: Record<
+  OrderStatus,
+  { label: string; icon: LucideIcon; className: string }
+> = {
   pending: {
     label: "Pending",
     icon: Clock3,
@@ -109,7 +112,7 @@ export function OrderList() {
   }
 
   const sorted = [...data].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
   return (
@@ -153,7 +156,7 @@ export function OrderList() {
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap",
-                  status.className
+                  status.className,
                 )}
               >
                 <status.icon className="size-3" strokeWidth={2} />

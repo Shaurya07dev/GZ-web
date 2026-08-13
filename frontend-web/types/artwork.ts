@@ -1,7 +1,16 @@
 export type ArtworkStatus =
-  | "draft" | "pending_approval" | "marketplace" | "reserved"
-  | "preparing_dispatch" | "in_transit" | "with_aggregator" | "sold"
-  | "settlement_complete" | "delivered" | "completed" | "returned";
+  | "draft"
+  | "pending_approval"
+  | "marketplace"
+  | "reserved"
+  | "preparing_dispatch"
+  | "in_transit"
+  | "with_aggregator"
+  | "sold"
+  | "settlement_complete"
+  | "delivered"
+  | "completed"
+  | "returned";
 
 export type ListingType = "marketplace_only" | "marketplace_and_aggregator";
 

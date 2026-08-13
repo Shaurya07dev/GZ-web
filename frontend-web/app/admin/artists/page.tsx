@@ -2,7 +2,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { UserTable } from "@/features/admin/people/user-table";
 
 export const metadata = {
-  title: "Artists — GalleryZone Admin",
+  title: "Artists | GalleryZone Admin",
 };
 
 export default function AdminArtistsPage() {

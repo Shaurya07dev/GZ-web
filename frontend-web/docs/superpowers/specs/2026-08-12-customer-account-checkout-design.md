@@ -36,7 +36,7 @@ non-empty states to render on first visit.
 ## 3. Shared data additions
 
 - `types/order.ts` — `OrderStatus` (`pending | paid | confirmed | packed |
-  transit | delivered | cancelled`, per SAD `orders` table), `Order`
+transit | delivered | cancelled`, per SAD `orders` table), `Order`
   (id, artworkId, amount, gstAmount, deliveryCharge, status, createdAt,
   addressId, statusHistory: `{status, changedAt}[]`).
 - `types/customer.ts` — `Address` (id, line1, line2?, city, state, pincode,
@@ -51,7 +51,7 @@ non-empty states to render on first visit.
   `listAddresses`, `addAddress`, `updateAddress`, `deleteAddress`.
 - `services/orderService.ts` — `listOrders`, `getOrder`, `createOrder(payload)`
   (the checkout confirm action — appends a new `Order` with `status:
-  "pending"` and a one-entry status history, floor-level realistic, not
+"pending"` and a one-entry status history, floor-level realistic, not
   actually processing payment).
 - Corresponding `hooks/useOrders.ts`, `hooks/useAddresses.ts`,
   `hooks/useCustomerProfile.ts` (query-key convention matching SAD §5.4:
@@ -115,10 +115,10 @@ works as one page with an internal step transition):
    page, but doesn't have to reuse the exact same component if that's
    awkward — a lighter inline variant is fine).
 2. **Review** — artwork summary, price breakdown (`customerPrice` + 5% GST
-   + a flat delivery charge — pick a realistic flat value, e.g. ₹250, and
-   say so plainly in the code as a mock-phase simplification, since the
-   real delivery-charge calculation isn't specified anywhere in the source
-   docs), selected address shown for confirmation.
+   - a flat delivery charge — pick a realistic flat value, e.g. ₹250, and
+     say so plainly in the code as a mock-phase simplification, since the
+     real delivery-charge calculation isn't specified anywhere in the source
+     docs), selected address shown for confirmation.
 3. **Confirm** — a button that calls `createOrder`, then shows a success
    state (checkmark, order number, "View order" linking to
    `/account/orders/[newOrderId]`) — no fake payment form, no card-number
@@ -143,7 +143,7 @@ body content for every new route and the updated Buy Now link.
 - Real payment processing of any kind (no card form, no payment gateway
   integration — mock-confirmed only, matching the "no backend" constraint).
 - Order cancellation/return flows (SAD lists `returned` etc. as possible
-  artwork statuses but building the UI to *trigger* those transitions from
+  artwork statuses but building the UI to _trigger_ those transitions from
   the customer side is not part of this pass).
 - Notification preferences, password change, or any other Settings-page
   feature with nothing real behind it in this mock phase.

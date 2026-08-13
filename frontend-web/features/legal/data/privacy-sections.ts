@@ -10,7 +10,7 @@ export const privacySections: LegalSection[] = [
     id: "information-we-collect",
     heading: "Information We Collect",
     body: [
-      "Identity & KYC documents: for artists, this includes a government ID and Aadhaar number submitted during onboarding. Your Aadhaar number is encrypted at rest and is never exposed through any API — only your verification status (verified / not verified) is ever visible, including to GalleryZone staff.",
+      "Identity & KYC documents: for artists, this includes a government ID and Aadhaar number submitted during onboarding. Your Aadhaar number is encrypted at rest and is never exposed through any API. Only your verification status (verified / not verified) is ever visible, including to GalleryZone staff.",
       "Bank account details: collected to pay out artist settlements and aggregator commissions. Your account number is stored masked (shown as, for example, XXXXXXXX1234) everywhere in the product; the full number is only used transiently at the moment a withdrawal is actually processed.",
       "Contact & address details: your name, email, phone number, and any delivery addresses you save for orders or shipments.",
       "Browsing and wishlist activity: which artworks and artists you view and save, used to keep your wishlist in sync and to show you more relevant work.",

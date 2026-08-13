@@ -15,7 +15,8 @@ export function useAggregatorCollection() {
 export function useRecordSaleMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: RecordSalePayload) => aggregatorService.recordSale(payload),
+    mutationFn: (payload: RecordSalePayload) =>
+      aggregatorService.recordSale(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-dashboard"] });

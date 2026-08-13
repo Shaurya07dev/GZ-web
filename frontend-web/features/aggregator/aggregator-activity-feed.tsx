@@ -17,7 +17,9 @@ import { MOCK_TODAY } from "./aggregator-data";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function relativeTime(iso: string): string {
-  const days = Math.round((MOCK_TODAY.getTime() - new Date(iso).getTime()) / ONE_DAY_MS);
+  const days = Math.round(
+    (MOCK_TODAY.getTime() - new Date(iso).getTime()) / ONE_DAY_MS,
+  );
   if (days <= 0) return "Today";
   if (days === 1) return "Yesterday";
   return `${days} days ago`;
@@ -32,8 +34,8 @@ const activityItems = mockAggregatorHoldings
       id: holding.id,
       icon: sold ? Banknote : BookmarkCheck,
       title: sold
-        ? `Sale recorded — "${artwork.title}"`
-        : `Reserved — "${artwork.title}"`,
+        ? `Sale recorded: "${artwork.title}"`
+        : `Reserved: "${artwork.title}"`,
       detail: `Display price ${formatINR(holding.displayPrice)} · ${holding.advancePercent}% advance`,
       time: relativeTime(holding.assignedAt),
       sortKey: holding.assignedAt,
@@ -59,11 +61,16 @@ export function AggregatorActivityFeed() {
           {activityItems.map((item) => (
             <li key={item.id} className="flex items-start gap-3.5">
               <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-                <item.icon className="size-4 text-gold-bright" strokeWidth={1.5} />
+                <item.icon
+                  className="size-4 text-gold-bright"
+                  strokeWidth={1.5}
+                />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-foreground">{item.title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {item.detail}
+                </p>
               </div>
               <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
                 {item.time}

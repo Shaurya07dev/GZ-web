@@ -74,7 +74,11 @@ const NAV_GROUPS: AdminNavGroup[] = [
     heading: null,
     items: [
       { label: "Overview", href: "/admin", icon: LayoutGrid },
-      { label: "Analytics", href: "/admin/analytics", icon: ChartNoAxesCombined },
+      {
+        label: "Analytics",
+        href: "/admin/analytics",
+        icon: ChartNoAxesCombined,
+      },
     ],
   },
   {
@@ -86,7 +90,12 @@ const NAV_GROUPS: AdminNavGroup[] = [
         icon: Images,
         badge: "artworks",
       },
-      { label: "KYC", href: "/admin/moderation/kyc", icon: IdCard, badge: "kyc" },
+      {
+        label: "KYC",
+        href: "/admin/moderation/kyc",
+        icon: IdCard,
+        badge: "kyc",
+      },
       {
         label: "Withdrawals",
         href: "/admin/moderation/withdrawals",
@@ -195,7 +204,7 @@ function Sidebar({
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[transform,width] lg:sticky lg:top-0 lg:h-[100dvh] lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "lg:w-20" : "lg:w-64"
+          collapsed ? "lg:w-20" : "lg:w-64",
         )}
       >
         <div className="flex h-16 shrink-0 items-center justify-between px-5">
@@ -206,7 +215,7 @@ function Sidebar({
             <span
               className={cn(
                 "text-xs font-medium tracking-[0.18em] text-sidebar-foreground",
-                collapsed && "lg:hidden"
+                collapsed && "lg:hidden",
               )}
             >
               GALLERYZONE
@@ -235,7 +244,7 @@ function Sidebar({
         <span
           className={cn(
             "mx-5 mt-1 mb-2 shrink-0 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase",
-            collapsed && "lg:hidden"
+            collapsed && "lg:hidden",
           )}
         >
           Admin Console
@@ -247,7 +256,8 @@ function Sidebar({
         <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-3 pt-2 pb-4">
           {NAV_GROUPS.map((group, groupIndex) => {
             const heading = group.heading;
-            const groupOpen = collapsed || !heading || !closedGroups.has(heading);
+            const groupOpen =
+              collapsed || !heading || !closedGroups.has(heading);
 
             return (
               <div key={heading ?? "primary"} className="flex flex-col gap-0.5">
@@ -258,14 +268,14 @@ function Sidebar({
                     className={cn(
                       "flex items-center justify-between px-3 pb-1 text-[10px] font-medium tracking-[0.16em] text-muted-foreground/80 uppercase transition-colors hover:text-sidebar-foreground",
                       groupIndex === 0 ? "pt-1" : "pt-4",
-                      collapsed && "lg:hidden"
+                      collapsed && "lg:hidden",
                     )}
                   >
                     {heading}
                     <ChevronDown
                       className={cn(
                         "size-3.5 transition-transform",
-                        groupOpen && "rotate-180"
+                        groupOpen && "rotate-180",
                       )}
                     />
                   </button>
@@ -275,13 +285,16 @@ function Sidebar({
                   <div
                     className={cn(
                       "flex flex-col gap-0.5",
-                      heading && "ml-[13px] border-l border-sidebar-border pl-2.5",
-                      heading && collapsed && "lg:m-0 lg:border-0 lg:pl-0"
+                      heading &&
+                        "ml-[13px] border-l border-sidebar-border pl-2.5",
+                      heading && collapsed && "lg:m-0 lg:border-0 lg:pl-0",
                     )}
                   >
                     {group.items.map((item) => {
                       const active = isActive(pathname, item.href);
-                      const count = item.badge ? badgeCounts[item.badge] : undefined;
+                      const count = item.badge
+                        ? badgeCounts[item.badge]
+                        : undefined;
                       const hasCount = count !== undefined && count > 0;
 
                       return (
@@ -296,17 +309,20 @@ function Sidebar({
                             collapsed && "lg:justify-center lg:px-2",
                             active
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+                              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
                           )}
                         >
                           <item.icon
-                            className={cn("size-4 shrink-0", active && "text-gold-bright")}
+                            className={cn(
+                              "size-4 shrink-0",
+                              active && "text-gold-bright",
+                            )}
                             strokeWidth={1.75}
                           />
                           <span
                             className={cn(
                               "min-w-0 flex-1 truncate",
-                              collapsed && "lg:hidden"
+                              collapsed && "lg:hidden",
                             )}
                           >
                             {item.label}
@@ -317,7 +333,7 @@ function Sidebar({
                                 aria-label={`${count} waiting`}
                                 className={cn(
                                   "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full border border-gold/35 bg-gold/10 px-1.5 text-[11px] font-medium text-gold-bright tabular-nums",
-                                  collapsed && "lg:hidden"
+                                  collapsed && "lg:hidden",
                                 )}
                               >
                                 {count}
@@ -343,17 +359,25 @@ function Sidebar({
         <div
           className={cn(
             "mx-3 mb-4 flex shrink-0 items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3",
-            collapsed && "lg:justify-center lg:px-2"
+            collapsed && "lg:justify-center lg:px-2",
           )}
         >
           <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gold/40">
-            <Image src={ADMIN.avatar} alt="" fill sizes="36px" className="object-cover" />
+            <Image
+              src={ADMIN.avatar}
+              alt=""
+              fill
+              sizes="36px"
+              className="object-cover"
+            />
           </div>
           <div className={cn("min-w-0", collapsed && "lg:hidden")}>
             <p className="truncate text-sm font-medium text-sidebar-foreground">
               {ADMIN.name}
             </p>
-            <p className="truncate text-xs text-muted-foreground">{ADMIN.email}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {ADMIN.email}
+            </p>
           </div>
         </div>
       </aside>
@@ -367,7 +391,7 @@ function Sidebar({
 // instead of falling through to the generic label.
 function pageTitle(pathname: string) {
   const match = NAV_ITEMS.filter((item) => isActive(pathname, item.href)).sort(
-    (a, b) => b.href.length - a.href.length
+    (a, b) => b.href.length - a.href.length,
   )[0];
   return match?.label ?? "Admin Console";
 }

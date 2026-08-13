@@ -12,7 +12,7 @@ export function ArtworkCardSkeleton({ className }: ArtworkCardSkeletonProps) {
     <div
       className={cn(
         "flex flex-col overflow-hidden rounded-lg border border-border bg-card",
-        className
+        className,
       )}
     >
       <Skeleton className="aspect-[4/5] w-full rounded-none" />

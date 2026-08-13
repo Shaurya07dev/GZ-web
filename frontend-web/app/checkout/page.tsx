@@ -11,13 +11,15 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 }
 
 export async function generateMetadata(
-  props: PageProps<"/checkout">
+  props: PageProps<"/checkout">,
 ): Promise<Metadata> {
   const { artworkId } = await props.searchParams;
   const artwork = getArtworkById(firstParam(artworkId) ?? "");
 
   return {
-    title: artwork ? `Checkout — ${artwork.title} — GalleryZone` : "Checkout — GalleryZone",
+    title: artwork
+      ? `Checkout | ${artwork.title} | GalleryZone`
+      : "Checkout | GalleryZone",
     description: "Review your delivery address and confirm your order.",
   };
 }
@@ -45,14 +47,17 @@ export default async function CheckoutPage(props: PageProps<"/checkout">) {
               className="flex size-16 items-center justify-center rounded-full border border-gold/40 bg-card"
               aria-hidden
             >
-              <ShoppingBag className="size-6 text-gold-bright" strokeWidth={1.5} />
+              <ShoppingBag
+                className="size-6 text-gold-bright"
+                strokeWidth={1.5}
+              />
             </div>
             <h1 className="mt-8 text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
               Nothing to check out.
             </h1>
             <p className="mt-5 max-w-sm text-balance text-base leading-relaxed text-muted-foreground">
-              We couldn&rsquo;t find an artwork to buy. Head back to the marketplace
-              and pick a piece to get started.
+              We couldn&rsquo;t find an artwork to buy. Head back to the
+              marketplace and pick a piece to get started.
             </p>
             <Link
               href="/marketplace"
@@ -73,8 +78,14 @@ export default async function CheckoutPage(props: PageProps<"/checkout">) {
       <SiteHeader />
       <main className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-[1200px] px-6 py-10 lg:px-10 lg:py-14">
-          <nav aria-label="Breadcrumb" className="mb-6 text-xs text-muted-foreground">
-            <Link href="/marketplace" className="transition-colors hover:text-gold-bright">
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-6 text-xs text-muted-foreground"
+          >
+            <Link
+              href="/marketplace"
+              className="transition-colors hover:text-gold-bright"
+            >
               Marketplace
             </Link>
             <span className="mx-1.5" aria-hidden="true">

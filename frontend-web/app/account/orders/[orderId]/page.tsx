@@ -19,18 +19,20 @@ function formatDate(iso: string): string {
 }
 
 export async function generateMetadata(
-  props: PageProps<"/account/orders/[orderId]">
+  props: PageProps<"/account/orders/[orderId]">,
 ): Promise<Metadata> {
   const { orderId } = await props.params;
   const order = await orderService.get(orderId);
 
   if (!order) {
-    return { title: "Order not found — GalleryZone" };
+    return { title: "Order not found | GalleryZone" };
   }
 
   const artwork = getArtworkById(order.artworkId);
   return {
-    title: artwork ? `Order — ${artwork.title} — GalleryZone` : "Order — GalleryZone",
+    title: artwork
+      ? `Order | ${artwork.title} | GalleryZone`
+      : "Order | GalleryZone",
   };
 }
 
@@ -42,7 +44,7 @@ export async function generateMetadata(
 // OrderStatusTimeline/OrderPriceBreakdown presentational components. An
 // unknown orderId 404s via notFound() rather than rendering a broken page.
 export default async function OrderDetailPage(
-  props: PageProps<"/account/orders/[orderId]">
+  props: PageProps<"/account/orders/[orderId]">,
 ) {
   const { orderId } = await props.params;
   const order = await orderService.get(orderId);

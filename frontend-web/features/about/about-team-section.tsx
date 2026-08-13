@@ -17,8 +17,16 @@ interface TeamMember {
 
 const TEAM: TeamMember[] = [
   { name: "Devika Menon", initials: "DM", role: "Founder & CEO" },
-  { name: "Arav Shah", initials: "AS", role: "Co-founder & Head of Engineering" },
-  { name: "Naledi Correia", initials: "NC", role: "Head of Curation & Verification" },
+  {
+    name: "Arav Shah",
+    initials: "AS",
+    role: "Co-founder & Head of Engineering",
+  },
+  {
+    name: "Naledi Correia",
+    initials: "NC",
+    role: "Head of Curation & Verification",
+  },
   { name: "Kabir Oberoi", initials: "KO", role: "Head of Artist Success" },
 ];
 
@@ -46,8 +54,8 @@ export function AboutTeamSection() {
               The people behind it.
             </h2>
             <p className="mt-3 max-w-md text-balance text-base leading-relaxed text-muted-foreground">
-              A small crew building the trust layer between artists,
-              galleries, and collectors.
+              A small crew building the trust layer between artists, galleries,
+              and collectors.
             </p>
           </div>
 
@@ -55,7 +63,10 @@ export function AboutTeamSection() {
             href="/contact"
             className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
+            <span
+              className="size-1.5 rounded-full bg-emerald-500"
+              aria-hidden
+            />
             We&rsquo;re hiring
             <ArrowUpRight className="size-3.5" />
           </Link>
@@ -66,7 +77,10 @@ export function AboutTeamSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-10%" }}
-          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.08 } },
+          }}
         >
           {TEAM.map((member) => (
             <motion.div
@@ -82,7 +96,9 @@ export function AboutTeamSection() {
               </Avatar>
               <div>
                 <p className="font-medium text-foreground">{member.name}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">{member.role}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {member.role}
+                </p>
               </div>
             </motion.div>
           ))}

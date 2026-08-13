@@ -3,7 +3,8 @@ import type { OrderStatus } from "./order";
 
 export type UserRole = "artist" | "aggregator" | "customer" | "admin";
 export type UserStatus = "pending" | "active" | "suspended" | "blocked";
-export type KycStatus = "pending" | "submitted" | "under_review" | "approved" | "rejected";
+export type KycStatus =
+  "pending" | "submitted" | "under_review" | "approved" | "rejected";
 
 export interface AdminUser {
   id: string;
@@ -12,10 +13,10 @@ export interface AdminUser {
   phone: string;
   role: UserRole;
   status: UserStatus;
-  createdAt: string;      // ISO
+  createdAt: string; // ISO
   lastLoginAt: string | null;
-  kycStatus?: KycStatus;  // artists only
-  companyName?: string;   // aggregators only
+  kycStatus?: KycStatus; // artists only
+  companyName?: string; // aggregators only
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";
@@ -25,8 +26,8 @@ export interface WithdrawalRequest {
   userId: string;
   userName: string;
   userRole: Extract<UserRole, "artist" | "aggregator">;
-  amount: number;                 // >= 1000 per platform rule
-  bankAccountMasked: string;      // e.g. "XXXXXXXX1234" — never a full number
+  amount: number; // >= 1000 per platform rule
+  bankAccountMasked: string; // e.g. "XXXXXXXX1234" — never a full number
   walletBalance: number;
   status: WithdrawalStatus;
   requestedAt: string;
@@ -49,11 +50,18 @@ export interface Settlement {
 }
 
 export type AuditAction =
-  | "artwork.approved" | "artwork.rejected" | "artwork.delisted"
-  | "kyc.approved" | "kyc.rejected"
-  | "withdrawal.approved" | "withdrawal.rejected"
-  | "user.suspended" | "user.activated"
-  | "category.created" | "category.updated" | "category.deleted"
+  | "artwork.approved"
+  | "artwork.rejected"
+  | "artwork.delisted"
+  | "kyc.approved"
+  | "kyc.rejected"
+  | "withdrawal.approved"
+  | "withdrawal.rejected"
+  | "user.suspended"
+  | "user.activated"
+  | "category.created"
+  | "category.updated"
+  | "category.deleted"
   | "settlement.retried"
   | "settings.updated";
 
@@ -61,11 +69,12 @@ export interface AuditLogEntry {
   id: string;
   adminName: string;
   action: AuditAction;
-  entityType: "artwork" | "user" | "withdrawal" | "category" | "settlement" | "settings";
+  entityType:
+    "artwork" | "user" | "withdrawal" | "category" | "settlement" | "settings";
   entityId: string;
-  entityLabel: string;   // human-readable, e.g. the artwork title
-  detail?: string;       // e.g. a rejection reason
-  createdAt: string;     // ISO
+  entityLabel: string; // human-readable, e.g. the artwork title
+  detail?: string; // e.g. a rejection reason
+  createdAt: string; // ISO
 }
 
 export interface Category {
@@ -76,10 +85,10 @@ export interface Category {
 }
 
 export interface PlatformSettings {
-  markupPercent: number;            // 30
-  gstPercent: number;               // 5
-  minWithdrawalAmount: number;      // 1000
-  insuranceThreshold: number;       // 20000
+  markupPercent: number; // 30
+  gstPercent: number; // 5
+  minWithdrawalAmount: number; // 1000
+  insuranceThreshold: number; // 20000
   aggregatorCommissionPercent: number; // 20 (of the markup)
 }
 
@@ -99,7 +108,7 @@ export interface AdminActivityEvent {
   id: string;
   label: string;
   detail: string;
-  at: string;   // ISO
+  at: string; // ISO
   kind: "artwork" | "order" | "user" | "withdrawal" | "settlement";
 }
 
@@ -113,16 +122,17 @@ export type AdminOrderStatusFilter = OrderStatus | "all";
 // than being redeclared ad hoc at three separate call sites.
 // ---------------------------------------------------------------------------
 
-export type ReportType = "sales" | "settlements" | "artist_payouts" | "aggregator_commission" | "gst";
+export type ReportType =
+  "sales" | "settlements" | "artist_payouts" | "aggregator_commission" | "gst";
 
 export interface GeneratedReport {
   id: string;
   type: ReportType;
   label: string;
-  from: string;         // ISO date (inclusive)
-  to: string;           // ISO date (inclusive)
-  generatedAt: string;  // ISO
-  generatedBy: string;  // admin name
+  from: string; // ISO date (inclusive)
+  to: string; // ISO date (inclusive)
+  generatedAt: string; // ISO
+  generatedBy: string; // admin name
   rowCount: number;
   // "ready" rows are still not downloadable in a mock build — Task 16 must
   // label the download affordance honestly rather than linking to nothing.

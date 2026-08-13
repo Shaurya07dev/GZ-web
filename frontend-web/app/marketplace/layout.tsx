@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 // server component, matching how every other route in this app (about,
 // checkout, account) ships its own metadata.
 export const metadata: Metadata = {
-  title: "The Marketplace — GalleryZone",
+  title: "The Marketplace | GalleryZone",
   description:
     "Browse original, verified artwork from independent artists across India. Every piece ships with a signed certificate of authenticity.",
 };

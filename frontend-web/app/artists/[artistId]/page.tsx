@@ -16,17 +16,17 @@ import { artistService, artworkService } from "@/services/artworkService";
 const getArtist = cache((artistId: string) => artistService.get(artistId));
 
 export async function generateMetadata(
-  props: PageProps<"/artists/[artistId]">
+  props: PageProps<"/artists/[artistId]">,
 ): Promise<Metadata> {
   const { artistId } = await props.params;
   const artist = await getArtist(artistId);
 
   if (!artist) {
-    return { title: "Artist not found — GalleryZone" };
+    return { title: "Artist not found | GalleryZone" };
   }
 
   return {
-    title: `${artist.name} — GalleryZone`,
+    title: `${artist.name} | GalleryZone`,
     description: `${artist.name} on GalleryZone: verified original artwork, priced with full artist privacy.`,
   };
 }
@@ -40,7 +40,7 @@ export async function generateMetadata(
 // Verify page. Only ArtistStory (the sanitized bio) and each ArtworkCard's
 // wishlist button are client components.
 export default async function ArtistProfilePage(
-  props: PageProps<"/artists/[artistId]">
+  props: PageProps<"/artists/[artistId]">,
 ) {
   const { artistId } = await props.params;
   const artist = await getArtist(artistId);
@@ -71,7 +71,7 @@ export default async function ArtistProfilePage(
               <EmptyState
                 icon={Palette}
                 title="No artworks listed yet"
-                description={`${artist.name} doesn't have any artwork on the marketplace right now — check back soon.`}
+                description={`${artist.name} doesn't have any artwork on the marketplace right now. Check back soon.`}
                 className="mt-5"
               />
             ) : (

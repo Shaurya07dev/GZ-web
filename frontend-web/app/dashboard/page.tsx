@@ -5,7 +5,7 @@ import { RecentActivityFeed } from "@/features/dashboard/recent-activity-feed";
 import { RevenueChart } from "@/features/dashboard/revenue-chart";
 
 export const metadata: Metadata = {
-  title: "Dashboard — GalleryZone",
+  title: "Dashboard | GalleryZone",
 };
 
 export default function DashboardOverviewPage() {

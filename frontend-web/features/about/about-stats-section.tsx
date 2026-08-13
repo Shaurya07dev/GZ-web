@@ -60,8 +60,8 @@ export function AboutStatsSection() {
             </h2>
           </div>
           <p className="max-w-sm text-balance text-sm leading-relaxed text-muted-foreground">
-            A small, growing catalog — every artist verified the same way,
-            every price kept private.
+            A small, growing catalog: every artist verified the same way, every
+            price kept private.
           </p>
         </motion.div>
 
@@ -70,7 +70,10 @@ export function AboutStatsSection() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-10%" }}
-          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.08 } },
+          }}
         >
           {STATS.map((stat, index) => (
             <motion.div

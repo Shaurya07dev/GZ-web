@@ -2,7 +2,10 @@
 
 import { useMemo } from "react";
 import { Lock, ScrollText } from "lucide-react";
-import { AdminDataTable, type AdminDataTableColumn } from "@/features/admin/admin-data-table";
+import {
+  AdminDataTable,
+  type AdminDataTableColumn,
+} from "@/features/admin/admin-data-table";
 import { useAdminAuditLog } from "@/hooks/useAdminSystem";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import { ADMIN_TODAY } from "@/features/admin/admin-data";
@@ -41,7 +44,14 @@ const NEGATIVE_ACTIONS = new Set<AuditAction>([
   "category.deleted",
 ]);
 
-const ENTITY_TYPES = ["artwork", "user", "withdrawal", "category", "settlement", "settings"] as const;
+const ENTITY_TYPES = [
+  "artwork",
+  "user",
+  "withdrawal",
+  "category",
+  "settlement",
+  "settings",
+] as const;
 
 function formatWhen(iso: string): string {
   const date = new Date(iso);
@@ -71,7 +81,10 @@ export function AuditLogTable() {
       key: "when",
       header: "When",
       render: (row) => (
-        <time dateTime={row.createdAt} className="text-sm tabular-nums text-muted-foreground">
+        <time
+          dateTime={row.createdAt}
+          className="text-sm tabular-nums text-muted-foreground"
+        >
           {formatWhen(row.createdAt)}
         </time>
       ),
@@ -101,7 +114,9 @@ export function AuditLogTable() {
       render: (row) => (
         <div className="min-w-0">
           <p className="truncate text-sm text-foreground">{row.entityLabel}</p>
-          <p className="text-xs capitalize text-muted-foreground">{row.entityType}</p>
+          <p className="text-xs capitalize text-muted-foreground">
+            {row.entityType}
+          </p>
         </div>
       ),
       sortable: true,
@@ -112,15 +127,19 @@ export function AuditLogTable() {
       header: "Detail",
       render: (row) =>
         row.detail ? (
-          <span className="line-clamp-2 text-xs text-muted-foreground">{row.detail}</span>
+          <span className="line-clamp-2 text-xs text-muted-foreground">
+            {row.detail}
+          </span>
         ) : (
-          <span className="text-xs text-muted-foreground/60">—</span>
+          <span className="text-xs text-muted-foreground/60">No detail</span>
         ),
     },
     {
       key: "admin",
       header: "By",
-      render: (row) => <span className="text-sm text-muted-foreground">{row.adminName}</span>,
+      render: (row) => (
+        <span className="text-sm text-muted-foreground">{row.adminName}</span>
+      ),
       sortable: true,
       sortValue: (row) => row.adminName,
     },
@@ -130,8 +149,8 @@ export function AuditLogTable() {
     <div className="space-y-3">
       <p className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
         <Lock className="mt-px size-3.5 shrink-0" />
-        Audit entries are immutable by design. Nothing here can be edited or removed,
-        including by an administrator.
+        Audit entries are immutable by design. Nothing here can be edited or
+        removed, including by an administrator.
       </p>
 
       <AdminDataTable
@@ -140,7 +159,9 @@ export function AuditLogTable() {
         isLoading={isPending}
         getRowKey={(row) => row.id}
         searchPlaceholder="Search subject or detail"
-        searchValue={(row) => `${row.entityLabel} ${row.detail ?? ""} ${row.adminName}`}
+        searchValue={(row) =>
+          `${row.entityLabel} ${row.detail ?? ""} ${row.adminName}`
+        }
         pageSize={20}
         filters={[
           {

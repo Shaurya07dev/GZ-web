@@ -40,12 +40,20 @@ export function UserDetailHeader({ user }: { user: AdminUser }) {
 
   async function handleToggle() {
     try {
-      await setStatusMutation.mutateAsync({ userId: user.id, status: nextStatus });
-      queryClient.setQueryData<AdminUser | undefined>(["admin-user", user.id], (prev) =>
-        prev ? { ...prev, status: nextStatus } : prev,
+      await setStatusMutation.mutateAsync({
+        userId: user.id,
+        status: nextStatus,
+      });
+      queryClient.setQueryData<AdminUser | undefined>(
+        ["admin-user", user.id],
+        (prev) => (prev ? { ...prev, status: nextStatus } : prev),
       );
-      queryClient.setQueriesData<AdminUser[]>({ queryKey: ["admin-users"] }, (prev) =>
-        (prev ?? []).map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u)),
+      queryClient.setQueriesData<AdminUser[]>(
+        { queryKey: ["admin-users"] },
+        (prev) =>
+          (prev ?? []).map((u) =>
+            u.id === user.id ? { ...u, status: nextStatus } : u,
+          ),
       );
       appendAudit({
         adminName: ADMIN.name,
@@ -96,7 +104,11 @@ export function UserDetailHeader({ user }: { user: AdminUser }) {
             disabled={setStatusMutation.isPending}
             className="shrink-0"
           >
-            {isSuspended ? <UserCheck className="size-4" /> : <Ban className="size-4" />}
+            {isSuspended ? (
+              <UserCheck className="size-4" />
+            ) : (
+              <Ban className="size-4" />
+            )}
             {isSuspended ? "Reactivate" : "Suspend"}
           </Button>
         </div>
@@ -105,7 +117,9 @@ export function UserDetailHeader({ user }: { user: AdminUser }) {
       <ConfirmActionDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={isSuspended ? `Reactivate ${user.name}?` : `Suspend ${user.name}?`}
+        title={
+          isSuspended ? `Reactivate ${user.name}?` : `Suspend ${user.name}?`
+        }
         description={
           isSuspended
             ? "They regain access immediately and can sign in as normal."
@@ -132,7 +146,9 @@ function Detail({
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`truncate text-sm text-foreground ${className ?? ""}`}>{value}</dd>
+      <dd className={`truncate text-sm text-foreground ${className ?? ""}`}>
+        {value}
+      </dd>
     </div>
   );
 }

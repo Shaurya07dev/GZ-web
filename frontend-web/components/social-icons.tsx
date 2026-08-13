@@ -49,7 +49,11 @@ export function YoutubeGlyph(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>
       <rect x="3" y="6" width="18" height="12" rx="4" />
-      <path d="M10.3 9.4 L15 12 L10.3 14.6 Z" fill="currentColor" stroke="none" />
+      <path
+        d="M10.3 9.4 L15 12 L10.3 14.6 Z"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
   );
 }
