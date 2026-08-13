@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { FileUploader } from "@/components/ui/file-uploader";
 import { InstagramGlyph } from "@/components/social-icons";
 import { ARTIST, PROFILE } from "./dashboard-data";
 
@@ -47,6 +48,8 @@ export function ProfileKycForm() {
     ifsc: PROFILE.ifsc,
   });
   const [bankSaved, setBankSaved] = useState(false);
+
+  const [docsSubmitted, setDocsSubmitted] = useState(false);
 
   function updateProfile<K extends keyof ProfileFormState>(
     field: K,
@@ -225,6 +228,39 @@ export function ProfileKycForm() {
             Encrypted at rest and used only for identity verification.
             Contact support to update your Aadhaar details.
           </p>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 sm:p-6">
+          <div>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Identity documents
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Submit an additional ID or address proof if support has
+              requested one for your account.
+            </p>
+          </div>
+
+          <FileUploader
+            title="Upload documents"
+            acceptedFormats={["jpg", "pdf", "svg", "png", "docx"]}
+            maxFiles={3}
+            maxSizeMB={10}
+            submitLabel="Submit for review"
+            onSubmit={() => setDocsSubmitted(true)}
+            className="max-w-none shadow-none ring-1 ring-border"
+          />
+
+          {docsSubmitted && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-1.5 text-sm text-gold-bright"
+            >
+              <Check className="size-3.5" />
+              Submitted for review
+            </motion.p>
+          )}
         </div>
 
         <form

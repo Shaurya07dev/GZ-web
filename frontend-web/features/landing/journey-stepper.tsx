@@ -4,6 +4,10 @@ import "@/lib/motion-config";
 import { motion } from "framer-motion";
 import { JOURNEY_STEPS } from "./journey-data";
 
+// Shared with journey-section.tsx's auto-advance timer so the visual fill
+// and the actual step change never drift out of sync.
+export const JOURNEY_STEP_DURATION_MS = 3000;
+
 export function JourneyStepper({
   activeIndex,
   onSelect,
@@ -35,9 +39,20 @@ export function JourneyStepper({
             {active && (
               <motion.span
                 layoutId="journey-tab-underline"
-                className="absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-gold-bright"
+                className="absolute inset-x-3 -bottom-px h-[2px] overflow-hidden rounded-full bg-border"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              />
+              >
+                <motion.span
+                  key={activeIndex}
+                  className="block h-full rounded-full bg-gold-bright"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{
+                    duration: JOURNEY_STEP_DURATION_MS / 1000,
+                    ease: "linear",
+                  }}
+                />
+              </motion.span>
             )}
           </button>
         );

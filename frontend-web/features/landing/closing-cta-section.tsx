@@ -3,28 +3,28 @@
 import "@/lib/motion-config";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ShieldCheck, Fingerprint, Globe, Gift, ArrowRight } from "lucide-react";
+import { ShieldCheck, Fingerprint, Globe, Lock, ArrowRight } from "lucide-react";
 
 const FEATURES = [
   {
     icon: ShieldCheck,
-    title: "Verified\nAuthenticity",
+    title: "Verified Authenticity",
     description: "Every artwork is carefully verified.",
   },
   {
     icon: Fingerprint,
-    title: "Permanent\nDigital Identity",
+    title: "Permanent Digital Identity",
     description: "A unique identity that lasts forever.",
   },
   {
     icon: Globe,
-    title: "Global\nExposure",
+    title: "Global Exposure",
     description: "Reach collectors worldwide.",
   },
   {
-    icon: Gift,
-    title: "Early-bird\nBenefits",
-    description: "Be featured and access exclusive opportunities.",
+    icon: Lock,
+    title: "100% Price Privacy",
+    description: "Your listed price always stays confidential.",
   },
 ];
 
@@ -40,7 +40,7 @@ export function ClosingCtaSection() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
-            <div className="px-8 py-14 md:px-14 md:py-16">
+            <div className="px-8 py-10 md:px-12 md:py-12">
               <div className="flex items-baseline gap-2.5">
                 <span className="font-display text-2xl font-semibold text-gold-bright italic">
                   GZ
@@ -50,7 +50,7 @@ export function ClosingCtaSection() {
                 </span>
               </div>
 
-              <h2 className="mt-8 text-balance font-display text-5xl leading-[1.1] font-semibold sm:text-6xl">
+              <h2 className="mt-6 text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
                 Give your art
                 <br />
                 an{" "}
@@ -59,29 +59,28 @@ export function ClosingCtaSection() {
                 </span>
               </h2>
 
-              <p className="mt-6 max-w-md text-balance text-base leading-relaxed text-muted-foreground">
+              <p className="mt-4 max-w-md text-balance text-base leading-relaxed text-muted-foreground">
                 Join GalleryZone and give your original artwork the
                 identity, recognition, and visibility it deserves.
               </p>
 
-              <div className="mt-14 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
-                {FEATURES.map((feature, i) => (
-                  <div
-                    key={feature.title}
-                    className={`flex flex-col gap-3 ${
-                      i > 0 ? "sm:border-l sm:border-border sm:pl-6" : ""
-                    }`}
-                  >
-                    <feature.icon
-                      className="size-6 text-gold-bright"
-                      strokeWidth={1.5}
-                    />
-                    <h3 className="font-medium whitespace-pre-line text-foreground">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {feature.description}
-                    </p>
+              <div className="mt-8 grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+                {FEATURES.map((feature) => (
+                  <div key={feature.title} className="flex items-start gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-gold/25 bg-gold/10">
+                      <feature.icon
+                        className="size-4 text-gold-bright"
+                        strokeWidth={1.75}
+                      />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-medium text-foreground">
+                        {feature.title}
+                      </h3>
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                        {feature.description}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>

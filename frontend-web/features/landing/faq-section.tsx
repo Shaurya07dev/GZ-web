@@ -1,32 +1,16 @@
 "use client";
 
-import "@/lib/motion-config";
-import { useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Minus } from "lucide-react";
 import { FAQ_ITEMS } from "./faq-data";
 
 export function FaqSection() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 0.85", "end 0.15"],
-  });
-  const leftY = useTransform(scrollYProgress, [0, 1], [-110, 110]);
-
   return (
-    <section
-      ref={sectionRef}
-      className="relative overflow-hidden py-20 md:py-28"
-    >
+    <section className="relative overflow-hidden py-20 md:py-28">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
-          <motion.div style={{ y: leftY }} className="lg:self-start">
+          <div className="lg:self-start">
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -53,7 +37,7 @@ export function FaqSection() {
                 works.
               </p>
             </motion.div>
-          </motion.div>
+          </div>
 
           <motion.div
             className="flex flex-col gap-4"

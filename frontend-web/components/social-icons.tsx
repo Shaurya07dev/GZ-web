@@ -38,3 +38,27 @@ export function LinkedinGlyph(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+// This lucide-react version ships no brand/logo glyphs at all (confirmed:
+// no youtube/tiktok/instagram/x icon files exist in node_modules), which is
+// why Instagram/X/LinkedIn above are already hand-drawn rather than
+// imported. Youtube and Tiktok follow, matching the same minimal
+// currentColor line-art voice, for the four SocialProofLink platforms used
+// on the Artwork Detail page (types/artwork.ts).
+export function YoutubeGlyph(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="6" width="18" height="12" rx="4" />
+      <path d="M10.3 9.4 L15 12 L10.3 14.6 Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function TiktokGlyph(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M13.5 3.5 v11.3 a3.3 3.3 0 1 1 -3.3 -3.3 c0.3 0 0.6 0.03 0.9 0.08" />
+      <path d="M13.5 3.5 a4.6 4.6 0 0 0 4.6 4.6" />
+    </svg>
+  );
+}

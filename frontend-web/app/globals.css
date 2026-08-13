@@ -166,4 +166,26 @@
   html {
     @apply font-sans;
   }
+
+  /* Slim on-brand scrollbar instead of the OS default — on Windows in dark
+     mode that renders as a boxy pill with up/down arrow buttons, which
+     clashes with the rest of the site's chrome. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--gold);
+  }
 }

@@ -1,0 +1,123 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { adminService } from "@/services/adminService";
+
+// ---------------------------------------------------------------------------
+// The three approval workflows. Every mutation here changes a pending-queue
+// count, so every one of them additionally invalidates ["admin-kpis"] — the
+// overview tiles and the shell's nav badges would otherwise keep claiming
+// work is waiting that you just cleared.
+//
+// Removing the acted-on row from its queue is the call site's job via
+// queryClient.setQueryData (spec §6) — these hooks only invalidate what the
+// action provably changed elsewhere.
+// ---------------------------------------------------------------------------
+
+// --- artwork moderation ----------------------------------------------------
+
+export function useAdminPendingArtworks() {
+  return useQuery({
+    queryKey: ["admin-pending-artworks"],
+    queryFn: () => adminService.listPendingArtworks(),
+  });
+}
+
+export function useAdminPendingArtwork(artworkId: string) {
+  return useQuery({
+    queryKey: ["admin-pending-artwork", artworkId],
+    queryFn: () => adminService.getPendingArtwork(artworkId),
+    enabled: Boolean(artworkId),
+  });
+}
+
+export function useApproveArtworkMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (artworkId: string) => adminService.approveArtwork(artworkId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+export function useRejectArtworkMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ artworkId, reason }: { artworkId: string; reason: string }) =>
+      adminService.rejectArtwork(artworkId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+// --- KYC -------------------------------------------------------------------
+
+export function useAdminKycQueue() {
+  return useQuery({
+    queryKey: ["admin-kyc-queue"],
+    queryFn: () => adminService.listKycQueue(),
+  });
+}
+
+export function useApproveKycMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => adminService.approveKyc(userId),
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-kyc-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+export function useRejectKycMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      adminService.rejectKyc(userId, reason),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-kyc-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+// --- withdrawals -----------------------------------------------------------
+
+export function useAdminWithdrawals() {
+  return useQuery({
+    queryKey: ["admin-withdrawals"],
+    queryFn: () => adminService.listWithdrawals(),
+  });
+}
+
+export function useApproveWithdrawalMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (withdrawalId: string) => adminService.approveWithdrawal(withdrawalId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+export function useRejectWithdrawalMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ withdrawalId, reason }: { withdrawalId: string; reason: string }) =>
+      adminService.rejectWithdrawal(withdrawalId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-withdrawals"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}

@@ -21,6 +21,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       { label: "Join GalleryZone", href: "/register?role=artist" },
       { label: "Early Artist Program", href: "/register?role=artist" },
+      { label: "Artist Survey", href: "/artist-survey" },
       { label: "How It Works", href: "/about" },
       { label: "Guidelines", href: "/about" },
       { label: "Resources", href: "/about" },
@@ -47,6 +48,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Contact", href: "/contact" },
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
+      { label: "Cookie Policy", href: "/cookies" },
     ],
   },
 ];
