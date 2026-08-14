@@ -2,15 +2,18 @@ import type { LegalSection } from "../types";
 
 // Drafted fresh — no source document exists for Privacy specifically — but
 // scoped strictly to what the SAD confirms the platform actually collects
-// and how it's handled (§8.7 Sensitive Data Handling, §2.4-2.5), not a
-// generic template. Contact details reused verbatim from the Onboarding
-// Guide's closing section.
+// and how it's handled (§8.7 Sensitive Data Handling, §2.4-2.5), plus what
+// the Artist and Aggregator MOUs confirm is actually gathered during
+// onboarding (signature sample, artist profile, linked social accounts).
+// Contact details reused verbatim from the Onboarding Guide's closing
+// section.
 export const privacySections: LegalSection[] = [
   {
     id: "information-we-collect",
     heading: "Information We Collect",
     body: [
-      "Identity & KYC documents: for artists, this includes a government ID and Aadhaar number submitted during onboarding. Your Aadhaar number is encrypted at rest and is never exposed through any API. Only your verification status (verified / not verified) is ever visible, including to GalleryZone staff.",
+      "Identity & KYC documents: for artists, this includes a government ID, a signature sample, and Aadhaar number submitted during onboarding. Your Aadhaar number is encrypted at rest and is never exposed through any API. Only your verification status (verified / not verified) is ever visible, including to GalleryZone staff.",
+      "Artist profile & social accounts: your artist bio and portfolio details, and any social media profiles you choose to link (Instagram, Facebook, YouTube, X, TikTok) as part of artist verification.",
       "Bank account details: collected to pay out artist settlements and aggregator commissions. Your account number is stored masked (shown as, for example, XXXXXXXX1234) everywhere in the product; the full number is only used transiently at the moment a withdrawal is actually processed.",
       "Contact & address details: your name, email, phone number, and any delivery addresses you save for orders or shipments.",
       "Browsing and wishlist activity: which artworks and artists you view and save, used to keep your wishlist in sync and to show you more relevant work.",
