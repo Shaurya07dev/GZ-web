@@ -53,13 +53,29 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   },
 ];
 
-export const SOCIAL_LINKS: {
+export type SocialLink = {
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   href: string;
   label: string;
-}[] = [
-  { icon: InstagramGlyph, href: "#", label: "Instagram" },
+  target?: string;
+  rel?: string;
+};
+
+export const SOCIAL_LINKS: SocialLink[] = [
+  {
+    icon: InstagramGlyph,
+    href: "https://www.instagram.com/galleryzone.in",
+    label: "Instagram",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  },
   { icon: XGlyph, href: "#", label: "X" },
   { icon: LinkedinGlyph, href: "#", label: "LinkedIn" },
-  { icon: Mail, href: "mailto:galleryzone@zohomail.in", label: "Email" },
+  {
+    icon: Mail,
+    href: "https://mail.google.com/mail/?view=cm&fs=1&to=galleryzone@zohomail.in",
+    label: "Email",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  },
 ];

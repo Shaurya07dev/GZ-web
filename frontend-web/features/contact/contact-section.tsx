@@ -179,18 +179,26 @@ export function ContactSection() {
                   Reach us directly
                 </h2>
                 <Link
-                  href={`mailto:${CONTACT_EMAIL}`}
+                  href={`https://mail.google.com/mail/?view=cm&fs=1&to=${CONTACT_EMAIL}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-3 inline-flex items-center gap-2 text-sm text-gold-bright hover:underline"
                 >
                   <Mail className="size-4" />
                   {CONTACT_EMAIL}
                 </Link>
                 <div className="mt-5 flex items-center gap-3 border-t border-border pt-5">
-                  {[InstagramGlyph, XGlyph, LinkedinGlyph].map((Glyph, i) => (
+                  {[
+                    { Glyph: InstagramGlyph, href: "https://www.instagram.com/galleryzone.in", label: "Instagram" },
+                    { Glyph: XGlyph, href: "#", label: "X" },
+                    { Glyph: LinkedinGlyph, href: "#", label: "LinkedIn" },
+                  ].map(({ Glyph, href, label }) => (
                     <Link
-                      key={i}
-                      href="#"
-                      aria-label="Follow GalleryZone"
+                      key={label}
+                      href={href}
+                      target={href.startsWith("http") ? "_blank" : undefined}
+                      rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                      aria-label={label}
                       className="flex size-9 items-center justify-center rounded-md border border-gold/40 text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
                     >
                       <Glyph className="size-4" />

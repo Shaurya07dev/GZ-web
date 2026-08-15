@@ -57,6 +57,8 @@ export function SiteFooter() {
                 <Link
                   key={social.label}
                   href={social.href}
+                  target={social.target}
+                  rel={social.rel}
                   aria-label={social.label}
                   className="flex size-9 items-center justify-center rounded-md border border-gold/40 text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
                 >
