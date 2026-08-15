@@ -259,8 +259,21 @@ export function SiteHeader() {
         </div>
 
         <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
-          <DialogContent className="top-0 right-0 left-auto h-full max-h-none w-full max-w-xs translate-x-0 translate-y-0 overflow-y-auto rounded-none border-l border-border/60 sm:max-w-xs">
+          <DialogContent className="top-0 right-0 left-auto flex h-full max-h-none w-full max-w-xs translate-x-0 translate-y-0 flex-col overflow-y-auto rounded-none border-l border-border/60 p-6 sm:max-w-xs">
             <DialogTitle className="sr-only">Navigation menu</DialogTitle>
+
+            <Link
+              href="/"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-baseline gap-2"
+            >
+              <span className="font-display text-xl font-semibold italic text-gold-bright">
+                GZ
+              </span>
+              <span className="text-xs font-medium tracking-[0.18em] text-foreground">
+                GALLERYZONE
+              </span>
+            </Link>
 
             {!isLandingPage && (
               <form
@@ -268,7 +281,7 @@ export function SiteHeader() {
                   e.preventDefault();
                   handleSearchSubmit(mobileQuery);
                 }}
-                className="flex items-center gap-2"
+                className="mt-6 flex items-center gap-2"
               >
                 <Input
                   value={mobileQuery}
@@ -287,8 +300,8 @@ export function SiteHeader() {
               </form>
             )}
 
-            <nav className="flex flex-col gap-1 text-sm">
-              <p className="mt-2 px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <nav className="mt-8 flex flex-col gap-1">
+              <p className="px-3 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                 Explore
               </p>
               {EXPLORE_CATEGORIES.map(({ category, label }) => (
@@ -296,7 +309,7 @@ export function SiteHeader() {
                   key={category}
                   href={`/marketplace?category=${encodeURIComponent(category)}`}
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-md px-2 py-2 hover:bg-muted"
+                  className="rounded-lg px-3 py-3 font-display text-lg font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   {label}
                 </Link>
@@ -304,7 +317,7 @@ export function SiteHeader() {
               <Link
                 href="/marketplace"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-md px-2 py-2 font-medium text-gold-bright hover:bg-muted"
+                className="rounded-lg px-3 py-3 font-display text-lg font-medium text-gold-bright transition-colors hover:bg-muted"
               >
                 Browse all artworks
               </Link>
@@ -315,46 +328,59 @@ export function SiteHeader() {
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="mt-1 rounded-md px-2 py-2 hover:bg-muted"
+                    className="rounded-lg px-3 py-3 font-display text-lg font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     {link.label}
                   </Link>
                 ),
               )}
+            </nav>
 
-              <p className="mt-3 px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            <div className="mt-6 border-t border-border/60 pt-6">
+              <p className="px-3 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
                 Sell With Us
               </p>
-              {SELL_WITH_US.map((option) => (
-                <Link
-                  key={option.href}
-                  href={option.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-md px-2 py-2 hover:bg-muted"
-                >
-                  {option.title}
-                </Link>
-              ))}
-
-              <div className="mt-4 flex flex-col gap-2 border-t border-border/60 pt-4">
-                {!isLandingPage && (
+              <nav className="mt-2 flex flex-col gap-1">
+                {SELL_WITH_US.map((option) => (
                   <Link
-                    href="/account/wishlist"
+                    key={option.title}
+                    href={option.href}
                     onClick={() => setMobileOpen(false)}
-                    className="rounded-md px-2 py-2 hover:bg-muted"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
                   >
-                    Wishlist
+                    <option.icon
+                      className="size-4 shrink-0 text-gold-bright"
+                      strokeWidth={1.75}
+                    />
+                    {option.title}
                   </Link>
-                )}
+                ))}
+              </nav>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-1 border-t border-border/60 pt-6">
+              {!isLandingPage && (
                 <Link
-                  href="/login"
+                  href="/account/wishlist"
                   onClick={() => setMobileOpen(false)}
-                  className="rounded-md px-2 py-2 hover:bg-muted"
+                  className="rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
                 >
-                  Sign In
+                  Wishlist
                 </Link>
-              </div>
-            </nav>
+              )}
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
+              >
+                Sign In
+              </Link>
+            </div>
+
+            <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-6">
+              <span className="text-xs text-muted-foreground">Theme</span>
+              <SwitchMode />
+            </div>
           </DialogContent>
         </Dialog>
       </header>

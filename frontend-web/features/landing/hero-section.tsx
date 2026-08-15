@@ -109,6 +109,57 @@ const ARTWORKS: ArtworkAnchor[] = [
   },
 ];
 
+// A separate, sparse set for mobile/tablet: four images pinned to the actual
+// screen corners, well clear of the centered headline band, instead of
+// naively shrinking the desktop 9-image scatter (which just pulls every
+// image inward toward the center and piles them on top of the text).
+const MOBILE_ARTWORKS: ArtworkAnchor[] = [
+  {
+    src: "/artworks/bird.png",
+    alt: "Mixed-media still life with a bird",
+    leftPct: 20,
+    topPct: 13,
+    width: 84,
+    height: 84,
+    revealFrom: 0.05,
+    revealTo: 0.3,
+    rotate: -3,
+  },
+  {
+    src: "/artworks/eye-pyramid.png",
+    alt: "Graphite illustration of an eye within a pyramid",
+    leftPct: 80,
+    topPct: 15,
+    width: 96,
+    height: 96,
+    revealFrom: 0.18,
+    revealTo: 0.42,
+    rotate: 3,
+  },
+  {
+    src: "/artworks/framed-painting.png",
+    alt: "Framed painting with a maroon mat",
+    leftPct: 22,
+    topPct: 86,
+    width: 88,
+    height: 96,
+    revealFrom: 0.32,
+    revealTo: 0.56,
+    rotate: -2,
+  },
+  {
+    src: "/artworks/portrait-woman.png",
+    alt: "Portrait painting of a woman",
+    leftPct: 79,
+    topPct: 87,
+    width: 96,
+    height: 70,
+    revealFrom: 0.46,
+    revealTo: 0.7,
+    rotate: 2,
+  },
+];
+
 export function HeroSection() {
   const driverRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -124,8 +175,17 @@ export function HeroSection() {
   return (
     <section ref={driverRef} className="relative h-[300vh]">
       <div className="sticky top-20 flex h-[calc(100vh-5rem)] w-full flex-col items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 origin-center scale-[0.55] sm:scale-[0.75] lg:scale-100">
+        <div className="absolute inset-0 hidden lg:block">
           {ARTWORKS.map((artwork) => (
+            <HeroArtwork
+              key={artwork.src}
+              artwork={artwork}
+              progress={smoothProgress}
+            />
+          ))}
+        </div>
+        <div className="absolute inset-0 lg:hidden">
+          {MOBILE_ARTWORKS.map((artwork) => (
             <HeroArtwork
               key={artwork.src}
               artwork={artwork}

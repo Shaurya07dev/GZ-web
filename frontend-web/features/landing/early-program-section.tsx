@@ -61,7 +61,9 @@ export function EarlyProgramSection() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1fr_1.5fr_1fr]">
-            <BenefitColumn items={left} align="left" />
+            <div className="hidden lg:block">
+              <BenefitColumn items={left} align="left" />
+            </div>
 
             <div className="flex flex-col items-center text-center">
               <div className="mb-7 flex origin-center scale-[0.72] items-center sm:scale-100">
@@ -113,9 +115,25 @@ export function EarlyProgramSection() {
                 <Check className="size-3.5 text-gold-bright" />
                 Limited to early members only
               </p>
+
+              <div className="mt-10 grid w-full grid-cols-2 gap-x-6 gap-y-6 text-left lg:hidden">
+                {BENEFITS.map((benefit) => (
+                  <div key={benefit.title} className="flex flex-col gap-2">
+                    <benefit.icon
+                      className="size-5 text-gold-bright"
+                      strokeWidth={1.5}
+                    />
+                    <h3 className="font-display text-sm font-semibold text-foreground">
+                      {benefit.title}
+                    </h3>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <BenefitColumn items={right} align="right" />
+            <div className="hidden lg:block">
+              <BenefitColumn items={right} align="right" />
+            </div>
           </div>
         </motion.div>
       </div>
@@ -131,27 +149,25 @@ function BenefitColumn({
   align: "left" | "right";
 }) {
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-6 sm:gap-10">
       {items.map((benefit) => (
         <div
           key={benefit.title}
-          className={`flex flex-col gap-3 ${align === "right" ? "lg:items-end lg:text-right" : ""}`}
+          className={`flex flex-col gap-2 sm:gap-3 ${align === "right" ? "lg:items-end lg:text-right" : ""}`}
         >
-          <span className="flex size-11 items-center justify-center rounded-full border border-gold/30 bg-background">
-            <benefit.icon
-              className="size-4 text-gold-bright"
-              strokeWidth={1.5}
-            />
-          </span>
+          <benefit.icon
+            className="size-5 text-gold-bright sm:size-6"
+            strokeWidth={1.5}
+          />
           <div
-            className={`flex flex-col gap-1 border-t border-border pt-3 ${
+            className={`flex flex-col gap-1 border-t border-border pt-2.5 sm:pt-3 ${
               align === "right" ? "lg:items-end" : ""
             }`}
           >
-            <h3 className="font-display text-lg font-semibold text-foreground">
+            <h3 className="font-display text-sm font-semibold text-foreground sm:text-lg">
               {benefit.title}
             </h3>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <p className="hidden text-sm leading-relaxed text-muted-foreground lg:block">
               {benefit.description}
             </p>
           </div>

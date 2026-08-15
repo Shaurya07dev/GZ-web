@@ -119,7 +119,7 @@ export function IdentitySection() {
               />
             </FadeItem>
 
-            <FadeItem className="order-first flex justify-center sm:col-span-2 sm:order-first lg:order-none lg:col-span-1 lg:-mt-[169px]">
+            <FadeItem className="hidden justify-center lg:flex lg:col-span-1 lg:-mt-[169px]">
               <div className="relative aspect-[3/4] w-40 sm:w-48 lg:w-full lg:max-w-[224px]">
                 <motion.div
                   className="absolute inset-0 -z-10 scale-[1.7] rounded-full bg-gold/[0.08] blur-3xl"
