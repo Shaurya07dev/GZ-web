@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, ChevronsUpDown, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -115,7 +115,7 @@ export function ArtistSurveyForm() {
     const result = surveySchema.safeParse(data);
     if (!result.success) {
       setIsSubmitting(false);
-      toast.error(result.error.errors[0].message);
+      toast.error(result.error.issues[0].message);
       return;
     }
 
@@ -356,20 +356,19 @@ export function ArtistSurveyForm() {
               <Label>Type of Painting ?</Label>
               <div className="block">
                 <Popover open={openStyleCombo} onOpenChange={setOpenStyleCombo}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openStyleCombo}
-                      className="w-full max-w-sm justify-between text-left font-normal"
-                    >
-                      <span className="truncate">
-                        {data.regionalStyle
-                          ? data.regionalStyle
-                          : "Select painting style..."}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
+                  <PopoverTrigger
+                    className={cn(
+                      buttonVariants({ variant: "outline" }),
+                      "w-full max-w-sm justify-between text-left font-normal",
+                    )}
+                    aria-expanded={openStyleCombo}
+                  >
+                    <span className="truncate">
+                      {data.regionalStyle
+                        ? data.regionalStyle
+                        : "Select painting style..."}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] sm:w-[350px] p-0">
                     <Command>
