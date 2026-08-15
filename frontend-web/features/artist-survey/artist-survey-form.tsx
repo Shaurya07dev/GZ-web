@@ -1,14 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Star } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { z } from "zod";
+
+const surveySchema = z.object({
+  firstName: z.string().max(255).optional(),
+  lastName: z.string().max(255).optional(),
+  email: z.string().email("Invalid email address").max(255),
+  phone: z.string().min(5, "Phone number is too short").max(50),
+  country: z.string().max(255).optional(),
+  state: z.string().min(1, "State is required").max(255),
+  city: z.string().min(1, "City is required").max(255),
+  artType: z.string().max(255).optional(),
+  artTypeOther: z.string().max(500).optional(),
+  paintingMethods: z.array(z.string()).max(20).optional(),
+  paintingMethodOther: z.string().max(500).optional(),
+  regionalStyle: z.string().max(255).optional(),
+  regionalStyleOther: z.string().max(500).optional(),
+  monthlyEarnings: z.string().min(1, "Monthly earnings is required").max(255),
+  experience: z.string().min(1, "Experience is required").max(255),
+  satisfaction: z.number().min(0).max(5).optional(),
+});
 import {
   ART_TYPES,
   PAINTING_METHODS,
@@ -27,7 +61,7 @@ interface SurveyData {
   artTypeOther: string;
   paintingMethods: string[];
   paintingMethodOther: string;
-  regionalStyles: string[];
+  regionalStyle: string;
   regionalStyleOther: string;
   monthlyEarnings: string;
   experience: string;
@@ -46,7 +80,7 @@ const EMPTY_SURVEY: SurveyData = {
   artTypeOther: "",
   paintingMethods: [],
   paintingMethodOther: "",
-  regionalStyles: [],
+  regionalStyle: "",
   regionalStyleOther: "",
   monthlyEarnings: "",
   experience: "",
@@ -68,19 +102,52 @@ export function ArtistSurveyForm() {
   const [data, setData] = useState<SurveyData>(EMPTY_SURVEY);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [openStyleCombo, setOpenStyleCombo] = useState(false);
 
   function update<K extends keyof SurveyData>(field: K, value: SurveyData[K]) {
     setData((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    const result = surveySchema.safeParse(data);
+    if (!result.success) {
       setIsSubmitting(false);
+      toast.error(result.error.errors[0].message);
+      return;
+    }
+
+    const validData = result.data;
+
+    const { error } = await supabase.from("artist_survey_responses").insert([{
+      first_name: validData.firstName || null,
+      last_name: validData.lastName || null,
+      email: validData.email,
+      phone: validData.phone,
+      country: validData.country || null,
+      state: validData.state,
+      city: validData.city,
+      art_type: validData.artType || null,
+      art_type_other: validData.artTypeOther || null,
+      painting_methods: validData.paintingMethods?.length ? validData.paintingMethods : null,
+      painting_method_other: validData.paintingMethodOther || null,
+      regional_styles: validData.regionalStyle ? [validData.regionalStyle] : null,
+      regional_style_other: validData.regionalStyleOther || null,
+      monthly_earnings: validData.monthlyEarnings,
+      experience: validData.experience,
+      satisfaction: validData.satisfaction || null,
+    }]);
+
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error("Failed to submit survey: " + error.message);
+    } else {
       setSubmitted(true);
       toast.success("Thanks, your artist survey is in.");
-    }, 1000);
+    }
   }
 
   if (submitted) {
@@ -287,47 +354,63 @@ export function ArtistSurveyForm() {
           <Question>
             <div className="space-y-3">
               <Label>Type of Painting ?</Label>
-              <div className="flex flex-col gap-2.5">
-                {REGIONAL_PAINTING_STYLES.map((style) => (
-                  <div key={style} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`style-${style}`}
-                      checked={data.regionalStyles.includes(style)}
-                      onCheckedChange={() =>
-                        update(
-                          "regionalStyles",
-                          toggle(data.regionalStyles, style),
-                        )
-                      }
-                    />
-                    <Label
-                      htmlFor={`style-${style}`}
-                      className="cursor-pointer font-normal"
+              <div className="block">
+                <Popover open={openStyleCombo} onOpenChange={setOpenStyleCombo}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openStyleCombo}
+                      className="w-full max-w-sm justify-between text-left font-normal"
                     >
-                      {style}
-                    </Label>
-                  </div>
-                ))}
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="style-other"
-                    checked={data.regionalStyles.includes("Other")}
-                    onCheckedChange={() =>
-                      update(
-                        "regionalStyles",
-                        toggle(data.regionalStyles, "Other"),
-                      )
-                    }
-                  />
-                  <Label
-                    htmlFor="style-other"
-                    className="cursor-pointer font-normal"
-                  >
-                    Other
-                  </Label>
-                </div>
+                      <span className="truncate">
+                        {data.regionalStyle
+                          ? data.regionalStyle
+                          : "Select painting style..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] sm:w-[350px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search style..." />
+                      <CommandList>
+                        <CommandEmpty>No style found.</CommandEmpty>
+                        <CommandGroup>
+                          {[...REGIONAL_PAINTING_STYLES, "Other"].map(
+                            (style) => (
+                              <CommandItem
+                                key={style}
+                                value={style}
+                                onSelect={(currentValue) => {
+                                  update(
+                                    "regionalStyle",
+                                    currentValue === data.regionalStyle
+                                      ? ""
+                                      : style, // Use the actual style string, not the lowercase currentValue
+                                  );
+                                  setOpenStyleCombo(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    data.regionalStyle === style
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                                {style}
+                              </CommandItem>
+                            ),
+                          )}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-              {data.regionalStyles.includes("Other") && (
+              {data.regionalStyle === "Other" && (
                 <Input
                   placeholder="Other (please specify)"
                   value={data.regionalStyleOther}
