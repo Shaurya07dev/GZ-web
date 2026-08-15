@@ -61,5 +61,5 @@ export const SOCIAL_LINKS: {
   { icon: InstagramGlyph, href: "#", label: "Instagram" },
   { icon: XGlyph, href: "#", label: "X" },
   { icon: LinkedinGlyph, href: "#", label: "LinkedIn" },
-  { icon: Mail, href: "mailto:hello@galleryzone.com", label: "Email" },
+  { icon: Mail, href: "mailto:galleryzone@zohomail.in", label: "Email" },
 ];

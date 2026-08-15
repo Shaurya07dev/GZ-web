@@ -7,4 +7,4 @@ export const ROLE_OPTIONS = [
   { value: "collector", label: "Collector" },
 ] as const;
 
-export const CONTACT_EMAIL = "hello@galleryzone.com";
+export const CONTACT_EMAIL = "galleryzone@zohomail.in";
