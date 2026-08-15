@@ -21,6 +21,33 @@ export function useAdminUser(userId: string) {
   });
 }
 
+// Person-detail pages: bundles the AdminUser row with the role-specific
+// record their page actually renders (portfolio/holdings/orders), through
+// adminService instead of the page importing lib/mock-data/* fixtures.
+export function useAdminArtistPortfolio(userId: string) {
+  return useQuery({
+    queryKey: ["admin-artist-portfolio", userId],
+    queryFn: () => adminService.getArtistPortfolio(userId),
+    enabled: Boolean(userId),
+  });
+}
+
+export function useAdminAggregatorPortfolio(userId: string) {
+  return useQuery({
+    queryKey: ["admin-aggregator-portfolio", userId],
+    queryFn: () => adminService.getAggregatorPortfolio(userId),
+    enabled: Boolean(userId),
+  });
+}
+
+export function useAdminCustomerPortfolio(userId: string) {
+  return useQuery({
+    queryKey: ["admin-customer-portfolio", userId],
+    queryFn: () => adminService.getCustomerPortfolio(userId),
+    enabled: Boolean(userId),
+  });
+}
+
 // Suspend / activate. Also invalidates ["admin-users"] as a prefix, which
 // covers every per-role list at once.
 export function useSetUserStatusMutation() {

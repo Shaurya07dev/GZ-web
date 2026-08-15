@@ -1,5 +1,6 @@
 import type { Artwork } from "@/types/artwork";
 import type { Order } from "@/types/order";
+import type { ArtistProfile } from "@/types/artist";
 import type {
   AdminActivityEvent,
   AdminKpis,
@@ -15,42 +16,52 @@ import type {
   UserStatus,
   WithdrawalRequest,
 } from "@/types/admin";
-import { mockArtworks } from "@/lib/mock-data/artworks";
-import { mockOrders } from "@/lib/mock-data/customer";
+import type { Address } from "@/types/customer";
+import { mockArtists } from "@/lib/mock-data/artists";
+import { getArtworksByArtist } from "@/lib/mock-data/helpers";
 import {
   defaultPlatformSettings,
   isInKycQueue,
   mockAdminActivity,
   mockAdminKpis,
-  mockAdminUsers,
   mockAuditLog,
   mockCategories,
-  mockPendingArtworks,
   mockReports,
   mockSettlements,
   mockWithdrawals,
 } from "@/lib/mock-data/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { ADMIN } from "@/features/admin/admin-data";
+import { aggregatorService } from "@/services/aggregatorService";
+import {
+  addressesCol,
+  adminUsersCol,
+  artworksCol,
+  ordersCol,
+  pendingArtworksCol,
+} from "@/lib/mock-collections";
 
 // ---------------------------------------------------------------------------
-// Mock admin service. Same contract as every other service in this codebase
-// (customerService, aggregatorService): reads resolve fixture data after a
-// fake delay, and mutations resolve a *plausible next value* WITHOUT mutating
-// the shared fixture arrays. The visible change comes from the call site
-// applying `queryClient.setQueryData` in the mutation hook's onSuccess — the
-// pattern the Customer Account track established (see
-// features/account/address-form-dialog.tsx). Fixtures stay read-only because
-// they are shared with the public marketplace, and mutating them in place
-// would leak admin side effects into pages admin doesn't own.
+// Mock admin service. Reads/writes for the moderation → catalog pipeline
+// (pending artworks, the marketplace catalog, admin users, orders, addresses)
+// go through lib/mock-collections.ts, so an approval here actually shows up
+// on the Marketplace and in the Artist Dashboard, and survives a refresh.
+// Everything else (withdrawals, categories, settlements, audit log, settings,
+// reports) keeps the original mock contract — reads resolve fixture data,
+// mutations resolve a *plausible next value* WITHOUT persisting it, exactly
+// like customerService/aggregatorService document. Those pages already work
+// correctly via TanStack Query's optimistic setQueryData (the audit log page
+// additionally has its own live-append store, store/useAdminAuditStore) and
+// sit outside the artist → admin → marketplace → checkout loop this
+// persistence layer exists to support.
 //
 // Swapping any of this for a real axios call later is a same-shape change.
 // ---------------------------------------------------------------------------
 
 function findArtwork(id: string): Artwork | undefined {
   return (
-    mockArtworks.find((a) => a.id === id) ??
-    mockPendingArtworks.find((a) => a.id === id)
+    artworksCol.get().find((a) => a.id === id) ??
+    pendingArtworksCol.get().find((a) => a.id === id)
   );
 }
 
@@ -84,7 +95,28 @@ function formatReportRange(from: string, to: string): string {
 
 export const adminService = {
   // --- overview + analytics ------------------------------------------------
-  getKpis: (): Promise<AdminKpis> => mockDelay(mockAdminKpis),
+  // gmv/platformRevenue/artistPayouts/totalOrders stay the seeded 12-month
+  // analytics aggregates (see lib/mock-data/admin.ts's own comment on why —
+  // deriving them from the handful of live orders would require hundreds of
+  // fabricated rows). The four queue-sized counters are recomputed live so
+  // every KPI tile agrees with the table/queue it links to.
+  getKpis: (): Promise<AdminKpis> => {
+    const pendingArtworks = pendingArtworksCol.get();
+    const adminUsers = adminUsersCol.get();
+    return mockDelay({
+      ...mockAdminKpis,
+      activeArtworks: artworksCol
+        .get()
+        .filter((a) => a.status === "marketplace").length,
+      totalUsers: adminUsers.length,
+      pendingArtworkApprovals: pendingArtworks.filter(
+        (a) => a.status === "pending_approval",
+      ).length,
+      pendingKyc: adminUsers.filter(isInKycQueue).length,
+      pendingWithdrawals: mockWithdrawals.filter((w) => w.status === "pending")
+        .length,
+    });
+  },
 
   getActivity: (): Promise<AdminActivityEvent[]> =>
     mockDelay(mockAdminActivity),
@@ -92,20 +124,33 @@ export const adminService = {
   // --- moderation ----------------------------------------------------------
   listPendingArtworks: (): Promise<Artwork[]> =>
     mockDelay(
-      mockPendingArtworks.filter((a) => a.status === "pending_approval"),
+      pendingArtworksCol.get().filter((a) => a.status === "pending_approval"),
     ),
 
   // Resolves undefined (rather than rejecting) for an unknown id so the review
   // page can call notFound() on it, matching customerService.getProfile's shape.
   getPendingArtwork: (id: string): Promise<Artwork | undefined> =>
-    mockDelay(mockPendingArtworks.find((a) => a.id === id)),
+    mockDelay(pendingArtworksCol.get().find((a) => a.id === id)),
 
   approveArtwork: (
     id: string,
   ): Promise<{ id: string; status: "marketplace" }> => {
-    if (!mockPendingArtworks.some((a) => a.id === id)) {
+    const pending = pendingArtworksCol.get();
+    const artwork = pending.find((a) => a.id === id);
+    if (!artwork || artwork.status !== "pending_approval") {
       return mockError(`Artwork "${id}" is not awaiting approval`);
     }
+    const now = new Date().toISOString();
+    const approved: Artwork = {
+      ...artwork,
+      status: "marketplace",
+      statusHistory: [
+        ...artwork.statusHistory,
+        { status: "marketplace" as const, changedAt: now },
+      ],
+    };
+    pendingArtworksCol.set(pending.filter((a) => a.id !== id));
+    artworksCol.set([...artworksCol.get(), approved]);
     return mockDelay({ id, status: "marketplace" as const });
   },
 
@@ -113,22 +158,34 @@ export const adminService = {
     id: string,
     reason: string,
   ): Promise<{ id: string; status: "returned"; reason: string }> => {
-    if (!mockPendingArtworks.some((a) => a.id === id)) {
+    const pending = pendingArtworksCol.get();
+    const artwork = pending.find((a) => a.id === id);
+    if (!artwork || artwork.status !== "pending_approval") {
       return mockError(`Artwork "${id}" is not awaiting approval`);
     }
     if (!reason.trim()) return mockError("A rejection reason is required");
+    const now = new Date().toISOString();
+    const updated: Artwork = {
+      ...artwork,
+      status: "returned",
+      statusHistory: [
+        ...artwork.statusHistory,
+        { status: "returned" as const, changedAt: now },
+      ],
+    };
+    pendingArtworksCol.set(pending.map((a) => (a.id === id ? updated : a)));
     return mockDelay({ id, status: "returned" as const, reason });
   },
 
   // The queue definition (artists sitting in submitted / under_review) lives in
   // the fixture module so the table, the nav badge and the KPI tile can't drift.
   listKycQueue: (): Promise<AdminUser[]> =>
-    mockDelay(mockAdminUsers.filter(isInKycQueue)),
+    mockDelay(adminUsersCol.get().filter(isInKycQueue)),
 
   approveKyc: (
     userId: string,
   ): Promise<{ userId: string; kycStatus: "approved" }> => {
-    if (!mockAdminUsers.some((u) => u.id === userId))
+    if (!adminUsersCol.get().some((u) => u.id === userId))
       return mockError(`User "${userId}" not found`);
     return mockDelay({ userId, kycStatus: "approved" as const });
   },
@@ -137,7 +194,7 @@ export const adminService = {
     userId: string,
     reason: string,
   ): Promise<{ userId: string; kycStatus: "rejected"; reason: string }> => {
-    if (!mockAdminUsers.some((u) => u.id === userId))
+    if (!adminUsersCol.get().some((u) => u.id === userId))
       return mockError(`User "${userId}" not found`);
     if (!reason.trim()) return mockError("A rejection reason is required");
     return mockDelay({ userId, kycStatus: "rejected" as const, reason });
@@ -172,7 +229,7 @@ export const adminService = {
   // Public + admin-only sets combined: admin is the one view that sees every
   // artwork regardless of status.
   listAllArtworks: (): Promise<Artwork[]> =>
-    mockDelay([...mockArtworks, ...mockPendingArtworks]),
+    mockDelay([...artworksCol.get(), ...pendingArtworksCol.get()]),
 
   getArtworkAdmin: (id: string): Promise<Artwork | undefined> =>
     mockDelay(findArtwork(id)),
@@ -227,23 +284,96 @@ export const adminService = {
   // --- people --------------------------------------------------------------
   listUsers: (role?: UserRole): Promise<AdminUser[]> =>
     mockDelay(
-      role ? mockAdminUsers.filter((u) => u.role === role) : mockAdminUsers,
+      role
+        ? adminUsersCol.get().filter((u) => u.role === role)
+        : adminUsersCol.get(),
     ),
 
   getUser: (id: string): Promise<AdminUser | undefined> =>
-    mockDelay(mockAdminUsers.find((u) => u.id === id)),
+    mockDelay(adminUsersCol.get().find((u) => u.id === id)),
 
   setUserStatus: (
     id: string,
     status: UserStatus,
   ): Promise<{ id: string; status: UserStatus }> => {
-    if (!mockAdminUsers.some((u) => u.id === id))
+    if (!adminUsersCol.get().some((u) => u.id === id))
       return mockError(`User "${id}" not found`);
     return mockDelay({ id, status });
   },
 
+  // Person-detail pages need more than the bare AdminUser row. These three
+  // bundle exactly what each detail page renders, through the service layer
+  // instead of the page importing lib/mock-data/* fixtures directly.
+  getArtistPortfolio: (
+    userId: string,
+  ): Promise<
+    | { user: AdminUser; profile: ArtistProfile | undefined; artworks: Artwork[] }
+    | undefined
+  > => {
+    const user = adminUsersCol
+      .get()
+      .find((u) => u.id === userId && u.role === "artist");
+    if (!user) return mockDelay(undefined);
+    const profile = mockArtists.find((a) => a.name === user.name);
+    const artworks = profile ? getArtworksByArtist(profile.id) : [];
+    return mockDelay({ user, profile, artworks });
+  },
+
+  // Holdings aren't partitioned per aggregator in this mock (same shortcut
+  // the original page took) — every current holding is shown against
+  // whichever aggregator's detail page is open.
+  getAggregatorPortfolio: async (
+    userId: string,
+  ): Promise<
+    | {
+        user: AdminUser;
+        holdings: Awaited<ReturnType<typeof aggregatorService.listCollection>>;
+        commissionPercent: number;
+      }
+    | undefined
+  > => {
+    const user = adminUsersCol
+      .get()
+      .find((u) => u.id === userId && u.role === "aggregator");
+    if (!user) return undefined;
+    const holdings = await aggregatorService.listCollection();
+    return {
+      user,
+      holdings,
+      commissionPercent: defaultPlatformSettings.aggregatorCommissionPercent,
+    };
+  },
+
+  // Orders aren't partitioned per customer in this mock either (mockOrders is
+  // a single-customer sample) — same shortcut as the aggregator portfolio.
+  getCustomerPortfolio: (
+    userId: string,
+  ): Promise<
+    | { user: AdminUser; orders: Order[]; addresses: Address[] }
+    | undefined
+  > => {
+    const user = adminUsersCol
+      .get()
+      .find((u) => u.id === userId && u.role === "customer");
+    if (!user) return mockDelay(undefined);
+    return mockDelay({
+      user,
+      orders: ordersCol.get(),
+      addresses: addressesCol.get(),
+    });
+  },
+
   // --- commerce ------------------------------------------------------------
-  listOrders: (): Promise<Order[]> => mockDelay(mockOrders),
+  listOrders: (): Promise<Order[]> => mockDelay(ordersCol.get()),
+
+  getOrderAdmin: (id: string): Promise<Order | undefined> =>
+    mockDelay(ordersCol.get().find((o) => o.id === id)),
+
+  getAddressAdmin: (id: string): Promise<Address | undefined> =>
+    mockDelay(addressesCol.get().find((a) => a.id === id)),
+
+  getSettlementByOrder: (orderId: string): Promise<Settlement | undefined> =>
+    mockDelay(mockSettlements.find((s) => s.orderId === orderId)),
 
   listSettlements: (): Promise<Settlement[]> => mockDelay(mockSettlements),
 

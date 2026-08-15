@@ -1,9 +1,8 @@
 import type { AggregatorHolding, RecordSalePayload } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
-import { mockArtworks } from "@/lib/mock-data/artworks";
-import { mockAggregatorHoldings } from "@/lib/mock-data/aggregator-holdings";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import { mockDelay, mockError } from "@/lib/mock-utils";
+import { artworksCol, holdingsCol } from "@/lib/mock-collections";
 
 // ---------------------------------------------------------------------------
 // Business rules (chosen and documented once here, applied consistently
@@ -22,9 +21,9 @@ import { mockDelay, mockError } from "@/lib/mock-utils";
 const ADVANCE_THRESHOLD = 25_000;
 
 // Exported (not just used internally by reserve() below) so
-// ReserveArtworkDialog (Task 23) can preview the exact advance percent/
-// amount a confirm click will produce, without duplicating the rule or
-// waiting on a round trip to find out.
+// ReserveArtworkDialog can preview the exact advance percent/amount a
+// confirm click will produce, without duplicating the rule or waiting on a
+// round trip to find out.
 export function advancePercentFor(customerPrice: number): 5 | 3 {
   return customerPrice < ADVANCE_THRESHOLD ? 5 : 3;
 }
@@ -38,23 +37,20 @@ export function advanceAmountFor(
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-// ---------------------------------------------------------------------------
-// In-memory "database" for this mock service. Starts as a copy of the seeded
-// fixture and is mutated by reserve()/recordSale()/updateDisplayPrice() so
-// the portal behaves like a real, stateful backend across a session (an
-// artwork reserved via the Inventory page actually disappears from
-// inventory and actually shows up in Collection, etc). This intentionally
-// does NOT mutate the shared mockArtworks array from lib/mock-data/ — that
-// fixture is read-only, shared with the Marketplace track, and mutating it
-// in place would leak side effects into pages this track doesn't own.
-// Consequence: an artwork's own `status` field stays whatever Task 2 seeded
-// (e.g. "marketplace") even after this service reserves it — every check in
-// this file and in the Aggregator Portal's pages treats `holdings` (not
-// artwork.status) as the real source of truth for what's reserved/sold, so
-// that's fully consistent within this track. Resets on server restart /
-// module reload, same as every other mock service in this codebase.
-let holdings: AggregatorHolding[] = [...mockAggregatorHoldings];
-let nextHoldingSeq = holdings.length + 1;
+// Holdings are backed by lib/mock-db.ts via holdingsCol (lib/mock-collections.ts)
+// so reserve()/recordSale()/updateDisplayPrice() survive a refresh and are
+// visible across tabs/portals — an artwork reserved via Inventory actually
+// disappears from inventory and shows up in Collection, for good. This
+// intentionally does NOT mutate the shared `artworksCol` records — that
+// collection is shared with the Marketplace/Admin tracks, and mutating it in
+// place would leak side effects into pages this track doesn't own.
+// Consequence: an artwork's own `status` field stays "marketplace" even
+// after this service reserves it — every check in this file and in the
+// Aggregator Portal's pages treats `holdings` (not artwork.status) as the
+// real source of truth for what's reserved/sold.
+function nextHoldingId(current: AggregatorHolding[]): string {
+  return `hold-${current.length + 1}-${Date.now().toString(36)}`;
+}
 
 function withArtwork(
   holding: AggregatorHolding,
@@ -72,16 +68,20 @@ export const aggregatorService = {
   // Reservable = eligible for aggregator display, still on the open
   // marketplace, and not already claimed by any holding (reserved or
   // already sold_pending_settlement) — checked against the live `holdings`
-  // store, not the frozen fixture, so a just-reserved artwork can never be
-  // reserved twice in the same session.
+  // store, not a frozen fixture, so a just-reserved artwork can never be
+  // reserved twice.
   listReservableInventory(): Promise<ArtworkSummary[]> {
-    const claimedArtworkIds = new Set(holdings.map((h) => h.artworkId));
-    const reservable = mockArtworks.filter(
-      (artwork) =>
-        artwork.listingType === "marketplace_and_aggregator" &&
-        artwork.status === "marketplace" &&
-        !claimedArtworkIds.has(artwork.id),
+    const claimedArtworkIds = new Set(
+      holdingsCol.get().map((h) => h.artworkId),
     );
+    const reservable = artworksCol
+      .get()
+      .filter(
+        (artwork) =>
+          artwork.listingType === "marketplace_and_aggregator" &&
+          artwork.status === "marketplace" &&
+          !claimedArtworkIds.has(artwork.id),
+      );
     return mockDelay(reservable.map(toSummary));
   },
 
@@ -97,6 +97,7 @@ export const aggregatorService = {
     }
 
     const artwork = getArtworkById(artworkId);
+    const holdings = holdingsCol.get();
     const alreadyClaimed = holdings.some((h) => h.artworkId === artworkId);
     if (!artwork || alreadyClaimed) {
       return mockError("Artwork no longer available");
@@ -107,29 +108,30 @@ export const aggregatorService = {
     const expiresAt = new Date(assignedAt.getTime() + THIRTY_DAYS_MS);
 
     const holding: AggregatorHolding = {
-      id: `hold-${nextHoldingSeq++}`,
+      id: nextHoldingId(holdings),
       artworkId,
       advancePercent,
       advanceAmount: advanceAmountFor(artwork.customerPrice, advancePercent),
-      displayPrice: artwork.customerPrice, // floor, per SAD §2.7 — see edit-display-price-dialog.tsx (Task 24) for the raise-only enforcement
+      displayPrice: artwork.customerPrice, // floor, per SAD §2.7 — see edit-display-price-dialog.tsx for the raise-only enforcement
       assignedAt: assignedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
       status: "reserved",
     };
-    holdings = [...holdings, holding];
+    holdingsCol.set([...holdings, holding]);
     return mockDelay(holding);
   },
 
   listCollection(): Promise<
     Array<AggregatorHolding & { artwork: ArtworkSummary }>
   > {
-    return mockDelay(holdings.map(withArtwork));
+    return mockDelay(holdingsCol.get().map(withArtwork));
   },
 
   // Matches POST /aggregators/sale (SAD §3.5): moves the matching *active*
   // holding to sold_pending_settlement rather than removing it, so it stays
-  // visible (and editable-price-locked) in the Collection table per spec §7.
+  // visible (and editable-price-locked) in the Collection table.
   recordSale(payload: RecordSalePayload): Promise<AggregatorHolding> {
+    const holdings = holdingsCol.get();
     const index = holdings.findIndex(
       (h) => h.artworkId === payload.artworkId && h.status === "reserved",
     );
@@ -140,29 +142,27 @@ export const aggregatorService = {
       ...holdings[index],
       status: "sold_pending_settlement",
     };
-    holdings = holdings.map((h, i) => (i === index ? updated : h));
+    holdingsCol.set(holdings.map((h, i) => (i === index ? updated : h)));
     return mockDelay(updated);
   },
 
-  // Synchronous, deliberately not a mockDelay-wrapped async mutation: Task
-  // 24's EditDisplayPriceDialog only needs to update local state (a single
+  // Synchronous, deliberately not a mockDelay-wrapped async mutation:
+  // EditDisplayPriceDialog only needs to update local state (a single
   // number) and does so via queryClient.setQueryData for instant UI
-  // feedback. This method exists purely so that update also lands in this
-  // service's own in-memory store — without it, the next unrelated
-  // ["aggregator-collection"] refetch (e.g. after recording a sale on a
-  // different holding) would silently revert the edited price back to
-  // whatever this service last held, since setQueryData alone never tells
-  // the "server" about the change.
+  // feedback. This method exists purely so that update also lands in the
+  // persisted store — without it, the next unrelated
+  // ["aggregator-collection"] refetch would silently revert the edited price.
   updateDisplayPrice(
     holdingId: string,
     displayPrice: number,
   ): AggregatorHolding {
+    const holdings = holdingsCol.get();
     const index = holdings.findIndex((h) => h.id === holdingId);
     if (index === -1) {
       throw new Error(`aggregatorService: no holding "${holdingId}"`);
     }
     const updated: AggregatorHolding = { ...holdings[index], displayPrice };
-    holdings = holdings.map((h, i) => (i === index ? updated : h));
+    holdingsCol.set(holdings.map((h, i) => (i === index ? updated : h)));
     return updated;
   },
 
@@ -170,19 +170,20 @@ export const aggregatorService = {
   // earned commission (that's realized on sale) — see the Onboarding
   // Guide's "20% of the 30% markup" worked example (₹30,000 listed →
   // ₹9,000 platform markup → ₹1,800 aggregator share). This mock layer
-  // deliberately never carries the private artist_price field (Global
-  // Constraints), so there's no platform markup figure to take 20% of
-  // directly. The equivalent figure available here is the aggregator's own
-  // markup over the customerPrice floor (displayPrice - customerPrice) —
-  // commissionEarned is 20% of that, summed only across holdings that have
-  // actually sold. A holding sold at exactly the floor price (displayPrice
-  // === customerPrice, never raised) contributes ₹0, which is the correct,
-  // honest result of this formula, not a bug.
+  // deliberately never carries the private artist_price field, so there's no
+  // platform markup figure to take 20% of directly. The equivalent figure
+  // available here is the aggregator's own markup over the customerPrice
+  // floor (displayPrice - customerPrice) — commissionEarned is 20% of that,
+  // summed only across holdings that have actually sold. A holding sold at
+  // exactly the floor price (displayPrice === customerPrice, never raised)
+  // contributes ₹0, which is the correct, honest result of this formula, not
+  // a bug.
   dashboardSummary(): Promise<{
     activeReservations: number;
     commissionEarned: number;
     pendingSettlements: number;
   }> {
+    const holdings = holdingsCol.get();
     const activeReservations = holdings.filter(
       (h) => h.status === "reserved",
     ).length;

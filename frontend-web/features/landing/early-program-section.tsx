@@ -54,7 +54,7 @@ export function EarlyProgramSection() {
     <section className="relative overflow-hidden py-20 md:py-28">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
         <motion.div
-          className="rounded-2xl border border-gold/25 bg-card px-8 py-14 md:px-14 md:py-16"
+          className="rounded-2xl border border-gold/25 bg-card px-5 py-10 sm:px-8 sm:py-14 md:px-14 md:py-16"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-10%" }}
@@ -64,7 +64,7 @@ export function EarlyProgramSection() {
             <BenefitColumn items={left} align="left" />
 
             <div className="flex flex-col items-center text-center">
-              <div className="mb-7 flex items-center">
+              <div className="mb-7 flex origin-center scale-[0.72] items-center sm:scale-100">
                 {AVATARS.map((avatar, i) => (
                   <div
                     key={avatar.src}

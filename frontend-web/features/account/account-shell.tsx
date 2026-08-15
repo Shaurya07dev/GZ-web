@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
+import { SignOutButton } from "@/components/shared/sign-out-button";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { mockCustomer, initials } from "./account-data";
 
@@ -210,6 +211,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex items-center gap-2">
         <NotificationsPopover />
         <SwitchMode width={44} height={24} />
+        <SignOutButton />
       </div>
     </header>
   );

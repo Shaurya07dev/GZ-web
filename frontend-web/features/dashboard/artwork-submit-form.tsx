@@ -11,6 +11,8 @@ import {
   Info,
   Check,
   ArrowLeft,
+  Nfc,
+  RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,7 +32,9 @@ import {
   MAX_ARTWORK_IMAGES,
   INSURANCE_RECOMMENDED_THRESHOLD,
   CUSTOMER_MARKUP_MULTIPLIER,
+  PLACEHOLDER_ARTWORK_IMAGES,
 } from "./artwork-submit-data";
+import { useSubmitArtworkMutation } from "@/hooks/useArtistArtworks";
 
 type FormState = {
   title: string;
@@ -43,6 +47,7 @@ type FormState = {
   listingType: string;
   insuranceOpted: boolean;
   coaDetails: string;
+  nfcTagId: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -56,13 +61,26 @@ const EMPTY_FORM: FormState = {
   listingType: "marketplace_and_aggregator",
   insuranceOpted: false,
   coaDetails: "",
+  nfcTagId: "",
 };
 
 type ImagePreview = { id: string; url: string; name: string };
 
+// Uploads never block submit — every slot starts filled with a stock photo
+// (no backend to store a real one either way); picking a real file just
+// swaps a slot's placeholder for a real preview.
+const INITIAL_IMAGES: ImagePreview[] = PLACEHOLDER_ARTWORK_IMAGES.map(
+  (url, i) => ({ id: `placeholder-${i}`, url, name: `Stock photo ${i + 1}` }),
+);
+
+function generateNfcTagId(): string {
+  return `NFC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+}
+
 export function ArtworkSubmitForm() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [images, setImages] = useState<ImagePreview[]>([]);
+  const [images, setImages] = useState<ImagePreview[]>(INITIAL_IMAGES);
+  const submitMutation = useSubmitArtworkMutation();
   const [submitted, setSubmitted] = useState<"draft" | "review" | null>(null);
 
   const artistPriceNumber = Number(form.artistPrice) || 0;
@@ -99,7 +117,31 @@ export function ArtworkSubmitForm() {
     mode: "draft" | "review",
   ) {
     e.preventDefault();
-    setSubmitted(mode);
+    submitMutation.mutate(
+      {
+        title: form.title || "Untitled artwork",
+        description: form.description,
+        category: form.category,
+        medium: form.medium,
+        dimensions: form.dimensions,
+        yearCreated: Number(form.yearCreated) || new Date().getFullYear(),
+        artistPrice: artistPriceNumber,
+        listingType: form.listingType as
+          | "marketplace_only"
+          | "marketplace_and_aggregator",
+        insuranceOpted: form.insuranceOpted,
+        coaDetails: form.coaDetails,
+        nfcTagId: form.nfcTagId || null,
+        images: images.map((img, i) => ({
+          url: img.url,
+          thumbnailUrl: img.url,
+          sortOrder: i,
+          altText: `${form.title || "Artwork"}, photo ${i + 1}`,
+        })),
+        mode,
+      },
+      { onSuccess: () => setSubmitted(mode) },
+    );
   }
 
   if (submitted) {
@@ -143,8 +185,9 @@ export function ArtworkSubmitForm() {
             Artwork images
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Upload up to {MAX_ARTWORK_IMAGES} high-resolution photos. The first
-            image is used as the cover.
+            Up to {MAX_ARTWORK_IMAGES} photos, cover image first. Slots start
+            filled with placeholders — remove one and add a real photo to
+            replace it.
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -200,7 +243,6 @@ export function ArtworkSubmitForm() {
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              required
               minLength={3}
               maxLength={200}
               placeholder="Monsoon Over Madurai"
@@ -214,7 +256,6 @@ export function ArtworkSubmitForm() {
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              required
               rows={4}
               placeholder="Oil on canvas, painted during the 2025 monsoon season."
               value={form.description}
@@ -281,7 +322,6 @@ export function ArtworkSubmitForm() {
               <Label htmlFor="dimensions">Dimensions</Label>
               <Input
                 id="dimensions"
-                required
                 placeholder="24 x 36 in"
                 value={form.dimensions}
                 onChange={(e) => updateField("dimensions", e.target.value)}
@@ -294,7 +334,6 @@ export function ArtworkSubmitForm() {
               <Input
                 id="year"
                 type="number"
-                required
                 min={1900}
                 max={2100}
                 placeholder="2025"
@@ -303,6 +342,34 @@ export function ArtworkSubmitForm() {
                 className="h-10"
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="nfcTagId">NFC / QR tag ID</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Nfc className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="nfcTagId"
+                  placeholder="Scan or enter the physical tag ID"
+                  value={form.nfcTagId}
+                  onChange={(e) => updateField("nfcTagId", e.target.value)}
+                  className="h-10 pl-9"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => updateField("nfcTagId", generateNfcTagId())}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold-bright"
+              >
+                <RefreshCw className="size-3.5" />
+                Generate
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Links this piece&rsquo;s physical tag to its digital passport.
+              Leave blank if you haven&rsquo;t attached one yet.
+            </p>
           </div>
         </section>
 
@@ -316,7 +383,6 @@ export function ArtworkSubmitForm() {
             <Input
               id="artistPrice"
               type="number"
-              required
               min={1}
               step={1}
               placeholder="18000"
@@ -391,19 +457,29 @@ export function ArtworkSubmitForm() {
           </div>
         </section>
 
+        {submitMutation.isError && (
+          <p className="text-sm text-destructive">
+            {submitMutation.error instanceof Error
+              ? submitMutation.error.message
+              : "Something went wrong."}
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="group inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02]"
+            disabled={submitMutation.isPending}
+            className="group inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >
             Submit for review
           </button>
           <button
             type="button"
+            disabled={submitMutation.isPending}
             onClick={(e) =>
               handleSubmit(e as unknown as FormEvent<HTMLFormElement>, "draft")
             }
-            className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-60"
           >
             Save as draft
           </button>

@@ -31,7 +31,7 @@ export function ClosingCtaSection() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
-            <div className="px-8 py-10 md:px-12 md:py-12">
+            <div className="px-6 py-10 sm:px-8 md:px-12 md:py-12">
               <p className="text-sm font-medium tracking-[0.14em] text-gold-bright">
                 GET IN TOUCH
               </p>
@@ -69,7 +69,7 @@ export function ClosingCtaSection() {
               </div>
             </div>
 
-            <div className="relative flex min-h-[320px] items-center justify-center overflow-hidden px-8 pb-14 lg:min-h-0 lg:pb-0">
+            <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden px-6 pb-14 sm:px-8 lg:min-h-0 lg:pb-0">
               <div className="pointer-events-none absolute inset-0" aria-hidden>
                 <SideRays
                   origin="top-right"
@@ -86,7 +86,7 @@ export function ClosingCtaSection() {
               </div>
               <Link
                 href="/contact"
-                className="group relative z-10 inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-gold-bright to-gold px-12 py-7 text-lg font-semibold text-[#171310] shadow-[0_28px_70px_-14px_rgba(200,154,74,0.65)] transition-transform hover:scale-[1.02]"
+                className="group relative z-10 inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-gold-bright to-gold px-6 py-4 text-sm font-semibold text-[#171310] shadow-[0_28px_70px_-14px_rgba(200,154,74,0.65)] transition-transform hover:scale-[1.02] sm:px-8 sm:py-5 sm:text-base lg:px-12 lg:py-7 lg:text-lg"
               >
                 Contact Us
                 <ArrowRight className="size-5 transition-transform group-hover:translate-x-0.5" />

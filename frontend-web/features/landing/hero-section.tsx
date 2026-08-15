@@ -124,13 +124,15 @@ export function HeroSection() {
   return (
     <section ref={driverRef} className="relative h-[300vh]">
       <div className="sticky top-20 flex h-[calc(100vh-5rem)] w-full flex-col items-center justify-center overflow-hidden">
-        {ARTWORKS.map((artwork) => (
-          <HeroArtwork
-            key={artwork.src}
-            artwork={artwork}
-            progress={smoothProgress}
-          />
-        ))}
+        <div className="absolute inset-0 origin-center scale-[0.55] sm:scale-[0.75] lg:scale-100">
+          {ARTWORKS.map((artwork) => (
+            <HeroArtwork
+              key={artwork.src}
+              artwork={artwork}
+              progress={smoothProgress}
+            />
+          ))}
+        </div>
 
         <motion.div
           className="relative z-10 flex max-w-2xl flex-col items-center px-6 text-center"

@@ -10,13 +10,19 @@ import {
   Check,
   Lock,
   Globe2,
+  Video,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { InstagramGlyph } from "@/components/social-icons";
-import { ARTIST, PROFILE } from "./dashboard-data";
+import {
+  useArtistAccountProfile,
+  useSaveArtistProfileMutation,
+  useSaveArtistBankMutation,
+} from "@/hooks/useArtistAccount";
+import { ARTIST } from "./dashboard-data";
 
 type ProfileFormState = {
   fullName: string;
@@ -25,6 +31,7 @@ type ProfileFormState = {
   bio: string;
   instagram: string;
   website: string;
+  socialProofVideoUrl: string;
 };
 
 type BankFormState = {
@@ -32,23 +39,48 @@ type BankFormState = {
   ifsc: string;
 };
 
+type ArtistAccountProfile = NonNullable<
+  ReturnType<typeof useArtistAccountProfile>["data"]
+>;
+
+// Fetches, then hands off to ProfileKycFormBody once loaded — the body's
+// local form state is seeded straight from `profile` in its useState
+// initializer (no effect needed) because the body only ever mounts after
+// `profile` exists, matching every other query-backed form in this codebase.
 export function ProfileKycForm() {
+  const { data: profile } = useArtistAccountProfile();
+
+  if (!profile) {
+    return (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
+        <div className="h-96 animate-pulse rounded-lg border border-border bg-card" />
+        <div className="h-96 animate-pulse rounded-lg border border-border bg-card" />
+      </div>
+    );
+  }
+
+  return <ProfileKycFormBody profile={profile} />;
+}
+
+function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
+  const saveProfileMutation = useSaveArtistProfileMutation();
+  const saveBankMutation = useSaveArtistBankMutation();
+
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
-    fullName: PROFILE.fullName,
-    email: PROFILE.email,
-    phone: PROFILE.phone,
-    bio: PROFILE.bio,
-    instagram: PROFILE.instagram,
-    website: PROFILE.website,
+    fullName: profile.fullName,
+    email: profile.email,
+    phone: profile.phone,
+    bio: profile.bio,
+    instagram: profile.instagram,
+    website: profile.website,
+    socialProofVideoUrl: profile.socialProofVideoUrl ?? "",
   });
   const [profileSaved, setProfileSaved] = useState(false);
 
   const [bankForm, setBankForm] = useState<BankFormState>({
     bankAccountNumber: "",
-    ifsc: PROFILE.ifsc,
+    ifsc: profile.ifsc,
   });
-  const [bankSaved, setBankSaved] = useState(false);
-
   const [docsSubmitted, setDocsSubmitted] = useState(false);
 
   function updateProfile<K extends keyof ProfileFormState>(
@@ -64,17 +96,21 @@ export function ProfileKycForm() {
     value: BankFormState[K],
   ) {
     setBankForm((prev) => ({ ...prev, [field]: value }));
-    setBankSaved(false);
   }
 
   function handleProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setProfileSaved(true);
+    saveProfileMutation.mutate(
+      { ...profileForm, socialProofVideoUrl: profileForm.socialProofVideoUrl || null },
+      { onSuccess: () => setProfileSaved(true) },
+    );
   }
 
   function handleBankSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setBankSaved(true);
+    saveBankMutation.mutate(bankForm, {
+      onSuccess: () => setBankForm((prev) => ({ ...prev, bankAccountNumber: "" })),
+    });
   }
 
   return (
@@ -185,12 +221,34 @@ export function ProfileKycForm() {
               />
             </div>
           </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="socialProofVideoUrl">
+              Behind-the-scenes video (YouTube / TikTok)
+            </Label>
+            <div className="relative">
+              <Video className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="socialProofVideoUrl"
+                placeholder="https://youtube.com/watch?v=..."
+                value={profileForm.socialProofVideoUrl}
+                onChange={(e) =>
+                  updateProfile("socialProofVideoUrl", e.target.value)
+                }
+                className="h-10 pl-9"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              A studio or process video collectors can watch as proof of your
+              practice.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02]"
+            disabled={saveProfileMutation.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >
             Save profile
           </button>
@@ -220,7 +278,7 @@ export function ProfileKycForm() {
           </div>
           <p className="mt-3 flex items-center gap-2 font-mono text-sm text-foreground">
             <Lock className="size-3.5 text-muted-foreground" />
-            {PROFILE.aadhaarMasked}
+            {profile.aadhaarMasked}
           </p>
           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             Encrypted at rest and used only for identity verification. Contact
@@ -278,7 +336,7 @@ export function ProfileKycForm() {
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-foreground">
-                {PROFILE.bankAccountMasked}
+                {profile.bankAccountMasked}
               </p>
               <p className="text-xs text-muted-foreground">Currently on file</p>
             </div>
@@ -310,12 +368,12 @@ export function ProfileKycForm() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              disabled={!bankForm.bankAccountNumber}
+              disabled={!bankForm.bankAccountNumber || saveBankMutation.isPending}
               className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
             >
               Update bank details
             </button>
-            {bankSaved && (
+            {saveBankMutation.isSuccess && (
               <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

@@ -19,8 +19,14 @@ export function useCreateOrderMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateOrderPayload) => orderService.create(payload),
-    onSuccess: () => {
+    onSuccess: (_order, variables) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["artworks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["artwork", variables.artworkId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["artist-wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
     },
   });
 }

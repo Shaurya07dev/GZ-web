@@ -1,12 +1,13 @@
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { UserDetailHeader } from "@/features/admin/people/user-detail-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
-import { mockAdminUsers } from "@/lib/mock-data/admin";
-import { mockArtists } from "@/lib/mock-data/artists";
-import { getArtworksByArtist } from "@/lib/mock-data/helpers";
+import { useAdminArtistPortfolio } from "@/hooks/useAdminUsers";
 import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
 
@@ -16,20 +17,16 @@ const TIER_LABELS = [
   { key: "tier3FirstSale", label: "Tier 3 · First confirmed sale" },
 ] as const;
 
-export default async function AdminArtistDetailPage(
+export default function AdminArtistDetailPage(
   props: PageProps<"/admin/artists/[artistId]">,
 ) {
-  const { artistId } = await props.params;
-  const user = mockAdminUsers.find(
-    (u) => u.id === artistId && u.role === "artist",
-  );
-  if (!user) notFound();
+  const { artistId } = use(props.params);
+  const { data, isLoading } = useAdminArtistPortfolio(artistId);
 
-  // The AdminUser row and the public ArtistProfile are separate fixtures; match
-  // on name so the tier breakdown and works grid reflect the same person the
-  // public site shows, where one exists.
-  const profile = mockArtists.find((a) => a.name === user.name);
-  const artworks = profile ? getArtworksByArtist(profile.id) : [];
+  if (isLoading) return null;
+  if (!data) notFound();
+
+  const { user, profile, artworks } = data;
   const tier = profile ? verifiedTierCount(profile.verification) : 0;
   const listedValue = artworks.reduce((sum, a) => sum + a.customerPrice, 0);
 

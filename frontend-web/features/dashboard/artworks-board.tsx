@@ -6,35 +6,34 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Plus, MoreVertical, Pencil } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ARTWORKS, type ArtworkStatus } from "./dashboard-data";
+import type { ArtworkStatus } from "@/types/artwork";
+import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 import { ArtworkStatusPill } from "./artwork-status-pill";
 
 const FILTERS: { value: ArtworkStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
   { value: "draft", label: "Draft" },
   { value: "pending_approval", label: "Pending" },
-  { value: "live", label: "Live" },
-  { value: "reserved", label: "Reserved" },
+  { value: "marketplace", label: "Live" },
+  { value: "with_aggregator", label: "With gallery" },
   { value: "sold", label: "Sold" },
 ];
 
 export function ArtworksBoard() {
+  const { data: artworks } = useArtistDashboardArtworks();
   const [filter, setFilter] = useState<ArtworkStatus | "all">("all");
 
-  const filtered = useMemo(
-    () =>
-      filter === "all"
-        ? ARTWORKS
-        : ARTWORKS.filter((artwork) => artwork.status === filter),
-    [filter],
-  );
+  const filtered = useMemo(() => {
+    const all = artworks ?? [];
+    return filter === "all" ? all : all.filter((a) => a.status === filter);
+  }, [artworks, filter]);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-xl font-semibold text-foreground">
-            {ARTWORKS.length} artworks
+            {(artworks ?? []).length} artworks
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Manage submissions, track status, and see what&rsquo;s live.
@@ -84,7 +83,7 @@ export function ArtworksBoard() {
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
-                  src={artwork.image}
+                  src={artwork.thumbnailUrl}
                   alt={artwork.title}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
@@ -109,7 +108,8 @@ export function ArtworksBoard() {
                       {artwork.title}
                     </h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {artwork.medium} · {artwork.year}
+                      {artwork.medium}
+                      {artwork.yearCreated ? ` · ${artwork.yearCreated}` : ""}
                     </p>
                   </div>
                   <p className="shrink-0 font-mono text-sm font-medium tabular-nums text-foreground">
@@ -118,7 +118,7 @@ export function ArtworksBoard() {
                 </div>
 
                 <Link
-                  href={`/dashboard/artworks/upload?id=${artwork.id}`}
+                  href="/dashboard/artworks/upload"
                   className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-gold-bright hover:underline"
                 >
                   <Pencil className="size-3.5" />

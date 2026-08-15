@@ -1,37 +1,29 @@
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { UserDetailHeader } from "@/features/admin/people/user-detail-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
-import { mockAdminUsers, defaultPlatformSettings } from "@/lib/mock-data/admin";
-import { mockAggregatorHoldings } from "@/lib/mock-data/aggregator-holdings";
-import { getArtworkById } from "@/lib/mock-data/helpers";
+import { useAdminAggregatorPortfolio } from "@/hooks/useAdminUsers";
 import { ADMIN_TODAY } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
 
-export default async function AdminAggregatorDetailPage(
+export default function AdminAggregatorDetailPage(
   props: PageProps<"/admin/aggregators/[aggregatorId]">,
 ) {
-  const { aggregatorId } = await props.params;
-  const user = mockAdminUsers.find(
-    (u) => u.id === aggregatorId && u.role === "aggregator",
-  );
-  if (!user) notFound();
+  const { aggregatorId } = use(props.params);
+  const { data, isLoading } = useAdminAggregatorPortfolio(aggregatorId);
 
-  // One aggregator fixture set exists platform-wide in this mock build, so
-  // holdings are shown for the console's demo aggregator rather than being
-  // partitioned per row.
-  const holdings = mockAggregatorHoldings;
+  if (isLoading) return null;
+  if (!data) notFound();
+
+  const { user, holdings, commissionPercent } = data;
   const sold = holdings.filter((h) => h.status === "sold_pending_settlement");
   const commissionEarned = sold.reduce((sum, holding) => {
-    const artwork = getArtworkById(holding.artworkId);
-    if (!artwork) return sum;
-    const markup = holding.displayPrice - artwork.customerPrice;
-    return (
-      sum +
-      Math.max(0, markup) *
-        (defaultPlatformSettings.aggregatorCommissionPercent / 100)
-    );
+    const markup = holding.displayPrice - holding.artwork.customerPrice;
+    return sum + Math.max(0, markup) * (commissionPercent / 100);
   }, 0);
 
   return (
@@ -74,7 +66,6 @@ export default async function AdminAggregatorDetailPage(
         ) : (
           <ul className="divide-y divide-border">
             {holdings.map((holding) => {
-              const artwork = getArtworkById(holding.artworkId);
               const daysLeft = Math.max(
                 0,
                 Math.round(
@@ -91,7 +82,7 @@ export default async function AdminAggregatorDetailPage(
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
-                        {artwork?.title ?? holding.artworkId}
+                        {holding.artwork.title}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {holding.advancePercent}% advance ·{" "}
@@ -108,9 +99,7 @@ export default async function AdminAggregatorDetailPage(
                         ? "Sold"
                         : `${daysLeft}d left`}
                     </span>
-                    {artwork ? (
-                      <AdminStatusBadge status={artwork.status} size="sm" />
-                    ) : null}
+                    <AdminStatusBadge status={holding.artwork.status} size="sm" />
                   </Link>
                 </li>
               );

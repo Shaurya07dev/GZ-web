@@ -1,7 +1,7 @@
 import type { Artwork, ArtworkFilters, ArtworkSummary } from "@/types/artwork";
 import type { ArtistProfile } from "@/types/artist";
 import { mockDelay } from "@/lib/mock-utils";
-import { mockArtworks } from "@/lib/mock-data/artworks";
+import { artworksCol } from "@/lib/mock-collections";
 import {
   filterArtworks,
   getArtistById,
@@ -27,7 +27,7 @@ export const artworkService = {
   // structurally enforced - this list is never returned as full Artwork
   // records.
   list(filters: ArtworkFilters): Promise<ArtworkSummary[]> {
-    const filtered = filterArtworks(mockArtworks, filters);
+    const filtered = filterArtworks(artworksCol.get(), filters);
     const sorted = sortArtworks(filtered, filters.sortBy);
     return mockDelay(sorted.map(toSummary));
   },

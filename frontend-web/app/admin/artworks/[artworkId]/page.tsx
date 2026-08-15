@@ -1,17 +1,18 @@
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { ArtworkAdminDetail } from "@/features/admin/catalog/artwork-admin-detail";
-import { mockArtworks } from "@/lib/mock-data/artworks";
-import { mockPendingArtworks } from "@/lib/mock-data/admin";
+import { useAdminArtwork } from "@/hooks/useAdminCatalog";
 
-export default async function AdminArtworkDetailPage(
+export default function AdminArtworkDetailPage(
   props: PageProps<"/admin/artworks/[artworkId]">,
 ) {
-  const { artworkId } = await props.params;
-  const artwork =
-    mockArtworks.find((a) => a.id === artworkId) ??
-    mockPendingArtworks.find((a) => a.id === artworkId);
+  const { artworkId } = use(props.params);
+  const { data: artwork, isLoading } = useAdminArtwork(artworkId);
 
+  if (isLoading) return null;
   if (!artwork) notFound();
 
   return (

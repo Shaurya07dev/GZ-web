@@ -6,7 +6,7 @@ import type { JourneyStep } from "./journey-data";
 export function JourneyStepDetail({ step }: { step: JourneyStep }) {
   return (
     <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-border bg-card lg:grid-cols-[1.35fr_0.85fr_1fr]">
-      <div className="relative min-h-[420px] overflow-hidden p-8">
+      <div className="relative min-h-[420px] overflow-hidden p-6 sm:p-8">
         <Image
           src="/journey/studio.png"
           alt="Artist's studio with an easel and painting in progress"
@@ -21,7 +21,7 @@ export function JourneyStepDetail({ step }: { step: JourneyStep }) {
           <span className="w-fit rounded-md border border-gold/50 px-3 py-1 text-xs font-medium tracking-wide text-gold-bright">
             {step.badge}
           </span>
-          <h3 className="mt-6 font-display text-5xl font-bold tracking-tight text-foreground">
+          <h3 className="mt-6 font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
             {step.label.toUpperCase()}
           </h3>
           <span className="mt-3 h-px w-6 bg-gold" />
@@ -29,7 +29,7 @@ export function JourneyStepDetail({ step }: { step: JourneyStep }) {
             {step.detailDescription}
           </p>
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             {step.requirements.map((req) => (
               <div key={req.label} className="flex w-[92px] flex-col gap-2.5">
                 <span className="flex size-11 items-center justify-center rounded-md border border-gold/40">
@@ -106,7 +106,7 @@ export function JourneyStepDetail({ step }: { step: JourneyStep }) {
           <p className="text-xs font-medium text-foreground">
             What happens next?
           </p>
-          <div className="mt-4 flex items-center">
+          <div className="mt-4 flex items-center overflow-x-auto">
             {step.nextSteps.map((next, i) => (
               <div key={next.label} className="flex items-center">
                 <div className="flex w-16 flex-col items-center gap-1.5 text-center">

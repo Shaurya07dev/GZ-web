@@ -31,7 +31,7 @@ export function ArtistSurveyBanner() {
       hideOnScroll
       onDismiss={() => localStorage.setItem(STORAGE_KEY, "1")}
     >
-      <p className="mx-0 max-w-[90%] text-sm text-primary-foreground">
+      <p className="mx-0 max-w-[85%] pr-2 text-xs text-primary-foreground sm:text-sm">
         Are you an artist? Tell us about your work in a 2 minute survey.{" "}
         <Link
           href="/artist-survey"

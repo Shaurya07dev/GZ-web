@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { KPI_METRICS } from "./dashboard-data";
+import { useArtistKpiMetrics } from "@/hooks/useArtistDashboard";
 
 export function KpiCards() {
+  const { data: metrics } = useArtistKpiMetrics();
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {KPI_METRICS.map((metric, i) => (
+      {(metrics ?? []).map((metric, i) => (
         <motion.div
           key={metric.key}
           initial={{ opacity: 0, y: 12 }}

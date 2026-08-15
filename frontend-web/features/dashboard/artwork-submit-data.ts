@@ -36,3 +36,18 @@ export const LISTING_TYPES = [
 export const MAX_ARTWORK_IMAGES = 8;
 export const INSURANCE_RECOMMENDED_THRESHOLD = 20000;
 export const CUSTOMER_MARKUP_MULTIPLIER = 1.3;
+
+// Stock photos pre-filling every image slot so the upload form is always
+// submittable with zero clicks (there's no backend to actually store a
+// photo either way) — picking a real file swaps a slot's placeholder for a
+// real preview via FileReader, but nothing is ever required.
+export const PLACEHOLDER_ARTWORK_IMAGES = [
+  "/ecosystem/artwork-1.png",
+  "/ecosystem/artwork-2.png",
+  "/ecosystem/artwork-3.png",
+  "/artworks/framed-painting.png",
+  "/artworks/landscape.png",
+  "/artworks/portrait-woman.png",
+  "/artworks/collage-busts.png",
+  "/artworks/draped-figure.png",
+];

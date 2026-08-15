@@ -56,6 +56,10 @@ export interface Artwork extends ArtworkSummary {
   coaIssueDate: string;
   socialProofLinks: SocialProofLink[];
   statusHistory: ArtworkStatusEvent[];
+  // Physical NFC/QR tag linked to this artwork's digital passport (Onboarding
+  // Guide Stage 5). Optional so the 30+ existing fixture records don't need
+  // a value; undefined/null both mean "not yet tagged".
+  nfcTagId?: string | null;
 }
 
 export interface ArtworkFilters {

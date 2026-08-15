@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import {
   Wallet,
@@ -15,43 +15,47 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  WALLET_SUMMARY,
-  WALLET_TRANSACTIONS,
-  PROFILE,
-  type WalletTransaction,
-} from "./dashboard-data";
+  useArtistWallet,
+  useArtistWalletTransactions,
+  useRequestWithdrawalMutation,
+} from "@/hooks/useArtistWallet";
+import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
+import type { WalletTransaction } from "./dashboard-data";
 
 const MIN_WITHDRAWAL = 1000;
 
-const SUMMARY_CARDS = [
-  {
-    key: "balance",
-    label: "Available balance",
-    value: WALLET_SUMMARY.balance,
-    icon: Wallet,
-    tone: "gold" as const,
-  },
-  {
-    key: "pending",
-    label: "Pending settlement",
-    value: WALLET_SUMMARY.pendingBalance,
-    icon: Clock3,
-    tone: "neutral" as const,
-  },
-  {
-    key: "locked",
-    label: "Locked",
-    value: WALLET_SUMMARY.lockedBalance,
-    icon: Lock,
-    tone: "neutral" as const,
-  },
-];
-
 export function WalletOverview() {
+  const { data: wallet } = useArtistWallet();
+  const { data: transactions } = useArtistWalletTransactions();
+
+  const summaryCards = [
+    {
+      key: "balance",
+      label: "Available balance",
+      value: wallet?.balance ?? 0,
+      icon: Wallet,
+      tone: "gold" as const,
+    },
+    {
+      key: "pending",
+      label: "Pending settlement",
+      value: wallet?.pendingBalance ?? 0,
+      icon: Clock3,
+      tone: "neutral" as const,
+    },
+    {
+      key: "locked",
+      label: "Locked",
+      value: wallet?.lockedBalance ?? 0,
+      icon: Lock,
+      tone: "neutral" as const,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {SUMMARY_CARDS.map((card, i) => (
+        {summaryCards.map((card, i) => (
           <motion.div
             key={card.key}
             initial={{ opacity: 0, y: 12 }}
@@ -76,30 +80,33 @@ export function WalletOverview() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.5fr]">
-        <WithdrawCard />
-        <TransactionsCard />
+        <WithdrawCard balance={wallet?.balance ?? 0} />
+        <TransactionsCard transactions={transactions ?? []} />
       </div>
     </div>
   );
 }
 
-function WithdrawCard() {
+function WithdrawCard({ balance }: { balance: number }) {
+  const { data: profile } = useArtistAccountProfile();
+  const withdrawMutation = useRequestWithdrawalMutation();
   const [amount, setAmount] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [lastAmount, setLastAmount] = useState(0);
 
   const amountNumber = Number(amount) || 0;
   const belowMinimum = amount !== "" && amountNumber < MIN_WITHDRAWAL;
-  const exceedsBalance = amountNumber > WALLET_SUMMARY.balance;
-  const canSubmit =
-    amountNumber >= MIN_WITHDRAWAL && amountNumber <= WALLET_SUMMARY.balance;
+  const exceedsBalance = amountNumber > balance;
+  const canSubmit = amountNumber >= MIN_WITHDRAWAL && amountNumber <= balance;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canSubmit) return;
-    setSubmitted(true);
+    withdrawMutation.mutate(amountNumber, {
+      onSuccess: () => setLastAmount(amountNumber),
+    });
   }
 
-  if (submitted) {
+  if (withdrawMutation.isSuccess) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -114,14 +121,14 @@ function WithdrawCard() {
           Withdrawal requested.
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          ₹{amountNumber.toLocaleString("en-IN")} will be sent to your bank
-          account ending {PROFILE.bankAccountMasked.slice(-4)}. This typically
-          takes 1–2 business days.
+          ₹{lastAmount.toLocaleString("en-IN")} will be sent to your bank
+          account ending {profile?.bankAccountMasked.slice(-4)}. This
+          typically takes 1–2 business days.
         </p>
         <button
           type="button"
           onClick={() => {
-            setSubmitted(false);
+            withdrawMutation.reset();
             setAmount("");
           }}
           className="mt-1 text-sm font-medium text-gold-bright hover:underline"
@@ -144,9 +151,9 @@ function WithdrawCard() {
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
-            {PROFILE.bankAccountMasked}
+            {profile?.bankAccountMasked}
           </p>
-          <p className="text-xs text-muted-foreground">{PROFILE.ifsc}</p>
+          <p className="text-xs text-muted-foreground">{profile?.ifsc}</p>
         </div>
       </div>
 
@@ -176,14 +183,13 @@ function WithdrawCard() {
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Minimum ₹1,000 · Available ₹
-            {WALLET_SUMMARY.balance.toLocaleString("en-IN")}
+            Minimum ₹1,000 · Available ₹{balance.toLocaleString("en-IN")}
           </p>
         )}
 
         <button
           type="submit"
-          disabled={!canSubmit}
+          disabled={!canSubmit || withdrawMutation.isPending}
           className="mt-2 inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-40"
         >
           Request withdrawal
@@ -193,9 +199,11 @@ function WithdrawCard() {
   );
 }
 
-function TransactionsCard() {
-  const rows = useMemo(() => WALLET_TRANSACTIONS, []);
-
+function TransactionsCard({
+  transactions,
+}: {
+  transactions: WalletTransaction[];
+}) {
   return (
     <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
       <h2 className="font-display text-base font-semibold text-foreground">
@@ -203,7 +211,7 @@ function TransactionsCard() {
       </h2>
 
       <div className="mt-3 flex flex-col">
-        {rows.map((tx) => (
+        {transactions.map((tx) => (
           <TransactionRow key={tx.id} tx={tx} />
         ))}
       </div>

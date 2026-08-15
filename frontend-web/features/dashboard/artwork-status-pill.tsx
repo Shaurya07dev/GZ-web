@@ -3,9 +3,15 @@ import {
   Clock3,
   Sparkles,
   BookmarkCheck,
+  PackageCheck,
+  Truck,
+  Building2,
   CircleCheckBig,
+  Landmark,
+  PackageOpen,
+  Undo2,
 } from "lucide-react";
-import type { ArtworkStatus } from "./dashboard-data";
+import type { ArtworkStatus } from "@/types/artwork";
 
 const STATUS_CONFIG: Record<
   ArtworkStatus,
@@ -21,7 +27,7 @@ const STATUS_CONFIG: Record<
     icon: Clock3,
     className: "border-gold/35 bg-gold/10 text-gold-bright",
   },
-  live: {
+  marketplace: {
     label: "Live",
     icon: Sparkles,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
@@ -31,10 +37,45 @@ const STATUS_CONFIG: Record<
     icon: BookmarkCheck,
     className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
   },
+  preparing_dispatch: {
+    label: "Preparing Dispatch",
+    icon: PackageOpen,
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
+  },
+  in_transit: {
+    label: "In Transit",
+    icon: Truck,
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
+  },
+  with_aggregator: {
+    label: "With Gallery",
+    icon: Building2,
+    className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
+  },
   sold: {
     label: "Sold",
     icon: CircleCheckBig,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  settlement_complete: {
+    label: "Settled",
+    icon: Landmark,
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  delivered: {
+    label: "Delivered",
+    icon: PackageCheck,
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  completed: {
+    label: "Completed",
+    icon: CircleCheckBig,
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  returned: {
+    label: "Returned",
+    icon: Undo2,
+    className: "border-destructive/30 bg-destructive/10 text-destructive",
   },
 };
 

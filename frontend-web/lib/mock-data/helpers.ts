@@ -1,14 +1,18 @@
 import type { Artwork, ArtworkFilters, ArtworkSummary } from "@/types/artwork";
 import type { ArtistProfile } from "@/types/artist";
-import { mockArtworks } from "./artworks";
 import { mockArtists } from "./artists";
+// Reads the LIVE artworks collection (lib/mock-collections.ts), not the
+// frozen `mockArtworks` fixture import — an artwork an admin just approved
+// only exists in that live collection, so every lookup through this file
+// (artworkService, aggregatorService, adminService) needs to see it too.
+import { artworksCol } from "@/lib/mock-collections";
 
 export function getArtworkById(id: string): Artwork | undefined {
-  return mockArtworks.find((artwork) => artwork.id === id);
+  return artworksCol.get().find((artwork) => artwork.id === id);
 }
 
 export function getArtworksByArtist(artistId: string): Artwork[] {
-  return mockArtworks.filter((artwork) => artwork.artistId === artistId);
+  return artworksCol.get().filter((artwork) => artwork.artistId === artistId);
 }
 
 export function getArtistById(id: string): ArtistProfile | undefined {

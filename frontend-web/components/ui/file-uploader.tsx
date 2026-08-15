@@ -208,9 +208,16 @@ export function FileUploader({
       <CardContent className="flex flex-col gap-5">
         {!isAtLimit && (
           <div className="flex flex-col gap-2">
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => inputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  inputRef.current?.click();
+                }
+              }}
               onDragEnter={handleDragEnter}
               onDragOver={(e) => e.preventDefault()}
               onDragLeave={handleDragLeave}
@@ -244,7 +251,7 @@ export function FileUploader({
               >
                 Choose File
               </Button>
-            </button>
+            </div>
 
             <input
               ref={inputRef}

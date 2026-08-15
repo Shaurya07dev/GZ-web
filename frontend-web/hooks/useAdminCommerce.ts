@@ -8,6 +8,30 @@ export function useAdminOrders() {
   });
 }
 
+export function useAdminOrder(orderId: string) {
+  return useQuery({
+    queryKey: ["admin-order", orderId],
+    queryFn: () => adminService.getOrderAdmin(orderId),
+    enabled: Boolean(orderId),
+  });
+}
+
+export function useAdminAddress(addressId: string) {
+  return useQuery({
+    queryKey: ["admin-address", addressId],
+    queryFn: () => adminService.getAddressAdmin(addressId),
+    enabled: Boolean(addressId),
+  });
+}
+
+export function useAdminSettlementByOrder(orderId: string) {
+  return useQuery({
+    queryKey: ["admin-settlement-by-order", orderId],
+    queryFn: () => adminService.getSettlementByOrder(orderId),
+    enabled: Boolean(orderId),
+  });
+}
+
 export function useAdminSettlements() {
   return useQuery({
     queryKey: ["admin-settlements"],

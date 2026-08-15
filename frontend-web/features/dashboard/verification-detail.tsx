@@ -4,7 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { CircleCheckBig, Circle, Sparkles, ArrowRight } from "lucide-react";
 import { InstagramGlyph } from "@/components/social-icons";
-import { VERIFICATION_TIERS, PROFILE, ARTIST } from "./dashboard-data";
+import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
+import { VERIFICATION_TIERS, ARTIST } from "./dashboard-data";
 
 const TOTAL_TIERS = VERIFICATION_TIERS.length;
 const completedCount = VERIFICATION_TIERS.filter(
@@ -12,6 +13,8 @@ const completedCount = VERIFICATION_TIERS.filter(
 ).length;
 
 export function VerificationDetail() {
+  const { data: profile } = useArtistAccountProfile();
+
   return (
     <div className="flex flex-col gap-6">
       <motion.div
@@ -106,7 +109,7 @@ export function VerificationDetail() {
                 {tier.tier === 1 && tier.status === "complete" && (
                   <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm text-foreground">
                     <InstagramGlyph className="size-3.5 text-gold-bright" />@
-                    {PROFILE.instagram}
+                    {profile?.instagram}
                   </div>
                 )}
 

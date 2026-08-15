@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowRight,
   Building2,
   ClipboardList,
   Heart,
@@ -247,14 +246,6 @@ export function SiteHeader() {
 
             <SwitchMode />
 
-            <Link
-              href="/register?role=artist"
-              className="group hidden items-center gap-2 rounded-md border border-gold/50 px-4 py-2 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 sm:inline-flex"
-            >
-              Become an Early Artist
-              <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-
             <Button
               variant="ghost"
               size="icon"
@@ -361,13 +352,6 @@ export function SiteHeader() {
                   className="rounded-md px-2 py-2 hover:bg-muted"
                 >
                   Sign In
-                </Link>
-                <Link
-                  href="/register?role=artist"
-                  onClick={() => setMobileOpen(false)}
-                  className="inline-flex items-center justify-center gap-2 rounded-md border border-gold/50 px-4 py-2 text-center font-medium text-gold-bright hover:border-gold hover:bg-gold/10"
-                >
-                  Become an Early Artist
                 </Link>
               </div>
             </nav>

@@ -1,15 +1,18 @@
+"use client";
+
+import { use } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import {
-  mockOrders,
-  mockAddresses,
-  mockCustomer,
-} from "@/lib/mock-data/customer";
-import { mockSettlements } from "@/lib/mock-data/admin";
-import { getArtworkById } from "@/lib/mock-data/helpers";
+  useAdminOrder,
+  useAdminAddress,
+  useAdminSettlementByOrder,
+} from "@/hooks/useAdminCommerce";
+import { useArtwork } from "@/hooks/useArtwork";
+import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { formatINR } from "@/lib/utils";
 import type { OrderStatus } from "@/types/order";
 
@@ -23,18 +26,20 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export default async function AdminOrderDetailPage(
+export default function AdminOrderDetailPage(
   props: PageProps<"/admin/orders/[orderId]">,
 ) {
-  const { orderId } = await props.params;
-  const order = mockOrders.find((o) => o.id === orderId);
+  const { orderId } = use(props.params);
+  const { data: order, isLoading } = useAdminOrder(orderId);
+  const { data: artwork } = useArtwork(order?.artworkId ?? "");
+  const { data: address } = useAdminAddress(order?.addressId ?? "");
+  const { data: settlement } = useAdminSettlementByOrder(orderId);
+  const { data: buyer } = useCustomerProfile();
+
+  if (isLoading) return null;
   if (!order) notFound();
 
-  const artwork = getArtworkById(order.artworkId);
-  const address = mockAddresses.find((a) => a.id === order.addressId);
-  const settlement = mockSettlements.find((s) => s.orderId === order.id);
   const total = order.amount + order.gstAmount + order.deliveryCharge;
-
   const history = [...order.statusHistory].sort(
     (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
   );
@@ -155,10 +160,12 @@ export default async function AdminOrderDetailPage(
             <h2 className="font-display text-base font-semibold text-foreground">
               Buyer
             </h2>
-            <p className="mt-2 text-sm text-foreground">{mockCustomer.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {mockCustomer.email}
-            </p>
+            {buyer ? (
+              <>
+                <p className="mt-2 text-sm text-foreground">{buyer.name}</p>
+                <p className="text-xs text-muted-foreground">{buyer.email}</p>
+              </>
+            ) : null}
             {address ? (
               <address className="mt-3 border-t border-border pt-3 text-sm leading-relaxed not-italic text-muted-foreground">
                 {address.line1}

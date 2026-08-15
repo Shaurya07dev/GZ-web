@@ -1,6 +1,26 @@
-import { ACTIVITY_FEED } from "./dashboard-data";
+"use client";
+
+import {
+  CircleCheckBig,
+  Upload,
+  Banknote,
+  ShieldCheck,
+  ArrowDownRight,
+} from "lucide-react";
+import { useArtistActivity } from "@/hooks/useArtistDashboard";
+import type { ActivityKind } from "./dashboard-data";
+
+const ICON_BY_KIND: Record<ActivityKind, typeof CircleCheckBig> = {
+  artwork_approved: CircleCheckBig,
+  artwork_submitted: Upload,
+  settlement: Banknote,
+  verification: ShieldCheck,
+  withdrawal: ArrowDownRight,
+};
 
 export function RecentActivityFeed() {
+  const { data: activity } = useArtistActivity();
+
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <h2 className="font-display text-base font-semibold text-foreground">
@@ -8,25 +28,25 @@ export function RecentActivityFeed() {
       </h2>
 
       <ul className="mt-4 flex flex-col gap-4">
-        {ACTIVITY_FEED.map((item) => (
-          <li key={item.id} className="flex items-start gap-3.5">
-            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-              <item.icon
-                className="size-4 text-gold-bright"
-                strokeWidth={1.5}
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm text-foreground">{item.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {item.detail}
-              </p>
-            </div>
-            <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
-              {item.time}
-            </span>
-          </li>
-        ))}
+        {(activity ?? []).map((item) => {
+          const Icon = ICON_BY_KIND[item.kind];
+          return (
+            <li key={item.id} className="flex items-start gap-3.5">
+              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+                <Icon className="size-4 text-gold-bright" strokeWidth={1.5} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-foreground">{item.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {item.detail}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
+                {item.time}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

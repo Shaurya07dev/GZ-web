@@ -9,19 +9,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import type { z } from "zod";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
+import { RoleToggle } from "./role-toggle";
 import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
 import {
@@ -39,16 +34,12 @@ import {
 // whether rememberMe is optional.
 type LoginFormValues = z.input<typeof loginSchema>;
 
-// The demo role picker is the only signal this mock phase has for "which
-// dashboard should a successful login land on" — there is no real backend
-// to carry that information, so it doubles as both the "sign in as" demo
-// control and the redirect-target selector described in spec §3.
-//
-// "admin" is deliberately local to this picker rather than added to
-// `roleSchema`: that schema also drives the *registration* form's role cards
-// and `/register?role=`, and admin is not a role anyone signs up for. The
-// Admin Console has no auth of its own either way (see features/admin/admin-data.ts) —
-// this entry only chooses where the demo login lands.
+// This toggle is the only signal this mock phase has for "which dashboard
+// should a successful login land on" — there is no real backend to carry
+// that information, so it's the actual "sign in as" control, not a hidden
+// dev affordance. "admin" is deliberately local to this picker rather than
+// added to `roleSchema`: that schema also drives the *registration* form's
+// role toggle, and admin is not a role anyone signs up for.
 type DemoRole = Role | "admin";
 
 const ROLE_REDIRECTS: Record<DemoRole, string> = {
@@ -58,12 +49,12 @@ const ROLE_REDIRECTS: Record<DemoRole, string> = {
   admin: "/admin",
 };
 
-const ROLE_LABELS: Record<DemoRole, string> = {
-  artist: "Artist",
-  aggregator: "Aggregator",
-  customer: "Customer",
-  admin: "Admin",
-};
+const ROLE_TOGGLE_OPTIONS: { value: DemoRole; label: string }[] = [
+  { value: "artist", label: "Artist" },
+  { value: "aggregator", label: "Aggregator" },
+  { value: "customer", label: "Customer" },
+  { value: "admin", label: "Admin" },
+];
 
 const containerVariants: Variants = {
   hidden: {},
@@ -97,6 +88,12 @@ export function LoginForm() {
       { ...values, simulateError },
       {
         onSuccess: () => {
+          // Fake session: no backend to issue a real token, so login writes
+          // the chosen role straight to a cookie that proxy.ts reads on
+          // every request to a guarded route. maxAge omitted (session
+          // cookie) unless "Remember me" is checked.
+          const maxAge = values.rememberMe ? 60 * 60 * 24 * 30 : undefined;
+          document.cookie = `gz_session=${demoRole}; path=/${maxAge ? `; max-age=${maxAge}` : ""}`;
           router.push(ROLE_REDIRECTS[demoRole]);
         },
         onError: (error) => {
@@ -129,6 +126,15 @@ export function LoginForm() {
           <span className="px-4 text-xs text-muted-foreground">or</span>
           <div className="grow border-t border-border" />
         </div>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <RoleToggle
+          layoutId="login-role-pill"
+          options={ROLE_TOGGLE_OPTIONS}
+          value={demoRole}
+          onChange={setDemoRole}
+        />
       </motion.div>
 
       {formError && (
@@ -198,27 +204,6 @@ export function LoginForm() {
           )}
           Sign in
         </Button>
-
-        <DevPanel className="flex-wrap">
-          <span className="text-xs text-muted-foreground">Sign in as</span>
-          <Select
-            value={demoRole}
-            onValueChange={(v) => setDemoRole(v as DemoRole)}
-          >
-            <SelectTrigger className="h-8 w-[140px]" size="sm">
-              <SelectValue>
-                {(value: unknown) => ROLE_LABELS[value as DemoRole] ?? "Artist"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(ROLE_LABELS) as DemoRole[]).map((role) => (
-                <SelectItem key={role} value={role}>
-                  {ROLE_LABELS[role]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </DevPanel>
 
         <DevPanel>
           <span className="text-xs text-muted-foreground">

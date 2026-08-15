@@ -1,12 +1,16 @@
-import {
-  IndianRupee,
-  Wallet,
-  Clock3,
-  Banknote,
-  Upload,
-  ShieldCheck,
-  CircleCheckBig,
-} from "lucide-react";
+import { IndianRupee, Wallet, Clock3 } from "lucide-react";
+
+// Activity feed entries are persisted (lib/mock-collections.ts's
+// artistActivityCol) so real actions (submit, approve, withdraw) can be
+// appended on top of this seed — a Lucide icon component isn't
+// JSON-serializable, so entries carry a `kind` string instead and
+// recent-activity-feed.tsx maps that to an icon at render time.
+export type ActivityKind =
+  | "artwork_approved"
+  | "artwork_submitted"
+  | "settlement"
+  | "verification"
+  | "withdrawal";
 
 export const ARTIST = {
   name: "Devika Rao",
@@ -50,36 +54,44 @@ export const REVENUE_SERIES = [
   { month: "Aug", amount: 184320 },
 ];
 
-export const ACTIVITY_FEED = [
+export interface ActivityEntry {
+  id: string;
+  kind: ActivityKind;
+  title: string;
+  detail: string;
+  time: string;
+}
+
+export const ACTIVITY_FEED: ActivityEntry[] = [
   {
     id: "act-1",
-    icon: CircleCheckBig,
+    kind: "artwork_approved",
     title: "“Monsoon Reverie” was approved",
     detail: "Live on the marketplace at ₹28,000",
     time: "2 hours ago",
   },
   {
     id: "act-2",
-    icon: Banknote,
+    kind: "settlement",
     title: "Settlement received",
     detail: "₹25,200 credited after commission",
     time: "Yesterday",
   },
   {
     id: "act-3",
-    icon: Upload,
+    kind: "artwork_submitted",
     title: "“Terracotta Study No. 4” submitted",
     detail: "Awaiting admin review",
     time: "2 days ago",
   },
   {
     id: "act-4",
-    icon: ShieldCheck,
+    kind: "verification",
     title: "Tier 2 verification complete",
     detail: "Active plan confirmed",
     time: "5 days ago",
   },
-] as const;
+];
 
 export const VERIFICATION_TIERS = [
   {
@@ -108,101 +120,6 @@ export const VERIFICATION_TIERS = [
       "Sell one artwork through the marketplace or an aggregator. Once confirmed, you'll unlock the Gold ✦ Verified badge shown on your public profile and listings.",
     status: "active" as const,
     completedOn: null,
-  },
-];
-
-export type ArtworkStatus =
-  "draft" | "pending_approval" | "live" | "reserved" | "sold";
-
-export type Artwork = {
-  id: string;
-  title: string;
-  image: string;
-  medium: string;
-  category: string;
-  year: number;
-  artistPrice: number;
-  status: ArtworkStatus;
-  submittedAt: string;
-};
-
-export const ARTWORKS: Artwork[] = [
-  {
-    id: "aw-1",
-    title: "Monsoon Reverie",
-    image: "/ecosystem/artwork-1.png",
-    medium: "Oil on Canvas",
-    category: "Landscape",
-    year: 2025,
-    artistPrice: 28000,
-    status: "live",
-    submittedAt: "2026-07-12",
-  },
-  {
-    id: "aw-2",
-    title: "Terracotta Study No. 4",
-    image: "/ecosystem/artwork-2.png",
-    medium: "Ceramic & Mixed Media",
-    category: "Sculpture",
-    year: 2026,
-    artistPrice: 15000,
-    status: "pending_approval",
-    submittedAt: "2026-08-08",
-  },
-  {
-    id: "aw-3",
-    title: "Silent Horizon",
-    image: "/ecosystem/artwork-3.png",
-    medium: "Acrylic on Canvas",
-    category: "Abstract",
-    year: 2025,
-    artistPrice: 22000,
-    status: "draft",
-    submittedAt: "2026-08-10",
-  },
-  {
-    id: "aw-4",
-    title: "Eclipse of Thoughts",
-    image: "/journey/artwork-preview.png",
-    medium: "Acrylic on Canvas",
-    category: "Abstract",
-    year: 2024,
-    artistPrice: 18000,
-    status: "reserved",
-    submittedAt: "2026-06-02",
-  },
-  {
-    id: "aw-5",
-    title: "Whispers in Bronze",
-    image: "/artworks/framed-painting.png",
-    medium: "Mixed Media",
-    category: "Portraiture",
-    year: 2023,
-    artistPrice: 32000,
-    status: "sold",
-    submittedAt: "2026-04-18",
-  },
-  {
-    id: "aw-6",
-    title: "Fragments of Dawn",
-    image: "/artworks/landscape.png",
-    medium: "Oil on Canvas",
-    category: "Landscape",
-    year: 2025,
-    artistPrice: 19500,
-    status: "live",
-    submittedAt: "2026-07-29",
-  },
-  {
-    id: "aw-7",
-    title: "Portrait in Amber",
-    image: "/artworks/portrait-woman.png",
-    medium: "Oil on Canvas",
-    category: "Portraiture",
-    year: 2026,
-    artistPrice: 24000,
-    status: "draft",
-    submittedAt: "2026-08-09",
   },
 ];
 
