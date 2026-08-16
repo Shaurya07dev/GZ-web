@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useForm, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2, MailCheck } from "lucide-react";
+import {
+  Loader2,
+  MailCheck,
+  UserPlus,
+  User,
+  Mail,
+  Phone,
+  Lock,
+  Building2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import {
   Field,
   FieldContent,
@@ -17,9 +25,11 @@ import {
   FieldError,
   FieldGroup,
 } from "@/components/ui/field";
+import { AuthCrest } from "./auth-crest";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
+import { AppleAuthButton } from "./apple-auth-button";
 import { RoleToggle } from "./role-toggle";
 import { DevPanel } from "./dev-panel";
 import { useRegisterMutation } from "@/hooks/useAuth";
@@ -39,10 +49,11 @@ const STEP_TRANSITION = { duration: 0.22, ease: [0.16, 1, 0.3, 1] as const };
 const ROLE_TOGGLE_OPTIONS = ROLE_OPTIONS.map((option) => ({
   value: option.role,
   label: option.label,
+  icon: option.icon,
 }));
 
 export function RegisterForm({ initialRole }: RegisterFormProps) {
-  const [simulateError, setSimulateError] = useState(false);
+  const router = useRouter();
   const registerMutation = useRegisterMutation();
 
   // z.literal(true) makes RegisterInput["acceptedTerms"] the TS literal
@@ -60,7 +71,6 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
       email: "",
       phone: "",
       password: "",
-      confirmPassword: "",
       acceptedTerms: false,
       companyName: "",
       contactPerson: "",
@@ -70,16 +80,13 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
   const role = useWatch({ control: form.control, name: "role" });
 
   function onSubmit(values: RegisterInput) {
-    registerMutation.mutate(
-      { ...values, simulateError },
-      {
-        onError: (error) => {
-          toast.error(
-            error instanceof Error ? error.message : "Something went wrong.",
-          );
-        },
+    registerMutation.mutate(values, {
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Something went wrong.",
+        );
       },
-    );
+    });
   }
 
   if (registerMutation.isSuccess) {
@@ -101,29 +108,24 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
       transition={STEP_TRANSITION}
       className="flex flex-col gap-6"
     >
-      <AuthFormHeader
-        title="Create your account"
-        description="Join GalleryZone as an artist, aggregator, or collector of verified original artwork."
-      />
-
-      <GoogleAuthButton />
-      <div className="relative flex items-center" aria-hidden="true">
-        <div className="grow border-t border-border" />
-        <span className="px-4 text-xs text-muted-foreground">or</span>
-        <div className="grow border-t border-border" />
-      </div>
+      <AuthCrest />
 
       <Controller
         control={form.control}
         name="role"
         render={({ field }) => (
           <RoleToggle
-            layoutId="register-role-pill"
             options={ROLE_TOGGLE_OPTIONS}
             value={field.value}
             onChange={field.onChange}
           />
         )}
+      />
+
+      <AuthFormHeader
+        title="Create an account"
+        description="Join GalleryZone and showcase your art."
+        icon={UserPlus}
       />
 
       <form
@@ -138,23 +140,28 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             label="Full name"
             placeholder="Ananya Rao"
             autoComplete="name"
+            icon={User}
           />
-          <AuthTextField
-            control={form.control}
-            name="email"
-            label="Email"
-            type="email"
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
-          <AuthTextField
-            control={form.control}
-            name="phone"
-            label="Phone number"
-            type="tel"
-            placeholder="98765 43210"
-            autoComplete="tel"
-          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <AuthTextField
+              control={form.control}
+              name="email"
+              label="Email Address"
+              type="email"
+              placeholder="you@example.com"
+              autoComplete="email"
+              icon={Mail}
+            />
+            <AuthTextField
+              control={form.control}
+              name="phone"
+              label="Phone number"
+              type="tel"
+              placeholder="98765 43210"
+              autoComplete="tel"
+              icon={Phone}
+            />
+          </div>
 
           <AnimatePresence initial={false}>
             {role === "aggregator" && (
@@ -173,6 +180,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
                     label="Company / gallery name"
                     placeholder="Northline Art Space"
                     autoComplete="organization"
+                    icon={Building2}
                   />
                   <AuthTextField
                     control={form.control}
@@ -180,6 +188,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
                     label="Contact person"
                     placeholder="Full name"
                     autoComplete="name"
+                    icon={User}
                   />
                 </FieldGroup>
               </motion.div>
@@ -191,15 +200,9 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             name="password"
             label="Password"
             type="password"
-            placeholder="At least 8 characters"
+            placeholder="Min 8 characters, 1 letter, 1 number"
             autoComplete="new-password"
-          />
-          <AuthTextField
-            control={form.control}
-            name="confirmPassword"
-            label="Confirm password"
-            type="password"
-            autoComplete="new-password"
+            icon={Lock}
           />
 
           <Controller
@@ -230,16 +233,25 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             )}
           />
 
-          <DevPanel>
-            <span className="text-xs text-muted-foreground">
-              Simulate duplicate-email error
-            </span>
-            <Switch
-              checked={simulateError}
-              onCheckedChange={setSimulateError}
-              size="sm"
-            />
-          </DevPanel>
+          <div className="grid grid-cols-3 gap-2">
+            {ROLE_OPTIONS.map((option) => (
+              <button
+                key={option.role}
+                type="button"
+                onClick={() => {
+                  // No backend, so "demo login" is the same fake-session
+                  // write login-form.tsx does on success — skip the form
+                  // and drop straight into the (mock-data-driven) dashboard.
+                  document.cookie = `gz_session=${option.role}; path=/`;
+                  router.push(option.redirectPath);
+                }}
+                className="flex flex-col items-center gap-1 rounded-lg border border-gold/30 bg-card px-2 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/10 active:scale-[0.98]"
+              >
+                <option.icon className="size-4 text-gold-bright" />
+                Demo {option.label}
+              </button>
+            ))}
+          </div>
 
           <Button
             type="submit"
@@ -253,6 +265,20 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
           </Button>
         </FieldGroup>
       </form>
+
+      <div className="flex flex-col gap-5">
+        <div className="relative flex items-center" aria-hidden="true">
+          <div className="grow border-t border-border" />
+          <span className="px-4 text-xs tracking-wide text-muted-foreground">
+            OR CONTINUE WITH
+          </span>
+          <div className="grow border-t border-border" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <GoogleAuthButton />
+          <AppleAuthButton />
+        </div>
+      </div>
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}

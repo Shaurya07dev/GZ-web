@@ -363,6 +363,102 @@ export const artistProfileCol = collection("artistProfile", () => ({
   socialProofVideoUrl: null as string | null,
 }));
 
+const ARTIST_MESSAGE_SEED: MessageThread[] = [
+  {
+    id: "msg-1",
+    from: "GalleryZone Curation Team",
+    subject: '"Terracotta Study No. 4" is pending review',
+    preview: "Your submission is with a curator for quality and authenticity review.",
+    body: "Thanks for submitting \"Terracotta Study No. 4.\" A curator is reviewing it for quality, authenticity, and pricing confidentiality. You'll be notified as soon as a decision is made — most reviews complete within 2-3 business days.",
+    unread: true,
+    receivedAt: "2026-08-09T10:15:00.000Z",
+  },
+  {
+    id: "msg-2",
+    from: "GalleryZone Admin",
+    subject: "Additional documentation requested",
+    preview: "We need a clearer signature close-up before your KYC can be approved.",
+    body: "Your Aadhaar and signature proof are on file, but the signature close-up photo is too blurred to verify against your Certificate of Authenticity. Please re-upload a sharper close-up from your Profile & KYC page.",
+    unread: true,
+    receivedAt: "2026-08-07T14:32:00.000Z",
+  },
+  {
+    id: "msg-3",
+    from: "GalleryZone Insurance Desk",
+    subject: "Consider transit insurance for high-value pieces",
+    preview: "Artworks valued above ₹20,000 are strongly recommended for transit insurance.",
+    body: "A couple of your listed pieces are priced above ₹20,000. Transit insurance (partnered with HDFC ERGO) protects you against unforeseen damage in shipping — uninsured artworks bear no platform liability if something goes wrong in transit.",
+    unread: false,
+    receivedAt: "2026-08-02T09:00:00.000Z",
+  },
+  {
+    id: "msg-4",
+    from: "GalleryZone Settlements",
+    subject: "Settlement processed for \"Whispers in Bronze\"",
+    preview: "Your payout has been credited to your GalleryZone wallet.",
+    body: "Good news — \"Whispers in Bronze\" sold, and your settlement has been processed and credited to your wallet. You can withdraw to your linked bank account any time above the ₹1,000 minimum.",
+    unread: false,
+    receivedAt: "2026-07-20T11:45:00.000Z",
+  },
+  {
+    id: "msg-5",
+    from: "GalleryZone Team",
+    subject: "Welcome to GalleryZone",
+    preview: "Your artist account is set up — here's what happens next.",
+    body: "Welcome! Your profile is live. Submit your first artwork from My Artworks, keep your bank details current in Profile & KYC, and check Verification to unlock the Gold badge after your first sale.",
+    unread: false,
+    receivedAt: "2026-07-05T08:00:00.000Z",
+  },
+];
+
+export const artistMessagesCol = collection<MessageThread[]>(
+  "artistMessages",
+  () => [...ARTIST_MESSAGE_SEED],
+);
+
+export const artistSettingsCol = collection("artistSettings", () => ({
+  notifyArtworkApproved: true,
+  notifyNewSale: true,
+  notifyWithdrawalProcessed: true,
+  notifyNewMessage: true,
+}));
+
+export const artistSupportTicketsCol = collection<SupportTicket[]>(
+  "artistSupportTickets",
+  () => [
+    {
+      id: "ticket-1",
+      subject: "Question about insurance for high-value pieces",
+      message:
+        "One of my pieces is priced above ₹20,000 — can you confirm the HDFC ERGO transit insurance is opt-in per artwork, not per account?",
+      status: "answered",
+      createdAt: "2026-07-28T09:20:00.000Z",
+    },
+  ],
+);
+
+export const artistSettlementsCol = collection<Settlement[]>(
+  "artistSettlements",
+  () => [
+    {
+      id: "settle-devika-1",
+      orderId: "order-seed-aw-5",
+      artworkTitle: "Whispers in Bronze",
+      artistName: CURRENT_ARTIST_NAME,
+      artistAmount: Math.round(32000 * 0.98),
+      aggregatorCommission: 0,
+      platformRevenue: Math.round(32000 * 0.02),
+      status: "processed",
+      createdAt: new Date(
+        Date.now() - 119 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      processedAt: new Date(
+        Date.now() - 118 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+    },
+  ],
+);
+
 // Artist's own asking price per artwork id — deliberately kept OUT of the
 // Artwork/ArtworkSummary shape (see types/artwork.ts: "the artist_price
 // confidentiality rule is structurally enforced" by that field's absence).

@@ -1,44 +1,36 @@
 "use client";
 
-import { motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RoleToggleOption<T extends string> {
   value: T;
   label: string;
+  icon?: LucideIcon;
 }
 
 interface RoleToggleProps<T extends string> {
   options: RoleToggleOption<T>[];
   value: T;
   onChange: (value: T) => void;
-  layoutId: string;
   className?: string;
 }
 
-// Segmented pill control: press a segment, the form updates in place —
-// no page/step transition. Shared by Register (3 real roles) and Login
-// (adds Admin, since there's no backend to know an account's role — this
-// toggle IS how "sign in as" works here, not a hidden dev affordance).
-// Generic over the value union so one component serves both Role and
-// DemoRole without duplicating the sliding-indicator logic.
+// Separate standalone buttons, not one connected segmented pill — each role
+// is its own discrete choice, not steps along a single track. Shared by
+// Register (3 roles) and Login (same 3 — this toggle IS how "sign in as"
+// works here, since there's no backend to know an account's role).
 export function RoleToggle<T extends string>({
   options,
   value,
   onChange,
-  layoutId,
   className,
 }: RoleToggleProps<T>) {
   return (
-    <div
-      role="radiogroup"
-      className={cn(
-        "inline-flex w-full items-center gap-1 rounded-full border border-border bg-muted/40 p-1",
-        className,
-      )}
-    >
+    <div role="radiogroup" className={cn("flex flex-wrap gap-2", className)}>
       {options.map((option) => {
         const isActive = option.value === value;
+        const Icon = option.icon;
         return (
           <button
             key={option.value}
@@ -47,20 +39,14 @@ export function RoleToggle<T extends string>({
             aria-checked={isActive}
             onClick={() => onChange(option.value)}
             className={cn(
-              "relative flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
               isActive
-                ? "text-[#171310]"
-                : "text-muted-foreground hover:text-foreground",
+                ? "border-gold-bright bg-gold-bright text-[#171310]"
+                : "border-border text-muted-foreground hover:border-gold-bright/50 hover:text-foreground",
             )}
           >
-            {isActive && (
-              <motion.span
-                layoutId={layoutId}
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                className="absolute inset-0 rounded-full bg-gold-bright"
-              />
-            )}
-            <span className="relative z-10">{option.label}</span>
+            {Icon && <Icon className="size-4" />}
+            <span>{option.label}</span>
           </button>
         );
       })}

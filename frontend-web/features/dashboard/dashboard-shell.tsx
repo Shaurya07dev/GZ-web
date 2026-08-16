@@ -8,9 +8,17 @@ import {
   LayoutGrid,
   CircleUserRound,
   Image as ImageIcon,
+  ImagePlus,
+  LayoutTemplate,
+  ShoppingBag,
   Wallet,
-  ShieldCheck,
-  Plus,
+  Landmark,
+  Fingerprint,
+  LineChart,
+  MessageSquare,
+  Building2,
+  LifeBuoy,
+  Settings as SettingsIcon,
   Menu,
   X,
   PanelLeftClose,
@@ -20,14 +28,24 @@ import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
+import { useArtistMessages } from "@/hooks/useArtistMessages";
 import { ARTIST } from "./dashboard-data";
 
 const NAV_ITEMS = [
-  { label: "Overview", href: "/dashboard", icon: LayoutGrid },
-  { label: "Profile & KYC", href: "/dashboard/profile", icon: CircleUserRound },
-  { label: "My artworks", href: "/dashboard/artworks", icon: ImageIcon },
-  { label: "Wallet", href: "/dashboard/wallet", icon: Wallet },
-  { label: "Verification", href: "/dashboard/verification", icon: ShieldCheck },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
+  { label: "My Profile", href: "/dashboard/profile", icon: CircleUserRound },
+  { label: "My Artworks", href: "/dashboard/artworks", icon: ImageIcon },
+  { label: "Add Artwork", href: "/dashboard/artworks/upload", icon: ImagePlus },
+  { label: "Portfolio", href: "/dashboard/portfolio", icon: LayoutTemplate },
+  { label: "Orders", href: "/dashboard/orders", icon: ShoppingBag },
+  { label: "Earnings & Wallet", href: "/dashboard/wallet", icon: Wallet },
+  { label: "Settlements", href: "/dashboard/settlements", icon: Landmark },
+  { label: "COA & NFC", href: "/dashboard/coa-nfc", icon: Fingerprint },
+  { label: "Analytics", href: "/dashboard/analytics", icon: LineChart },
+  { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
+  { label: "Gallery Spaces", href: "/dashboard/gallery-spaces", icon: Building2 },
+  { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
+  { label: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
 ] as const;
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -56,6 +74,8 @@ function Sidebar({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: messages } = useArtistMessages();
+  const unreadMessages = messages?.filter((m) => m.unread).length ?? 0;
 
   return (
     <>
@@ -108,18 +128,6 @@ function Sidebar({
           </button>
         </div>
 
-        <Link
-          href="/dashboard/artworks/upload"
-          title={collapsed ? "List new artwork" : undefined}
-          className={cn(
-            "mx-4 mb-2 inline-flex items-center justify-center gap-2 rounded-lg bg-gold-bright/95 px-4 py-2.5 text-sm font-semibold text-[#171310] transition-colors hover:bg-gold-bright",
-            collapsed && "lg:mx-3 lg:px-0",
-          )}
-        >
-          <Plus className="size-4 shrink-0" />
-          <span className={cn(collapsed && "lg:hidden")}>List new artwork</span>
-        </Link>
-
         <nav className="flex flex-1 flex-col gap-1 px-3 py-3">
           {NAV_ITEMS.map((item) => {
             const active =
@@ -147,16 +155,31 @@ function Sidebar({
                   )}
                   strokeWidth={1.75}
                 />
-                <span className={cn(collapsed && "lg:hidden")}>
+                <span
+                  className={cn(
+                    "flex-1 truncate",
+                    collapsed && "lg:hidden",
+                  )}
+                >
                   {item.label}
                 </span>
+                {item.label === "Messages" && unreadMessages > 0 && (
+                  <span
+                    className={cn(
+                      "flex size-4.5 shrink-0 items-center justify-center rounded-full bg-gold-bright text-[10px] font-semibold text-[#171310]",
+                      collapsed && "lg:hidden",
+                    )}
+                  >
+                    {unreadMessages}
+                  </span>
+                )}
               </Link>
             );
           })}
         </nav>
 
         <Link
-          href="/dashboard/verification"
+          href="/dashboard/profile"
           className={cn(
             "mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 transition-colors hover:bg-sidebar-accent",
             collapsed && "lg:justify-center lg:px-2",
@@ -186,11 +209,20 @@ function Sidebar({
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  "/dashboard": "Overview",
-  "/dashboard/profile": "Profile & KYC",
+  "/dashboard": "Dashboard",
+  "/dashboard/profile": "My Profile",
   "/dashboard/artworks": "My Artworks",
-  "/dashboard/artworks/upload": "Submit Artwork",
-  "/dashboard/wallet": "Wallet",
+  "/dashboard/artworks/upload": "Add Artwork",
+  "/dashboard/portfolio": "Portfolio",
+  "/dashboard/orders": "Orders",
+  "/dashboard/wallet": "Earnings & Wallet",
+  "/dashboard/settlements": "Settlements",
+  "/dashboard/coa-nfc": "COA & NFC",
+  "/dashboard/analytics": "Analytics",
+  "/dashboard/messages": "Messages",
+  "/dashboard/gallery-spaces": "Gallery Spaces",
+  "/dashboard/support": "Support",
+  "/dashboard/settings": "Settings",
   "/dashboard/verification": "Verification",
 };
 

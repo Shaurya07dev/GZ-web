@@ -27,6 +27,8 @@ export function useCreateOrderMutation() {
       });
       queryClient.invalidateQueries({ queryKey: ["artist-wallet"] });
       queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-settlements"] });
     },
   });
 }

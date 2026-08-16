@@ -6,6 +6,7 @@ export interface RoleOption {
   label: string;
   description: string;
   icon: LucideIcon;
+  redirectPath: string;
 }
 
 // Copy sourced from the Onboarding Guide's "Platform Overview" section
@@ -18,6 +19,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
     label: "Artist",
     description: "List and sell your original artwork with full price privacy.",
     icon: Palette,
+    redirectPath: "/dashboard",
   },
   {
     role: "aggregator",
@@ -25,11 +27,13 @@ export const ROLE_OPTIONS: RoleOption[] = [
     description:
       "Reserve, display, and distribute verified art through your gallery or space.",
     icon: Building2,
+    redirectPath: "/aggregator/dashboard",
   },
   {
     role: "customer",
     label: "Customer",
     description: "Discover and collect verified original artwork.",
     icon: Compass,
+    redirectPath: "/account",
   },
 ];

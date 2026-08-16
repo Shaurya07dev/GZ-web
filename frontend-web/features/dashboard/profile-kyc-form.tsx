@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Camera,
@@ -11,6 +12,7 @@ import {
   Lock,
   Globe2,
   Video,
+  ChevronRight,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -115,6 +117,14 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-start">
+      <Link
+        href="/dashboard/verification"
+        className="flex items-center justify-between gap-3 rounded-lg border border-gold/30 bg-gold/5 px-4 py-3 text-sm font-medium text-gold-bright transition-colors hover:bg-gold/10 lg:col-span-2"
+      >
+        View verification status
+        <ChevronRight className="size-4" />
+      </Link>
+
       <form
         onSubmit={handleProfileSubmit}
         className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6"
@@ -389,3 +399,4 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     </div>
   );
 }
+

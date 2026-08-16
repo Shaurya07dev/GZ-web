@@ -6,16 +6,28 @@ import { useRouter } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertCircle, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  Loader2,
+  LogIn,
+  Mail,
+  Lock,
+  Palette,
+  Building2,
+  Compass,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import type { z } from "zod";
+import { AuthCrest } from "./auth-crest";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
+import { AppleAuthButton } from "./apple-auth-button";
 import { RoleToggle } from "./role-toggle";
 import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
@@ -37,23 +49,21 @@ type LoginFormValues = z.input<typeof loginSchema>;
 // This toggle is the only signal this mock phase has for "which dashboard
 // should a successful login land on" — there is no real backend to carry
 // that information, so it's the actual "sign in as" control, not a hidden
-// dev affordance. "admin" is deliberately local to this picker rather than
-// added to `roleSchema`: that schema also drives the *registration* form's
-// role toggle, and admin is not a role anyone signs up for.
-type DemoRole = Role | "admin";
-
-const ROLE_REDIRECTS: Record<DemoRole, string> = {
+// dev affordance.
+const ROLE_REDIRECTS: Record<Role, string> = {
   artist: "/dashboard",
   aggregator: "/aggregator/dashboard",
   customer: "/account",
-  admin: "/admin",
 };
 
-const ROLE_TOGGLE_OPTIONS: { value: DemoRole; label: string }[] = [
-  { value: "artist", label: "Artist" },
-  { value: "aggregator", label: "Aggregator" },
-  { value: "customer", label: "Customer" },
-  { value: "admin", label: "Admin" },
+const ROLE_TOGGLE_OPTIONS: {
+  value: Role;
+  label: string;
+  icon: LucideIcon;
+}[] = [
+  { value: "artist", label: "Artist", icon: Palette },
+  { value: "aggregator", label: "Aggregator", icon: Building2 },
+  { value: "customer", label: "Customer", icon: Compass },
 ];
 
 const containerVariants: Variants = {
@@ -73,7 +83,7 @@ const itemVariants: Variants = {
 export function LoginForm() {
   const router = useRouter();
   const loginMutation = useLoginMutation();
-  const [demoRole, setDemoRole] = useState<DemoRole>("artist");
+  const [demoRole, setDemoRole] = useState<Role>("artist");
   const [simulateError, setSimulateError] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -113,27 +123,22 @@ export function LoginForm() {
       className="flex flex-col gap-6"
     >
       <motion.div variants={itemVariants}>
-        <AuthFormHeader
-          title="Welcome back"
-          description="Sign in to continue to your GalleryZone account."
-        />
-      </motion.div>
-
-      <motion.div variants={itemVariants} className="flex flex-col gap-5">
-        <GoogleAuthButton />
-        <div className="relative flex items-center" aria-hidden="true">
-          <div className="grow border-t border-border" />
-          <span className="px-4 text-xs text-muted-foreground">or</span>
-          <div className="grow border-t border-border" />
-        </div>
+        <AuthCrest />
       </motion.div>
 
       <motion.div variants={itemVariants}>
         <RoleToggle
-          layoutId="login-role-pill"
           options={ROLE_TOGGLE_OPTIONS}
           value={demoRole}
           onChange={setDemoRole}
+        />
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <AuthFormHeader
+          title="Welcome back"
+          description="Pick your role above, then sign in to continue."
+          icon={LogIn}
         />
       </motion.div>
 
@@ -153,10 +158,11 @@ export function LoginForm() {
         <AuthTextField
           control={form.control}
           name="email"
-          label="Email"
+          label="Email Address"
           type="email"
           placeholder="you@example.com"
           autoComplete="email"
+          icon={Mail}
         />
         <AuthTextField
           control={form.control}
@@ -165,6 +171,7 @@ export function LoginForm() {
           type="password"
           placeholder="Your password"
           autoComplete="current-password"
+          icon={Lock}
         />
 
         <div className="flex items-center justify-between">
@@ -215,6 +222,20 @@ export function LoginForm() {
           />
         </DevPanel>
       </motion.form>
+
+      <motion.div variants={itemVariants} className="flex flex-col gap-5">
+        <div className="relative flex items-center" aria-hidden="true">
+          <div className="grow border-t border-border" />
+          <span className="px-4 text-xs tracking-wide text-muted-foreground">
+            OR CONTINUE WITH
+          </span>
+          <div className="grow border-t border-border" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <GoogleAuthButton />
+          <AppleAuthButton />
+        </div>
+      </motion.div>
 
       <motion.p
         variants={itemVariants}

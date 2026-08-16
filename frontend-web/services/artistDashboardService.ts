@@ -1,4 +1,7 @@
 import type { Artwork, ArtworkImage } from "@/types/artwork";
+import type { AggregatorHolding } from "@/types/aggregator";
+import type { Order } from "@/types/order";
+import type { Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import {
   artworksCol,
@@ -8,6 +11,10 @@ import {
   artistActivityCol,
   artistProfileCol,
   artistPricesCol,
+  artistSettlementsCol,
+  artistSettingsCol,
+  ordersCol,
+  holdingsCol,
   CURRENT_ARTIST_ID,
   CURRENT_ARTIST_NAME,
   KPI_METRICS,
@@ -197,6 +204,48 @@ export const artistDashboardService = {
   ) => {
     const updated = { ...artistProfileCol.get(), ...patch };
     artistProfileCol.set(updated);
+    return mockDelay(updated);
+  },
+
+  listOrders: (): Promise<Array<Order & { artistPayout: number }>> => {
+    const artistArtworkIds = new Set(artistArtworks().map((a) => a.id));
+    const prices = artistPricesCol.get();
+    return mockDelay(
+      ordersCol
+        .get()
+        .filter((order) => artistArtworkIds.has(order.artworkId))
+        .map((order) => ({
+          ...order,
+          artistPayout: Math.round((prices[order.artworkId] ?? 0) * 0.98),
+        })),
+    );
+  },
+
+  listSettlements: (): Promise<Settlement[]> =>
+    mockDelay(artistSettlementsCol.get()),
+
+  listGallerySpaces: (): Promise<
+    Array<AggregatorHolding & { artwork: Artwork }>
+  > => {
+    const artworkById = new Map(artistArtworks().map((a) => [a.id, a]));
+    return mockDelay(
+      holdingsCol
+        .get()
+        .filter((holding) => artworkById.has(holding.artworkId))
+        .map((holding) => ({
+          ...holding,
+          artwork: artworkById.get(holding.artworkId)!,
+        })),
+    );
+  },
+
+  getSettings: () => mockDelay(artistSettingsCol.get()),
+
+  updateSettings: (
+    patch: Partial<ReturnType<typeof artistSettingsCol.get>>,
+  ) => {
+    const updated = { ...artistSettingsCol.get(), ...patch };
+    artistSettingsCol.set(updated);
     return mockDelay(updated);
   },
 

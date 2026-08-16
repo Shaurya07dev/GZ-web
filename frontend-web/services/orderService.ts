@@ -1,4 +1,5 @@
 import type { Order } from "@/types/order";
+import type { Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import {
@@ -6,8 +7,10 @@ import {
   artistActivityCol,
   artistWalletCol,
   artistWalletTransactionsCol,
+  artistSettlementsCol,
   artistPricesCol,
   CURRENT_ARTIST_ID,
+  CURRENT_ARTIST_NAME,
   ordersCol,
 } from "@/lib/mock-collections";
 
@@ -25,11 +28,10 @@ export interface CreateOrderPayload {
 // A sale settles into the artist's wallet immediately in this mock (no
 // pending/clearing period modeled) — only wired for the demo artist, since
 // she's the only artist this app has a wallet for.
-function settleIntoArtistWallet(artwork: {
-  id: string;
-  title: string;
-  artistId: string;
-}) {
+function settleIntoArtistWallet(
+  artwork: { id: string; title: string; artistId: string },
+  orderId: string,
+) {
   if (artwork.artistId !== CURRENT_ARTIST_ID) return;
 
   const artistPrice = artistPricesCol.get()[artwork.id];
@@ -54,6 +56,21 @@ function settleIntoArtistWallet(artwork: {
     },
     ...transactions,
   ]);
+
+  const now = new Date().toISOString();
+  const settlement: Settlement = {
+    id: `settle-${crypto.randomUUID().slice(0, 8)}`,
+    orderId,
+    artworkTitle: artwork.title,
+    artistName: CURRENT_ARTIST_NAME,
+    artistAmount: settlementAmount,
+    aggregatorCommission: 0,
+    platformRevenue: Math.round((artistPrice ?? 0) * 0.02),
+    status: "processed",
+    createdAt: now,
+    processedAt: now,
+  };
+  artistSettlementsCol.set([settlement, ...artistSettlementsCol.get()]);
 
   artistActivityCol.set([
     {
@@ -115,7 +132,7 @@ export const orderService = {
       ),
     );
 
-    settleIntoArtistWallet(artwork);
+    settleIntoArtistWallet(artwork, order.id);
 
     return mockDelay(order);
   },

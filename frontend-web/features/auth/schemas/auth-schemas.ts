@@ -6,7 +6,7 @@ import { z } from "zod";
 export const roleSchema = z.enum(["artist", "aggregator", "customer"]);
 export type Role = z.infer<typeof roleSchema>;
 
-const passwordRule = z
+export const passwordRule = z
   .string()
   .min(8, "At least 8 characters")
   .regex(/[A-Za-z]/, "At least one letter")
@@ -28,16 +28,11 @@ export const registerBaseSchema = z
     role: roleSchema,
     name: z.string().min(2, "Name is too short"),
     email: z.string().email(),
-    phone: z.string().min(10, "Enter a valid phone number"),
+    phone: z.string().regex(/^\d{10}$/, "Enter a 10-digit phone number"),
     password: passwordRule,
-    confirmPassword: z.string(),
     acceptedTerms: z.literal(true, { message: "You must accept the Terms" }),
     companyName: z.string().optional(),
     contactPerson: z.string().optional(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
   })
   .refine(
     (data) =>
