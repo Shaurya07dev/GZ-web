@@ -32,6 +32,7 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
     assignedAt: daysFromToday(-5),
     expiresAt: daysFromToday(25),
     status: "reserved",
+    assignmentSource: "gz_assigned",
   },
   {
     id: "hold-2",
@@ -42,6 +43,7 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
     assignedAt: daysFromToday(-18),
     expiresAt: daysFromToday(12),
     status: "reserved",
+    assignmentSource: "self_reserved",
   },
   {
     id: "hold-3",
@@ -52,6 +54,7 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
     assignedAt: daysFromToday(-24),
     expiresAt: daysFromToday(6),
     status: "reserved",
+    assignmentSource: "gz_assigned",
   },
   {
     id: "hold-4",
@@ -62,6 +65,7 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
     assignedAt: daysFromToday(-28),
     expiresAt: daysFromToday(2),
     status: "reserved",
+    assignmentSource: "self_reserved",
   },
   {
     id: "hold-5",
@@ -72,6 +76,7 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
     assignedAt: daysFromToday(-12),
     expiresAt: daysFromToday(18),
     status: "reserved",
+    assignmentSource: "gz_assigned",
   },
   {
     id: "hold-6",
@@ -82,6 +87,7 @@ export const mockAggregatorHoldings: AggregatorHolding[] = [
     assignedAt: daysFromToday(-37),
     expiresAt: daysFromToday(-7),
     status: "sold_pending_settlement",
+    assignmentSource: "self_reserved",
   },
 ];
 

@@ -4,10 +4,12 @@
 // orderService/artistDashboardService all read and write the exact same
 // underlying records instead of each keeping its own copy.
 import type { Artwork, ArtworkStatus } from "@/types/artwork";
-import type { AggregatorHolding } from "@/types/aggregator";
+import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { Address, CustomerProfile } from "@/types/customer";
-import type { AdminUser } from "@/types/admin";
+import type { AdminUser, Settlement } from "@/types/admin";
+import type { MessageThread } from "@/types/message";
+import type { SupportTicket } from "@/types/support";
 import { mockArtworks } from "./mock-data/artworks";
 import { mockAggregatorHoldings } from "./mock-data/aggregator-holdings";
 import { mockOrders, mockAddresses, mockCustomer } from "./mock-data/customer";
@@ -23,6 +25,7 @@ import {
   PROFILE,
   type WalletTransaction,
 } from "@/features/dashboard/dashboard-data";
+import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
 import { getCollection, setCollection } from "./mock-db";
 
 function collection<T>(key: string, seed: () => T) {
@@ -175,9 +178,150 @@ export const pendingArtworksCol = collection<Artwork[]>(
     ...buildArtistSeedArtworks().filter((a) => PENDING_STATUSES.has(a.status)),
   ],
 );
+// mockAggregatorHoldings only references the 7 public mockArtists' work, none
+// of Devika Rao's — so her already `with_aggregator` seed artwork (aw-4,
+// "Eclipse of Thoughts") needs its own synthetic holding here, or her Gallery
+// Spaces page would always be empty despite that status existing.
+const DEVIKA_GALLERY_HOLDING: AggregatorHolding = {
+  id: "hold-devika-1",
+  artworkId: "aw-4",
+  advancePercent: 5,
+  advanceAmount: Math.round(18000 * 1.3 * 0.05),
+  displayPrice: Math.round(18000 * 1.3),
+  assignedAt: "2026-07-24T00:00:00.000Z",
+  expiresAt: "2026-08-23T00:00:00.000Z",
+  status: "reserved",
+  assignmentSource: "gz_assigned",
+};
+
 export const holdingsCol = collection<AggregatorHolding[]>("holdings", () => [
   ...mockAggregatorHoldings,
+  DEVIKA_GALLERY_HOLDING,
 ]);
+
+export const aggregatorSalesCol = collection<AggregatorSale[]>(
+  "aggregatorSales",
+  () => [],
+);
+
+export const aggregatorGallerySpacesCol = collection<GallerySpace[]>(
+  "aggregatorGallerySpaces",
+  () => [
+    {
+      id: "space-1",
+      name: "Verandah Art House — Main Gallery",
+      addressLine1: "14 Church Street",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "560001",
+      capacity: 12,
+      coordinatorName: AGGREGATOR.contactPerson,
+    },
+  ],
+);
+
+export const aggregatorWalletCol = collection("aggregatorWallet", () => ({
+  balance: 0,
+  pendingBalance: 0,
+  lockedBalance: 0,
+}));
+export const aggregatorWalletTransactionsCol = collection<WalletTransaction[]>(
+  "aggregatorWalletTransactions",
+  () => [],
+);
+export const aggregatorSettlementsCol = collection<Settlement[]>(
+  "aggregatorSettlements",
+  () => [],
+);
+
+const AGGREGATOR_MESSAGE_SEED: MessageThread[] = [
+  {
+    id: "agg-msg-1",
+    from: "GalleryZone Audit Team",
+    subject: "Scheduled inventory audit — Verandah Art House",
+    preview:
+      "A GalleryZone auditor will visit on 18 Aug 2026 to reconcile on-premises inventory.",
+    body: "Per MOU §8, GalleryZone will conduct a physical inventory audit at your premises on 18 Aug 2026 between 10:00–14:00 IST. Please ensure all GalleryZone-assigned pieces are accessible and match your My Inventory register. Contact your coordinator if any piece is in transit.",
+    unread: true,
+    receivedAt: "2026-08-10T09:00:00.000Z",
+  },
+  {
+    id: "agg-msg-2",
+    from: "GalleryZone Custody Desk",
+    subject: '"Density Study, Karol Bagh" custody expires in 2 days',
+    preview:
+      "The 30-day display window for this reserved piece ends on 13 Aug 2026.",
+    body: '"Density Study, Karol Bagh" (holding hold-4) expires on 13 Aug 2026. Record a sale before expiry or request a return shipment from Shipping — unreturned pieces after expiry may incur custody fees per MOU §4.',
+    unread: true,
+    receivedAt: "2026-08-11T08:30:00.000Z",
+  },
+  {
+    id: "agg-msg-3",
+    from: "GalleryZone Insurance Desk",
+    subject: "Damage report acknowledged — \"Salvaged Frequencies\"",
+    preview:
+      "We received your transit-damage report and have opened a claim review.",
+    body: "Your damage report for \"Salvaged Frequencies\" (minor corner abrasion noted on receipt) is logged under claim REF-DMG-2026-0810. A GalleryZone adjuster will follow up within 2 business days. Do not attempt repairs until instructed — photos on file are sufficient for now.",
+    unread: false,
+    receivedAt: "2026-08-08T15:20:00.000Z",
+  },
+  {
+    id: "agg-msg-4",
+    from: "GalleryZone Coordinator Program",
+    subject: "Welcome — your nominated coordinator is on file",
+    preview:
+      "Meher Chatterjee is registered as Verandah Art House's GalleryZone coordinator.",
+    body: "Welcome to the Aggregator Portal. MOU §10 requires one nominated GalleryZone coordinator per premises — we have Meher Chatterjee on file for Verandah Art House — Main Gallery. They will receive audit notices, expiry reminders, and inbound shipment alerts on your behalf.",
+    unread: false,
+    receivedAt: "2026-07-15T10:00:00.000Z",
+  },
+  {
+    id: "agg-msg-5",
+    from: "GalleryZone Settlements",
+    subject: "Settlement pending for \"Salvaged Frequencies\"",
+    preview:
+      "Sale recorded — aggregator commission will credit after delivery confirmation.",
+    body: "You recorded a sale for \"Salvaged Frequencies\" on 5 Jul 2026. Settlement (20% of your markup over the listed price) will credit to your wallet once delivery is confirmed and the 7-day settlement window clears. Track status under Wallet and Settlements.",
+    unread: false,
+    receivedAt: "2026-07-05T18:45:00.000Z",
+  },
+];
+
+export const aggregatorMessagesCol = collection<MessageThread[]>(
+  "aggregatorMessages",
+  () => [...AGGREGATOR_MESSAGE_SEED],
+);
+export const aggregatorSupportTicketsCol = collection<SupportTicket[]>(
+  "aggregatorSupportTickets",
+  () => [
+    {
+      id: "agg-ticket-1",
+      subject: "Clarification on security deposit refund terms",
+      message:
+        "Our MOU security deposit is marked active — if we exit the program, is the ₹50,000 deposit refunded after the final audit and return of all assigned inventory, or is there a waiting period?",
+      status: "answered",
+      createdAt: "2026-07-22T11:10:00.000Z",
+    },
+  ],
+);
+export const aggregatorSettingsCol = collection("aggregatorSettings", () => ({
+  notifyNewAssignment: true,
+  notifySaleRecorded: true,
+  notifySettlementProcessed: true,
+  notifyExpiryReminder: true,
+}));
+export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
+  companyName: AGGREGATOR.companyName,
+  contactPerson: AGGREGATOR.contactPerson,
+  avatar: AGGREGATOR.avatar,
+  gstNumber: "29ABCDE1234F1Z5",
+  phone: "+91 98450 12345",
+  addressLine1: "14 Church Street, Bengaluru, Karnataka 560001",
+  bankAccountMasked: "•••• •••• •••• 4821",
+  ifsc: "HDFC0001234",
+  securityDepositStatus: "active" as const,
+}));
+
 export const ordersCol = collection<Order[]>("orders", () => [...mockOrders]);
 export const addressesCol = collection<Address[]>("addresses", () => [
   ...mockAddresses,
