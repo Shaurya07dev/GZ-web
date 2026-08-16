@@ -1,8 +1,18 @@
-import type { AggregatorHolding, RecordSalePayload } from "@/types/aggregator";
+import type {
+  AggregatorHolding,
+  AggregatorSale,
+  RecordSalePayload,
+} from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import { mockDelay, mockError } from "@/lib/mock-utils";
-import { artworksCol, holdingsCol } from "@/lib/mock-collections";
+import {
+  artworksCol,
+  holdingsCol,
+  aggregatorSalesCol,
+  aggregatorWalletCol,
+  aggregatorWalletTransactionsCol,
+} from "@/lib/mock-collections";
 
 // ---------------------------------------------------------------------------
 // Business rules (chosen and documented once here, applied consistently
@@ -130,7 +140,9 @@ export const aggregatorService = {
 
   // Matches POST /aggregators/sale (SAD §3.5): moves the matching *active*
   // holding to sold_pending_settlement rather than removing it, so it stays
-  // visible (and editable-price-locked) in the Collection table.
+  // visible (and editable-price-locked) in the Collection table. Also persists
+  // the AggregatorSale row and credits pending wallet commission at the same
+  // 20%-of-markup rate dashboardSummary() uses.
   recordSale(payload: RecordSalePayload): Promise<AggregatorHolding> {
     const holdings = holdingsCol.get();
     const index = holdings.findIndex(
@@ -139,11 +151,66 @@ export const aggregatorService = {
     if (index === -1) {
       return mockError("No active reservation found for this artwork");
     }
+    const holding = holdings[index];
     const updated: AggregatorHolding = {
-      ...holdings[index],
+      ...holding,
       status: "sold_pending_settlement",
     };
     holdingsCol.set(holdings.map((h, i) => (i === index ? updated : h)));
+
+    const now = new Date().toISOString();
+    const sale: AggregatorSale = {
+      id: `sale-${crypto.randomUUID().slice(0, 8)}`,
+      holdingId: holding.id,
+      artworkId: payload.artworkId,
+      soldPrice: payload.soldPrice,
+      buyerName: payload.buyerName,
+      buyerEmail: payload.buyerEmail,
+      buyerPhone: payload.buyerPhone,
+      deliveryAddress: payload.deliveryAddress,
+      deliveryMode: payload.deliveryMode,
+      soldAt: now,
+      shipmentStatus: "preparing",
+      dispatchedAt: null,
+      deliveredAt: null,
+      courierRef:
+        payload.deliveryMode === "courier"
+          ? `CR-${Date.now().toString(36).toUpperCase()}`
+          : null,
+    };
+    aggregatorSalesCol.set([sale, ...aggregatorSalesCol.get()]);
+
+    // Credit the wallet at the same 20%-of-markup rate dashboardSummary()
+    // already uses (don't recompute a second formula) — see MOU §8's
+    // "Profit Share = 20% × (Listed Price − Artist Price)"; this mock has no
+    // artist_price field available here, so the markup base is
+    // (displayPrice − artwork.customerPrice), same substitution
+    // dashboardSummary() already documents and justifies.
+    const artwork = getArtworkById(payload.artworkId);
+    if (artwork) {
+      const commission = Math.round(
+        0.2 * Math.max(0, holding.displayPrice - artwork.customerPrice),
+      );
+      if (commission > 0) {
+        const wallet = aggregatorWalletCol.get();
+        aggregatorWalletCol.set({
+          ...wallet,
+          pendingBalance: wallet.pendingBalance + commission,
+        });
+        aggregatorWalletTransactionsCol.set([
+          {
+            id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+            type: "commission",
+            label: `Commission: "${artwork.title}"`,
+            amount: commission,
+            date: now.slice(0, 10),
+            status: "pending",
+          },
+          ...aggregatorWalletTransactionsCol.get(),
+        ]);
+      }
+    }
+
     return mockDelay(updated);
   },
 

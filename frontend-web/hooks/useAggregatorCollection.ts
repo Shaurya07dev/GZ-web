@@ -20,6 +20,13 @@ export function useRecordSaleMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-wallet"] });
+      queryClient.invalidateQueries({
+        queryKey: ["aggregator-wallet-transactions"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-sales"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-customers"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-shipments"] });
     },
   });
 }
