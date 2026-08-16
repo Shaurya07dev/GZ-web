@@ -78,7 +78,7 @@ export default function AccountSettingsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-display text-xl font-semibold text-foreground">
-          Settings
+          Profile
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Update the name, email, and phone number on your account.

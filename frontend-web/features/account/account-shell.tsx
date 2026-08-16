@@ -4,36 +4,100 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  PackageSearch,
+  LayoutGrid,
+  Compass,
   Heart,
+  Frame,
+  ShoppingBag,
+  Wallet,
+  Repeat2,
+  CircleUserRound,
   MapPin,
-  Settings,
+  LifeBuoy,
   Menu,
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { mockCustomer, initials } from "./account-data";
 
 // A third independent copy-and-adapt of the DashboardShell/AggregatorShell
 // structural pattern (same reasoning as AggregatorShell's own header
-// comment: two unrelated, fixed nav structures don't warrant a shared
-// RoleShell abstraction). Adapted for the customer account section: no
-// "create new X" CTA (nothing here gets created from the shell), and a
-// profile card sourced from useCustomerProfile with the raw mockCustomer
-// import as the pre-hydration fallback (the "start with known-good sync
-// data, let the query refine it" pattern also used by the Overview pages).
-const NAV_ITEMS = [
-  { label: "Orders", href: "/account/orders", icon: PackageSearch },
-  { label: "Wishlist", href: "/account/wishlist", icon: Heart },
-  { label: "Addresses", href: "/account/addresses", icon: MapPin },
-  { label: "Settings", href: "/account/settings", icon: Settings },
-] as const;
+// comment: unrelated, fixed nav structures don't warrant a shared RoleShell
+// abstraction). Grouped/collapsible nav mirrors AggregatorShell's — Collector
+// nav grew from 4 flat items to 9 across 6 sections, past the point a flat
+// list stays scannable.
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: "main",
+    label: "Main",
+    items: [
+      { label: "Dashboard", href: "/account", icon: LayoutGrid },
+      { label: "Discover", href: "/marketplace", icon: Compass },
+      { label: "Wishlist", href: "/account/wishlist", icon: Heart },
+    ],
+  },
+  {
+    id: "collection",
+    label: "My Collection",
+    items: [
+      { label: "My Collection", href: "/account/collection", icon: Frame },
+    ],
+  },
+  {
+    id: "purchases",
+    label: "Purchases",
+    items: [{ label: "Orders", href: "/account/orders", icon: ShoppingBag }],
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    items: [{ label: "Wallet", href: "/account/wallet", icon: Wallet }],
+  },
+  {
+    id: "resale",
+    label: "Resale",
+    items: [
+      { label: "Resell Artwork", href: "/account/resale", icon: Repeat2 },
+    ],
+  },
+  {
+    id: "account",
+    label: "Account",
+    items: [
+      { label: "Profile", href: "/account/settings", icon: CircleUserRound },
+      { label: "Addresses", href: "/account/addresses", icon: MapPin },
+      { label: "Support", href: "/account/support", icon: LifeBuoy },
+    ],
+  },
+];
+
+const ALL_GROUP_IDS = NAV_GROUPS.map((g) => g.id);
+const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
 export function AccountShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -52,6 +116,46 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function isItemActive(pathname: string, href: string) {
+  if (href === "/account") return pathname === "/account";
+  return pathname.startsWith(href);
+}
+
+function NavLink({
+  item,
+  collapsed,
+  onClick,
+  active,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  onClick: () => void;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      title={collapsed ? item.label : undefined}
+      className={cn(
+        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+        collapsed && "lg:justify-center lg:px-2",
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+      )}
+    >
+      <item.icon
+        className={cn("size-4 shrink-0", active && "text-gold-bright")}
+        strokeWidth={1.75}
+      />
+      <span className={cn("flex-1 truncate", collapsed && "lg:hidden")}>
+        {item.label}
+      </span>
+    </Link>
+  );
+}
+
 function Sidebar({
   mobileOpen,
   onClose,
@@ -63,6 +167,9 @@ function Sidebar({
   const { data: profile } = useCustomerProfile();
   const customer = profile ?? mockCustomer;
   const [collapsed, setCollapsed] = useState(false);
+  // All groups open by default — see AggregatorShell's identical note on
+  // why a collapsed group doesn't auto-reopen when you land on its page.
+  const [openGroups, setOpenGroups] = useState<string[]>(ALL_GROUP_IDS);
 
   return (
     <>
@@ -121,40 +228,55 @@ function Sidebar({
             collapsed && "lg:hidden",
           )}
         >
-          My Account
+          Collector Portal
         </span>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-3">
-          {NAV_ITEMS.map((item) => {
-            const active = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
-                  collapsed && "lg:justify-center lg:px-2",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                )}
-              >
-                <item.icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    active && "text-gold-bright",
-                  )}
-                  strokeWidth={1.75}
+        <div className="flex-1 overflow-y-auto px-3 py-1">
+          {collapsed ? (
+            <nav className="flex flex-col gap-1">
+              {ALL_ITEMS.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  collapsed={collapsed}
+                  onClick={onClose}
+                  active={isItemActive(pathname, item.href)}
                 />
-                <span className={cn(collapsed && "lg:hidden")}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+              ))}
+            </nav>
+          ) : (
+            <Accordion
+              multiple
+              value={openGroups}
+              onValueChange={(value) => setOpenGroups(value as string[])}
+            >
+              {NAV_GROUPS.map((group) => (
+                <AccordionItem
+                  key={group.id}
+                  value={group.id}
+                  className="border-b-0"
+                >
+                  <AccordionTrigger className="rounded-md px-2 py-2 text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase no-underline hover:bg-sidebar-accent/40 hover:text-muted-foreground hover:no-underline **:data-[slot=accordion-trigger-icon]:size-3.5">
+                    {group.label}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-1">
+                    <nav className="flex flex-col gap-1 pt-1">
+                      {group.items.map((item) => (
+                        <NavLink
+                          key={item.href}
+                          item={item}
+                          collapsed={collapsed}
+                          onClick={onClose}
+                          active={isItemActive(pathname, item.href)}
+                        />
+                      ))}
+                    </nav>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </div>
 
         <Link
           href="/account/settings"
@@ -181,18 +303,18 @@ function Sidebar({
   );
 }
 
-const PAGE_TITLES: Record<string, string> = {
-  "/account/orders": "Orders",
-  "/account/wishlist": "Wishlist",
-  "/account/addresses": "Addresses",
-  "/account/settings": "Settings",
-};
+const PAGE_TITLES: Record<string, string> = Object.fromEntries(
+  ALL_ITEMS.filter((item) => item.href.startsWith("/account")).map(
+    (item) => [item.href, item.label],
+  ),
+);
+PAGE_TITLES["/account"] = "Dashboard";
 
 function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
   const title =
     PAGE_TITLES[pathname] ??
-    (pathname.startsWith("/account/orders/") ? "Order details" : "Account");
+    (pathname.startsWith("/account/orders/") ? "Order details" : "Collector Portal");
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-5 backdrop-blur-md sm:px-8 lg:px-10">

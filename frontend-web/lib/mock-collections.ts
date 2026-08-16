@@ -10,6 +10,7 @@ import type { Address, CustomerProfile } from "@/types/customer";
 import type { AdminUser, Settlement } from "@/types/admin";
 import type { MessageThread } from "@/types/message";
 import type { SupportTicket } from "@/types/support";
+import type { ResaleListing } from "@/types/resale";
 import { mockArtworks } from "./mock-data/artworks";
 import { mockAggregatorHoldings } from "./mock-data/aggregator-holdings";
 import { mockOrders, mockAddresses, mockCustomer } from "./mock-data/customer";
@@ -333,6 +334,48 @@ export const customerProfileCol = collection<CustomerProfile>(
 export const adminUsersCol = collection<AdminUser[]>("adminUsers", () => [
   ...mockAdminUsers,
 ]);
+
+// --- Collector Portal (buyer-side) ------------------------------------------
+// "Collection" isn't its own collection — ownership transfers the moment an
+// order reaches "delivered" (see services/customerCollectionService.ts), so
+// there's nothing new to persist there. Wallet/resale/support are genuinely
+// new state, seeded around the one cancelled seed order (order-reclaimed-
+// stone-vessel) so the wallet isn't empty on first load.
+export const customerWalletCol = collection("customerWallet", () => ({
+  balance: 16630,
+  pendingBalance: 0,
+  lockedBalance: 0,
+}));
+export const customerWalletTransactionsCol = collection<WalletTransaction[]>(
+  "customerWalletTransactions",
+  () => [
+    {
+      id: "cwt-1",
+      type: "refund",
+      label: 'Refund: "Reclaimed Stone Vessel" (order cancelled)',
+      amount: 16630,
+      date: "2026-07-29",
+      status: "completed",
+    },
+  ],
+);
+export const customerResaleListingsCol = collection<ResaleListing[]>(
+  "customerResaleListings",
+  () => [],
+);
+export const customerSupportTicketsCol = collection<SupportTicket[]>(
+  "customerSupportTickets",
+  () => [
+    {
+      id: "cust-ticket-1",
+      subject: "Question about certificate of authenticity",
+      message:
+        "Where can I view the digital certificate of authenticity for my delivered artwork?",
+      status: "answered",
+      createdAt: "2026-08-01T10:00:00.000Z",
+    },
+  ],
+);
 // Withdrawals/settlements/categories/audit-log/settings/reports are left on
 // adminService's existing "resolve a plausible value, don't persist" pattern
 // — the audit called those pages already Built and correctly wired (several
