@@ -119,6 +119,12 @@ export function ArtistSurveyForm() {
       return;
     }
 
+    if (!supabase) {
+      setIsSubmitting(false);
+      toast.error("Survey submission isn't configured yet. Please try again later.");
+      return;
+    }
+
     const validData = result.data;
 
     const { error } = await supabase.from("artist_survey_responses").insert([{

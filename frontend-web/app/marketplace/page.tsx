@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -18,7 +18,30 @@ import type { ArtworkFilters } from "@/types/artwork";
 // the one exception is reading `category`/`q` from the URL on first load, so
 // the nav's "Explore" mega menu and search box can actually land on a
 // pre-filtered grid instead of a generic listing page.
+//
+// useSearchParams() opts a page out of static prerendering unless it sits
+// below a Suspense boundary (Next.js requirement) — split into an outer
+// Suspense wrapper and this inner component so `next build` can prerender
+// the shell instead of failing the whole page.
 export default function MarketplacePage() {
+  return (
+    <Suspense fallback={<MarketplaceFallback />}>
+      <MarketplacePageContent />
+    </Suspense>
+  );
+}
+
+function MarketplaceFallback() {
+  return (
+    <>
+      <SiteHeader />
+      <main className="flex flex-1 flex-col" />
+      <SiteFooter />
+    </>
+  );
+}
+
+function MarketplacePageContent() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<ArtworkFilters>(() => ({
     ...DEFAULT_MARKETPLACE_FILTERS,
