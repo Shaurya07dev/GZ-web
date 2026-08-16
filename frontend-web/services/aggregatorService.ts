@@ -116,6 +116,7 @@ export const aggregatorService = {
       assignedAt: assignedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
       status: "reserved",
+      assignmentSource: "self_reserved",
     };
     holdingsCol.set([...holdings, holding]);
     return mockDelay(holding);
