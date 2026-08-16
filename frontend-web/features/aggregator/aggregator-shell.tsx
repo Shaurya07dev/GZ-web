@@ -6,39 +6,112 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
+  CircleUserRound,
   PackageSearch,
   GalleryVerticalEnd,
+  ShoppingBag,
+  Users,
+  Building2,
+  Truck,
+  Wallet,
+  Landmark,
+  LineChart,
+  MessageSquare,
+  LifeBuoy,
+  Settings as SettingsIcon,
   Menu,
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronRight,
+  Sparkles,
+  LogOut,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
-import { SignOutButton } from "@/components/shared/sign-out-button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
 import { AGGREGATOR } from "./aggregator-data";
 
 // Deliberately a parallel sibling to features/dashboard/dashboard-shell.tsx,
-// not a shared/generalized abstraction over it — DashboardShell is
-// hardcoded to artist nav items and artist-specific data (NAV_ITEMS is a
-// local const there too, not a prop), so generalizing it into a shared
-// RoleShell for two call sites is more abstraction than two fixed,
-// unrelated nav structures warrant, and risks regressing the already-
-// shipped, working Artist Dashboard. This file copies that shell's
-// structure and exact Tailwind classes/tokens for visual consistency, then
-// adapts: aggregator nav items, no "List new artwork" CTA (aggregators
-// don't create listings), and a non-interactive profile card (no
-// verification page exists for aggregators in this phase).
-const NAV_ITEMS = [
-  { label: "Dashboard", href: "/aggregator/dashboard", icon: LayoutGrid },
-  { label: "Inventory", href: "/aggregator/inventory", icon: PackageSearch },
+// not a shared/generalized abstraction over it — same reasoning as before:
+// DashboardShell is hardcoded to artist nav items, AdminShell to admin nav
+// items, this one to aggregator nav items. Grouped/collapsible nav is new
+// here; if Admin or Artist want it too, extract then, against two real call
+// sites instead of one.
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Collection",
-    href: "/aggregator/collection",
-    icon: GalleryVerticalEnd,
+    id: "main",
+    label: "Main",
+    items: [
+      { label: "Dashboard", href: "/aggregator/dashboard", icon: LayoutGrid },
+      { label: "My Profile", href: "/aggregator/profile", icon: CircleUserRound },
+      { label: "Browse GalleryZone", href: "/aggregator/inventory", icon: PackageSearch },
+      { label: "My Inventory", href: "/aggregator/collection", icon: GalleryVerticalEnd },
+    ],
   },
-] as const;
+  {
+    id: "operations",
+    label: "Operations",
+    items: [
+      { label: "Orders & Sales", href: "/aggregator/orders", icon: ShoppingBag },
+      { label: "Customers", href: "/aggregator/customers", icon: Users },
+      { label: "Gallery Spaces", href: "/aggregator/gallery-spaces", icon: Building2 },
+      { label: "Shipping & Logistics", href: "/aggregator/shipping", icon: Truck },
+    ],
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    items: [
+      { label: "Earnings & Wallet", href: "/aggregator/wallet", icon: Wallet },
+      { label: "Settlements", href: "/aggregator/settlements", icon: Landmark },
+    ],
+  },
+  {
+    id: "growth",
+    label: "Growth",
+    items: [
+      { label: "Analytics", href: "/aggregator/analytics", icon: LineChart },
+      { label: "Messages", href: "/aggregator/messages", icon: MessageSquare },
+    ],
+  },
+  {
+    id: "support",
+    label: "Support & Account",
+    items: [
+      { label: "Support", href: "/aggregator/support", icon: LifeBuoy },
+      { label: "Settings", href: "/aggregator/settings", icon: SettingsIcon },
+    ],
+  },
+];
+
+const ALL_GROUP_IDS = NAV_GROUPS.map((g) => g.id);
+const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
 export function AggregatorShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -57,6 +130,61 @@ export function AggregatorShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function isItemActive(pathname: string, href: string) {
+  return pathname.startsWith(href);
+}
+
+function NavLink({
+  item,
+  collapsed,
+  onClick,
+  active,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  onClick: () => void;
+  active: boolean;
+}) {
+  const { data: messages } = useAggregatorMessages();
+  const unreadMessages =
+    item.label === "Messages"
+      ? (messages?.filter((m) => m.unread).length ?? 0)
+      : 0;
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      title={collapsed ? item.label : undefined}
+      className={cn(
+        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
+        collapsed && "lg:justify-center lg:px-2",
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+      )}
+    >
+      <item.icon
+        className={cn("size-4 shrink-0", active && "text-gold-bright")}
+        strokeWidth={1.75}
+      />
+      <span className={cn("flex-1 truncate", collapsed && "lg:hidden")}>
+        {item.label}
+      </span>
+      {unreadMessages > 0 && (
+        <span
+          className={cn(
+            "flex size-4.5 shrink-0 items-center justify-center rounded-full bg-gold-bright text-[10px] font-semibold text-[#171310]",
+            collapsed && "lg:hidden",
+          )}
+        >
+          {unreadMessages}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 function Sidebar({
   mobileOpen,
   onClose,
@@ -66,6 +194,15 @@ function Sidebar({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  // All 5 groups open by default. Base UI's <Accordion multiple> makes this
+  // controllable via an array of open item values — every nav Link is
+  // always reachable on first load, and a user who collapses a group stays
+  // collapsed until they reopen it themselves (no auto-expand-on-navigate:
+  // you can only land on a page whose group is collapsed by typing a URL or
+  // using browser back/forward, since the link itself is hidden while
+  // collapsed — a minor, acceptable edge case, not worth the extra state
+  // sync this would take to close).
+  const [openGroups, setOpenGroups] = useState<string[]>(ALL_GROUP_IDS);
 
   return (
     <>
@@ -127,77 +264,166 @@ function Sidebar({
           Aggregator Portal
         </span>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-3">
-          {NAV_ITEMS.map((item) => {
-            const active = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                title={collapsed ? item.label : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
-                  collapsed && "lg:justify-center lg:px-2",
-                  active
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-                )}
-              >
-                <item.icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    active && "text-gold-bright",
-                  )}
-                  strokeWidth={1.75}
+        <div className="flex-1 overflow-y-auto px-3 py-1">
+          {collapsed ? (
+            // Rail-collapsed: grouping is a full-width-sidebar concept only
+            // (a group header with no room for its label is meaningless) —
+            // render every item as one flat icon list instead.
+            <nav className="flex flex-col gap-1">
+              {ALL_ITEMS.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  collapsed={collapsed}
+                  onClick={onClose}
+                  active={isItemActive(pathname, item.href)}
                 />
-                <span className={cn(collapsed && "lg:hidden")}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+              ))}
+            </nav>
+          ) : (
+            <Accordion
+              multiple
+              value={openGroups}
+              onValueChange={(value) => setOpenGroups(value as string[])}
+            >
+              {NAV_GROUPS.map((group) => (
+                <AccordionItem
+                  key={group.id}
+                  value={group.id}
+                  className="border-b-0"
+                >
+                  <AccordionTrigger className="rounded-md px-2 py-2 text-[11px] font-medium tracking-[0.12em] text-muted-foreground uppercase no-underline hover:bg-sidebar-accent/40 hover:text-muted-foreground hover:no-underline **:data-[slot=accordion-trigger-icon]:size-3.5">
+                    {group.label}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-1">
+                    <nav className="flex flex-col gap-1 pt-1">
+                      {group.items.map((item) => (
+                        <NavLink
+                          key={item.href}
+                          item={item}
+                          collapsed={collapsed}
+                          onClick={onClose}
+                          active={isItemActive(pathname, item.href)}
+                        />
+                      ))}
+                    </nav>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </div>
 
-        {/* Static "signed in as" card, mirroring DashboardShell's bottom
-            profile card visually. Not a Link: aggregators have no
-            verification/settings page to navigate to in this phase, so
-            unlike the artist shell's equivalent card, this one is purely
-            informational. */}
+        {/* Cosmetic only — there is no subscription_plans-equivalent for
+            aggregators in the SAD (§2.4's subscription_plans/subscriptions
+            tables are Artist-domain only). Fixed plan name, fixed expiry,
+            "Manage Plan" is a visual no-op. Never wire this to real gating —
+            nothing in the aggregator portal should end up behind it. */}
         <div
           className={cn(
-            "mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3",
-            collapsed && "lg:justify-center lg:px-2",
+            "mx-3 mb-3 rounded-lg border border-gold/25 bg-gold/5 px-3 py-3",
+            collapsed && "lg:hidden",
           )}
         >
-          <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gold/40">
-            <Image
-              src={AGGREGATOR.avatar}
-              alt=""
-              fill
-              sizes="36px"
-              className="object-cover"
-            />
-          </div>
-          <div className={cn("min-w-0", collapsed && "lg:hidden")}>
-            <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {AGGREGATOR.companyName}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {AGGREGATOR.contactPerson}
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="size-3.5 text-gold-bright" strokeWidth={1.75} />
+            <p className="text-xs font-medium text-foreground">
+              Premium Aggregator
             </p>
           </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Valid until 24 Aug, 2027
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              window.alert("Plan management isn't part of this phase.")
+            }
+            className="mt-2 flex items-center gap-1 text-[11px] font-medium text-gold-bright hover:underline"
+          >
+            Manage plan
+            <ChevronRight className="size-3" strokeWidth={2} />
+          </button>
         </div>
+
+        <AccountMenu collapsed={collapsed} />
       </aside>
     </>
   );
 }
 
-const PAGE_TITLES: Record<string, string> = {
-  "/aggregator/dashboard": "Dashboard",
-  "/aggregator/inventory": "Inventory",
-  "/aggregator/collection": "Collection",
-};
+function AccountMenu({ collapsed }: { collapsed: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  function handleSignOut() {
+    document.cookie = "gz_session=; path=/; max-age=0";
+    window.location.href = "/login";
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          "mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 text-left transition-colors hover:bg-sidebar-accent",
+          collapsed && "lg:justify-center lg:px-2",
+        )}
+      >
+        <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gold/40">
+          <Image
+            src={AGGREGATOR.avatar}
+            alt=""
+            fill
+            sizes="36px"
+            className="object-cover"
+          />
+        </div>
+        <div className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
+          <p className="truncate text-sm font-medium text-sidebar-foreground">
+            {AGGREGATOR.companyName}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            Aggregator
+          </p>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent
+        side="top"
+        align="start"
+        className="w-56 p-1.5"
+      >
+        <Link
+          href="/aggregator/profile"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
+        >
+          <CircleUserRound className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          My Profile
+        </Link>
+        <Link
+          href="/aggregator/settings"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
+        >
+          <SettingsIcon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          Settings
+        </Link>
+        <div className="my-1 border-t border-border" />
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-foreground/90 transition-colors hover:bg-muted"
+        >
+          <LogOut className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          Sign out
+        </button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+const PAGE_TITLES: Record<string, string> = Object.fromEntries(
+  ALL_ITEMS.map((item) => [item.href, item.label]),
+);
 
 function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
@@ -220,7 +446,6 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex items-center gap-2">
         <NotificationsPopover />
         <SwitchMode width={44} height={24} />
-        <SignOutButton />
       </div>
     </header>
   );
