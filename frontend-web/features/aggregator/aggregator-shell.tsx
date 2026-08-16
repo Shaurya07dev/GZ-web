@@ -23,8 +23,6 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
-  ChevronRight,
-  Sparkles,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
@@ -210,7 +208,7 @@ function Sidebar({
         <button
           aria-label="Close menu"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-background backdrop-blur-sm lg:hidden"
         />
       )}
 
@@ -312,38 +310,6 @@ function Sidebar({
               ))}
             </Accordion>
           )}
-        </div>
-
-        {/* Cosmetic only — there is no subscription_plans-equivalent for
-            aggregators in the SAD (§2.4's subscription_plans/subscriptions
-            tables are Artist-domain only). Fixed plan name, fixed expiry,
-            "Manage Plan" is a visual no-op. Never wire this to real gating —
-            nothing in the aggregator portal should end up behind it. */}
-        <div
-          className={cn(
-            "mx-3 mb-3 rounded-lg border border-gold/25 bg-gold/5 px-3 py-3",
-            collapsed && "lg:hidden",
-          )}
-        >
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="size-3.5 text-gold-bright" strokeWidth={1.75} />
-            <p className="text-xs font-medium text-foreground">
-              Premium Aggregator
-            </p>
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Valid until 24 Aug, 2027
-          </p>
-          <button
-            type="button"
-            onClick={() =>
-              window.alert("Plan management isn't part of this phase.")
-            }
-            className="mt-2 flex items-center gap-1 text-[11px] font-medium text-gold-bright hover:underline"
-          >
-            Manage plan
-            <ChevronRight className="size-3" strokeWidth={2} />
-          </button>
         </div>
 
         <AccountMenu collapsed={collapsed} />

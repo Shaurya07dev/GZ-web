@@ -197,7 +197,7 @@ function Sidebar({
         <button
           aria-label="Close menu"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-background backdrop-blur-sm lg:hidden"
         />
       )}
 
