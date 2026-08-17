@@ -7,8 +7,8 @@ import {
   Clock3,
   HandCoins,
   Sparkles,
-  Nfc,
-  BotMessageSquare,
+  QrCode,
+  Fingerprint,
   Wallet,
 } from "lucide-react";
 
@@ -91,21 +91,21 @@ export interface TechFeature {
 
 export const TECH_FEATURES: TechFeature[] = [
   {
-    title: "NFC & QR Tagging",
+    title: "QR Tagging",
     description:
-      "Every artwork carries a physical QR and NFC tag linked to its digital identity, Certificate of Authenticity, and ownership history for the artwork's entire life cycle.",
-    icon: Nfc,
+      "Every artwork carries a physical QR tag linked to its digital identity, Certificate of Authenticity, and ownership history for the artwork's entire life cycle. The tag is scan-ready at galleries, fairs, or private collections, connecting anyone with a phone to the full provenance record. Tags are permanent, they stay with the work, not the platform.",
+    icon: QrCode,
   },
   {
-    title: "AI Search & Chat",
+    title: "Digital Identity & Provenance",
     description:
-      "AI-driven visual search and recommendations help collectors find original work, alongside an AI video generator for showcasing artwork.",
-    icon: BotMessageSquare,
+      "Every artwork receives a persistent digital identity connected to its Certificate of Authenticity, origin, and ownership history.",
+    icon: Fingerprint,
   },
   {
     title: "Wallet & Auto Notifications",
     description:
-      "An integrated wallet tracks advances and settlements automatically, with notifications sent at every step from sale to payout.",
+      "An integrated wallet tracks advances and settlements automatically, with notifications sent at every step from sale to payout. Artists always know exactly where their money is and when it arrives.",
     icon: Wallet,
   },
 ];

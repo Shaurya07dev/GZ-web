@@ -140,7 +140,7 @@ export function AboutOverviewSection() {
             transition={{ duration: 0.5, ease: "easeOut" }}
           >
             <h2 className="text-balance font-display text-3xl leading-[1.15] font-semibold sm:text-4xl">
-              Our mission is to protect the artist&rsquo;s price.
+              Built to protect the artist&rsquo;s price.
             </h2>
             <p className="mt-5 max-w-md text-balance text-base leading-relaxed text-muted-foreground">
               For too long, sharing your work meant losing control of its price.

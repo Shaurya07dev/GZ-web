@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AboutOverviewSection } from "@/features/about/about-overview-section";
+import { AboutMissionSection } from "@/features/about/about-mission-section";
 import { AboutStatsSection } from "@/features/about/about-stats-section";
 import { AboutTeamSection } from "@/features/about/about-team-section";
 import { VerificationTiersSection } from "@/features/about/verification-tiers-section";
@@ -19,6 +20,7 @@ export default function AboutPage() {
       <SiteHeader />
       <main className="flex flex-1 flex-col">
         <AboutOverviewSection />
+        <AboutMissionSection />
         <AboutStatsSection />
         <AboutTeamSection />
         <VerificationTiersSection />
