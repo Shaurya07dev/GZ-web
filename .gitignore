@@ -1,6 +1,10 @@
-# This repo tracks only the website codebase in frontend-web/.
-# Everything else at the root (docs, PDFs, reference images, corpus data)
-# is workspace scratch material and stays untracked.
+# This repo tracks the website (frontend-web/), the abandoned Expo mobile
+# attempt (mobile/, kept for reference, not developed further), and the
+# active Flutter mobile app (mobile_flutter/). Everything else at the root
+# (docs, PDFs, reference images, corpus data) is workspace scratch material
+# and stays untracked.
 /*
 !/frontend-web/
+!/mobile/
+!/mobile_flutter/
 !/.gitignore
