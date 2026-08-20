@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Mail, Phone, Percent, Clock3, PackageCheck, Check } from "lucide-react";
+import { Mail, Phone, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -9,27 +9,7 @@ import {
   useAggregatorSupport,
   useSubmitAggregatorTicketMutation,
 } from "@/hooks/useAggregatorSupport";
-
-const FAQ = [
-  {
-    icon: Percent,
-    question: "How is my commission calculated?",
-    answer:
-      "20% of the difference between your display price and the GalleryZone customer price (Profit Share = 20% × (Listed Price − Artist Price)). Paid only after full customer payment, delivery, and any return window closes.",
-  },
-  {
-    icon: Clock3,
-    question: "How long can I hold a reserved artwork?",
-    answer:
-      "30 days from the reservation date, unless otherwise approved by GalleryZone. Unsold pieces may be relocated to another aggregator or sales channel after that.",
-  },
-  {
-    icon: PackageCheck,
-    question: "What's the advance payment for reserving an artwork?",
-    answer:
-      "5% or 3% of the artwork's value plus applicable delivery charges, paid before you take possession for display. This is adjusted upon successful sale.",
-  },
-];
+import { SupportFaqPanel } from "@/features/faq/support-faq-panel";
 
 // Ticket submission isn't wired to a live support inbox in this demo — same
 // honest-mock pattern as the Artist Dashboard's equivalent. Real issues go
@@ -78,30 +58,7 @@ export function AggregatorSupportView() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <h2 className="font-display text-base font-semibold text-foreground">
-            Frequently asked
-          </h2>
-          {FAQ.map((item) => (
-            <div
-              key={item.question}
-              className="rounded-lg border border-border bg-card p-4"
-            >
-              <div className="flex items-center gap-2">
-                <item.icon
-                  className="size-4 shrink-0 text-gold-bright"
-                  strokeWidth={1.75}
-                />
-                <p className="text-sm font-medium text-foreground">
-                  {item.question}
-                </p>
-              </div>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {item.answer}
-              </p>
-            </div>
-          ))}
-        </div>
+        <SupportFaqPanel audience="aggregators" />
       </div>
 
       <div className="flex flex-col gap-6">

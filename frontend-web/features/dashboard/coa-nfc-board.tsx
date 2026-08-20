@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 import { cn } from "@/lib/utils";
+import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 
 type ArtistArtwork = NonNullable<
   ReturnType<typeof useArtistDashboardArtworks>["data"]
@@ -150,6 +151,29 @@ function CertificateDialog({
                 <dt className="text-xs text-muted-foreground">NFC tag</dt>
                 <dd className="text-foreground">
                   {artwork.nfcTagId ?? "Not yet attached"}
+                </dd>
+              </div>
+              {/* Owner, custodian and location are tracked separately — a
+                  piece can be owned by one party while physically held by
+                  another somewhere else again. */}
+              <div>
+                <dt className="text-xs text-muted-foreground">Legal owner</dt>
+                <dd className="text-foreground">
+                  {CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner]}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">
+                  Physical custodian
+                </dt>
+                <dd className="text-foreground">
+                  {CUSTODY_PARTY_LABEL[resolveCustody(artwork).custodian]}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-muted-foreground">Location</dt>
+                <dd className="text-foreground">
+                  {resolveCustody(artwork).locationLabel}
                 </dd>
               </div>
             </dl>

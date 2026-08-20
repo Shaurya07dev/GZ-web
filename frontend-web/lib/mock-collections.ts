@@ -3,7 +3,11 @@
 // so artworkService/adminService/aggregatorService/customerService/
 // orderService/artistDashboardService all read and write the exact same
 // underlying records instead of each keeping its own copy.
-import type { Artwork, ArtworkStatus } from "@/types/artwork";
+import type {
+  Artwork,
+  ArtworkStatus,
+  ExternalSalePenalty,
+} from "@/types/artwork";
 import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { Address, CustomerProfile } from "@/types/customer";
@@ -457,6 +461,14 @@ const ARTIST_MESSAGE_SEED: MessageThread[] = [
 export const artistMessagesCol = collection<MessageThread[]>(
   "artistMessages",
   () => [...ARTIST_MESSAGE_SEED],
+);
+
+// Off-platform sale fees the artist owes, collected on their next listing
+// (services/artistDashboardService.ts). Empty by default — a penalty only
+// exists once an artist marks something sold elsewhere.
+export const artistPenaltiesCol = collection<ExternalSalePenalty[]>(
+  "artistPenalties",
+  () => [],
 );
 
 export const artistSettingsCol = collection("artistSettings", () => ({

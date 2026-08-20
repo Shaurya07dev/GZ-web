@@ -13,6 +13,7 @@ import {
   Globe2,
   Video,
   ChevronRight,
+  Receipt,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +27,10 @@ import {
 } from "@/hooks/useArtistAccount";
 import { ARTIST } from "./dashboard-data";
 
+// Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
+// literal "Z", then a checksum character.
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
 type ProfileFormState = {
   fullName: string;
   email: string;
@@ -34,6 +39,7 @@ type ProfileFormState = {
   instagram: string;
   website: string;
   socialProofVideoUrl: string;
+  gstin: string;
 };
 
 type BankFormState = {
@@ -76,6 +82,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     instagram: profile.instagram,
     website: profile.website,
     socialProofVideoUrl: profile.socialProofVideoUrl ?? "",
+    gstin: profile.gstin ?? "",
   });
   const [profileSaved, setProfileSaved] = useState(false);
 
@@ -100,8 +107,15 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     setBankForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // GSTIN is optional. When one IS entered we check its shape locally (2-digit
+  // state code, PAN, entity digit, Z, checksum char) — no GST portal
+  // integration, which the business deliberately does not want.
+  const gstinInvalid =
+    profileForm.gstin.trim().length > 0 && !GSTIN_PATTERN.test(profileForm.gstin.trim());
+
   function handleProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (gstinInvalid) return;
     saveProfileMutation.mutate(
       { ...profileForm, socialProofVideoUrl: profileForm.socialProofVideoUrl || null },
       { onSuccess: () => setProfileSaved(true) },
@@ -252,12 +266,46 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               practice.
             </p>
           </div>
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <Label htmlFor="gstin">
+              GSTIN{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
+            <div className="relative sm:max-w-xs">
+              <Receipt className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="gstin"
+                maxLength={15}
+                placeholder="22AAAAA0000A1Z5"
+                value={profileForm.gstin}
+                onChange={(e) =>
+                  updateProfile("gstin", e.target.value.toUpperCase())
+                }
+                aria-invalid={gstinInvalid}
+                className="h-10 pl-9 font-mono"
+              />
+            </div>
+            {gstinInvalid ? (
+              <p className="text-xs text-destructive">
+                That does not look like a valid GSTIN. Leave it blank if you
+                do not have one.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Only if you are GST-registered. Used by GalleryZone for
+                invoicing and settlement — never shown on your public profile
+                or to buyers.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={saveProfileMutation.isPending}
+            disabled={saveProfileMutation.isPending || gstinInvalid}
             className="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >
             Save profile

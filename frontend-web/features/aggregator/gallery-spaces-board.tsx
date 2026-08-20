@@ -32,7 +32,7 @@ export function GallerySpacesBoard() {
     return (
       <EmptyState
         icon={Building2}
-        title="No gallery spaces on file"
+        title="No display spaces on file"
         description="Your display premises will appear here once registered with GalleryZone."
       />
     );

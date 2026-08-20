@@ -24,7 +24,7 @@ import { ADMIN, ADMIN_TODAY } from "@/features/admin/admin-data";
 import { getArtistById, getArtworksByArtist } from "@/lib/mock-data/helpers";
 import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
-import type { Artwork } from "@/types/artwork";
+import { LISTING_TYPE_LABEL, type Artwork } from "@/types/artwork";
 
 const REJECT_PRESETS = [
   "Appears to be a reproduction or replica",
@@ -204,11 +204,7 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
             <Detail label="Insured" value={artwork.insured ? "Yes" : "No"} />
             <Detail
               label="Listing"
-              value={
-                artwork.listingType === "marketplace_and_aggregator"
-                  ? "Marketplace + aggregator"
-                  : "Marketplace only"
-              }
+              value={LISTING_TYPE_LABEL[artwork.listingType]}
             />
             <Detail
               label="Waiting"

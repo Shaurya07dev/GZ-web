@@ -3,7 +3,7 @@ import type {
   AggregatorSale,
   RecordSalePayload,
 } from "@/types/aggregator";
-import type { ArtworkSummary } from "@/types/artwork";
+import { isAggregatorListed, type ArtworkSummary } from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import {
@@ -88,7 +88,7 @@ export const aggregatorService = {
       .get()
       .filter(
         (artwork) =>
-          artwork.listingType === "marketplace_and_aggregator" &&
+          isAggregatorListed(artwork.listingType) &&
           artwork.status === "marketplace" &&
           !claimedArtworkIds.has(artwork.id),
       );

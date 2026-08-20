@@ -28,6 +28,7 @@ const STATUS_LABEL: Record<ArtworkStatus, string> = {
   delivered: "Delivered",
   completed: "Completed",
   returned: "Returned",
+  sold_externally: "Sold outside GalleryZone",
 };
 
 export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {

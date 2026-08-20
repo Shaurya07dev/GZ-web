@@ -12,7 +12,7 @@ import {
 } from "@/features/admin/admin-status-badge";
 import { useAdminArtworks } from "@/hooks/useAdminCatalog";
 import { formatINR } from "@/lib/utils";
-import type { Artwork } from "@/types/artwork";
+import { LISTING_TYPE_LABEL, type Artwork } from "@/types/artwork";
 
 export function ArtworkAdminTable() {
   const { data: artworks, isPending } = useAdminArtworks();
@@ -85,9 +85,7 @@ export function ArtworkAdminTable() {
       header: "Channel",
       render: (row) => (
         <span className="text-xs text-muted-foreground">
-          {row.listingType === "marketplace_and_aggregator"
-            ? "Marketplace + aggregator"
-            : "Marketplace only"}
+          {LISTING_TYPE_LABEL[row.listingType]}
         </span>
       ),
       sortable: true,

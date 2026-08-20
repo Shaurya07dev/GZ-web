@@ -1,3 +1,5 @@
+import type { ListingType } from "@/types/artwork";
+
 export const ARTWORK_CATEGORIES = [
   { value: "painting", label: "Painting" },
   { value: "sculpture", label: "Sculpture" },
@@ -19,17 +21,27 @@ export const ARTWORK_MEDIUMS = [
   { value: "other", label: "Other" },
 ];
 
-export const LISTING_TYPES = [
+export const LISTING_TYPES: {
+  value: ListingType;
+  label: string;
+  description: string;
+}[] = [
   {
     value: "marketplace_only",
-    label: "Marketplace only",
-    description: "Sell directly through GalleryZone's online marketplace.",
+    label: "Marketplace",
+    description: "Sell online through GalleryZone's own marketplace.",
+  },
+  {
+    value: "aggregator_only",
+    label: "Aggregator",
+    description:
+      "Send the physical piece to a verified aggregator to display and sell in person.",
   },
   {
     value: "marketplace_and_aggregator",
-    label: "Marketplace + Galleries",
+    label: "Both",
     description:
-      "Also make this available for verified galleries to reserve and display physically.",
+      "List online and make the piece available for aggregator display at the same time.",
   },
 ];
 

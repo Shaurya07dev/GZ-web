@@ -10,6 +10,7 @@ import {
   Landmark,
   PackageOpen,
   Undo2,
+  ExternalLink,
 } from "lucide-react";
 import type { ArtworkStatus } from "@/types/artwork";
 
@@ -48,7 +49,7 @@ const STATUS_CONFIG: Record<
     className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
   },
   with_aggregator: {
-    label: "With Gallery",
+    label: "With Aggregator",
     icon: Building2,
     className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
   },
@@ -71,6 +72,11 @@ const STATUS_CONFIG: Record<
     label: "Completed",
     icon: CircleCheckBig,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  sold_externally: {
+    label: "Sold Elsewhere",
+    icon: ExternalLink,
+    className: "border-border bg-secondary text-muted-foreground",
   },
   returned: {
     label: "Returned",

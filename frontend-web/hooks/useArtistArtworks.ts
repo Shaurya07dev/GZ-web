@@ -25,6 +25,35 @@ export function useSubmitArtworkMutation() {
       queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
       queryClient.invalidateQueries({ queryKey: ["artist-kpis"] });
       queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-penalties"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-wallet"] });
+    },
+  });
+}
+
+// Off-platform sale fees owed but not yet charged. Read on the Add Artwork
+// form (so the artist sees the fee before listing) and after marking a piece
+// sold elsewhere.
+export function useArtistPenalties() {
+  return useQuery({
+    queryKey: ["artist-penalties"],
+    queryFn: () => artistDashboardService.listPenalties(),
+  });
+}
+
+// Marking a piece sold elsewhere removes it from every GalleryZone channel
+// and queues a fee, so the artworks list, KPIs, activity feed and penalty
+// list all go stale at once.
+export function useMarkSoldElsewhereMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (artworkId: string) =>
+      artistDashboardService.markSoldElsewhere(artworkId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-penalties"] });
     },
   });
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Nfc } from "lucide-react";
+import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 import { useArtwork } from "@/hooks/useArtwork";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { ArtworkPassportCard } from "./artwork-passport-card";
@@ -29,6 +30,7 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
     notFound();
   }
 
+  const custody = resolveCustody(artwork);
   const coverImage =
     [...artwork.images].sort((a, b) => a.sortOrder - b.sortOrder)[0]?.url ??
     artwork.thumbnailUrl;
@@ -59,6 +61,36 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
           Physical tag <span className="font-mono">{artwork.nfcTagId}</span>
         </p>
       )}
+
+      {/* Ownership, custody and location are three independent facts about a
+          physical artwork — the passport shows all three rather than one
+          collapsed "owner". */}
+      <dl className="mx-auto mt-10 grid max-w-md grid-cols-3 gap-3 text-center">
+        <div className="rounded-lg border border-border bg-card px-3 py-3">
+          <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            Owner
+          </dt>
+          <dd className="mt-1 text-sm font-medium text-foreground">
+            {CUSTODY_PARTY_LABEL[custody.legalOwner]}
+          </dd>
+        </div>
+        <div className="rounded-lg border border-border bg-card px-3 py-3">
+          <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            Held by
+          </dt>
+          <dd className="mt-1 text-sm font-medium text-foreground">
+            {CUSTODY_PARTY_LABEL[custody.custodian]}
+          </dd>
+        </div>
+        <div className="rounded-lg border border-border bg-card px-3 py-3">
+          <dt className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            Location
+          </dt>
+          <dd className="mt-1 text-sm font-medium text-foreground">
+            {custody.locationLabel}
+          </dd>
+        </div>
+      </dl>
 
       <div className="mx-auto mt-14 max-w-md">
         <ProvenanceTimeline history={artwork.statusHistory} />

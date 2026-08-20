@@ -1,4 +1,10 @@
-import type { Artwork, ArtworkImage } from "@/types/artwork";
+import {
+  EXTERNAL_SALE_PENALTY_RATE,
+  WITHDRAWABLE_STATUSES,
+  type Artwork,
+  type ArtworkImage,
+  type ExternalSalePenalty,
+} from "@/types/artwork";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { Settlement } from "@/types/admin";
@@ -13,6 +19,7 @@ import {
   artistPricesCol,
   artistSettlementsCol,
   artistSettingsCol,
+  artistPenaltiesCol,
   ordersCol,
   holdingsCol,
   CURRENT_ARTIST_ID,
@@ -50,6 +57,54 @@ function appendActivity(kind: ActivityKind, title: string, detail: string) {
   artistActivityCol.set([entry, ...artistActivityCol.get()]);
 }
 
+// Any penalty an artist owes for selling a piece elsewhere is collected the
+// next time they actually list something — drafts don't trigger it. Charged
+// as a wallet adjustment; the balance floors at 0 because there's no
+// negative-balance/recovery flow in the mock.
+function settlePendingPenalties(listingTitle: string) {
+  const outstanding = artistPenaltiesCol
+    .get()
+    .filter((penalty) => penalty.settledAt === null);
+  if (outstanding.length === 0) return;
+
+  const now = new Date().toISOString();
+  const total = outstanding.reduce((sum, penalty) => sum + penalty.amount, 0);
+  const settledIds = new Set(outstanding.map((penalty) => penalty.id));
+
+  artistPenaltiesCol.set(
+    artistPenaltiesCol
+      .get()
+      .map((penalty) =>
+        settledIds.has(penalty.id) ? { ...penalty, settledAt: now } : penalty,
+      ),
+  );
+
+  const wallet = artistWalletCol.get();
+  artistWalletCol.set({
+    ...wallet,
+    balance: Math.max(0, wallet.balance - total),
+  });
+
+  const transaction: WalletTransaction = {
+    id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+    type: "adjustment",
+    label: `Off-platform sale fee (${outstanding.length} artwork${outstanding.length > 1 ? "s" : ""}), charged on "${listingTitle}"`,
+    amount: -total,
+    date: now.slice(0, 10),
+    status: "completed",
+  };
+  artistWalletTransactionsCol.set([
+    transaction,
+    ...artistWalletTransactionsCol.get(),
+  ]);
+
+  appendActivity(
+    "settlement",
+    "Off-platform sale fee charged",
+    `₹${total.toLocaleString("en-IN")} deducted with your new listing.`,
+  );
+}
+
 export interface ArtworkKpiMetric {
   key: string;
   label: string;
@@ -69,7 +124,6 @@ export interface SubmitArtworkInput {
   artistPrice: number;
   listingType: Artwork["listingType"];
   insuranceOpted: boolean;
-  coaDetails: string;
   nfcTagId: string | null;
   images: ArtworkImage[];
   mode: "draft" | "review";
@@ -147,6 +201,7 @@ export const artistDashboardService = {
 
     artistPricesCol.set({ ...artistPricesCol.get(), [id]: input.artistPrice });
     pendingArtworksCol.set([artwork, ...pendingArtworksCol.get()]);
+    if (input.mode === "review") settlePendingPenalties(artwork.title);
 
     appendActivity(
       input.mode === "draft" ? "artwork_submitted" : "artwork_submitted",
@@ -158,6 +213,65 @@ export const artistDashboardService = {
 
     return mockDelay(artwork);
   },
+
+  // "Sold on another platform": the piece leaves every GalleryZone channel at
+  // once, and a penalty of EXTERNAL_SALE_PENALTY_RATE of its listed price is
+  // queued against the artist's NEXT listing (settlePendingPenalties above).
+  markSoldElsewhere: (artworkId: string): Promise<Artwork> => {
+    const inLive = artworksCol.get().find((a) => a.id === artworkId);
+    const inPending = pendingArtworksCol.get().find((a) => a.id === artworkId);
+    const artwork = inLive ?? inPending;
+
+    if (!artwork || artwork.artistId !== CURRENT_ARTIST_ID)
+      return mockError("Artwork not found");
+    if (artwork.status === "sold_externally")
+      return mockError("This artwork is already marked as sold elsewhere");
+    if (!WITHDRAWABLE_STATUSES.has(artwork.status))
+      return mockError(
+        "This artwork is already claimed on GalleryZone and can no longer be withdrawn",
+      );
+
+    const now = new Date().toISOString();
+    const updated: Artwork = {
+      ...artwork,
+      status: "sold_externally",
+      statusHistory: [
+        ...artwork.statusHistory,
+        { status: "sold_externally", changedAt: now },
+      ],
+      custody: {
+        legalOwner: "customer",
+        custodian: "customer",
+        locationLabel: "Sold outside GalleryZone",
+      },
+    };
+
+    const replace = (list: Artwork[]) =>
+      list.map((a) => (a.id === artworkId ? updated : a));
+    if (inLive) artworksCol.set(replace(artworksCol.get()));
+    if (inPending) pendingArtworksCol.set(replace(pendingArtworksCol.get()));
+
+    const penalty: ExternalSalePenalty = {
+      id: `pen-${crypto.randomUUID().slice(0, 8)}`,
+      artworkId,
+      artworkTitle: artwork.title,
+      amount: Math.round(artwork.customerPrice * EXTERNAL_SALE_PENALTY_RATE),
+      createdAt: now,
+      settledAt: null,
+    };
+    artistPenaltiesCol.set([penalty, ...artistPenaltiesCol.get()]);
+
+    appendActivity(
+      "artwork_submitted",
+      `"${artwork.title}" marked sold elsewhere`,
+      `Removed from GalleryZone. ₹${penalty.amount.toLocaleString("en-IN")} will be charged on your next listing.`,
+    );
+
+    return mockDelay(updated);
+  },
+
+  listPenalties: (): Promise<ExternalSalePenalty[]> =>
+    mockDelay(artistPenaltiesCol.get()),
 
   getWallet: (): Promise<{
     balance: number;

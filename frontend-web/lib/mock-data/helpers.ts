@@ -1,4 +1,9 @@
-import type { Artwork, ArtworkFilters, ArtworkSummary } from "@/types/artwork";
+import {
+  isMarketplaceListed,
+  type Artwork,
+  type ArtworkFilters,
+  type ArtworkSummary,
+} from "@/types/artwork";
 import type { ArtistProfile } from "@/types/artist";
 import { mockArtists } from "./artists";
 // Reads the LIVE artworks collection (lib/mock-collections.ts), not the
@@ -12,7 +17,23 @@ export function getArtworkById(id: string): Artwork | undefined {
 }
 
 export function getArtworksByArtist(artistId: string): Artwork[] {
-  return artworksCol.get().filter((artwork) => artwork.artistId === artistId);
+  return artworksCol
+    .get()
+    .filter(
+      (artwork) => artwork.artistId === artistId && isPubliclyListed(artwork),
+    );
+}
+
+// One gate for every public listing surface (marketplace grid, artist page
+// rails). Aggregator-only pieces are sold through partner premises and never
+// appear in the online store; a piece the artist sold elsewhere leaves every
+// channel at once. Direct lookups by id (getArtworkById) deliberately skip
+// this — a passport/COA link must still resolve after the piece is gone.
+function isPubliclyListed(artwork: Artwork): boolean {
+  return (
+    isMarketplaceListed(artwork.listingType) &&
+    artwork.status !== "sold_externally"
+  );
 }
 
 export function getArtistById(id: string): ArtistProfile | undefined {
@@ -63,6 +84,7 @@ export function filterArtworks(
   const query = filters.query?.trim().toLowerCase();
 
   return artworks.filter((artwork) => {
+    if (!isPubliclyListed(artwork)) return false;
     if (filters.category && artwork.category !== filters.category) return false;
     if (filters.medium && artwork.medium !== filters.medium) return false;
     if (

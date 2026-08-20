@@ -85,6 +85,11 @@ const STATUS_CONFIG: Record<
   },
   sold: { label: "Sold", tone: "positive", icon: CircleCheckBig },
   settlement_complete: { label: "Settled", tone: "positive", icon: Scale },
+  sold_externally: {
+    label: "Sold Elsewhere",
+    tone: "neutral",
+    icon: CircleX,
+  },
   returned: { label: "Returned", tone: "negative", icon: Undo2 },
 
   // --- orders (delivered / completed / pending shared with the above) ---

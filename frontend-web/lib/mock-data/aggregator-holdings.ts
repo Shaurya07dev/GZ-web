@@ -1,4 +1,5 @@
 import type { AggregatorHolding } from "@/types/aggregator";
+import { isAggregatorListed } from "@/types/artwork";
 import { mockArtworks } from "./artworks";
 
 const TODAY = new Date("2026-08-11T00:00:00.000Z");
@@ -100,9 +101,9 @@ for (const holding of mockAggregatorHoldings) {
       `mock-data/aggregator-holdings: "${holding.artworkId}" does not exist in mockArtworks`,
     );
   }
-  if (artwork.listingType !== "marketplace_and_aggregator") {
+  if (!isAggregatorListed(artwork.listingType)) {
     throw new Error(
-      `mock-data/aggregator-holdings: "${holding.artworkId}" must have listingType "marketplace_and_aggregator" (got "${artwork.listingType}")`,
+      `mock-data/aggregator-holdings: "${holding.artworkId}" must be listed on the aggregator channel (got "${artwork.listingType}")`,
     );
   }
 }

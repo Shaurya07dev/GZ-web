@@ -4,6 +4,7 @@ import type {
   ArtworkStatus,
   SocialProofLink,
 } from "@/types/artwork";
+import { isAggregatorListed } from "@/types/artwork";
 import { verifiedTierCount } from "@/types/artist";
 import type {
   AdminActivityEvent,
@@ -1143,7 +1144,7 @@ export const mockSettlements: Settlement[] = SETTLEMENT_SEEDS.map((seed) => {
   const orderTotal = order ? order.amount : artwork.customerPrice;
   const split = splitSettlement(
     orderTotal,
-    artwork.listingType === "marketplace_and_aggregator",
+    isAggregatorListed(artwork.listingType),
   );
   return {
     id: seed.id,

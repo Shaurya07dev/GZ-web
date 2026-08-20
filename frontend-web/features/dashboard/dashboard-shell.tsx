@@ -43,7 +43,7 @@ const NAV_ITEMS = [
   { label: "COA & NFC", href: "/dashboard/coa-nfc", icon: Fingerprint },
   { label: "Analytics", href: "/dashboard/analytics", icon: LineChart },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-  { label: "Gallery Spaces", href: "/dashboard/gallery-spaces", icon: Building2 },
+  { label: "Aggregator Display", href: "/dashboard/gallery-spaces", icon: Building2 },
   { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
   { label: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
 ] as const;
@@ -220,7 +220,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/coa-nfc": "COA & NFC",
   "/dashboard/analytics": "Analytics",
   "/dashboard/messages": "Messages",
-  "/dashboard/gallery-spaces": "Gallery Spaces",
+  "/dashboard/gallery-spaces": "Aggregator Display",
   "/dashboard/support": "Support",
   "/dashboard/settings": "Settings",
   "/dashboard/verification": "Verification",

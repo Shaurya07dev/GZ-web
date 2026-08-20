@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Check, Loader2 } from "lucide-react";
+import { BadgeCheck, Check, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
@@ -15,6 +15,7 @@ import {
   useUpdateArtistSettingsMutation,
 } from "@/hooks/useArtistSettings";
 import { passwordRule } from "@/features/auth/schemas/auth-schemas";
+import { SUBSCRIPTION } from "./dashboard-data";
 
 const NOTIFICATION_TOGGLES = [
   {
@@ -33,6 +34,8 @@ export function ArtistSettingsView() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SubscriptionCard />
+
       <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
         <h2 className="font-display text-base font-semibold text-foreground">
           Notifications
@@ -88,6 +91,59 @@ export function ArtistSettingsView() {
       />
     </div>
   );
+}
+
+// Static plan card — every artist is on the founding-member plan (free for
+// the first year) and there is no billing system to read a real plan from
+// yet. It exists so the artist can actually see the benefit they are on.
+function SubscriptionCard() {
+  return (
+    <div className="rounded-lg border border-gold/30 bg-gold/5 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-background">
+            <BadgeCheck className="size-4 text-gold-bright" strokeWidth={1.75} />
+          </span>
+          <div>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              {SUBSCRIPTION.planName} plan
+            </h2>
+            <p className="text-sm text-gold-bright">
+              {SUBSCRIPTION.priceLabel}
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full border border-gold/40 px-2.5 py-1 text-xs font-medium text-gold-bright">
+          Active
+        </span>
+      </div>
+
+      <ul className="mt-4 grid gap-1.5 sm:grid-cols-2">
+        {SUBSCRIPTION.benefits.map((benefit) => (
+          <li
+            key={benefit}
+            className="flex items-start gap-2 text-sm text-muted-foreground"
+          >
+            <Check className="mt-0.5 size-3.5 shrink-0 text-gold-bright" />
+            {benefit}
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-4 border-t border-gold/20 pt-3 text-xs text-muted-foreground">
+        Renews {formatPlanDate(SUBSCRIPTION.renewsOn)}. Nothing to pay until
+        then, and we will tell you well before anything changes.
+      </p>
+    </div>
+  );
+}
+
+function formatPlanDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(iso));
 }
 
 const passwordSchema = z

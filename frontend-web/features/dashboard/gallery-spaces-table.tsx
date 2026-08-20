@@ -14,7 +14,7 @@ const STATUS_CONFIG: Record<
   { label: string; icon: typeof BookmarkCheck; className: string }
 > = {
   reserved: {
-    label: "With gallery",
+    label: "With aggregator",
     icon: BookmarkCheck,
     className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
   },
@@ -32,7 +32,7 @@ export function GallerySpacesTable() {
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-display text-xl font-semibold text-foreground">
-          Gallery spaces
+          Aggregator display
         </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Pieces currently placed with an aggregator for physical display,
@@ -49,14 +49,14 @@ export function GallerySpacesTable() {
       ) : isError ? (
         <EmptyState
           icon={GalleryVerticalEnd}
-          title="Couldn't load your gallery spaces"
+          title="Couldn't load your aggregator display"
           description="Something went wrong. Try refreshing the page."
         />
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={GalleryVerticalEnd}
-          title="No pieces with a gallery yet"
-          description="Artworks listed for marketplace + aggregator distribution will show up here once a gallery reserves one."
+          title="No pieces with an aggregator yet"
+          description="Artworks listed on the aggregator channel show up here once an aggregator reserves one."
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">

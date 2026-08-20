@@ -1,32 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Mail, Phone, ShieldCheck, Wallet, Clock3, Check } from "lucide-react";
+import { Mail, Phone, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useSupportTickets, useSubmitTicketMutation } from "@/hooks/useSupport";
-
-const FAQ = [
-  {
-    icon: ShieldCheck,
-    question: "When should I add transit insurance?",
-    answer:
-      "Strongly recommended for artworks valued above ₹20,000 (partnered with HDFC ERGO). Uninsured artworks bear no platform liability for damage in transit.",
-  },
-  {
-    icon: Clock3,
-    question: "How long does settlement take after a sale?",
-    answer:
-      "Post-sale direct bank settlement typically completes within 7 days. You receive 100% of your listed artist price on a marketplace sale.",
-  },
-  {
-    icon: Wallet,
-    question: "What's the minimum withdrawal amount?",
-    answer:
-      "₹1,000. Withdrawals go to the bank account on file in Profile & KYC.",
-  },
-];
+import { SupportFaqPanel } from "@/features/faq/support-faq-panel";
 
 // Ticket submission isn't wired to a live support inbox in this demo — same
 // honest-mock pattern as GoogleAuthButton. Real issues go to the contact
@@ -70,27 +50,7 @@ export function SupportView() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <h2 className="font-display text-base font-semibold text-foreground">
-            Frequently asked
-          </h2>
-          {FAQ.map((item) => (
-            <div
-              key={item.question}
-              className="rounded-lg border border-border bg-card p-4"
-            >
-              <div className="flex items-center gap-2">
-                <item.icon className="size-4 shrink-0 text-gold-bright" strokeWidth={1.75} />
-                <p className="text-sm font-medium text-foreground">
-                  {item.question}
-                </p>
-              </div>
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {item.answer}
-              </p>
-            </div>
-          ))}
-        </div>
+        <SupportFaqPanel audience="artists" />
       </div>
 
       <div className="flex flex-col gap-6">

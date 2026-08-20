@@ -13,6 +13,10 @@ import {
   ArrowLeft,
   Nfc,
   RefreshCw,
+  Building2,
+  PlayCircle,
+  ScrollText,
+  TriangleAlert,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,7 +38,11 @@ import {
   CUSTOMER_MARKUP_MULTIPLIER,
   PLACEHOLDER_ARTWORK_IMAGES,
 } from "./artwork-submit-data";
-import { useSubmitArtworkMutation } from "@/hooks/useArtistArtworks";
+import {
+  useArtistPenalties,
+  useSubmitArtworkMutation,
+} from "@/hooks/useArtistArtworks";
+import { isAggregatorListed, type ListingType } from "@/types/artwork";
 
 type FormState = {
   title: string;
@@ -44,9 +52,8 @@ type FormState = {
   dimensions: string;
   yearCreated: string;
   artistPrice: string;
-  listingType: string;
+  listingType: ListingType;
   insuranceOpted: boolean;
-  coaDetails: string;
   nfcTagId: string;
 };
 
@@ -60,7 +67,6 @@ const EMPTY_FORM: FormState = {
   artistPrice: "",
   listingType: "marketplace_and_aggregator",
   insuranceOpted: false,
-  coaDetails: "",
   nfcTagId: "",
 };
 
@@ -83,7 +89,16 @@ export function ArtworkSubmitForm() {
   const submitMutation = useSubmitArtworkMutation();
   const [submitted, setSubmitted] = useState<"draft" | "review" | null>(null);
 
+  const { data: penalties } = useArtistPenalties();
+  const outstandingPenalty = (penalties ?? [])
+    .filter((penalty) => penalty.settledAt === null)
+    .reduce((sum, penalty) => sum + penalty.amount, 0);
+
   const artistPriceNumber = Number(form.artistPrice) || 0;
+  // Aggregator display puts the physical piece in someone else's custody, so
+  // insurance stops being a choice the moment that channel is selected.
+  const aggregatorSelected = isAggregatorListed(form.listingType);
+  const insuranceRequired = aggregatorSelected;
   const customerPrice = useMemo(
     () => Math.round(artistPriceNumber * CUSTOMER_MARKUP_MULTIPLIER),
     [artistPriceNumber],
@@ -126,11 +141,8 @@ export function ArtworkSubmitForm() {
         dimensions: form.dimensions,
         yearCreated: Number(form.yearCreated) || new Date().getFullYear(),
         artistPrice: artistPriceNumber,
-        listingType: form.listingType as
-          | "marketplace_only"
-          | "marketplace_and_aggregator",
-        insuranceOpted: form.insuranceOpted,
-        coaDetails: form.coaDetails,
+        listingType: form.listingType,
+        insuranceOpted: insuranceRequired || form.insuranceOpted,
         nfcTagId: form.nfcTagId || null,
         images: images.map((img, i) => ({
           url: img.url,
@@ -180,6 +192,26 @@ export function ArtworkSubmitForm() {
       className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start"
     >
       <div className="flex flex-col gap-6">
+        {outstandingPenalty > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+            <TriangleAlert
+              className="mt-0.5 size-4 shrink-0 text-destructive"
+              strokeWidth={1.75}
+            />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                ₹{outstandingPenalty.toLocaleString("en-IN")} off-platform sale
+                fee is due on this listing
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                You marked artwork as sold on another platform. The 1% fee is
+                charged to your wallet when you submit this piece for review.
+                Saving a draft doesn&rsquo;t trigger it.
+              </p>
+            </div>
+          </div>
+        )}
+
         <section className="rounded-lg border border-border bg-card p-5 sm:p-6">
           <h2 className="font-display text-base font-semibold text-foreground">
             Artwork images
@@ -397,8 +429,12 @@ export function ArtworkSubmitForm() {
           </div>
 
           <div className="flex flex-col gap-2.5">
-            <Label>Listing type</Label>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Label>Sales channel</Label>
+            <p className="text-xs text-muted-foreground">
+              Marketplace and Aggregator are separate channels. Pick one, or
+              both.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
               {LISTING_TYPES.map((option) => {
                 const active = form.listingType === option.value;
                 return (
@@ -426,35 +462,96 @@ export function ArtworkSubmitForm() {
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-4 rounded-md border border-border p-3.5">
+          {aggregatorSelected && (
+            <div className="flex flex-col gap-3 rounded-md border border-gold/30 bg-gold/5 p-4">
+              <div className="flex items-center gap-2">
+                <Building2
+                  className="size-4 shrink-0 text-gold-bright"
+                  strokeWidth={1.75}
+                />
+                <p className="text-sm font-medium text-foreground">
+                  Aggregator terms &amp; requirements
+                </p>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                An aggregator holds and displays the physical piece, so a few
+                extra details apply: weight, framed or unframed, canvas format,
+                display materials, and mandatory insurance. The full terms and
+                the physical-details fields land here next.
+              </p>
+
+              {/* Placeholder for the single explainer video that sits under the
+                  aggregator terms. Drop the embed in here when the file or
+                  YouTube link is ready — deliberately one video, with any
+                  further walkthroughs linked from Support → FAQs. */}
+              <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
+                <PlayCircle
+                  className="size-5 shrink-0 text-gold-bright"
+                  strokeWidth={1.5}
+                />
+                <div>
+                  <p className="text-xs font-medium text-foreground">
+                    Explainer video
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    A short walkthrough of the aggregator process goes here.
+                    Coming soon.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div
+            className={`flex items-start justify-between gap-4 rounded-md border p-3.5 ${
+              insuranceRequired ? "border-gold/40 bg-gold/5" : "border-border"
+            }`}
+          >
             <div>
-              <Label htmlFor="insurance">Insure this artwork</Label>
+              <Label htmlFor="insurance">
+                Insure this artwork
+                {insuranceRequired && (
+                  <span className="ml-2 text-xs font-medium text-gold-bright">
+                    Required
+                  </span>
+                )}
+              </Label>
               <p className="mt-1 text-xs text-muted-foreground">
-                {artistPriceNumber > INSURANCE_RECOMMENDED_THRESHOLD
-                  ? "Recommended for pieces valued above ₹20,000, and required for gallery display."
-                  : "Optional below ₹20,000, required if a gallery displays this artwork physically."}
+                {insuranceRequired
+                  ? "Mandatory for aggregator listings — the piece leaves your studio and is held by a partner while on display."
+                  : artistPriceNumber > INSURANCE_RECOMMENDED_THRESHOLD
+                    ? "Recommended for pieces valued above ₹20,000."
+                    : "Optional below ₹20,000."}
               </p>
             </div>
             <Switch
               id="insurance"
-              checked={form.insuranceOpted}
+              checked={insuranceRequired || form.insuranceOpted}
+              disabled={insuranceRequired}
               onCheckedChange={(checked) =>
                 updateField("insuranceOpted", checked)
               }
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="coa">Certificate of authenticity notes</Label>
-            <Textarea
-              id="coa"
-              rows={2}
-              placeholder="Signed on reverse."
-              value={form.coaDetails}
-              onChange={(e) => updateField("coaDetails", e.target.value)}
-              className="min-h-16 resize-none"
+          <div className="flex items-start gap-3 rounded-md border border-border p-3.5">
+            <ScrollText
+              className="mt-0.5 size-4 shrink-0 text-gold-bright"
+              strokeWidth={1.75}
             />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Certificate of Authenticity — required
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                GalleryZone issues a numbered Certificate of Authenticity for
+                every accepted artwork. Nothing to fill in here: the
+                certificate number is generated on approval and stays linked to
+                this piece for its whole life, alongside its NFC/QR passport.
+              </p>
+            </div>
           </div>
+
         </section>
 
         {submitMutation.isError && (
@@ -517,21 +614,34 @@ export function ArtworkSubmitForm() {
               {form.yearCreated ? ` · ${form.yearCreated}` : ""}
             </p>
 
-            <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-              <span className="text-xs text-muted-foreground">
-                Marketplace price
-              </span>
-              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                {artistPriceNumber > 0
-                  ? `₹${customerPrice.toLocaleString("en-IN")}`
-                  : "N/A"}
-              </span>
+            <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  Your price (private)
+                </span>
+                <span className="font-mono text-sm tabular-nums text-foreground">
+                  {artistPriceNumber > 0
+                    ? `₹${artistPriceNumber.toLocaleString("en-IN")}`
+                    : "N/A"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  Listed price
+                </span>
+                <span className="font-mono text-sm font-semibold tabular-nums text-gold-bright">
+                  {artistPriceNumber > 0
+                    ? `₹${customerPrice.toLocaleString("en-IN")}`
+                    : "N/A"}
+                </span>
+              </div>
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Your price × 1.30: this is what collectors see.
+              You receive your price in full. The listed price is your price ×
+              1.30 — that&rsquo;s what buyers see.
             </p>
 
-            {form.insuranceOpted && (
+            {(insuranceRequired || form.insuranceOpted) && (
               <div className="mt-4 flex items-center gap-2 rounded-md border border-gold/30 bg-gold/5 px-3 py-2 text-xs text-gold-bright">
                 <ShieldCheck className="size-3.5 shrink-0" />
                 Insured artwork

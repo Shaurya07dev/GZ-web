@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<ArtworkStatus, string> = {
   delivered: "Delivered",
   completed: "Sale completed",
   returned: "Returned",
+  sold_externally: "Sold outside GalleryZone",
 };
 
 function formatDate(iso: string): string {

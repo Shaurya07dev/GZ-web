@@ -192,4 +192,22 @@ export const PROFILE = {
   ifsc: "HDFC0001234",
   aadhaarStatus: "verified" as const,
   aadhaarMasked: "•••• •••• 4821",
+  // Optional — an artist without a GSTIN leaves this blank. Used by
+  // GalleryZone for invoicing/settlement only, never shown publicly.
+  gstin: "",
+};
+
+// Every artist is on the founding-member plan: free for the first year.
+// Static until there's a real billing system to read a plan from.
+export const SUBSCRIPTION = {
+  planName: "Founding Artist",
+  priceLabel: "Free for your first year",
+  startedOn: "2026-07-05",
+  renewsOn: "2027-07-05",
+  benefits: [
+    "Unlimited artwork listings",
+    "0% listing and confirmation fees",
+    "Aggregator display access",
+    "COA and NFC passport for every accepted piece",
+  ],
 };

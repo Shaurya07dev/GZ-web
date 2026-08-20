@@ -65,7 +65,7 @@ const SELL_WITH_US = [
   },
   {
     icon: Building2,
-    title: "Partner as a Gallery",
+    title: "Partner as an Aggregator",
     description:
       "Display verified artwork in your space and earn a share of every sale you help make.",
     href: "/register?role=aggregator",
