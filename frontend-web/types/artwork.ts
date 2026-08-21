@@ -273,6 +273,31 @@ export interface OwnershipTransfer {
   status: TransferStatus;
 }
 
+// --- Physical Certificate of Authenticity -----------------------------------
+
+// MOU §12: after a sale, a buyer may ask for the COA on paper. The artist
+// prints it, signs it by hand, and dispatches it through the portal — this
+// record is that request and its fulfilment.
+export type PhysicalCoaStatus = "requested" | "dispatched";
+
+export interface PhysicalCoaRequest {
+  id: string;
+  artworkId: string;
+  artworkTitle: string;
+  coaCertificateNumber: string;
+  requestedByName: string;
+  requestedAt: string;
+  deliveryAddress: {
+    line1: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  status: PhysicalCoaStatus;
+  dispatchedAt: string | null;
+  courierRef: string | null;
+}
+
 export interface ArtworkFilters {
   category?: string;
   minPrice?: number;

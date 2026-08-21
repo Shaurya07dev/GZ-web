@@ -8,6 +8,7 @@ import type {
   ArtworkStatus,
   ExternalSalePenalty,
   OwnershipTransfer,
+  PhysicalCoaRequest,
 } from "@/types/artwork";
 import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Order } from "@/types/order";
@@ -326,6 +327,13 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
   bankAccountMasked: "•••• •••• •••• 4821",
   ifsc: "HDFC0001234",
   securityDepositStatus: "active" as const,
+  // Signed once from the aggregator's profile page — the partner agreement,
+  // separate from the artist MOU (features/aggregator/aggregator-mou-data.ts).
+  mouAcceptance: null as {
+    acceptedAt: string;
+    signatureName: string;
+    version: string;
+  } | null,
 }));
 
 // Digital ownership hand-overs (services/ownershipService.ts). Empty by
@@ -333,6 +341,12 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
 // every later resale appends to it.
 export const ownershipTransfersCol = collection<OwnershipTransfer[]>(
   "ownershipTransfers",
+  () => [],
+);
+
+// Paper-COA requests (MOU §12), empty until a buyer asks for one.
+export const physicalCoaRequestsCol = collection<PhysicalCoaRequest[]>(
+  "physicalCoaRequests",
   () => [],
 );
 

@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useCollection } from "@/hooks/useCollection";
 import type { CollectionItem } from "@/services/customerCollectionService";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
+import { PhysicalCoaRequest } from "./physical-coa-request";
 import { mockCustomer } from "@/lib/mock-data/customer";
 
 function formatDate(iso: string): string {
@@ -208,6 +209,11 @@ function CollectionItemDialog({
                 ))}
               </ol>
             </div>
+
+            <PhysicalCoaRequest
+              artworkId={item.artwork.id}
+              artworkTitle={item.artwork.title}
+            />
 
             <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row">
               <Link

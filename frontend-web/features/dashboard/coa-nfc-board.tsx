@@ -13,6 +13,7 @@ import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 import { cn } from "@/lib/utils";
 import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
+import { PhysicalCoaQueue } from "./physical-coa-queue";
 import { ARTIST } from "./dashboard-data";
 
 type ArtistArtwork = NonNullable<
@@ -37,6 +38,8 @@ export function CoaNfcBoard() {
           physical pieces also get an NFC/QR tag linked to it.
         </p>
       </div>
+
+      <PhysicalCoaQueue />
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center">

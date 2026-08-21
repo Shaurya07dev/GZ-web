@@ -7,16 +7,7 @@
 // re-transcribe rather than editing here, so the screen and the paper version
 // can never say different things.
 
-export interface MouClause {
-  number: number;
-  title: string;
-  /** Lead paragraphs, rendered before any list. */
-  paragraphs?: string[];
-  /** Bulleted items. */
-  points?: string[];
-  /** Closing paragraphs, rendered after the list. */
-  closing?: string[];
-}
+import type { MouClause, MouDocument } from "@/features/mou/mou-agreement";
 
 export const MOU_VERSION = "2026.1";
 
@@ -328,3 +319,12 @@ export const MOU_DECLARATION = [
   "I voluntarily agree to abide by all terms and conditions.",
   "I confirm that the submitted artworks are original and created entirely by me.",
 ];
+
+export const ARTIST_MOU: MouDocument = {
+  title: "Memorandum of Understanding",
+  version: MOU_VERSION,
+  intro: "Your overall agreement with GalleryZone. Read it in full, then sign.",
+  preamble: MOU_PREAMBLE,
+  clauses: MOU_CLAUSES,
+  declaration: MOU_DECLARATION,
+};

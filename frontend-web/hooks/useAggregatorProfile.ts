@@ -8,6 +8,16 @@ export function useAggregatorProfile() {
   });
 }
 
+export function useAcceptAggregatorMouMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { signatureName: string; version: string }) =>
+      aggregatorProfileService.acceptMou(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["aggregator-profile"] }),
+  });
+}
+
 export function useUpdateAggregatorProfileMutation() {
   const queryClient = useQueryClient();
   return useMutation({
