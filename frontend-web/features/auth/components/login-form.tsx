@@ -31,6 +31,7 @@ import { AppleAuthButton } from "./apple-auth-button";
 import { RoleToggle } from "./role-toggle";
 import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
+import { ROLE_LANDING, SESSION_COOKIE, signIn } from "@/lib/session";
 import {
   loginSchema,
   type LoginInput,
@@ -49,12 +50,8 @@ type LoginFormValues = z.input<typeof loginSchema>;
 // This toggle is the only signal this mock phase has for "which dashboard
 // should a successful login land on" — there is no real backend to carry
 // that information, so it's the actual "sign in as" control, not a hidden
-// dev affordance.
-const ROLE_REDIRECTS: Record<Role, string> = {
-  artist: "/dashboard",
-  aggregator: "/aggregator/dashboard",
-  customer: "/account",
-};
+// dev affordance. Where each role lands lives in lib/session.ts, shared with
+// the route guard so the two can't disagree.
 
 const ROLE_TOGGLE_OPTIONS: {
   value: Role;
@@ -89,7 +86,9 @@ export function LoginForm() {
 
   const form = useForm<LoginFormValues, undefined, LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "", rememberMe: false },
+    // Checked by default: someone signing in expects to still be signed in
+    // when they come back later, not to be handed the login form again.
+    defaultValues: { email: "", password: "", rememberMe: true },
   });
 
   function onSubmit(values: LoginInput) {
@@ -98,13 +97,16 @@ export function LoginForm() {
       { ...values, simulateError },
       {
         onSuccess: () => {
-          // Fake session: no backend to issue a real token, so login writes
-          // the chosen role straight to a cookie that proxy.ts reads on
-          // every request to a guarded route. maxAge omitted (session
-          // cookie) unless "Remember me" is checked.
-          const maxAge = values.rememberMe ? 60 * 60 * 24 * 30 : undefined;
-          document.cookie = `gz_session=${demoRole}; path=/${maxAge ? `; max-age=${maxAge}` : ""}`;
-          router.push(ROLE_REDIRECTS[demoRole]);
+          // Fake session (see lib/session.ts): no backend to issue a real
+          // token, so signing in writes the chosen role to a cookie that
+          // proxy.ts reads on every request. Unticking "Keep me signed in"
+          // downgrades it to a browser-session cookie that dies on close.
+          if (values.rememberMe) {
+            signIn(demoRole);
+          } else {
+            document.cookie = `${SESSION_COOKIE}=${demoRole}; path=/; samesite=lax`;
+          }
+          router.push(ROLE_LANDING[demoRole]);
         },
         onError: (error) => {
           setFormError(
@@ -187,7 +189,7 @@ export function LoginForm() {
                 />
                 <FieldContent>
                   <FieldLabel htmlFor="rememberMe" className="font-normal">
-                    Remember me
+                    Keep me signed in
                   </FieldLabel>
                 </FieldContent>
               </Field>

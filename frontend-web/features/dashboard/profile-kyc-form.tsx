@@ -26,6 +26,7 @@ import {
   useSaveArtistBankMutation,
 } from "@/hooks/useArtistAccount";
 import { ARTIST } from "./dashboard-data";
+import { MouAgreement } from "./mou-agreement";
 
 // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
 // literal "Z", then a checksum character.
@@ -131,6 +132,10 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-start">
+      <div className="lg:col-span-2">
+        <MouAgreement />
+      </div>
+
       <Link
         href="/dashboard/verification"
         className="flex items-center justify-between gap-3 rounded-lg border border-gold/30 bg-gold/5 px-4 py-3 text-sm font-medium text-gold-bright transition-colors hover:bg-gold/10 lg:col-span-2"

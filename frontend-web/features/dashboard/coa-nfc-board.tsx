@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BadgeCheck, Fingerprint, ScanLine } from "lucide-react";
+import { BadgeCheck, Fingerprint, ScanLine, UserRoundCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,8 @@ import {
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 import { cn } from "@/lib/utils";
 import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
+import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
+import { ARTIST } from "./dashboard-data";
 
 type ArtistArtwork = NonNullable<
   ReturnType<typeof useArtistDashboardArtworks>["data"]
@@ -20,6 +22,7 @@ type ArtistArtwork = NonNullable<
 export function CoaNfcBoard() {
   const { data: artworks } = useArtistDashboardArtworks();
   const [previewing, setPreviewing] = useState<ArtistArtwork | null>(null);
+  const [transferring, setTransferring] = useState<ArtistArtwork | null>(null);
 
   const rows = artworks ?? [];
 
@@ -87,7 +90,21 @@ export function CoaNfcBoard() {
       <CertificateDialog
         artwork={previewing}
         onClose={() => setPreviewing(null)}
+        onTransfer={(artwork) => {
+          setPreviewing(null);
+          setTransferring(artwork);
+        }}
       />
+
+      {transferring && (
+        <TransferRightsDialog
+          open
+          onOpenChange={(open) => !open && setTransferring(null)}
+          artworkId={transferring.id}
+          artworkTitle={transferring.title}
+          fromName={ARTIST.name}
+        />
+      )}
     </div>
   );
 }
@@ -111,9 +128,11 @@ function NfcPill({ tagged }: { tagged: boolean }) {
 function CertificateDialog({
   artwork,
   onClose,
+  onTransfer,
 }: {
   artwork: ArtistArtwork | null;
   onClose: () => void;
+  onTransfer: (artwork: ArtistArtwork) => void;
 }) {
   return (
     <Dialog
@@ -182,6 +201,17 @@ function CertificateDialog({
               This is a preview — the platform isn&rsquo;t wired to generate a
               downloadable PDF in this demo.
             </p>
+
+            {/* First hand-over of the passport: artist to buyer. The buyer can
+                pass it on again later from their own collection. */}
+            <button
+              type="button"
+              onClick={() => onTransfer(artwork)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
+            >
+              <UserRoundCheck className="size-3.5" />
+              Transfer rights to a buyer
+            </button>
           </>
         ) : null}
       </DialogContent>

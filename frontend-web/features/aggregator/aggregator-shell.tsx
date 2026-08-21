@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/popover";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
 import { AGGREGATOR } from "./aggregator-data";
+import { signOut } from "@/lib/session";
 
 // Deliberately a parallel sibling to features/dashboard/dashboard-shell.tsx,
 // not a shared/generalized abstraction over it — same reasoning as before:
@@ -322,7 +323,7 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
 
   function handleSignOut() {
-    document.cookie = "gz_session=; path=/; max-age=0";
+    signOut();
     window.location.href = "/login";
   }
 

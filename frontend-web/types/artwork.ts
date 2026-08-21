@@ -94,6 +94,47 @@ export interface Artwork extends ArtworkSummary {
   // once. Optional so existing fixture records don't need a value:
   // resolveCustody() derives one from `status` when it's absent.
   custody?: ArtworkCustody | null;
+  // Weight, framing, format and the aggregator packing requirements. Optional
+  // because the fixture records predate the fields; the form collects them on
+  // every new listing and requires them once the aggregator channel is picked.
+  physical?: ArtworkPhysical | null;
+}
+
+// --- Physical details -------------------------------------------------------
+
+// How the piece arrives. MOU §12 requires work sent for aggregator display to
+// be either professionally stretched on canvas or properly framed, so those
+// two are the compliant options and the rest are flagged in the form.
+export type FramingState =
+  | "framed"
+  | "stretched_canvas"
+  | "unframed_rolled"
+  | "mounted_board"
+  | "freestanding";
+
+export const FRAMING_LABEL: Record<FramingState, string> = {
+  framed: "Framed",
+  stretched_canvas: "Stretched on canvas",
+  unframed_rolled: "Unframed / rolled",
+  mounted_board: "Mounted on board",
+  freestanding: "Freestanding (sculpture)",
+};
+
+// MOU §12: only these two are acceptable for a piece going to an aggregator.
+export const AGGREGATOR_READY_FRAMING = new Set<FramingState>([
+  "framed",
+  "stretched_canvas",
+]);
+
+export interface ArtworkPhysical {
+  weightKg: number | null;
+  framing: FramingState | null;
+  /** Surface or format — canvas, paper, board, panel, bronze. */
+  format: string | null;
+  /** MOU §12: hangers must ship with the artwork. */
+  hangingHardwareIncluded: boolean;
+  /** Artist has confirmed packing to GalleryZone's shipping standard. */
+  packagingConfirmed: boolean;
 }
 
 // --- Ownership / custody / location -----------------------------------------
@@ -109,6 +150,8 @@ export const CUSTODY_PARTY_LABEL: Record<CustodyParty, string> = {
 
 export interface ArtworkCustody {
   legalOwner: CustodyParty;
+  /** Named owner once a transfer has been accepted (the buyer's own name). */
+  legalOwnerName?: string | null;
   custodian: CustodyParty;
   locationLabel: string;
 }
@@ -207,6 +250,27 @@ export interface ExternalSalePenalty {
   amount: number;
   createdAt: string;
   settledAt: string | null;
+}
+
+// --- Ownership transfer (NFC passport hand-over) ----------------------------
+
+// A hand-over of the digital ownership record from the current owner to a
+// named buyer: the owner starts it, the buyer accepts through a link, and the
+// artwork's custody plus this list update together. The same flow runs again
+// on every resale, which is what keeps provenance continuous.
+export type TransferStatus = "pending" | "accepted" | "cancelled";
+
+export interface OwnershipTransfer {
+  id: string;
+  artworkId: string;
+  artworkTitle: string;
+  fromName: string;
+  toName: string;
+  toEmail: string;
+  initiatedAt: string;
+  acceptedAt: string | null;
+  cancelledAt: string | null;
+  status: TransferStatus;
 }
 
 export interface ArtworkFilters {

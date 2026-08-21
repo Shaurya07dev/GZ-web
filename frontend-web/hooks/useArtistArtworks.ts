@@ -31,6 +31,21 @@ export function useSubmitArtworkMutation() {
   });
 }
 
+// Editing an existing listing. Same invalidations as submitting: the list,
+// the KPI tile and the activity feed all reflect it.
+export function useUpdateArtworkMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof artistDashboardService.updateArtwork>[0]) =>
+      artistDashboardService.updateArtwork(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
+      queryClient.invalidateQueries({ queryKey: ["artwork"] });
+    },
+  });
+}
+
 // Off-platform sale fees owed but not yet charged. Read on the Add Artwork
 // form (so the artist sees the fee before listing) and after marking a piece
 // sold elsewhere.

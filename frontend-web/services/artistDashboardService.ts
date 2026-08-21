@@ -1,8 +1,11 @@
 import {
+  ARTWORK_EDIT_WINDOW_DAYS,
   EXTERNAL_SALE_PENALTY_RATE,
   WITHDRAWABLE_STATUSES,
+  artworkEditState,
   type Artwork,
   type ArtworkImage,
+  type ArtworkPhysical,
   type ExternalSalePenalty,
 } from "@/types/artwork";
 import type { AggregatorHolding } from "@/types/aggregator";
@@ -124,6 +127,7 @@ export interface SubmitArtworkInput {
   artistPrice: number;
   listingType: Artwork["listingType"];
   insuranceOpted: boolean;
+  physical: ArtworkPhysical;
   nfcTagId: string | null;
   images: ArtworkImage[];
   mode: "draft" | "review";
@@ -197,6 +201,7 @@ export const artistDashboardService = {
       socialProofLinks: [],
       statusHistory: [{ status, changedAt: now }],
       nfcTagId: input.nfcTagId,
+      physical: input.physical,
     };
 
     artistPricesCol.set({ ...artistPricesCol.get(), [id]: input.artistPrice });
@@ -212,6 +217,74 @@ export const artistDashboardService = {
     );
 
     return mockDelay(artwork);
+  },
+
+  // Edits are refused here, not just hidden in the UI: 7 days from listing, or
+  // until the piece is bought or claimed, whichever comes first.
+  updateArtwork: (input: {
+    artworkId: string;
+    patch: Omit<SubmitArtworkInput, "mode">;
+  }): Promise<Artwork> => {
+    const inLive = artworksCol.get().find((a) => a.id === input.artworkId);
+    const inPending = pendingArtworksCol
+      .get()
+      .find((a) => a.id === input.artworkId);
+    const artwork = inLive ?? inPending;
+
+    if (!artwork || artwork.artistId !== CURRENT_ARTIST_ID)
+      return mockError("Artwork not found");
+
+    const editState = artworkEditState(artwork);
+    if (!editState.editable) {
+      return mockError(
+        editState.reason === "purchased"
+          ? "This artwork has been claimed or sold — it can no longer be edited"
+          : `The ${ARTWORK_EDIT_WINDOW_DAYS}-day edit window for this artwork has closed`,
+      );
+    }
+
+    const { patch } = input;
+    if (!patch.title.trim()) return mockError("A title is required");
+    if (patch.artistPrice <= 0)
+      return mockError("Enter your price for this artwork");
+
+    const updated: Artwork = {
+      ...artwork,
+      title: patch.title.trim(),
+      description: patch.description,
+      category: patch.category,
+      medium: patch.medium,
+      dimensions: patch.dimensions || null,
+      yearCreated: patch.yearCreated || null,
+      artistName: artwork.artistName,
+      customerPrice: Math.round(patch.artistPrice * CUSTOMER_MARKUP_MULTIPLIER),
+      listingType: patch.listingType,
+      insured: patch.insuranceOpted,
+      physical: patch.physical,
+      nfcTagId: patch.nfcTagId,
+      images: patch.images.length > 0 ? patch.images : artwork.images,
+      thumbnailUrl: patch.images[0]?.url ?? artwork.thumbnailUrl,
+    };
+
+    const replace = (list: Artwork[]) =>
+      list.map((a) => (a.id === updated.id ? updated : a));
+    if (inLive) artworksCol.set(replace(artworksCol.get()));
+    if (inPending) pendingArtworksCol.set(replace(pendingArtworksCol.get()));
+
+    artistPricesCol.set({
+      ...artistPricesCol.get(),
+      [updated.id]: patch.artistPrice,
+    });
+
+    appendActivity(
+      "artwork_submitted",
+      `"${updated.title}" updated`,
+      editState.reason === "draft"
+        ? "Draft changes saved"
+        : `${editState.daysLeft} ${editState.daysLeft === 1 ? "day" : "days"} left in the edit window`,
+    );
+
+    return mockDelay(updated);
   },
 
   // "Sold on another platform": the piece leaves every GalleryZone channel at
@@ -312,6 +385,36 @@ export const artistDashboardService = {
   },
 
   getProfile: () => mockDelay(artistProfileCol.get()),
+
+  // Signing the MOU is its own method rather than a profile patch: it records
+  // when and against which version, and must never be silently overwritten by
+  // an ordinary profile save.
+  acceptMou: (input: { signatureName: string; version: string }) => {
+    const profile = artistProfileCol.get();
+    if (!input.signatureName.trim())
+      return mockError("Type your full name to sign");
+    if (
+      input.signatureName.trim().toLowerCase() !==
+      profile.fullName.trim().toLowerCase()
+    )
+      return mockError("The signature must match the name on your profile");
+
+    const updated = {
+      ...profile,
+      mouAcceptance: {
+        acceptedAt: new Date().toISOString(),
+        signatureName: input.signatureName.trim(),
+        version: input.version,
+      },
+    };
+    artistProfileCol.set(updated);
+    appendActivity(
+      "verification",
+      "MOU signed",
+      `Memorandum of Understanding v${input.version} accepted`,
+    );
+    return mockDelay(updated);
+  },
 
   updateProfile: (
     patch: Partial<ReturnType<typeof artistProfileCol.get>>,

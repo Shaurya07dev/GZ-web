@@ -7,6 +7,7 @@ import type {
   Artwork,
   ArtworkStatus,
   ExternalSalePenalty,
+  OwnershipTransfer,
 } from "@/types/artwork";
 import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Order } from "@/types/order";
@@ -327,6 +328,14 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
   securityDepositStatus: "active" as const,
 }));
 
+// Digital ownership hand-overs (services/ownershipService.ts). Empty by
+// default — the chain starts the first time an owner transfers a piece, and
+// every later resale appends to it.
+export const ownershipTransfersCol = collection<OwnershipTransfer[]>(
+  "ownershipTransfers",
+  () => [],
+);
+
 export const ordersCol = collection<Order[]>("orders", () => [...mockOrders]);
 export const addressesCol = collection<Address[]>("addresses", () => [
   ...mockAddresses,
@@ -408,6 +417,13 @@ export const artistActivityCol = collection("artistActivity", () => [
 export const artistProfileCol = collection("artistProfile", () => ({
   ...PROFILE,
   socialProofVideoUrl: null as string | null,
+  // Signed once, from the artist's profile page. Null until they read the
+  // MOU and sign it — see features/dashboard/mou-agreement.tsx.
+  mouAcceptance: null as {
+    acceptedAt: string;
+    signatureName: string;
+    version: string;
+  } | null,
 }));
 
 const ARTIST_MESSAGE_SEED: MessageThread[] = [

@@ -23,6 +23,7 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
@@ -178,6 +179,22 @@ function Sidebar({
           })}
         </nav>
 
+        {/* The site root redirects a signed-in artist straight here, so this
+            is their only way back out to the public pages to see how their
+            work looks to a buyer. */}
+        <Link
+          href="/marketplace"
+          className={cn(
+            "mx-3 mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            collapsed && "lg:justify-center lg:px-2",
+          )}
+        >
+          <Store className="size-4 shrink-0" strokeWidth={1.75} />
+          <span className={cn("flex-1 truncate", collapsed && "lg:hidden")}>
+            View site
+          </span>
+        </Link>
+
         <Link
           href="/dashboard/profile"
           className={cn(
@@ -228,7 +245,13 @@ const PAGE_TITLES: Record<string, string> = {
 
 function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? "Dashboard";
+  // Dynamic segments can't be keys in PAGE_TITLES, so the one route with an id
+  // in it is matched by shape.
+  const title =
+    PAGE_TITLES[pathname] ??
+    (/^\/dashboard\/artworks\/[^/]+\/edit$/.test(pathname)
+      ? "Edit Artwork"
+      : "Dashboard");
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-5 backdrop-blur-md sm:px-8 lg:px-10">

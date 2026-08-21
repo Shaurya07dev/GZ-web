@@ -39,6 +39,7 @@ import {
   type Role,
 } from "@/features/auth/schemas/auth-schemas";
 import { ROLE_OPTIONS } from "@/features/auth/data/role-options";
+import { signIn } from "@/lib/session";
 
 interface RegisterFormProps {
   initialRole?: Role;
@@ -242,7 +243,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
                   // No backend, so "demo login" is the same fake-session
                   // write login-form.tsx does on success — skip the form
                   // and drop straight into the (mock-data-driven) dashboard.
-                  document.cookie = `gz_session=${option.role}; path=/`;
+                  signIn(option.role);
                   router.push(option.redirectPath);
                 }}
                 className="flex flex-col items-center gap-1 rounded-lg border border-gold/30 bg-card px-2 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/10 active:scale-[0.98]"

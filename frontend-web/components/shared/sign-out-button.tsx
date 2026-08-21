@@ -2,6 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/session";
 
 // Clears the fake session cookie login-form.tsx writes and sends proxy.ts
 // back to treating every guarded route as signed-out.
@@ -9,7 +10,7 @@ export function SignOutButton() {
   const router = useRouter();
 
   function handleSignOut() {
-    document.cookie = "gz_session=; path=/; max-age=0";
+    signOut();
     router.push("/login");
   }
 

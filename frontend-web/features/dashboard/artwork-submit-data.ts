@@ -45,8 +45,26 @@ export const LISTING_TYPES: {
   },
 ];
 
+// Surface/format the work is made on. Free-ish list rather than a rigid enum —
+// an aggregator needs to know what they are hanging, not a taxonomy.
+export const ARTWORK_FORMATS = [
+  { value: "canvas", label: "Canvas" },
+  { value: "paper", label: "Paper" },
+  { value: "board", label: "Board / panel" },
+  { value: "wood", label: "Wood" },
+  { value: "metal", label: "Metal" },
+  { value: "stone", label: "Stone" },
+  { value: "textile", label: "Textile" },
+  { value: "other", label: "Other" },
+];
+
 export const MAX_ARTWORK_IMAGES = 8;
 export const INSURANCE_RECOMMENDED_THRESHOLD = 20000;
+// Named in the Artist Onboarding Guide. The buy-link is not published yet —
+// when GalleryZone supplies the partner URL, set it here and the form turns
+// the partner name into a link automatically.
+export const INSURANCE_PARTNER = "HDFC ERGO";
+export const INSURANCE_PARTNER_URL: string | null = null;
 export const CUSTOMER_MARKUP_MULTIPLIER = 1.3;
 
 // Stock photos pre-filling every image slot so the upload form is always

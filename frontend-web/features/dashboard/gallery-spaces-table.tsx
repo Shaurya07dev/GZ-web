@@ -1,13 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { BookmarkCheck, CircleCheckBig, GalleryVerticalEnd } from "lucide-react";
+import {
+  BookmarkCheck,
+  CircleCheckBig,
+  GalleryVerticalEnd,
+  CalendarRange,
+  MapPin,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { ExpiryCountdown } from "@/features/aggregator/expiry-countdown";
 import { useArtistGallerySpaces } from "@/hooks/useArtistGallerySpaces";
 import type { AggregatorHolding } from "@/types/aggregator";
+import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
 
 const STATUS_CONFIG: Record<
   AggregatorHolding["status"],
@@ -30,14 +37,35 @@ export function GallerySpacesTable() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          Aggregator display
-        </h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Pieces currently placed with an aggregator for physical display,
-          for up to 30 days.
-        </p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            Aggregator display
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Where your work is physically on display right now.
+          </p>
+        </div>
+
+        {/* Your artwork is with GalleryZone for a six-month listing period —
+            not a fixed month-per-location schedule. Locations can change
+            within that period; this page always shows the current one. */}
+        <div className="flex items-start gap-3 rounded-lg border border-gold/25 bg-gold/5 p-4">
+          <CalendarRange
+            className="mt-0.5 size-4 shrink-0 text-gold-bright"
+            strokeWidth={1.75}
+          />
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            You send your artwork for a{" "}
+            <span className="font-medium text-foreground">
+              six-month listing period
+            </span>
+            . Within it, GalleryZone places the piece with an aggregator for
+            display and may move it to another one if it hasn&rsquo;t sold —
+            you don&rsquo;t commit to a location for a fixed month. Whatever
+            the current placement is, it shows here.
+          </p>
+        </div>
       </div>
 
       {isPending ? (
@@ -65,7 +93,8 @@ export function GallerySpacesTable() {
               <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
                 <th className="px-4 py-3 font-medium">Artwork</th>
                 <th className="px-4 py-3 font-medium">Display price</th>
-                <th className="px-4 py-3 font-medium">Window</th>
+                <th className="px-4 py-3 font-medium">Current location</th>
+                <th className="px-4 py-3 font-medium">At this location until</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
@@ -97,6 +126,18 @@ export function GallerySpacesTable() {
 
                     <td className="px-4 py-3.5">
                       <PriceTag amount={holding.displayPrice} className="text-sm" />
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <MapPin
+                          className="size-3.5 shrink-0 text-muted-foreground"
+                          strokeWidth={1.75}
+                        />
+                        <span className="text-foreground">
+                          {AGGREGATOR.companyName}
+                        </span>
+                      </div>
                     </td>
 
                     <td className="px-4 py-3.5">

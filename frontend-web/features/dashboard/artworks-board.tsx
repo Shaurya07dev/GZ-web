@@ -210,7 +210,7 @@ function ArtworkCard({
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
           {editState.editable ? (
             <Link
-              href="/dashboard/artworks/upload"
+              href={`/dashboard/artworks/${artwork.id}/edit`}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-gold-bright hover:underline"
             >
               <Pencil className="size-3.5" />

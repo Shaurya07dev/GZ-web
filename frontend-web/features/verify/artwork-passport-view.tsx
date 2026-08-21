@@ -7,6 +7,7 @@ import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 import { useArtwork } from "@/hooks/useArtwork";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { ArtworkPassportCard } from "./artwork-passport-card";
+import { OwnershipHistory } from "./ownership-history";
 import { ProvenanceTimeline } from "./provenance-timeline";
 
 // Client-rendered (not the Server Component the marketplace detail page
@@ -71,7 +72,7 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
             Owner
           </dt>
           <dd className="mt-1 text-sm font-medium text-foreground">
-            {CUSTODY_PARTY_LABEL[custody.legalOwner]}
+            {custody.legalOwnerName ?? CUSTODY_PARTY_LABEL[custody.legalOwner]}
           </dd>
         </div>
         <div className="rounded-lg border border-border bg-card px-3 py-3">
@@ -91,6 +92,8 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
           </dd>
         </div>
       </dl>
+
+      <OwnershipHistory artworkId={artwork.id} artistName={artwork.artistName} />
 
       <div className="mx-auto mt-14 max-w-md">
         <ProvenanceTimeline history={artwork.statusHistory} />

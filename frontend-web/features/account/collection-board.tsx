@@ -9,6 +9,7 @@ import {
   ScanLine,
   BadgeCheck,
   Repeat2,
+  UserRoundCheck,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -23,6 +24,8 @@ import { PriceTag } from "@/components/shared/price-tag";
 import { cn } from "@/lib/utils";
 import { useCollection } from "@/hooks/useCollection";
 import type { CollectionItem } from "@/services/customerCollectionService";
+import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
+import { mockCustomer } from "@/lib/mock-data/customer";
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-IN", {
@@ -48,6 +51,7 @@ function statusLabel(status: string): string {
 export function CollectionBoard() {
   const { data, isPending } = useCollection();
   const [viewing, setViewing] = useState<CollectionItem | null>(null);
+  const [transferring, setTransferring] = useState<CollectionItem | null>(null);
 
   if (isPending) {
     return (
@@ -111,7 +115,26 @@ export function CollectionBoard() {
         ))}
       </div>
 
-      <CollectionItemDialog item={viewing} onClose={() => setViewing(null)} />
+      <CollectionItemDialog
+        item={viewing}
+        onClose={() => setViewing(null)}
+        onTransfer={(item) => {
+          setViewing(null);
+          setTransferring(item);
+        }}
+      />
+
+      {/* Resale hand-over: the collector names the next owner, who accepts
+          through a link. Same flow the artist used to transfer it here. */}
+      {transferring && (
+        <TransferRightsDialog
+          open
+          onOpenChange={(open) => !open && setTransferring(null)}
+          artworkId={transferring.artwork.id}
+          artworkTitle={transferring.artwork.title}
+          fromName={mockCustomer.name}
+        />
+      )}
     </>
   );
 }
@@ -119,9 +142,11 @@ export function CollectionBoard() {
 function CollectionItemDialog({
   item,
   onClose,
+  onTransfer,
 }: {
   item: CollectionItem | null;
   onClose: () => void;
+  onTransfer: (item: CollectionItem) => void;
 }) {
   return (
     <Dialog open={Boolean(item)} onOpenChange={(open) => !open && onClose()}>
@@ -201,6 +226,14 @@ function CollectionItemDialog({
                 <Repeat2 className="size-3.5" />
                 List for resale
               </Link>
+              <button
+                type="button"
+                onClick={() => onTransfer(item)}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <UserRoundCheck className="size-3.5" />
+                Transfer ownership
+              </button>
             </div>
           </>
         ) : null}
