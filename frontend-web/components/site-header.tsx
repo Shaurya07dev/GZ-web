@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -32,6 +32,12 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { mockArtworks } from "@/lib/mock-data/artworks";
+import {
+  ROLE_SECTION_HOME,
+  readSessionRole,
+  signOut,
+  subscribeToSession,
+} from "@/lib/session";
 
 function titleCase(value: string): string {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -94,6 +100,21 @@ export function SiteHeader() {
   // here and nowhere else.
   const isLandingPage = pathname === "/";
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // The cookie isn't available during the server render, and rendering
+  // "Sign In" to someone who is already signed in is exactly the trap this
+  // fixes — so the header subscribes to the session instead of assuming.
+  const sessionRole = useSyncExternalStore(
+    subscribeToSession,
+    readSessionRole,
+    () => null,
+  );
+
+  function handleSignOut() {
+    signOut();
+    router.push("/");
+    router.refresh();
+  }
   const [mobileQuery, setMobileQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -114,7 +135,10 @@ export function SiteHeader() {
       <ArtistSurveyBanner />
       <header className="w-full border-b border-border/60 bg-background/75 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between gap-4 px-6 lg:px-10">
-          <Link href="/" className="flex items-baseline gap-2.5">
+          <Link
+            href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
+            className="flex items-baseline gap-2.5"
+          >
             <span className="font-display text-2xl font-semibold italic text-gold-bright">
               GZ
             </span>
@@ -237,12 +261,30 @@ export function SiteHeader() {
               </>
             )}
 
-            <Link
-              href="/login"
-              className="hidden text-sm text-foreground/85 transition-colors hover:text-foreground md:inline-block"
-            >
-              Sign In
-            </Link>
+            {sessionRole ? (
+              <div className="hidden items-center gap-3 md:flex">
+                <Link
+                  href={ROLE_SECTION_HOME[sessionRole]}
+                  className="text-sm font-medium text-gold-bright transition-colors hover:text-gold"
+                >
+                  {sessionRole === "customer" ? "My account" : "My dashboard"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="text-sm text-foreground/70 transition-colors hover:text-foreground"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden text-sm text-foreground/85 transition-colors hover:text-foreground md:inline-block"
+              >
+                Sign In
+              </Link>
+            )}
 
             <SwitchMode />
 
@@ -263,7 +305,7 @@ export function SiteHeader() {
             <DialogTitle className="sr-only">Navigation menu</DialogTitle>
 
             <Link
-              href="/"
+              href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
               onClick={() => setMobileOpen(false)}
               className="flex items-baseline gap-2"
             >
@@ -368,13 +410,35 @@ export function SiteHeader() {
                   Wishlist
                 </Link>
               )}
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
-              >
-                Sign In
-              </Link>
+              {sessionRole ? (
+                <>
+                  <Link
+                    href={ROLE_SECTION_HOME[sessionRole]}
+                    onClick={() => setMobileOpen(false)}
+                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:bg-muted"
+                  >
+                    {sessionRole === "customer" ? "My account" : "My dashboard"}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      handleSignOut();
+                    }}
+                    className="rounded-lg px-3 py-2.5 text-left text-sm text-foreground/90 transition-colors hover:bg-muted"
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
 
             <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-6">

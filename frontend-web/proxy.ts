@@ -15,9 +15,11 @@ import {
 
 const GUARDED_PREFIXES = ["/dashboard", "/aggregator", "/admin", "/account"];
 
-// Arriving at any of these while already signed in means the person wanted
-// their own home, not a marketing page or a login form they don't need.
-const SIGNED_OUT_ONLY = ["/", "/login", "/register"];
+// Only the site root redirects a signed-in person to their own home. /login
+// and /register stay reachable on purpose: signing in again is how you switch
+// roles or sign in as someone else, and bouncing people off those pages leaves
+// them with no way out of a session.
+const ROOT_PATH = "/";
 
 function guardedPrefix(pathname: string): string | undefined {
   return GUARDED_PREFIXES.find(
@@ -30,10 +32,10 @@ export function proxy(request: NextRequest) {
   const cookieRole = request.cookies.get(SESSION_COOKIE)?.value;
   const role = isSessionRole(cookieRole) ? cookieRole : undefined;
 
-  // Signed in and asking for the site root or an auth page: go straight to
-  // where this role belongs. This is what makes galleryzone.in open the
-  // artist's dashboard days later instead of the landing page.
-  if (SIGNED_OUT_ONLY.includes(pathname)) {
+  // Signed in and asking for the site root: go straight to where this role
+  // belongs. This is what makes galleryzone.in open the artist's dashboard
+  // days later instead of the landing page.
+  if (pathname === ROOT_PATH) {
     return role
       ? NextResponse.redirect(new URL(ROLE_LANDING[role], request.url))
       : NextResponse.next();
@@ -61,8 +63,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
-    "/login",
-    "/register",
     "/dashboard/:path*",
     "/aggregator/:path*",
     "/admin/:path*",

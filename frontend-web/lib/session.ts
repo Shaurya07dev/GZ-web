@@ -41,10 +41,45 @@ export function isSessionRole(value: string | undefined): value is SessionRole {
   return value === "artist" || value === "aggregator" || value === "customer" || value === "admin";
 }
 
+// Client-side read of the session cookie. The route guard reads it on the
+// server; the public header needs it in the browser so it can show the right
+// controls instead of an unconditional "Sign In".
+export function readSessionRole(): SessionRole | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${SESSION_COOKIE}=`));
+  const value = match?.split("=")[1];
+  return isSessionRole(value) ? value : null;
+}
+
+// The cookie is external state as far as React is concerned, so components
+// read it through useSyncExternalStore rather than an effect. Nothing emits an
+// event when a cookie changes, so signIn/signOut announce it themselves and we
+// also re-read when the tab regains focus (covers signing out in another tab).
+const SESSION_CHANGED_EVENT = "gz:session-changed";
+
+export function subscribeToSession(onChange: () => void): () => void {
+  window.addEventListener(SESSION_CHANGED_EVENT, onChange);
+  window.addEventListener("focus", onChange);
+  document.addEventListener("visibilitychange", onChange);
+  return () => {
+    window.removeEventListener(SESSION_CHANGED_EVENT, onChange);
+    window.removeEventListener("focus", onChange);
+    document.removeEventListener("visibilitychange", onChange);
+  };
+}
+
+function announceSessionChange(): void {
+  window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
+}
+
 export function signIn(role: SessionRole): void {
   document.cookie = `${SESSION_COOKIE}=${role}; path=/; max-age=${SESSION_MAX_AGE_SECONDS}; samesite=lax`;
+  announceSessionChange();
 }
 
 export function signOut(): void {
   document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0`;
+  announceSessionChange();
 }
