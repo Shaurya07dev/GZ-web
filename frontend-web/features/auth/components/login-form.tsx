@@ -31,7 +31,7 @@ import { AppleAuthButton } from "./apple-auth-button";
 import { RoleToggle } from "./role-toggle";
 import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
-import { ROLE_LANDING, SESSION_COOKIE, signIn } from "@/lib/session";
+import { ROLE_SECTION_HOME, SESSION_COOKIE, signIn } from "@/lib/session";
 import {
   loginSchema,
   type LoginInput,
@@ -106,7 +106,7 @@ export function LoginForm() {
           } else {
             document.cookie = `${SESSION_COOKIE}=${demoRole}; path=/; samesite=lax`;
           }
-          router.push(ROLE_LANDING[demoRole]);
+          router.push(ROLE_SECTION_HOME[demoRole]);
         },
         onError: (error) => {
           setFormError(

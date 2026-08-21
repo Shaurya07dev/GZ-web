@@ -13,9 +13,11 @@ export const SESSION_COOKIE = "gz_session";
 // login page.
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
-// Where a signed-in person lands when they arrive at the site root, or right
-// after signing in. Buyers go to the marketplace on purpose — sending someone
-// who came to look at art to their own orders page is the wrong door.
+// Where a signed-in person lands when they ARRIVE AT THE SITE ROOT. Buyers go
+// to the marketplace on purpose — sending someone who came to look at art to
+// their own orders page is the wrong door. Signing in explicitly is different:
+// that uses ROLE_SECTION_HOME below, because you sign in to get to your own
+// portal.
 export const ROLE_LANDING: Record<SessionRole, string> = {
   artist: "/dashboard",
   aggregator: "/aggregator/dashboard",
@@ -23,10 +25,11 @@ export const ROLE_LANDING: Record<SessionRole, string> = {
   customer: "/marketplace",
 };
 
-// Deliberately NOT the same map as ROLE_LANDING. This one answers a different
-// question: "you're signed in as X but you asked for section Y, where do we
-// put you instead?" — and a buyer bounced off /admin belongs in their own
-// account area, not dropped into the shop with no explanation.
+// Deliberately NOT the same map as ROLE_LANDING. This one is each role's own
+// portal, used in the two cases where a person is explicitly headed there:
+// right after signing in, and when they are bounced off a section belonging to
+// another role. A buyer lands in their account area both times — dropping them
+// into the shop instead reads as "nothing happened".
 export const ROLE_SECTION_HOME: Record<SessionRole, string> = {
   artist: "/dashboard",
   aggregator: "/aggregator/dashboard",

@@ -1,6 +1,6 @@
 import { Palette, Building2, Compass, type LucideIcon } from "lucide-react";
 import type { Role } from "@/features/auth/schemas/auth-schemas";
-import { ROLE_LANDING } from "@/lib/session";
+import { ROLE_SECTION_HOME } from "@/lib/session";
 
 export interface RoleOption {
   role: Role;
@@ -20,7 +20,7 @@ export const ROLE_OPTIONS: RoleOption[] = [
     label: "Artist",
     description: "List and sell your original artwork with full price privacy.",
     icon: Palette,
-    redirectPath: ROLE_LANDING.artist,
+    redirectPath: ROLE_SECTION_HOME.artist,
   },
   {
     role: "aggregator",
@@ -28,13 +28,13 @@ export const ROLE_OPTIONS: RoleOption[] = [
     description:
       "Reserve, display, and distribute verified art through your gallery or space.",
     icon: Building2,
-    redirectPath: ROLE_LANDING.aggregator,
+    redirectPath: ROLE_SECTION_HOME.aggregator,
   },
   {
     role: "customer",
     label: "Customer",
     description: "Discover and collect verified original artwork.",
     icon: Compass,
-    redirectPath: ROLE_LANDING.customer,
+    redirectPath: ROLE_SECTION_HOME.customer,
   },
 ];

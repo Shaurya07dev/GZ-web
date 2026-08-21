@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CheckoutAddressStep } from "./checkout-address-step";
@@ -33,6 +33,27 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
   const [address, setAddress] = useState<Address | null>(null);
   const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
 
+  const topRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
+
+  // Each step is shorter than the one before it, so moving forward leaves the
+  // window scrolled past the new step — you land looking at the footer. Pull
+  // the flow back into view on every step change, but not on first render,
+  // where the page should stay where the browser put it.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    topRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [step, placedOrder]);
+
   const stepIndex = STEPS.findIndex((s) => s.key === step);
 
   function goToStep(index: number) {
@@ -44,6 +65,10 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+      {/* Scroll anchor: sits above the progress bar with enough offset to
+          clear the sticky header. */}
+      <div ref={topRef} className="scroll-mt-24" aria-hidden="true" />
+
       <ol className="flex items-center gap-2" aria-label="Checkout progress">
         {STEPS.map((s, index) => {
           const isComplete =
