@@ -8,16 +8,19 @@ import { verifiedTierCount } from "@/types/artist";
 import { mockArtists } from "./artists";
 
 // ---------------------------------------------------------------------------
-// 18 artworks across all 7 mockArtists and 6 categories (painting, sculpture,
+// 26 artworks across all 7 mockArtists and 6 categories (painting, sculpture,
 // photography, printmaking, textile art, mixed media — five or more required).
-// customerPrice spans ~₹8,400–₹149,000. Status spread: 12 "marketplace"
+// customerPrice spans ~₹8,400–₹149,000. Status spread: 20 "marketplace"
 // (mostly, per Global Constraints), 5 "reserved", 1 "sold" — every
 // "reserved"/"sold" artwork here is tied to a real aggregator holding in
 // aggregator-holdings.ts (dates below are kept in exact sync with that file
 // via matching day-offsets from the same TODAY anchor), so the two fixtures
-// join cleanly by id. 8 artworks carry listingType "marketplace_and_aggregator"
-// (6 claimed by a holding + 2 still unclaimed/reservable, for the Aggregator
-// Portal's Inventory view); the remaining 10 are "marketplace_only".
+// join cleanly by id.
+//
+// 16 artworks are aggregator-eligible: 14 "marketplace_and_aggregator" and 2
+// "aggregator_only" (placed in person, never listed in the online grid). Six
+// of those are claimed by a holding, leaving 10 reservable in the Aggregator
+// Portal's Inventory view. The remaining 10 are "marketplace_only".
 //
 // Descriptions never mention price/valuation (platform rule — Onboarding
 // Guide "No Price In Description"). artistName/verifiedArtist are derived
@@ -759,5 +762,356 @@ export const mockArtworks: Artwork[] = [
       ["reserved", 37],
       ["sold", 10],
     ),
+  },
+
+  // --- Reservable aggregator stock -------------------------------------
+  // Eight pieces that exist purely so the Aggregator Portal's Inventory page
+  // has something left to reserve. Everything above is either claimed by a
+  // holding in aggregator-holdings.ts or marketplace-only, which left the
+  // grid with exactly two cards and an empty state one click later.
+  //
+  // All eight are aggregator-eligible, "marketplace" status and referenced by
+  // no holding, so listReservableInventory() picks them up. They carry a real
+  // `physical` block because MOU §12 governs anything sent for aggregator
+  // display — framed or stretched, hangers included, packed to standard.
+  {
+    id: "terrace-garden-after-rain",
+    title: "Terrace Garden, After Rain",
+    artistId: "meera-nair",
+    ...artistMeta("meera-nair"),
+    category: "painting",
+    medium: "Oil on Canvas",
+    customerPrice: 26600,
+    thumbnailUrl: IMG.landscape,
+    insured: true,
+    status: "marketplace",
+    listingType: "marketplace_and_aggregator",
+    description:
+      "A rooftop in Fort Kochi an hour after the rain stops, when the water still standing in the planters throws the sky back up at the wall. Built in thin oil glazes so the white of the ground keeps coming through the greens, with the puddles scraped back rather than painted in.",
+    dimensions: "30x40 in",
+    yearCreated: 2026,
+    images: images("Terrace Garden, After Rain", [
+      IMG.landscape,
+      IMG.framed,
+      IMG.journey,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0019",
+    coaIssueDate: daysAgo(41),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-terrace-garden/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 52],
+      ["pending_approval", 47],
+      ["marketplace", 41],
+    ),
+    physical: {
+      weightKg: 4.2,
+      framing: "framed",
+      format: "Canvas on stretcher, teak frame",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "weight-of-a-quiet-room",
+    title: "Weight of a Quiet Room",
+    artistId: "arjun-mehta",
+    ...artistMeta("arjun-mehta"),
+    category: "sculpture",
+    medium: "Cast Bronze",
+    customerPrice: 84500,
+    thumbnailUrl: IMG.busts,
+    insured: true,
+    status: "marketplace",
+    listingType: "marketplace_and_aggregator",
+    description:
+      "A seated figure reduced to the three planes that still read as a person from across a room. Sand-cast in a single pour, then worked back by hand at the shoulders so the tool marks stay visible under the patina. Supplied on a machined steel base.",
+    dimensions: "18x11x14 in",
+    yearCreated: 2025,
+    images: images("Weight of a Quiet Room", [
+      IMG.busts,
+      IMG.drape,
+      IMG.eco1,
+      IMG.portrait,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0020",
+    coaIssueDate: daysAgo(63),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-quiet-room/",
+      },
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-quiet-room-pour",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 78],
+      ["pending_approval", 71],
+      ["marketplace", 63],
+    ),
+    physical: {
+      weightKg: 16.5,
+      framing: "freestanding",
+      format: "Bronze on steel base",
+      hangingHardwareIncluded: false,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "platform-nine-first-light",
+    title: "Platform Nine, First Light",
+    artistId: "kavya-iyer",
+    ...artistMeta("kavya-iyer"),
+    category: "photography",
+    medium: "Archival Pigment Print",
+    customerPrice: 18200,
+    thumbnailUrl: IMG.framed,
+    insured: false,
+    status: "marketplace",
+    listingType: "marketplace_and_aggregator",
+    description:
+      "Shot at 5.40am from the far end of Platform Nine, waiting for the one minute when the station lights and the daylight are the same temperature and the whole shed goes flat. Printed on cotton rag in an edition of twelve, each one numbered on the reverse.",
+    dimensions: "16x24 in",
+    yearCreated: 2026,
+    images: images("Platform Nine, First Light", [
+      IMG.framed,
+      IMG.eco2,
+      IMG.landscape,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0021",
+    coaIssueDate: daysAgo(29),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-platform-nine/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 38],
+      ["pending_approval", 34],
+      ["marketplace", 29],
+    ),
+    physical: {
+      weightKg: 2.1,
+      framing: "framed",
+      format: "Cotton rag print, museum glass",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "letterpress-for-a-lost-street",
+    title: "Letterpress for a Lost Street",
+    artistId: "rohan-bhattacharya",
+    ...artistMeta("rohan-bhattacharya"),
+    category: "printmaking",
+    medium: "Linocut on Paper",
+    customerPrice: 15600,
+    thumbnailUrl: IMG.pyramid,
+    insured: false,
+    status: "marketplace",
+    listingType: "marketplace_and_aggregator",
+    description:
+      "Cut from a single block after the shopfronts on the artist's own street were painted over in one weekend. The signage lettering is set from wood type salvaged from the press that used to print those shutters, so the piece is partly made of the thing it records.",
+    dimensions: "14x20 in",
+    yearCreated: 2025,
+    images: images("Letterpress for a Lost Street", [
+      IMG.pyramid,
+      IMG.eco3,
+      IMG.framed,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0022",
+    coaIssueDate: daysAgo(55),
+    socialProofLinks: social([]),
+    statusHistory: history(
+      ["draft", 66],
+      ["pending_approval", 61],
+      ["marketplace", 55],
+    ),
+    physical: {
+      weightKg: 1.6,
+      framing: "framed",
+      format: "Handmade paper, ash frame",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "kantha-in-three-registers",
+    title: "Kantha in Three Registers",
+    artistId: "ananya-deshmukh",
+    ...artistMeta("ananya-deshmukh"),
+    category: "textile art",
+    medium: "Hand Embroidery on Cotton, Natural Dye",
+    customerPrice: 32400,
+    thumbnailUrl: IMG.drape,
+    insured: true,
+    status: "marketplace",
+    // Aggregator-only: this one is meant to be seen and handled in person,
+    // so it never appears in the online marketplace grid.
+    listingType: "aggregator_only",
+    description:
+      "Three bands of running stitch worked at three different densities across a single dyed field, so the cloth reads as one surface from a distance and as three separate weathers up close. Roughly four months of stitching, in madder, indigo and pomegranate rind.",
+    dimensions: "36x48 in",
+    yearCreated: 2025,
+    images: images("Kantha in Three Registers", [
+      IMG.drape,
+      IMG.eco1,
+      IMG.portrait,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0023",
+    coaIssueDate: daysAgo(35),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-kantha-registers/",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 45],
+      ["pending_approval", 40],
+      ["marketplace", 35],
+    ),
+    physical: {
+      weightKg: 3.4,
+      framing: "stretched_canvas",
+      format: "Cotton stretched on a hardwood frame",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "signal-loss-diptych",
+    title: "Signal Loss (Diptych)",
+    artistId: "priya-subramaniam",
+    ...artistMeta("priya-subramaniam"),
+    category: "mixed media",
+    medium: "Repurposed Metal and Pigment on Panel",
+    customerPrice: 47800,
+    thumbnailUrl: IMG.eco2,
+    insured: true,
+    status: "marketplace",
+    listingType: "marketplace_and_aggregator",
+    description:
+      "Two panels built from the housings of dead television sets, flattened, primed and worked over in dry pigment until the seams of the original casing come back through. Hung as a pair with a fixed four-inch gap, which is part of the work rather than a display note.",
+    dimensions: "24x36 in (each panel)",
+    yearCreated: 2026,
+    images: images("Signal Loss (Diptych)", [
+      IMG.eco2,
+      IMG.eco3,
+      IMG.pyramid,
+      IMG.busts,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0024",
+    coaIssueDate: daysAgo(22),
+    socialProofLinks: social([
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-signal-loss-build",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 31],
+      ["pending_approval", 27],
+      ["marketplace", 22],
+    ),
+    physical: {
+      weightKg: 11.8,
+      framing: "mounted_board",
+      format: "Metal and pigment on birch panel",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "noon-heat-chettinad",
+    title: "Noon Heat, Chettinad",
+    artistId: "ishaan-kapoor",
+    ...artistMeta("ishaan-kapoor"),
+    category: "painting",
+    medium: "Acrylic on Canvas",
+    customerPrice: 96200,
+    thumbnailUrl: IMG.idPaint,
+    insured: true,
+    status: "marketplace",
+    listingType: "marketplace_and_aggregator",
+    description:
+      "The largest canvas in this series, and the one that gave up its horizon: a courtyard at the hour when the light is so flat that the walls, the floor and the sky all resolve to the same value. Painted in acrylic for the speed, then knocked back with a dry brush over four weeks.",
+    dimensions: "48x60 in",
+    yearCreated: 2026,
+    images: images("Noon Heat, Chettinad", [
+      IMG.idPaint,
+      IMG.landscape,
+      IMG.framed,
+      IMG.journey,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0025",
+    coaIssueDate: daysAgo(17),
+    socialProofLinks: social([
+      {
+        platform: "instagram",
+        url: "https://www.instagram.com/reel/gz-noon-heat-chettinad/",
+      },
+      {
+        platform: "youtube",
+        url: "https://www.youtube.com/watch?v=gz-noon-heat-process",
+      },
+    ]),
+    statusHistory: history(
+      ["draft", 27],
+      ["pending_approval", 22],
+      ["marketplace", 17],
+    ),
+    physical: {
+      weightKg: 7.9,
+      framing: "stretched_canvas",
+      format: "Canvas on deep stretcher, unframed edges",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
+  },
+  {
+    id: "verdigris-study-no-4",
+    title: "Verdigris Study No. 4",
+    artistId: "arjun-mehta",
+    ...artistMeta("arjun-mehta"),
+    category: "sculpture",
+    medium: "Cast Bronze",
+    customerPrice: 21900,
+    thumbnailUrl: IMG.eco3,
+    insured: false,
+    status: "marketplace",
+    // Aggregator-only: a small wall piece the artist wants placed in person.
+    listingType: "aggregator_only",
+    description:
+      "A wall-mounted bronze the size of an open hand, patinated in stages over six weeks and stopped at the point where the green had taken but the metal underneath still showed at the edges. Fourth in a run of nine, each one halted at a different week.",
+    dimensions: "9x7x2 in",
+    yearCreated: 2025,
+    images: images("Verdigris Study No. 4", [
+      IMG.eco3,
+      IMG.busts,
+      IMG.eco1,
+    ]),
+    coaCertificateNumber: "GZ-COA-2026-0026",
+    coaIssueDate: daysAgo(48),
+    socialProofLinks: social([]),
+    statusHistory: history(
+      ["draft", 58],
+      ["pending_approval", 54],
+      ["marketplace", 48],
+    ),
+    physical: {
+      weightKg: 2.8,
+      framing: "framed",
+      format: "Bronze on a mounted backing plate",
+      hangingHardwareIncluded: true,
+      packagingConfirmed: true,
+    },
   },
 ];
