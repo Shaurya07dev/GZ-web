@@ -180,7 +180,7 @@ export function AboutTeamSection() {
                   <Landmark className="size-5 text-gold transition-transform duration-500 group-hover:scale-110" strokeWidth={1.25} />
                 </div>
                 <div className="pt-1">
-                  <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-amber-500 mb-2">
+                  <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-gold mb-2">
                     Long-Term Vision
                   </h4>
                   <p className="text-sm text-muted-foreground/90 leading-relaxed max-w-md">

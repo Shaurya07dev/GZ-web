@@ -18,7 +18,6 @@ export interface FaqItem {
 export const FAQ_AUDIENCES: { value: FaqAudience; label: string }[] = [
   { value: "general", label: "General" },
   { value: "artists", label: "Artists" },
-  { value: "aggregators", label: "Aggregators" },
   { value: "buyers", label: "Buyers" },
 ];
 
