@@ -72,18 +72,36 @@ export function EditDisplayPriceDialog({
 
   function onSubmit(values: { displayPrice: number }) {
     if (!holding) return;
-    const updated = aggregatorService.updateDisplayPrice(
-      holding.id,
-      values.displayPrice,
-    );
+    // The service refuses a second change (MOU §6) by throwing — surface that
+    // rather than letting it break the dialog.
+    let updated;
+    try {
+      updated = aggregatorService.updateDisplayPrice(
+        holding.id,
+        values.displayPrice,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not set the price",
+      );
+      onOpenChange(false);
+      return;
+    }
+
     queryClient.setQueryData<
       Array<AggregatorHolding & { artwork: ArtworkSummary }>
     >(["aggregator-collection"], (prev) =>
       prev?.map((h) =>
-        h.id === holding.id ? { ...h, displayPrice: updated.displayPrice } : h,
+        h.id === holding.id
+          ? {
+              ...h,
+              displayPrice: updated.displayPrice,
+              displayPriceSetAt: updated.displayPriceSetAt,
+            }
+          : h,
       ),
     );
-    toast.success("Display price updated");
+    toast.success("Selling price set");
     onOpenChange(false);
   }
 
@@ -91,10 +109,11 @@ export function EditDisplayPriceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Edit display price</DialogTitle>
+          <DialogTitle>Set the selling price</DialogTitle>
           <DialogDescription>
-            &ldquo;{holding.artwork.title}&rdquo; &mdash; you may raise the
-            display price above the marketplace price, never below it.
+            &ldquo;{holding.artwork.title}&rdquo; &mdash; you may set this above
+            the marketplace price, never below it. Under your MOU (§6) you get
+            one opportunity to set it, so it is fixed once you confirm.
           </DialogDescription>
         </DialogHeader>
 
@@ -136,7 +155,7 @@ export function EditDisplayPriceDialog({
             Cancel
           </Button>
           <Button type="submit" form="edit-display-price-form">
-            Save price
+            Set price — final
           </Button>
         </DialogFooter>
       </DialogContent>

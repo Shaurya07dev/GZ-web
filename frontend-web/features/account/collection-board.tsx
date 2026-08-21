@@ -89,7 +89,7 @@ export function CollectionBoard() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
           <button
-            key={item.order.id}
+            key={item.artwork.id}
             type="button"
             onClick={() => setViewing(item)}
             className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left transition-colors hover:border-gold/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -110,7 +110,7 @@ export function CollectionBoard() {
               <p className="truncate text-xs text-muted-foreground">
                 {item.artwork.artistName}
               </p>
-              <PriceTag amount={item.order.amount} className="mt-1 text-sm" />
+              <PriceTag amount={item.paidPrice} className="mt-1 text-sm" />
             </div>
           </button>
         ))}
@@ -184,7 +184,7 @@ function CollectionItemDialog({
               <div>
                 <dt className="text-xs text-muted-foreground">Acquired</dt>
                 <dd className="text-foreground">
-                  {formatDate(item.order.createdAt)}
+                  {formatDate(item.acquiredAt)}
                 </dd>
               </div>
             </dl>
@@ -216,14 +216,23 @@ function CollectionItemDialog({
             />
 
             <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row">
-              <Link
-                href={`/account/orders/${item.order.id}`}
-                onClick={onClose}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                <ExternalLink className="size-3.5" />
-                View order
-              </Link>
+              {/* Bought in person from an aggregator: there is no GalleryZone
+                  order to open, so the provenance of the purchase is stated
+                  instead of linking nowhere. */}
+              {item.order ? (
+                <Link
+                  href={`/account/orders/${item.order.id}`}
+                  onClick={onClose}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  <ExternalLink className="size-3.5" />
+                  View order
+                </Link>
+              ) : (
+                <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground">
+                  Bought in person
+                </span>
+              )}
               <Link
                 href="/account/resale"
                 onClick={onClose}

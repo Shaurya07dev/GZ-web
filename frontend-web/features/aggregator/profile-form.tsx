@@ -5,7 +5,14 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldCheck, Building2, Lock } from "lucide-react";
+import {
+  Check,
+  Loader2,
+  ShieldCheck,
+  Building2,
+  Lock,
+  UserRoundCog,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
@@ -23,6 +30,15 @@ const profileSchema = z.object({
   gstNumber: z.string().trim().length(15, "GST number must be 15 characters"),
   phone: z.string().trim().min(10, "Enter a valid phone number"),
   addressLine1: z.string().trim().min(5, "Enter your business address"),
+  // MOU §10 requires one nominated GalleryZone coordinator per premises. All
+  // three are required: audit notices, expiry reminders and inbound shipment
+  // alerts go to this person, so a half-filled contact is no contact.
+  coordinatorDesignation: z
+    .string()
+    .trim()
+    .min(2, "Enter their role, e.g. Gallery Manager"),
+  coordinatorPhone: z.string().trim().min(10, "Enter a valid phone number"),
+  coordinatorEmail: z.string().trim().email("Enter a valid email address"),
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
@@ -74,6 +90,9 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
       gstNumber: profile.gstNumber,
       phone: profile.phone,
       addressLine1: profile.addressLine1,
+      coordinatorDesignation: profile.coordinatorDesignation,
+      coordinatorPhone: profile.coordinatorPhone,
+      coordinatorEmail: profile.coordinatorEmail,
     },
   });
 
@@ -202,6 +221,89 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
             />
             <FieldError errors={[errors.addressLine1]} />
           </Field>
+        </div>
+
+        {/* MOU §10: one nominated GalleryZone coordinator per premises. The
+            company's contact person above is who GalleryZone deals with
+            commercially; this is the named person on the floor who receives
+            audit notices, expiry reminders and inbound shipments. */}
+        <div className="flex flex-col gap-4 rounded-md border border-gold/25 bg-gold/5 p-4">
+          <div className="flex items-start gap-2.5">
+            <UserRoundCog
+              className="mt-0.5 size-4 shrink-0 text-gold-bright"
+              strokeWidth={1.75}
+            />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Nominated GalleryZone coordinator
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                Required by your MOU (§10). This person receives audit notices,
+                display-expiry reminders and inbound shipment alerts on your
+                behalf.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor="coordinatorName">Name</FieldLabel>
+              <Input
+                id="coordinatorName"
+                className="h-10"
+                value={profile.contactPerson}
+                readOnly
+                aria-describedby="coordinatorNameHint"
+              />
+              <p
+                id="coordinatorNameHint"
+                className="text-xs text-muted-foreground"
+              >
+                Taken from the contact person above — change it there.
+              </p>
+            </Field>
+
+            <Field data-invalid={Boolean(errors.coordinatorDesignation)}>
+              <FieldLabel htmlFor="coordinatorDesignation">
+                Designation
+              </FieldLabel>
+              <Input
+                id="coordinatorDesignation"
+                className="h-10"
+                placeholder="Gallery Manager"
+                {...register("coordinatorDesignation")}
+                aria-invalid={Boolean(errors.coordinatorDesignation)}
+              />
+              <FieldError errors={[errors.coordinatorDesignation]} />
+            </Field>
+
+            <Field data-invalid={Boolean(errors.coordinatorPhone)}>
+              <FieldLabel htmlFor="coordinatorPhone">Direct phone</FieldLabel>
+              <Input
+                id="coordinatorPhone"
+                type="tel"
+                className="h-10"
+                {...register("coordinatorPhone")}
+                aria-invalid={Boolean(errors.coordinatorPhone)}
+              />
+              <FieldError errors={[errors.coordinatorPhone]} />
+            </Field>
+
+            <Field
+              data-invalid={Boolean(errors.coordinatorEmail)}
+              className="sm:col-span-2"
+            >
+              <FieldLabel htmlFor="coordinatorEmail">Email</FieldLabel>
+              <Input
+                id="coordinatorEmail"
+                type="email"
+                className="h-10"
+                {...register("coordinatorEmail")}
+                aria-invalid={Boolean(errors.coordinatorEmail)}
+              />
+              <FieldError errors={[errors.coordinatorEmail]} />
+            </Field>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

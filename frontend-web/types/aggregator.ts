@@ -7,6 +7,11 @@ export interface AggregatorHolding {
   assignedAt: string; // ISO
   expiresAt: string; // assignedAt + 30 days
   status: "reserved" | "sold_pending_settlement";
+  // Aggregator MOU §6: the aggregator gets ONE opportunity to set the selling
+  // price. Stamped the first time they set it; after that the price is locked.
+  // Optional because fixture holdings predate the field — undefined and null
+  // both mean "not set yet".
+  displayPriceSetAt?: string | null;
   // Distinguishes an aggregator-initiated reservation (Browse → Reserve) from
   // GalleryZone proactively placing inventory at this aggregator's premises
   // (MOU §4). Drives the My Inventory filter tabs.

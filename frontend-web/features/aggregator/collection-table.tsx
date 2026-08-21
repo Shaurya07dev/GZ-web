@@ -7,6 +7,7 @@ import {
   CircleCheckBig,
   GalleryVerticalEnd,
   Pencil,
+  Lock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ export function CollectionTable() {
           <tbody>
             {data.map((holding) => {
               const isSold = holding.status === "sold_pending_settlement";
+              const priceLocked = Boolean(holding.displayPriceSetAt);
               const status = STATUS_CONFIG[holding.status];
               return (
                 <tr
@@ -119,23 +121,46 @@ export function CollectionTable() {
                   </td>
 
                   <td className="px-4 py-3.5">
+                    {/* MOU §6 — one opportunity to set the selling price.
+                        Once set it is locked, so the pencil disappears and
+                        the cell says why. */}
                     <button
                       type="button"
-                      onClick={() => !isSold && setPriceDialogHolding(holding)}
-                      disabled={isSold}
+                      onClick={() =>
+                        !isSold &&
+                        !priceLocked &&
+                        setPriceDialogHolding(holding)
+                      }
+                      disabled={isSold || priceLocked}
+                      title={
+                        priceLocked
+                          ? "Set once already — the selling price is fixed (MOU §6)"
+                          : undefined
+                      }
                       className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 -ml-1.5 transition-colors enabled:hover:bg-muted disabled:cursor-not-allowed"
                     >
                       <PriceTag
                         amount={holding.displayPrice}
                         className="text-sm"
                       />
-                      {!isSold && (
-                        <Pencil
-                          className="size-3 text-muted-foreground"
-                          strokeWidth={1.75}
-                        />
-                      )}
+                      {!isSold &&
+                        (priceLocked ? (
+                          <Lock
+                            className="size-3 text-muted-foreground"
+                            strokeWidth={1.75}
+                          />
+                        ) : (
+                          <Pencil
+                            className="size-3 text-muted-foreground"
+                            strokeWidth={1.75}
+                          />
+                        ))}
                     </button>
+                    {!isSold && !priceLocked && (
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        You can set this once
+                      </p>
+                    )}
                   </td>
 
                   <td className="px-4 py-3.5">

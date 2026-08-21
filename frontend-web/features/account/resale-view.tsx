@@ -85,7 +85,7 @@ export function ResaleView() {
           <div className="mt-4 flex flex-col gap-3">
             {eligible.map((item) => (
               <div
-                key={item.order.id}
+                key={item.artwork.id}
                 className="flex items-center gap-4 rounded-lg border border-border bg-card p-4"
               >
                 <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
@@ -102,7 +102,7 @@ export function ResaleView() {
                     {item.artwork.title}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    Acquired for <PriceTag amount={item.order.amount} className="text-xs" />
+                    Acquired for <PriceTag amount={item.paidPrice} className="text-xs" />
                   </p>
                 </div>
                 <button
@@ -271,7 +271,7 @@ function ListingDialog({
               </FieldGroup>
 
               <p className="text-xs text-muted-foreground">
-                Originally acquired for ₹{item.order.amount.toLocaleString("en-IN")}.
+                Originally acquired for ₹{item.paidPrice.toLocaleString("en-IN")}.
                 Buyer inquiries and resale checkout aren&rsquo;t wired to a live
                 marketplace in this demo.
               </p>

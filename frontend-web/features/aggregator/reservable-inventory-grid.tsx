@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShieldCheck, PackageSearch } from "lucide-react";
+import { ShieldCheck, PackageSearch, FileSignature } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
+import { useAggregatorProfile } from "@/hooks/useAggregatorProfile";
 import { ReserveArtworkDialog } from "./reserve-artwork-dialog";
 import type { ArtworkSummary } from "@/types/artwork";
 
@@ -24,6 +25,10 @@ const MINIMUM_VERIFICATION = {
 } as const;
 
 export function ReservableInventoryGrid() {
+  const { data: profile } = useAggregatorProfile();
+  // undefined while loading — only `false` should disable anything, so a slow
+  // profile fetch never blocks a signed aggregator mid-session.
+  const mouSigned = profile ? Boolean(profile.mouAcceptance) : undefined;
   const { data, isPending, isError } = useReservableInventory();
   const [selected, setSelected] = useState<ArtworkSummary | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -73,11 +78,37 @@ export function ReservableInventoryGrid() {
 
   return (
     <>
+      {/* The service refuses a reservation without a signed MOU. Say so here
+          rather than letting someone pick a piece and hit the wall in the
+          confirm dialog. */}
+      {mouSigned === false && (
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
+          <FileSignature
+            className="size-4 shrink-0 text-gold-bright"
+            strokeWidth={1.75}
+          />
+          <p className="flex-1 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">
+              Sign your Aggregator MOU to reserve artwork.
+            </span>{" "}
+            It covers custody, pricing and settlement — GalleryZone can&rsquo;t
+            place a piece with you until it&rsquo;s signed.
+          </p>
+          <Link
+            href="/aggregator/profile"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gold/60 px-4 py-2 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
+          >
+            Go to My Profile
+          </Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {data.map((artwork) => (
           <InventoryArtworkCard
             key={artwork.id}
             artwork={artwork}
+            disabled={mouSigned === false}
             onReserve={() => openReserveDialog(artwork)}
           />
         ))}
@@ -95,9 +126,11 @@ export function ReservableInventoryGrid() {
 function InventoryArtworkCard({
   artwork,
   onReserve,
+  disabled = false,
 }: {
   artwork: ArtworkSummary;
   onReserve: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors duration-200 ease-out hover:border-gold/50">
@@ -137,7 +170,12 @@ function InventoryArtworkCard({
         </div>
         <PriceTag amount={artwork.customerPrice} className="mt-1 text-base" />
 
-        <Button onClick={onReserve} className="mt-2.5 w-full">
+        <Button
+          onClick={onReserve}
+          disabled={disabled}
+          title={disabled ? "Sign your Aggregator MOU first" : undefined}
+          className="mt-2.5 w-full"
+        >
           Reserve
         </Button>
       </div>

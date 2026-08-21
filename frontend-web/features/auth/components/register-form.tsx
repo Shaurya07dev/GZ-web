@@ -40,6 +40,7 @@ import {
 } from "@/features/auth/schemas/auth-schemas";
 import { ROLE_OPTIONS } from "@/features/auth/data/role-options";
 import { signIn } from "@/lib/session";
+import { buyerInviteService } from "@/services/buyerInviteService";
 
 interface RegisterFormProps {
   initialRole?: Role;
@@ -82,6 +83,25 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
 
   function onSubmit(values: RegisterInput) {
     registerMutation.mutate(values, {
+      onSuccess: () => {
+        // A buyer who bought in person from an aggregator exists only as a
+        // name and email on that sale. Registering with the same address
+        // claims those purchases into this account, with their certificates
+        // and ownership records attached.
+        if (values.role === "customer") {
+          const claimed = buyerInviteService.claimForEmail({
+            email: values.email,
+            name: values.name,
+          });
+          if (claimed.length > 0) {
+            toast.success(
+              claimed.length === 1
+                ? `“${claimed[0].artworkTitle}” has been added to your collection.`
+                : `${claimed.length} artworks you bought have been added to your collection.`,
+            );
+          }
+        }
+      },
       onError: (error) => {
         toast.error(
           error instanceof Error ? error.message : "Something went wrong.",

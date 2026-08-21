@@ -23,6 +23,8 @@ export const CHECKOUT_DELIVERY_CHARGE = 250;
 export interface CreateOrderPayload {
   artworkId: string;
   addressId: string;
+  /** Gateway result, collected before the order is created. */
+  payment?: Order["payment"];
 }
 
 // A sale settles into the artist's wallet immediately in this mock (no
@@ -107,9 +109,16 @@ export const orderService = {
       amount: artwork.customerPrice,
       gstAmount,
       deliveryCharge: CHECKOUT_DELIVERY_CHARGE,
-      status: "pending",
+      // A paid order, because payment is collected before this is called.
+      status: payload.payment ? "paid" : "pending",
       createdAt: now,
-      statusHistory: [{ status: "pending", changedAt: now }],
+      statusHistory: [
+        { status: "pending", changedAt: now },
+        ...(payload.payment
+          ? [{ status: "paid" as const, changedAt: now }]
+          : []),
+      ],
+      payment: payload.payment ?? null,
     };
     ordersCol.set([order, ...ordersCol.get()]);
 

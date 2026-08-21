@@ -12,7 +12,7 @@ import type {
 } from "@/types/artwork";
 import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Order } from "@/types/order";
-import type { Address, CustomerProfile } from "@/types/customer";
+import type { Address, BuyerInvite, CustomerProfile } from "@/types/customer";
 import type { AdminUser, Settlement } from "@/types/admin";
 import type { MessageThread } from "@/types/message";
 import type { SupportTicket } from "@/types/support";
@@ -327,6 +327,11 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
   bankAccountMasked: "•••• •••• •••• 4821",
   ifsc: "HDFC0001234",
   securityDepositStatus: "active" as const,
+  // The nominated GalleryZone coordinator (aggregator MOU §10) — audit
+  // notices, expiry reminders and inbound shipment alerts go to this person.
+  coordinatorDesignation: "Gallery Manager",
+  coordinatorPhone: "+91 98450 33127",
+  coordinatorEmail: "meher@verandaharthouse.in",
   // Signed once from the aggregator's profile page — the partner agreement,
   // separate from the artist MOU (features/aggregator/aggregator-mou-data.ts).
   mouAcceptance: null as {
@@ -347,6 +352,13 @@ export const ownershipTransfersCol = collection<OwnershipTransfer[]>(
 // Paper-COA requests (MOU §12), empty until a buyer asks for one.
 export const physicalCoaRequestsCol = collection<PhysicalCoaRequest[]>(
   "physicalCoaRequests",
+  () => [],
+);
+
+// In-person buyers waiting to be connected to an account (see
+// services/buyerInviteService.ts). Empty until an aggregator records a sale.
+export const buyerInvitesCol = collection<BuyerInvite[]>(
+  "buyerInvites",
   () => [],
 );
 

@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaQueue } from "./physical-coa-queue";
+import { ArtworkHistory } from "./artwork-history";
 import { ARTIST } from "./dashboard-data";
 
 type ArtistArtwork = NonNullable<
@@ -204,6 +205,8 @@ function CertificateDialog({
               This is a preview — the platform isn&rsquo;t wired to generate a
               downloadable PDF in this demo.
             </p>
+
+            <ArtworkHistory artwork={artwork} />
 
             {/* First hand-over of the passport: artist to buyer. The buyer can
                 pass it on again later from their own collection. */}

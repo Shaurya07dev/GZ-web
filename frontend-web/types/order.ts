@@ -22,4 +22,13 @@ export interface Order {
   status: OrderStatus;
   createdAt: string; // ISO date
   statusHistory: OrderStatusEvent[];
+  // Payment reference from the gateway. Simulated for now (see
+  // features/checkout/razorpay-simulation.tsx) — the shape matches what
+  // Razorpay returns so wiring the real gateway is a swap, not a rewrite.
+  payment?: {
+    provider: "razorpay";
+    paymentId: string;
+    method: string;
+    simulated: boolean;
+  } | null;
 }

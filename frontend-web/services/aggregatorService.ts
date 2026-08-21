@@ -6,12 +6,14 @@ import type {
 import { isAggregatorListed, type ArtworkSummary } from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import { mockDelay, mockError } from "@/lib/mock-utils";
+import { buyerInviteService } from "./buyerInviteService";
 import {
   artworksCol,
   holdingsCol,
   aggregatorSalesCol,
   aggregatorWalletCol,
   aggregatorWalletTransactionsCol,
+  aggregatorProfileCol,
 } from "@/lib/mock-collections";
 
 // ---------------------------------------------------------------------------
@@ -106,6 +108,15 @@ export const aggregatorService = {
       return mockError("Artwork no longer available");
     }
 
+    // MOU first, inventory second: an unsigned aggregator has no agreement
+    // covering custody, pricing or settlement, so they cannot take possession
+    // of anyone's artwork. Enforced here rather than only in the UI.
+    if (!aggregatorProfileCol.get().mouAcceptance) {
+      return mockError(
+        "Sign your Aggregator MOU in My Profile before reserving artwork",
+      );
+    }
+
     const artwork = getArtworkById(artworkId);
     const holdings = holdingsCol.get();
     const alreadyClaimed = holdings.some((h) => h.artworkId === artworkId);
@@ -127,6 +138,7 @@ export const aggregatorService = {
       expiresAt: expiresAt.toISOString(),
       status: "reserved",
       assignmentSource: "self_reserved",
+      displayPriceSetAt: null,
     };
     holdingsCol.set([...holdings, holding]);
     return mockDelay(holding);
@@ -180,6 +192,20 @@ export const aggregatorService = {
     };
     aggregatorSalesCol.set([sale, ...aggregatorSalesCol.get()]);
 
+    // The buyer walked in off the street and has no account. Hold their
+    // purchase against their email so it appears in their collection the
+    // moment they register (services/buyerInviteService.ts).
+    const soldArtwork = getArtworkById(payload.artworkId);
+    buyerInviteService.create({
+      email: payload.buyerEmail,
+      name: payload.buyerName,
+      artworkId: payload.artworkId,
+      artworkTitle: soldArtwork?.title ?? "Artwork",
+      soldPrice: payload.soldPrice,
+      soldAt: now,
+      source: "aggregator_sale",
+    });
+
     // Credit the wallet at the same 20%-of-markup rate dashboardSummary()
     // already uses (don't recompute a second formula) — see MOU §8's
     // "Profit Share = 20% × (Listed Price − Artist Price)"; this mock has no
@@ -220,6 +246,8 @@ export const aggregatorService = {
   // feedback. This method exists purely so that update also lands in the
   // persisted store — without it, the next unrelated
   // ["aggregator-collection"] refetch would silently revert the edited price.
+  // One opportunity only (MOU §6). Enforced here, not just by hiding the
+  // button, so a stale tab can't post a second price.
   updateDisplayPrice(
     holdingId: string,
     displayPrice: number,
@@ -229,7 +257,16 @@ export const aggregatorService = {
     if (index === -1) {
       throw new Error(`aggregatorService: no holding "${holdingId}"`);
     }
-    const updated: AggregatorHolding = { ...holdings[index], displayPrice };
+    if (holdings[index].displayPriceSetAt) {
+      throw new Error(
+        "The selling price for this artwork has already been set and cannot be changed (MOU §6)",
+      );
+    }
+    const updated: AggregatorHolding = {
+      ...holdings[index],
+      displayPrice,
+      displayPriceSetAt: new Date().toISOString(),
+    };
     holdingsCol.set(holdings.map((h, i) => (i === index ? updated : h)));
     return updated;
   },

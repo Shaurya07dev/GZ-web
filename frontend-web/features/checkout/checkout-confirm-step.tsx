@@ -1,11 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
+import {
+  CHECKOUT_DELIVERY_CHARGE,
+  CHECKOUT_GST_RATE,
+} from "@/services/orderService";
+import { RazorpaySimulation } from "./razorpay-simulation";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
 import type { Order } from "@/types/order";
@@ -32,10 +38,19 @@ export function CheckoutConfirmStep({
   placedOrder,
 }: CheckoutConfirmStepProps) {
   const createOrderMutation = useCreateOrderMutation();
+  const [payOpen, setPayOpen] = useState(false);
 
-  function handlePlaceOrder() {
+  const total =
+    artwork.customerPrice +
+    Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100 +
+    CHECKOUT_DELIVERY_CHARGE;
+
+  // Payment first, order second: an order only exists once the gateway has
+  // returned a reference, so there is never a paid-but-orderless state or an
+  // order with no payment against it.
+  function handlePaid(payment: NonNullable<Order["payment"]>) {
     createOrderMutation.mutate(
-      { artworkId: artwork.id, addressId: address.id },
+      { artworkId: artwork.id, addressId: address.id, payment },
       {
         onSuccess: (order) => {
           onOrderPlaced(order);
@@ -50,7 +65,7 @@ export function CheckoutConfirmStep({
   }
 
   if (placedOrder) {
-    const total =
+    const paidTotal =
       placedOrder.amount + placedOrder.gstAmount + placedOrder.deliveryCharge;
     return (
       <div className="flex flex-col items-center gap-5 py-6 text-center">
@@ -73,9 +88,15 @@ export function CheckoutConfirmStep({
         <p className="text-sm text-muted-foreground">
           Total paid{" "}
           <span className="font-medium text-foreground">
-            {formatINR(total)}
+            {formatINR(paidTotal)}
           </span>
         </p>
+        {placedOrder.payment && (
+          <p className="font-mono text-xs text-muted-foreground">
+            {placedOrder.payment.paymentId}
+            {placedOrder.payment.simulated ? " · simulated payment" : ""}
+          </p>
+        )}
         <div className="mt-2 flex flex-col gap-3 sm:flex-row">
           <Button
             nativeButton={false}
@@ -103,9 +124,8 @@ export function CheckoutConfirmStep({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           You&rsquo;re buying &ldquo;{artwork.title}&rdquo;, delivered to{" "}
-          {address.line1}, {address.city}. There&rsquo;s no payment form in this
-          preview build; confirming places the order at the price shown in
-          review.
+          {address.line1}, {address.city}. Paying opens a stand-in for the
+          Razorpay checkout — no money moves until live keys are connected.
         </p>
       </div>
 
@@ -119,15 +139,25 @@ export function CheckoutConfirmStep({
           Back
         </Button>
         <Button
-          onClick={handlePlaceOrder}
+          onClick={() => setPayOpen(true)}
           disabled={createOrderMutation.isPending}
         >
           {createOrderMutation.isPending && (
             <Loader2 className="size-4 animate-spin" strokeWidth={2} />
           )}
-          {createOrderMutation.isPending ? "Placing order…" : "Place Order"}
+          {createOrderMutation.isPending
+            ? "Placing order…"
+            : `Pay ${formatINR(total)}`}
         </Button>
       </div>
+
+      <RazorpaySimulation
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        amount={total}
+        artworkTitle={artwork.title}
+        onPaid={handlePaid}
+      />
     </div>
   );
 }
