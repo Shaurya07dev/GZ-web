@@ -19,7 +19,11 @@ import {
   useAggregatorWalletTransactions,
   useAggregatorRequestWithdrawalMutation,
 } from "@/hooks/useAggregatorWallet";
-import { useAggregatorProfile } from "@/hooks/useAggregatorProfile";
+import {
+  useAggregatorProfile,
+  useUpdateAggregatorProfileMutation,
+} from "@/hooks/useAggregatorProfile";
+import { GstNumberCard } from "@/components/shared/gst-number-card";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 
 const MIN_WITHDRAWAL = 1000;
@@ -29,6 +33,8 @@ const MIN_WITHDRAWAL = 1000;
 export function WalletOverview() {
   const { data: wallet } = useAggregatorWallet();
   const { data: transactions } = useAggregatorWalletTransactions();
+  const { data: profile } = useAggregatorProfile();
+  const updateProfileMutation = useUpdateAggregatorProfileMutation();
 
   const summaryCards = [
     {
@@ -56,6 +62,16 @@ export function WalletOverview() {
 
   return (
     <div className="flex flex-col gap-6">
+      {profile && (
+        <GstNumberCard
+          value={profile.gstNumber ?? ""}
+          onSave={(gstNumber) => updateProfileMutation.mutate({ gstNumber })}
+          isPending={updateProfileMutation.isPending}
+          isSuccess={updateProfileMutation.isSuccess}
+          description="Used on your commission settlements and invoices. Also editable from your profile."
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {summaryCards.map((card, i) => (
           <motion.div

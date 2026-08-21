@@ -113,8 +113,9 @@ buttons, which skip the form.
 2. **GST.** Currently added on top at checkout (`CHECKOUT_GST_RATE = 0.05` in
    `services/orderService.ts`). The handwritten note says it should already be
    inside the display price. Same document.
-3. **Delivery charges.** What the aggregator pays and how it is calculated.
-   Same document.
+3. **Delivery charges.** Same document. **Shiprocket is the chosen carrier**
+   (client's call, 21 Aug) — see the delivery section below before quoting any
+   number.
 4. **Bank account.** The note says "bank account"; artists and aggregators
    have one, collectors do not. Yash will confirm which he meant.
 
@@ -125,6 +126,56 @@ insurance partner URL (`INSURANCE_PARTNER_URL` in
 panel, and the artwork calculation sheet.
 
 **Not code:** patent prior-art research, and porting anything to production.
+
+---
+
+## Delivery — Shiprocket
+
+Decided by the client on 21 Aug. Nothing is built yet. Full write-up:
+<https://claude.ai/code/artifact/f44f524f-016e-4275-8670-fd2b35aaea54>
+
+**The thing that governs everything: volumetric weight.** Shiprocket bills the
+higher of actual weight and `L × B × H ÷ 5000` (centimetres). Artwork is light
+and enormous, so the volumetric figure always wins:
+
+| Piece | Packed box | Actual | Billable |
+|---|---|---|---|
+| 12×16in rolled in a tube | 45×12×12 cm | 0.6 kg | 1.3 kg |
+| 18×24in framed | 75×60×10 cm | 2.5 kg | 9.0 kg |
+| 24×36in framed | 100×70×12 cm | 4.0 kg | 16.8 kg |
+| 36×48in framed | 130×95×14 cm | 7.0 kg | 34.6 kg |
+
+A 4kg painting bills as 16.8kg. Any estimate based on actual weight is wrong by
+roughly four times.
+
+**Known before building:**
+
+- Rolled-in-a-tube is the single biggest cost lever, but only for direct
+  marketplace sales — artist MOU §12 requires framed or stretched for
+  aggregator display.
+- Past ~120cm on the longest side, standard couriers stop accepting; that needs
+  Shiprocket's cargo service, quoted separately.
+- Recommended pricing model is four flat bands by packed size, priced off the
+  worst realistic zone, with the rate API called internally to watch true cost.
+  Live per-pincode rates at checkout were considered and rejected — unpredictable
+  shipping on a ₹40,000 painting reads badly.
+- **This is the first feature that cannot be mocked.** Shiprocket needs a
+  server: credentials can't sit in the browser and tracking arrives by webhook.
+- Add Artwork already collects weight, dimensions and framing. It does **not**
+  collect packed box dimensions, which is what volumetric weight needs. Either
+  ask the artist for the packed size or derive it from the artwork plus a fixed
+  margin.
+
+**Unresolved, and must not be guessed:**
+
+- **The placement leg contradicts itself across the two signed MOUs.** Artist
+  §10 deducts artist-to-aggregator transport from the artist's settlement;
+  aggregator §7 has the aggregator paying delivery with the 5% deposit. Only one
+  party can pay it.
+- **RTO** — a refused or undeliverable order costs roughly a second delivery,
+  and neither MOU assigns it. Recommend prepaid-only until this is settled.
+- **Insurance** — artists already arrange transit cover with HDFC ERGO under
+  MOU §9. Adding Shiprocket's cover on top pays twice for one risk.
 
 ---
 

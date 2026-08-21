@@ -343,6 +343,39 @@ export const artistDashboardService = {
     return mockDelay(updated);
   },
 
+  // Demo shortcut: approve one's own submission without waiting for an admin.
+  // Real approval is adminService.approveArtwork and stays the only path in
+  // production — this exists so the preview can be walked end to end in one
+  // sitting instead of across three days.
+  selfApproveArtwork: (artworkId: string): Promise<Artwork> => {
+    const pending = pendingArtworksCol.get();
+    const artwork = pending.find((a) => a.id === artworkId);
+    if (!artwork || artwork.artistId !== CURRENT_ARTIST_ID)
+      return mockError("Artwork not found");
+    if (artwork.status !== "pending_approval")
+      return mockError("Only a submitted artwork can be approved");
+
+    const now = new Date().toISOString();
+    const approved: Artwork = {
+      ...artwork,
+      status: "marketplace",
+      statusHistory: [
+        ...artwork.statusHistory,
+        { status: "marketplace", changedAt: now },
+      ],
+    };
+    pendingArtworksCol.set(pending.filter((a) => a.id !== artworkId));
+    artworksCol.set([...artworksCol.get(), approved]);
+
+    appendActivity(
+      "artwork_approved",
+      `"${approved.title}" approved`,
+      "Approved instantly for the demo — normally a curator reviews this",
+    );
+
+    return mockDelay(approved);
+  },
+
   listPenalties: (): Promise<ExternalSalePenalty[]> =>
     mockDelay(artistPenaltiesCol.get()),
 

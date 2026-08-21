@@ -14,6 +14,7 @@ import {
   UserRoundCog,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { GSTIN_PATTERN } from "@/components/shared/gst-number-card";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
   useAggregatorProfile,
@@ -27,7 +28,15 @@ type AggregatorProfileData = NonNullable<
 const profileSchema = z.object({
   companyName: z.string().trim().min(2, "Enter your company name"),
   contactPerson: z.string().trim().min(2, "Enter a contact person"),
-  gstNumber: z.string().trim().length(15, "GST number must be 15 characters"),
+  // Optional for everyone (meeting decision): blank is valid, but a number
+  // that IS entered has to be the right shape.
+  gstNumber: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value.length === 0 || GSTIN_PATTERN.test(value),
+      "Enter a valid 15-character GSTIN, or leave it blank",
+    ),
   phone: z.string().trim().min(10, "Enter a valid phone number"),
   addressLine1: z.string().trim().min(5, "Enter your business address"),
   // MOU §10 requires one nominated GalleryZone coordinator per premises. All
@@ -184,7 +193,12 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
             name="gstNumber"
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="gstNumber">GST number</FieldLabel>
+                <FieldLabel htmlFor="gstNumber">
+                  GST number{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </FieldLabel>
                 <Input
                   id="gstNumber"
                   maxLength={15}

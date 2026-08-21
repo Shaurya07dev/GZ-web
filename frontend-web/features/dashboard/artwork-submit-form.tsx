@@ -44,9 +44,11 @@ import {
 } from "./artwork-submit-data";
 import {
   useArtistPenalties,
+  useSelfApproveArtworkMutation,
   useSubmitArtworkMutation,
   useUpdateArtworkMutation,
 } from "@/hooks/useArtistArtworks";
+import { DevPanel } from "@/features/auth/components/dev-panel";
 import {
   AGGREGATOR_READY_FRAMING,
   FRAMING_LABEL,
@@ -175,7 +177,12 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   const submitMutation = useSubmitArtworkMutation();
   const updateMutation = useUpdateArtworkMutation();
   const [submitted, setSubmitted] = useState<"draft" | "review" | null>(null);
+  const [submittedArtworkId, setSubmittedArtworkId] = useState<string | null>(
+    null,
+  );
+  const [approved, setApproved] = useState(false);
   const [saved, setSaved] = useState(false);
+  const selfApproveMutation = useSelfApproveArtworkMutation();
 
   const { data: penalties } = useArtistPenalties();
   const outstandingPenalty = (penalties ?? [])
@@ -277,7 +284,12 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
 
     submitMutation.mutate(
       { ...payload, mode },
-      { onSuccess: () => setSubmitted(mode) },
+      {
+        onSuccess: (artwork) => {
+          setSubmittedArtworkId(artwork.id);
+          setSubmitted(mode);
+        },
+      },
     );
   }
 
@@ -321,20 +333,63 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
           <Check className="size-5 text-gold-bright" />
         </span>
         <h2 className="font-display text-xl font-semibold text-foreground">
-          {submitted === "draft" ? "Saved as draft." : "Submitted for review."}
+          {approved
+            ? "Approved and live."
+            : submitted === "draft"
+              ? "Saved as draft."
+              : "Submitted for review."}
         </h2>
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          {submitted === "draft"
-            ? `“${form.title || "Your artwork"}” has been saved. You can continue editing it any time from My Artworks.`
-            : `“${form.title || "Your artwork"}” is now with our team. Verification usually takes 1–3 days. You'll be notified the moment it's approved and goes live.`}
+          {approved
+            ? `“${form.title || "Your artwork"}” is on the marketplace now. Collectors can see it and buy it.`
+            : submitted === "draft"
+              ? `“${form.title || "Your artwork"}” has been saved. You can continue editing it any time from My Artworks.`
+              : `“${form.title || "Your artwork"}” is now with our team. Verification usually takes 1–3 days. You'll be notified the moment it's approved and goes live.`}
         </p>
-        <Link
-          href="/dashboard/artworks"
-          className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-gold-bright hover:underline"
-        >
-          <ArrowLeft className="size-3.5" />
-          Back to My Artworks
-        </Link>
+
+        {/* Demo shortcut: skip the wait so the flow can be walked end to end in
+            one sitting. A curator does this in production. */}
+        {submitted === "review" && !approved && submittedArtworkId && (
+          <DevPanel className="mt-2 w-full max-w-md">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Don&rsquo;t want to wait 1&ndash;3 days?
+              </p>
+              <button
+                type="button"
+                disabled={selfApproveMutation.isPending}
+                onClick={() =>
+                  selfApproveMutation.mutate(submittedArtworkId, {
+                    onSuccess: () => setApproved(true),
+                  })
+                }
+                className="inline-flex items-center gap-1.5 rounded-md border border-gold/50 px-3 py-1.5 text-xs font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-50"
+              >
+                {selfApproveMutation.isPending
+                  ? "Approving…"
+                  : "Skip review, publish now"}
+              </button>
+            </div>
+          </DevPanel>
+        )}
+
+        <div className="mt-2 flex flex-wrap items-center gap-4">
+          <Link
+            href="/dashboard/artworks"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gold-bright hover:underline"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to My Artworks
+          </Link>
+          {approved && (
+            <Link
+              href={`/marketplace/${submittedArtworkId}`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-gold-bright hover:underline"
+            >
+              View it on the marketplace
+            </Link>
+          )}
+        </div>
       </motion.div>
     );
   }

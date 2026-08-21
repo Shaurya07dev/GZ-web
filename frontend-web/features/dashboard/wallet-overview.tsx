@@ -19,7 +19,11 @@ import {
   useArtistWalletTransactions,
   useRequestWithdrawalMutation,
 } from "@/hooks/useArtistWallet";
-import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
+import {
+  useArtistAccountProfile,
+  useSaveArtistProfileMutation,
+} from "@/hooks/useArtistAccount";
+import { GstNumberCard } from "@/components/shared/gst-number-card";
 import type { WalletTransaction } from "./dashboard-data";
 
 const MIN_WITHDRAWAL = 1000;
@@ -27,6 +31,10 @@ const MIN_WITHDRAWAL = 1000;
 export function WalletOverview() {
   const { data: wallet } = useArtistWallet();
   const { data: transactions } = useArtistWalletTransactions();
+  // Same field the profile page edits — one GST number per artist, reachable
+  // from either screen.
+  const { data: profile } = useArtistAccountProfile();
+  const saveProfileMutation = useSaveArtistProfileMutation();
 
   const summaryCards = [
     {
@@ -54,6 +62,16 @@ export function WalletOverview() {
 
   return (
     <div className="flex flex-col gap-6">
+      {profile && (
+        <GstNumberCard
+          value={profile.gstin ?? ""}
+          onSave={(gstin) => saveProfileMutation.mutate({ gstin })}
+          isPending={saveProfileMutation.isPending}
+          isSuccess={saveProfileMutation.isSuccess}
+          description="Used on your settlement statements and invoices. Also editable from your profile."
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {summaryCards.map((card, i) => (
           <motion.div

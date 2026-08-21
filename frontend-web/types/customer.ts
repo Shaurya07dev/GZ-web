@@ -29,4 +29,6 @@ export interface CustomerProfile {
   name: string;
   email: string;
   phone: string;
+  /** Optional — buyers who want GST invoices. Never shown publicly. */
+  gstin?: string;
 }

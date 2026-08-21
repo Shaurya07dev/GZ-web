@@ -8,6 +8,11 @@ import {
   useCustomerWalletTransactions,
 } from "@/hooks/useCustomerWallet";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
+import {
+  useCustomerProfile,
+  useUpdateProfileMutation,
+} from "@/hooks/useCustomerProfile";
+import { GstNumberCard } from "@/components/shared/gst-number-card";
 
 // Deliberately simpler than the Artist/Aggregator wallets: no withdrawal
 // form here (see customerWalletService's comment — this balance is refund
@@ -15,9 +20,21 @@ import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 export function CollectorWalletOverview() {
   const { data: wallet } = useCustomerWallet();
   const { data: transactions } = useCustomerWalletTransactions();
+  const { data: profile } = useCustomerProfile();
+  const updateProfileMutation = useUpdateProfileMutation();
 
   return (
     <div className="flex flex-col gap-6">
+      {profile && (
+        <GstNumberCard
+          value={profile.gstin ?? ""}
+          onSave={(gstin) => updateProfileMutation.mutate({ gstin })}
+          isPending={updateProfileMutation.isPending}
+          isSuccess={updateProfileMutation.isSuccess}
+          description="Add it if you need GST invoices for your purchases — for a business or an office collection, say."
+        />
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
