@@ -30,23 +30,23 @@ export function AuthLayoutPanel() {
     <aside className="relative flex shrink-0 flex-col overflow-hidden border-b border-sidebar-border bg-sidebar px-6 py-6 lg:sticky lg:top-0 lg:h-[100dvh] lg:w-[44%] lg:justify-between lg:border-r lg:border-b-0 lg:px-14 lg:py-12">
       <PanelGlow />
 
-      <div className="relative z-10 flex items-center justify-between lg:justify-start">
+      <div className="relative z-10 flex flex-col gap-3 lg:gap-4">
         <Wordmark />
+        {/* Tagline — always visible right under the logo */}
+        <div>
+          <p className="font-display text-lg font-medium italic text-sidebar-foreground/90 sm:text-xl lg:text-2xl">
+            Art, that Connects.{" "}
+            <span className="text-gold-bright not-italic">
+              Culture that inspires.
+            </span>
+          </p>
+          <span className="mt-3 block h-px w-8 bg-gold/50" />
+        </div>
       </div>
 
-      <div className="relative z-10 mt-6 hidden flex-1 lg:mt-10 lg:flex lg:min-h-0">
+      <div className="relative z-10 mt-6 hidden flex-1 lg:mt-8 lg:flex lg:min-h-0">
         <RotatingShowcase />
       </div>
-
-      <blockquote className="relative z-10 mt-6 max-w-sm lg:mt-10">
-        <p className="text-balance font-display text-xl leading-snug font-medium text-sidebar-foreground italic sm:text-2xl lg:text-[1.75rem]">
-          Art, that Connects.{" "}
-          <span className="text-gold-bright not-italic">
-            Culture that inspires.
-          </span>
-        </p>
-        <span className="mt-4 block h-px w-8 bg-gold/60" />
-      </blockquote>
     </aside>
   );
 }
