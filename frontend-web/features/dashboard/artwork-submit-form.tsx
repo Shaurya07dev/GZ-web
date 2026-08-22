@@ -34,6 +34,7 @@ import {
 import {
   ARTWORK_CATEGORIES,
   ARTWORK_MEDIUMS,
+  ARTWORK_RARITY_TYPES,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
   INSURANCE_RECOMMENDED_THRESHOLD,
@@ -63,6 +64,7 @@ type FormState = {
   description: string;
   category: string;
   medium: string;
+  rarityType: "R" | "U" | "O" | "N" | "";
   dimensions: string;
   yearCreated: string;
   artistPrice: string;
@@ -82,6 +84,7 @@ const EMPTY_FORM: FormState = {
   description: "",
   category: "",
   medium: "",
+  rarityType: "",
   dimensions: "",
   yearCreated: "",
   artistPrice: "",
@@ -145,6 +148,7 @@ function formStateFor(artwork: EditableArtwork): FormState {
     description: artwork.description,
     category: artwork.category,
     medium: artwork.medium,
+    rarityType: ("rarityType" in artwork ? (artwork as { rarityType?: string }).rarityType : "") as FormState["rarityType"] ?? "",
     dimensions: artwork.dimensions ?? "",
     yearCreated: artwork.yearCreated ? String(artwork.yearCreated) : "",
     artistPrice: String(artwork.artistPrice || ""),
@@ -582,6 +586,36 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 className="h-10"
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="rarityType">Artwork type / rarity</Label>
+            <Select
+              value={form.rarityType}
+              onValueChange={(value) =>
+                updateField("rarityType", value as FormState["rarityType"])
+              }
+            >
+              <SelectTrigger id="rarityType" className="h-10 w-full">
+                <SelectValue placeholder="Select type">
+                  {(value: string | null) =>
+                    ARTWORK_RARITY_TYPES.find((r) => r.value === value)?.label ??
+                    "Select type"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {ARTWORK_RARITY_TYPES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    <span className="font-semibold">{r.value}</span>
+                    <span className="ml-1 text-muted-foreground">— {r.description}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              R = Rare · U = Unique · O = Original · N = Normal. Shown as a badge on your artwork card.
+            </p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-3">

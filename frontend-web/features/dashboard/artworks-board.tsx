@@ -133,7 +133,7 @@ export function ArtworksBoard() {
         title="Mark as sold on another platform?"
         description={
           soldElsewhereTarget
-            ? `"${soldElsewhereTarget.title}" is removed from every GalleryZone sales channel immediately and cannot be relisted. A 1% fee of its listed price — ${formatINR(penaltyAmount)} — is charged on your next listing.`
+            ? `"${soldElsewhereTarget.title}" will be removed from all GalleryZone sales channels immediately and cannot be relisted. A platform fee (up to 1% of its listed price — ${formatINR(penaltyAmount)}) may be applicable at the admin's discretion.`
             : ""
         }
         confirmLabel="Mark as sold elsewhere"
@@ -174,6 +174,13 @@ function ArtworkCard({
         <div className="absolute top-3 left-3">
           <ArtworkStatusPill status={artwork.status} />
         </div>
+        {"rarityType" in artwork && (artwork as { rarityType?: string }).rarityType && (
+          <div className="absolute top-3 right-3">
+            <span className="inline-flex items-center rounded-sm bg-gold-bright px-1.5 py-0.5 text-[10px] font-bold text-background leading-none">
+              {String((artwork as { rarityType: string }).rarityType)}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-4">

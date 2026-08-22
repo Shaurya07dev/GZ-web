@@ -40,7 +40,10 @@ export function AuthLayoutPanel() {
 
       <blockquote className="relative z-10 mt-6 max-w-sm lg:mt-10">
         <p className="text-balance font-display text-xl leading-snug font-medium text-sidebar-foreground italic sm:text-2xl lg:text-[1.75rem]">
-          Verified Authenticity. Physical &amp; Digital Reach.
+          Art, that Connects.{" "}
+          <span className="text-gold-bright not-italic">
+            Culture that inspires.
+          </span>
         </p>
         <span className="mt-4 block h-px w-8 bg-gold/60" />
       </blockquote>
@@ -50,12 +53,17 @@ export function AuthLayoutPanel() {
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex items-baseline gap-2.5">
-      <span className="font-display text-2xl font-semibold text-gold-bright italic">
-        GZ
-      </span>
-      <span className="text-sm font-medium tracking-[0.18em] text-sidebar-foreground">
-        GALLERYZONE
+    <Link href="/" className="flex flex-col gap-0.5">
+      <div className="flex items-baseline gap-2.5">
+        <span className="font-display text-2xl font-semibold text-gold-bright italic">
+          GZ
+        </span>
+        <span className="text-sm font-medium tracking-[0.18em] text-sidebar-foreground">
+          GALLERYZONE
+        </span>
+      </div>
+      <span className="ml-0.5 text-[10px] font-semibold tracking-[0.28em] text-gold/70 uppercase">
+        Art Connects
       </span>
     </Link>
   );
