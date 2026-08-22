@@ -4,6 +4,7 @@ import { VerificationProgress } from "@/features/dashboard/verification-progress
 import { RecentActivityFeed } from "@/features/dashboard/recent-activity-feed";
 import { RevenueChart } from "@/features/dashboard/revenue-chart";
 import { RatingCard } from "@/features/dashboard/rating-card";
+import { CommunityTeaser } from "@/features/dashboard/community-teaser";
 
 export const metadata: Metadata = {
   title: "Dashboard | GalleryZone",
@@ -23,6 +24,8 @@ export default function DashboardOverviewPage() {
         <RatingCard />
         <RecentActivityFeed />
       </div>
+
+      <CommunityTeaser />
     </div>
   );
 }

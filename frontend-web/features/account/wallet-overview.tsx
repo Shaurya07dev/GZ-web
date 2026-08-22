@@ -25,16 +25,6 @@ export function CollectorWalletOverview() {
 
   return (
     <div className="flex flex-col gap-6">
-      {profile && (
-        <GstNumberCard
-          value={profile.gstin ?? ""}
-          onSave={(gstin) => updateProfileMutation.mutate({ gstin })}
-          isPending={updateProfileMutation.isPending}
-          isSuccess={updateProfileMutation.isSuccess}
-          description="Add it if you need GST invoices for your purchases — for a business or an office collection, say."
-        />
-      )}
-
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -72,6 +62,15 @@ export function CollectorWalletOverview() {
           )}
         </div>
       </div>
+      {profile && (
+        <GstNumberCard
+          value={profile.gstin ?? ""}
+          onSave={(gstin) => updateProfileMutation.mutate({ gstin })}
+          isPending={updateProfileMutation.isPending}
+          isSuccess={updateProfileMutation.isSuccess}
+          description="Add it if you need GST invoices for your purchases — for a business or an office collection, say."
+        />
+      )}
     </div>
   );
 }

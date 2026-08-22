@@ -9,11 +9,15 @@ import { BadgeCheck, Check, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
-import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
   useArtistSettings,
   useUpdateArtistSettingsMutation,
 } from "@/hooks/useArtistSettings";
+import {
+  useDeactivationRequest,
+  useRequestDeactivationMutation,
+  useWithdrawDeactivationMutation,
+} from "@/hooks/useArtistAccount";
 import { passwordRule } from "@/features/auth/schemas/auth-schemas";
 import { SUBSCRIPTION } from "./dashboard-data";
 
@@ -30,7 +34,6 @@ const NOTIFICATION_TOGGLES = [
 export function ArtistSettingsView() {
   const { data: settings } = useArtistSettings();
   const updateMutation = useUpdateArtistSettingsMutation();
-  const [deactivateOpen, setDeactivateOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,35 +63,139 @@ export function ArtistSettingsView() {
 
       <SecurityCard />
 
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 sm:p-6">
-        <h2 className="font-display text-base font-semibold text-foreground">
-          Danger zone
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Deactivating your account removes your listings from the
-          marketplace. This is a mock action in this demo.
-        </p>
-        <button
-          type="button"
-          onClick={() => setDeactivateOpen(true)}
-          className="mt-3 rounded-md border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-        >
-          Deactivate account
-        </button>
-      </div>
+      <DangerZone />
+    </div>
+  );
+}
 
-      <ConfirmActionDialog
-        open={deactivateOpen}
-        onOpenChange={setDeactivateOpen}
-        title="Deactivate your account?"
-        description="This is a mock action — no account is actually deactivated in this demo."
-        confirmLabel="Deactivate"
-        destructive
-        onConfirm={() => {
-          toast.info("Account deactivation isn't wired up in this demo.");
-          setDeactivateOpen(false);
-        }}
-      />
+// Closing the account is a request, not a switch. A GalleryZone admin decides,
+// because an account on its way out may still owe a settlement, have a piece
+// sitting with an aggregator, or have a transfer someone is waiting to accept.
+// The typed word is deliberate friction on a step that cannot be undone by
+// pressing the same button again.
+const CONFIRM_WORD = "DEACTIVATE";
+
+function DangerZone() {
+  const { data: request } = useDeactivationRequest();
+  const requestMutation = useRequestDeactivationMutation();
+  const withdrawMutation = useWithdrawDeactivationMutation();
+  const [reason, setReason] = useState("");
+  const [confirmWord, setConfirmWord] = useState("");
+
+  const pending = request?.status === "pending";
+  const canSubmit =
+    reason.trim().length > 0 &&
+    confirmWord.trim().toUpperCase() === CONFIRM_WORD &&
+    !requestMutation.isPending;
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    requestMutation.mutate(
+      { reason },
+      {
+        onSuccess: () => {
+          setReason("");
+          setConfirmWord("");
+          toast.info("Deactivation requested. GalleryZone will review it.");
+        },
+      },
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 sm:p-6">
+      <h2 className="font-display text-base font-semibold text-foreground">
+        Danger zone
+      </h2>
+
+      {pending ? (
+        <div className="mt-3 flex flex-col items-start gap-3">
+          <p className="text-sm text-muted-foreground">
+            Deactivation requested on{" "}
+            {new Date(request.requestedAt).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+            , awaiting review. Your listings stay live until it is approved.
+          </p>
+          <p className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+            Your reason: {request.reason}
+          </p>
+          <button
+            type="button"
+            disabled={withdrawMutation.isPending}
+            onClick={() => withdrawMutation.mutate(request.id)}
+            className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-40"
+          >
+            Withdraw request
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-3">
+          {request?.status === "rejected" && (
+            <p className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+              Your last request was refused
+              {request.decisionNote ? `: ${request.decisionNote}` : "."} You can
+              ask again.
+            </p>
+          )}
+          {request?.status === "approved" && (
+            <p className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+              This account has been deactivated by GalleryZone. Contact support
+              to reopen it.
+            </p>
+          )}
+
+          <p className="text-sm text-muted-foreground">
+            Deactivating removes your listings from the marketplace. It is
+            reviewed by GalleryZone first — certificates, ownership records and
+            anything still owed to you have to be settled before an account
+            closes.
+          </p>
+
+          <Field>
+            <FieldLabel htmlFor="deactivateReason">
+              Why are you closing the account?
+            </FieldLabel>
+            <Input
+              id="deactivateReason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Moving abroad"
+              className="h-10"
+            />
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="deactivateConfirm">
+              Type {CONFIRM_WORD} to confirm
+            </FieldLabel>
+            <Input
+              id="deactivateConfirm"
+              value={confirmWord}
+              onChange={(e) => setConfirmWord(e.target.value)}
+              placeholder={CONFIRM_WORD}
+              className="h-10 font-mono sm:max-w-[14rem]"
+            />
+          </Field>
+
+          {requestMutation.error instanceof Error && (
+            <p className="text-sm text-destructive">
+              {requestMutation.error.message}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="self-start rounded-md border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:pointer-events-none disabled:opacity-40"
+          >
+            Request deactivation
+          </button>
+        </form>
+      )}
     </div>
   );
 }

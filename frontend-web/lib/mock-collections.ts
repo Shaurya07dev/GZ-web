@@ -13,7 +13,11 @@ import type {
 import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { Address, BuyerInvite, CustomerProfile } from "@/types/customer";
-import type { AdminUser, Settlement } from "@/types/admin";
+import type {
+  AdminUser,
+  DeactivationRequest,
+  Settlement,
+} from "@/types/admin";
 import type { MessageThread } from "@/types/message";
 import type { SupportTicket } from "@/types/support";
 import type { ResaleListing } from "@/types/resale";
@@ -383,6 +387,13 @@ export const customerProfileCol = collection<CustomerProfile>(
 export const adminUsersCol = collection<AdminUser[]>("adminUsers", () => [
   ...mockAdminUsers,
 ]);
+
+// Account-closure requests waiting on an admin. Empty until someone asks —
+// see services/artistDashboardService.ts (request) and adminService (decide).
+export const deactivationRequestsCol = collection<DeactivationRequest[]>(
+  "deactivationRequests",
+  () => [],
+);
 
 // --- Collector Portal (buyer-side) ------------------------------------------
 // "Collection" isn't its own collection — ownership transfers the moment an

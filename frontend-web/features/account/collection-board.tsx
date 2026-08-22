@@ -247,7 +247,7 @@ function CollectionItemDialog({
                 className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
               >
                 <UserRoundCheck className="size-3.5" />
-                Transfer ownership
+                Transfer rights
               </button>
             </div>
           </>

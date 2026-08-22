@@ -8,12 +8,16 @@ import assert from "node:assert/strict";
 import {
   ARTWORK_EDIT_WINDOW_DAYS,
   EXTERNAL_SALE_PENALTY_RATE,
+  activeDisplayTransfer,
   artworkEditState,
   isAggregatorListed,
+  isDisplayActive,
   isMarketplaceListed,
   resolveCustody,
+  transferKind,
   type Artwork,
   type ArtworkStatus,
+  type OwnershipTransfer,
 } from "./artwork.ts";
 
 const NOW = Date.parse("2026-08-20T00:00:00.000Z");
@@ -86,5 +90,88 @@ const explicit = {
   },
 } as unknown as Artwork;
 assert.equal(resolveCustody(explicit).legalOwner, "galleryzone", "stored wins");
+
+// --- display rights ----------------------------------------------------------
+
+const CLOCK = new Date(NOW);
+
+function transfer(over: Partial<OwnershipTransfer>): OwnershipTransfer {
+  return {
+    id: "tr-1",
+    artworkId: "aw-1",
+    artworkTitle: "Monsoon Reverie",
+    fromName: "Devika Rao",
+    toName: "Verandah Art House",
+    toEmail: "hello@verandaharthouse.in",
+    initiatedAt: new Date(NOW - 10 * DAY).toISOString(),
+    acceptedAt: new Date(NOW - 9 * DAY).toISOString(),
+    cancelledAt: null,
+    status: "accepted",
+    ...over,
+  };
+}
+
+// A record written before display rights existed is an ownership hand-over.
+assert.equal(transferKind(transfer({})), "ownership", "no kind means ownership");
+assert.equal(
+  isDisplayActive(transfer({}), CLOCK),
+  false,
+  "an ownership transfer is never a display",
+);
+
+const running = transfer({
+  kind: "display",
+  displayEndsAt: new Date(NOW + 20 * DAY).toISOString(),
+});
+assert.equal(isDisplayActive(running, CLOCK), true, "date ahead: still on display");
+
+// The whole point of deriving it: nothing runs, the day simply passes.
+const lapsed = transfer({
+  kind: "display",
+  displayEndsAt: new Date(NOW - 1 * DAY).toISOString(),
+});
+assert.equal(
+  isDisplayActive(lapsed, CLOCK),
+  false,
+  "date passed: display is over without anything ending it",
+);
+
+// Ending early beats a date that has not arrived yet.
+const pulledBack = transfer({
+  kind: "display",
+  displayEndsAt: new Date(NOW + 20 * DAY).toISOString(),
+  displayEndedAt: new Date(NOW - 2 * DAY).toISOString(),
+});
+assert.equal(
+  isDisplayActive(pulledBack, CLOCK),
+  false,
+  "ended early: over regardless of the end date",
+);
+
+// Not yet accepted is not yet on display.
+assert.equal(
+  isDisplayActive(
+    transfer({
+      kind: "display",
+      status: "pending",
+      acceptedAt: null,
+      displayEndsAt: new Date(NOW + 20 * DAY).toISOString(),
+    }),
+    CLOCK,
+  ),
+  false,
+  "a display nobody accepted is not in force",
+);
+
+assert.equal(
+  activeDisplayTransfer([lapsed, pulledBack, running], CLOCK)?.id,
+  running.id,
+  "picks the one display actually in force",
+);
+assert.equal(
+  activeDisplayTransfer([lapsed, pulledBack], CLOCK),
+  null,
+  "no live display reads as none",
+);
 
 console.log("types/artwork.ts checks passed");

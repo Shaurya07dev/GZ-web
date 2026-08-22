@@ -50,6 +50,14 @@ export function useAcceptTransferMutation() {
   });
 }
 
+export function useEndDisplayMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (transferId: string) => ownershipService.endDisplay(transferId),
+    onSuccess: () => invalidateOwnership(queryClient),
+  });
+}
+
 export function useCancelTransferMutation() {
   const queryClient = useQueryClient();
   return useMutation({

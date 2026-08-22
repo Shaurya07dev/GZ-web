@@ -49,6 +49,26 @@ export interface Settlement {
   processedAt: string | null;
 }
 
+// --- Account deactivation ----------------------------------------------------
+
+// Closing an account is not self-service: the artist asks, an admin decides.
+// Listings, certificates and ownership records outlive the account, so someone
+// has to look at what is outstanding before the door closes.
+export type DeactivationStatus = "pending" | "approved" | "rejected";
+
+export interface DeactivationRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: Extract<UserRole, "artist">;
+  reason: string;
+  status: DeactivationStatus;
+  requestedAt: string;
+  decidedAt: string | null;
+  /** Why an admin refused, shown back to the artist. */
+  decisionNote: string | null;
+}
+
 export type AuditAction =
   | "artwork.approved"
   | "artwork.rejected"

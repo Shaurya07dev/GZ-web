@@ -7,6 +7,7 @@ import type {
   AdminUser,
   AuditLogEntry,
   Category,
+  DeactivationRequest,
   GeneratedReport,
   GenerateReportInput,
   PlatformSettings,
@@ -36,6 +37,7 @@ import { aggregatorService } from "@/services/aggregatorService";
 import {
   addressesCol,
   adminUsersCol,
+  deactivationRequestsCol,
   artworksCol,
   ordersCol,
   pendingArtworksCol,
@@ -91,6 +93,18 @@ function formatReportRange(from: string, to: string): string {
     timeZone: "UTC",
   };
   return `${new Date(from).toLocaleDateString("en-IN", options)} – ${new Date(to).toLocaleDateString("en-IN", options)}`;
+}
+
+// An approved closure suspends the account. The request stores the artist id
+// ("devika-rao"); admin records key on the user id ("user-artist-devika-rao"),
+// so match on the suffix rather than assuming one prefix.
+function deactivateUser(artistId: string): void {
+  const users = adminUsersCol.get();
+  adminUsersCol.set(
+    users.map((user) =>
+      user.id.endsWith(artistId) ? { ...user, status: "suspended" } : user,
+    ),
+  );
 }
 
 export const adminService = {
@@ -223,6 +237,50 @@ export const adminService = {
       return mockError("Only pending withdrawals can be rejected");
     if (!reason.trim()) return mockError("A rejection reason is required");
     return mockDelay({ id, status: "rejected" as const, reason });
+  },
+
+  // --- account deactivation ------------------------------------------------
+  // The artist asks from their settings page; this is the deciding end.
+  // Approving suspends the account, which is what the Artists table already
+  // renders — no second notion of "closed" is invented here.
+
+  listDeactivationRequests: (): Promise<DeactivationRequest[]> =>
+    mockDelay(
+      [...deactivationRequestsCol.get()].sort((a, b) =>
+        b.requestedAt.localeCompare(a.requestedAt),
+      ),
+    ),
+
+  decideDeactivation: (input: {
+    id: string;
+    approve: boolean;
+    note?: string;
+  }): Promise<DeactivationRequest> => {
+    const all = deactivationRequestsCol.get();
+    const request = all.find((r) => r.id === input.id);
+    if (!request) return mockError(`Request "${input.id}" not found`);
+    if (request.status !== "pending")
+      return mockError("That request has already been decided");
+    if (!input.approve && !input.note?.trim())
+      return mockError("A reason is required when refusing a closure");
+
+    const decided: DeactivationRequest = {
+      ...request,
+      status: input.approve ? "approved" : "rejected",
+      decidedAt: new Date().toISOString(),
+      decisionNote: input.note?.trim() ?? null,
+    };
+    deactivationRequestsCol.set(
+      all.map((r) => (r.id === input.id ? decided : r)),
+    );
+
+    if (input.approve) {
+      // The admin user id carries a "user-" prefix, and the demo artist's
+      // carries "user-artist-" — match on the suffix rather than rebuilding it.
+      deactivateUser(request.userId);
+    }
+
+    return mockDelay(decided);
   },
 
   // --- catalog -------------------------------------------------------------

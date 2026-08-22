@@ -62,16 +62,6 @@ export function WalletOverview() {
 
   return (
     <div className="flex flex-col gap-6">
-      {profile && (
-        <GstNumberCard
-          value={profile.gstin ?? ""}
-          onSave={(gstin) => saveProfileMutation.mutate({ gstin })}
-          isPending={saveProfileMutation.isPending}
-          isSuccess={saveProfileMutation.isSuccess}
-          description="Used on your settlement statements and invoices. Also editable from your profile."
-        />
-      )}
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {summaryCards.map((card, i) => (
           <motion.div
@@ -101,6 +91,15 @@ export function WalletOverview() {
         <WithdrawCard balance={wallet?.balance ?? 0} />
         <TransactionsCard transactions={transactions ?? []} />
       </div>
+      {profile && (
+        <GstNumberCard
+          value={profile.gstin ?? ""}
+          onSave={(gstin) => saveProfileMutation.mutate({ gstin })}
+          isPending={saveProfileMutation.isPending}
+          isSuccess={saveProfileMutation.isSuccess}
+          description="Used on your settlement statements and invoices. Also editable from your profile."
+        />
+      )}
     </div>
   );
 }

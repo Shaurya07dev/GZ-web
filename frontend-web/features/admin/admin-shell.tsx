@@ -10,6 +10,7 @@ import {
   Images,
   IdCard,
   Banknote,
+  UserMinus,
   Frame,
   Tags,
   Palette,
@@ -102,6 +103,14 @@ const NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/moderation/withdrawals",
         icon: Banknote,
         badge: "withdrawals",
+      },
+      // No badge: the pending count comes from adminService's KPI set, which
+      // does not carry deactivations. Adding one there is a change to the
+      // dashboard's numbers, not to this nav.
+      {
+        label: "Deactivations",
+        href: "/admin/moderation/deactivations",
+        icon: UserMinus,
       },
     ],
   },

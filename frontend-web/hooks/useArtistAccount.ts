@@ -35,3 +35,39 @@ export function useAcceptMouMutation() {
     },
   });
 }
+
+// --- Account deactivation ---------------------------------------------------
+
+export function useDeactivationRequest() {
+  return useQuery({
+    queryKey: ["artist-deactivation-request"],
+    queryFn: () => artistDashboardService.getDeactivationRequest(),
+  });
+}
+
+function useDeactivationMutation<TInput>(
+  mutationFn: (input: TInput) => Promise<unknown>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["artist-deactivation-request"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
+    },
+  });
+}
+
+export function useRequestDeactivationMutation() {
+  return useDeactivationMutation((input: { reason: string }) =>
+    artistDashboardService.requestDeactivation(input),
+  );
+}
+
+export function useWithdrawDeactivationMutation() {
+  return useDeactivationMutation((requestId: string) =>
+    artistDashboardService.withdrawDeactivation(requestId),
+  );
+}

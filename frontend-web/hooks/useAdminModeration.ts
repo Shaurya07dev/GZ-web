@@ -132,3 +132,25 @@ export function useRejectWithdrawalMutation() {
     },
   });
 }
+
+// --- Account deactivation ---------------------------------------------------
+
+export function useAdminDeactivationRequests() {
+  return useQuery({
+    queryKey: ["admin-deactivations"],
+    queryFn: () => adminService.listDeactivationRequests(),
+  });
+}
+
+export function useDecideDeactivationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; approve: boolean; note?: string }) =>
+      adminService.decideDeactivation(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-deactivations"] });
+      // Approving suspends the account, so the people tables are stale too.
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+}

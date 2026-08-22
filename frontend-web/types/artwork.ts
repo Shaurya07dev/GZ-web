@@ -260,6 +260,17 @@ export interface ExternalSalePenalty {
 // on every resale, which is what keeps provenance continuous.
 export type TransferStatus = "pending" | "accepted" | "cancelled";
 
+// Art travels to be shown, and the piece that goes on a gallery wall for a
+// month has not changed hands. So a transfer is one of two things: a permanent
+// hand-over of ownership, or a time-boxed hand-over of display rights that
+// leaves the owner exactly where they were.
+export type TransferKind = "ownership" | "display";
+
+export const TRANSFER_KIND_LABEL: Record<TransferKind, string> = {
+  ownership: "Ownership",
+  display: "Display rights",
+};
+
 export interface OwnershipTransfer {
   id: string;
   artworkId: string;
@@ -271,6 +282,39 @@ export interface OwnershipTransfer {
   acceptedAt: string | null;
   cancelledAt: string | null;
   status: TransferStatus;
+  /** Absent on records written before display rights existed — those are all
+   *  ownership hand-overs. Read it through transferKind(). */
+  kind?: TransferKind;
+  /** Display transfers only: the date the display period runs to. */
+  displayEndsAt?: string | null;
+  /** Display transfers only: set when the owner pulls the piece back early. */
+  displayEndedAt?: string | null;
+}
+
+export function transferKind(transfer: OwnershipTransfer): TransferKind {
+  return transfer.kind ?? "ownership";
+}
+
+// A display transfer ends by its own date. Nothing runs to make that happen —
+// every screen compares the date to now, so the display simply stops being
+// active when the day passes, exactly as it stops when the owner ends it early.
+export function isDisplayActive(
+  transfer: OwnershipTransfer,
+  now: Date = new Date(),
+): boolean {
+  if (transferKind(transfer) !== "display") return false;
+  if (transfer.status !== "accepted") return false;
+  if (transfer.displayEndedAt) return false;
+  if (!transfer.displayEndsAt) return false;
+  return new Date(transfer.displayEndsAt).getTime() > now.getTime();
+}
+
+/** The one display transfer currently in force for a piece, if any. */
+export function activeDisplayTransfer(
+  transfers: OwnershipTransfer[],
+  now: Date = new Date(),
+): OwnershipTransfer | null {
+  return transfers.find((t) => isDisplayActive(t, now)) ?? null;
 }
 
 // --- Physical Certificate of Authenticity -----------------------------------

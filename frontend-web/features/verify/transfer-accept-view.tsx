@@ -1,8 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ShieldCheck, CircleAlert, ArrowRight } from "lucide-react";
+import { ShieldCheck, CircleAlert, ArrowRight, ScanLine } from "lucide-react";
 import { useTransfer, useAcceptTransferMutation } from "@/hooks/useOwnershipTransfers";
+import { useArtwork } from "@/hooks/useArtwork";
+import { transferKind } from "@/types/artwork";
 
 // What the incoming owner sees when they open the transfer link. Deliberately
 // public: the person accepting may not have a GalleryZone account yet, and the
@@ -10,6 +13,10 @@ import { useTransfer, useAcceptTransferMutation } from "@/hooks/useOwnershipTran
 // button that moves the record.
 export function TransferAcceptView({ transferId }: { transferId: string }) {
   const { data: transfer, isLoading } = useTransfer(transferId);
+  // The link is the only thing the recipient gets, so this page carries what
+  // they need to recognise the piece: the image, the tag on it, and a way
+  // through to the full passport.
+  const { data: artwork } = useArtwork(transfer?.artworkId ?? "");
   const acceptMutation = useAcceptTransferMutation();
 
   if (isLoading) {
@@ -44,8 +51,16 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
     return (
       <Panel
         tone="ok"
-        title="Ownership transferred"
-        body={`“${transfer.artworkTitle}” is now recorded to ${transfer.toName}. The artwork’s passport shows the full chain of ownership.`}
+        title={
+          transferKind(transfer) === "display"
+            ? "Display rights recorded"
+            : "Ownership transferred"
+        }
+        body={
+          transferKind(transfer) === "display"
+            ? `“${transfer.artworkTitle}” is recorded as on display with ${transfer.toName}. Ownership has not changed — the passport shows both.`
+            : `“${transfer.artworkTitle}” is now recorded to ${transfer.toName}. The artwork’s passport shows the full chain of ownership.`
+        }
         action={
           <Link
             href={`/verify/${transfer.artworkId}`}
@@ -59,6 +74,8 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
     );
   }
 
+  const isDisplay = transferKind(transfer) === "display";
+
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 py-16 lg:py-24">
       <div className="flex flex-col gap-2 text-center">
@@ -66,22 +83,51 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
           GalleryZone passport
         </p>
         <h1 className="font-display text-2xl font-semibold text-foreground">
-          {transfer.fromName} is transferring ownership to you
+          {isDisplay
+            ? `${transfer.fromName} is giving you display rights`
+            : `${transfer.fromName} is transferring ownership to you`}
         </h1>
       </div>
 
-      <div className="rounded-lg border border-gold/30 bg-card p-5">
-        <dl className="flex flex-col gap-3 text-sm">
+      <div className="overflow-hidden rounded-lg border border-gold/30 bg-card">
+        {artwork && (
+          <div className="relative aspect-[4/3] w-full bg-muted">
+            <Image
+              src={artwork.thumbnailUrl}
+              alt={transfer.artworkTitle}
+              fill
+              sizes="(min-width: 768px) 28rem, 100vw"
+              className="object-cover"
+            />
+          </div>
+        )}
+        <dl className="flex flex-col gap-3 p-5 text-sm">
           <Row label="Artwork" value={transfer.artworkTitle} />
           <Row label="From" value={transfer.fromName} />
           <Row label="To" value={`${transfer.toName} · ${transfer.toEmail}`} />
+          {isDisplay && transfer.displayEndsAt && (
+            <Row label="On display until" value={formatDate(transfer.displayEndsAt)} />
+          )}
+          {artwork?.nfcTagId && (
+            <Row label="NFC tag" value={artwork.nfcTagId} />
+          )}
         </dl>
+        <Link
+          href={`/verify/${transfer.artworkId}`}
+          className="flex items-center justify-between gap-2 border-t border-border px-5 py-3 text-sm text-gold-bright transition-colors hover:bg-gold/5"
+        >
+          <span className="inline-flex items-center gap-2">
+            <ScanLine className="size-3.5" strokeWidth={2} />
+            View full passport
+          </span>
+          <ArrowRight className="size-3.5" />
+        </Link>
       </div>
 
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Accepting records you as the artwork&rsquo;s owner on its digital
-        passport. The previous owners stay in its history — provenance is added
-        to, never rewritten.
+        {isDisplay
+          ? "Accepting records the piece as on display with you until that date. Ownership stays where it is, and the display ends on its own when the date passes."
+          : "Accepting records you as the artwork’s owner on its digital passport. The previous owners stay in its history — provenance is added to, never rewritten."}
       </p>
 
       {acceptMutation.isError && (
@@ -98,10 +144,18 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
         disabled={acceptMutation.isPending}
         className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
       >
-        Accept ownership
+        {isDisplay ? "Accept display rights" : "Accept ownership"}
       </button>
     </div>
   );
+}
+
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(iso));
 }
 
 function Row({ label, value }: { label: string; value: string }) {

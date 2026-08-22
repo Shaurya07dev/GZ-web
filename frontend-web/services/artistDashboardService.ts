@@ -10,7 +10,7 @@ import {
 } from "@/types/artwork";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { Order } from "@/types/order";
-import type { Settlement } from "@/types/admin";
+import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import {
   artworksCol,
@@ -23,6 +23,7 @@ import {
   artistSettlementsCol,
   artistSettingsCol,
   artistPenaltiesCol,
+  deactivationRequestsCol,
   ordersCol,
   holdingsCol,
   CURRENT_ARTIST_ID,
@@ -487,6 +488,69 @@ export const artistDashboardService = {
           artwork: artworkById.get(holding.artworkId)!,
         })),
     );
+  },
+
+  // --- Account deactivation ------------------------------------------------
+  // Asking is all the artist can do. An admin decides, because a closing
+  // account may still owe a settlement, hold a piece with an aggregator, or
+  // have a transfer someone is waiting to accept.
+
+  getDeactivationRequest: (): Promise<DeactivationRequest | null> =>
+    mockDelay(
+      deactivationRequestsCol
+        .get()
+        .filter((r) => r.userId === CURRENT_ARTIST_ID)
+        .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0] ?? null,
+    ),
+
+  requestDeactivation: (input: {
+    reason: string;
+  }): Promise<DeactivationRequest> => {
+    if (!input.reason.trim())
+      return mockError("Tell us why you are closing the account");
+
+    const open = deactivationRequestsCol
+      .get()
+      .some((r) => r.userId === CURRENT_ARTIST_ID && r.status === "pending");
+    if (open) return mockError("You already have a request under review");
+
+    const request: DeactivationRequest = {
+      id: `deact-${crypto.randomUUID().slice(0, 8)}`,
+      userId: CURRENT_ARTIST_ID,
+      userName: CURRENT_ARTIST_NAME,
+      userRole: "artist",
+      reason: input.reason.trim(),
+      status: "pending",
+      requestedAt: new Date().toISOString(),
+      decidedAt: null,
+      decisionNote: null,
+    };
+    deactivationRequestsCol.set([request, ...deactivationRequestsCol.get()]);
+    appendActivity(
+      "verification",
+      "Deactivation requested",
+      "Your account closure is waiting on a GalleryZone review.",
+    );
+    return mockDelay(request);
+  },
+
+  withdrawDeactivation: (requestId: string): Promise<{ id: string }> => {
+    const request = deactivationRequestsCol
+      .get()
+      .find((r) => r.id === requestId);
+    if (!request) return mockError("Request not found");
+    if (request.status !== "pending")
+      return mockError("That request has already been decided");
+
+    deactivationRequestsCol.set(
+      deactivationRequestsCol.get().filter((r) => r.id !== requestId),
+    );
+    appendActivity(
+      "verification",
+      "Deactivation withdrawn",
+      "You cancelled your account closure request.",
+    );
+    return mockDelay({ id: requestId });
   },
 
   getSettings: () => mockDelay(artistSettingsCol.get()),

@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BadgeCheck, Fingerprint, ScanLine, UserRoundCheck } from "lucide-react";
+import {
+  BadgeCheck,
+  Fingerprint,
+  History,
+  ScanLine,
+  UserRoundCheck,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +31,12 @@ export function CoaNfcBoard() {
   const { data: artworks } = useArtistDashboardArtworks();
   const [previewing, setPreviewing] = useState<ArtistArtwork | null>(null);
   const [transferring, setTransferring] = useState<ArtistArtwork | null>(null);
+  // History used to be reachable only by opening the certificate. It answers a
+  // different question from "is this piece authentic" — where has it been — so
+  // it gets its own button.
+  const [viewingHistory, setViewingHistory] = useState<ArtistArtwork | null>(
+    null,
+  );
 
   const rows = artworks ?? [];
 
@@ -85,6 +97,14 @@ export function CoaNfcBoard() {
                   <BadgeCheck className="size-3.5 text-gold-bright" />
                   Preview certificate
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingHistory(artwork)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                >
+                  <History className="size-3.5 text-gold-bright" />
+                  History
+                </button>
               </div>
             </div>
           ))}
@@ -100,6 +120,11 @@ export function CoaNfcBoard() {
         }}
       />
 
+      <HistoryDialog
+        artwork={viewingHistory}
+        onClose={() => setViewingHistory(null)}
+      />
+
       {transferring && (
         <TransferRightsDialog
           open
@@ -110,6 +135,30 @@ export function CoaNfcBoard() {
         />
       )}
     </div>
+  );
+}
+
+function HistoryDialog({
+  artwork,
+  onClose,
+}: {
+  artwork: ArtistArtwork | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={Boolean(artwork)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>History</DialogTitle>
+        </DialogHeader>
+        {artwork ? (
+          <>
+            <p className="text-sm text-muted-foreground">{artwork.title}</p>
+            <ArtworkHistory artwork={artwork} />
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -216,7 +265,7 @@ function CertificateDialog({
               className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
             >
               <UserRoundCheck className="size-3.5" />
-              Transfer rights to a buyer
+              Transfer rights
             </button>
           </>
         ) : null}

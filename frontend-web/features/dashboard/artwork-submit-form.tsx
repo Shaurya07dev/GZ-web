@@ -685,33 +685,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="nfcTagId">NFC / QR tag ID</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Nfc className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="nfcTagId"
-                  placeholder="Scan or enter the physical tag ID"
-                  value={form.nfcTagId}
-                  onChange={(e) => updateField("nfcTagId", e.target.value)}
-                  className="h-10 pl-9"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => updateField("nfcTagId", generateNfcTagId())}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold-bright"
-              >
-                <RefreshCw className="size-3.5" />
-                Generate
-              </button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Links this piece&rsquo;s physical tag to its digital passport.
-              Leave blank if you haven&rsquo;t attached one yet.
-            </p>
-          </div>
         </section>
 
         <section className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6">
@@ -782,6 +755,33 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             )}
           </div>
 
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="nfcTagId">NFC / QR tag ID</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Nfc className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="nfcTagId"
+                  placeholder="Scan or enter the physical tag ID"
+                  value={form.nfcTagId}
+                  onChange={(e) => updateField("nfcTagId", e.target.value)}
+                  className="h-10 pl-9"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => updateField("nfcTagId", generateNfcTagId())}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold-bright"
+              >
+                <RefreshCw className="size-3.5" />
+                Generate
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Links this piece&rsquo;s physical tag to its digital passport.
+              Leave blank if you haven&rsquo;t attached one yet.
+            </p>
+          </div>
           {aggregatorSelected && (
             <div className="flex flex-col gap-3.5 rounded-md border border-gold/30 bg-gold/5 p-4">
               <div className="flex items-center gap-2">
@@ -910,8 +910,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 {insuranceRequired
                   ? `Mandatory for aggregator listings — the piece leaves your studio and is held by a partner while on display. Cover is arranged with ${INSURANCE_PARTNER}; the premium is deducted from your settlement.`
                   : artistPriceNumber > INSURANCE_RECOMMENDED_THRESHOLD
-                    ? `Strongly recommended above ₹${INSURANCE_RECOMMENDED_THRESHOLD.toLocaleString("en-IN")} (${INSURANCE_PARTNER}). Decline it and theft, fire, transit damage and loss are yours alone.`
-                    : `Optional below ₹${INSURANCE_RECOMMENDED_THRESHOLD.toLocaleString("en-IN")}, arranged with ${INSURANCE_PARTNER}. Uninsured artworks carry no platform liability in transit.`}
+                    ? `Strongly recommended for a piece at this price (${INSURANCE_PARTNER}). Decline it and theft, fire, transit damage and loss are yours alone.`
+                    : `Optional, arranged with ${INSURANCE_PARTNER}. Uninsured artworks carry no platform liability in transit.`}
               </p>
             </div>
             <Switch

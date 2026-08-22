@@ -1,7 +1,10 @@
 import {
+  isDisplayActive,
   resolveCustody,
+  transferKind,
   type Artwork,
   type OwnershipTransfer,
+  type TransferKind,
 } from "@/types/artwork";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import {
@@ -49,6 +52,9 @@ export const ownershipService = {
     fromName: string;
     toName: string;
     toEmail: string;
+    kind?: TransferKind;
+    /** Required for a display transfer: the date the display runs to. */
+    displayEndsAt?: string | null;
   }): Promise<OwnershipTransfer> => {
     const artwork = findArtwork(input.artworkId);
     if (!artwork) return mockError("Artwork not found");
@@ -56,12 +62,30 @@ export const ownershipService = {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.toEmail.trim()))
       return mockError("Enter a valid email address");
 
+    const kind: TransferKind = input.kind ?? "ownership";
+    if (kind === "display") {
+      if (!input.displayEndsAt)
+        return mockError("Pick the date the display runs to");
+      if (new Date(input.displayEndsAt).getTime() <= Date.now())
+        return mockError("The display end date has to be in the future");
+    }
+
     const alreadyOpen = ownershipTransfersCol
       .get()
       .some((t) => t.artworkId === input.artworkId && t.status === "pending");
     if (alreadyOpen)
       return mockError(
         "A transfer for this artwork is already waiting to be accepted",
+      );
+
+    // A piece cannot be lent twice over. The active loan has to end — by its
+    // own date or by the owner ending it — before another one starts.
+    const onDisplay = ownershipTransfersCol
+      .get()
+      .some((t) => t.artworkId === input.artworkId && isDisplayActive(t));
+    if (onDisplay)
+      return mockError(
+        "This artwork is already on display somewhere. End that display first.",
       );
 
     const transfer: OwnershipTransfer = {
@@ -75,13 +99,18 @@ export const ownershipService = {
       acceptedAt: null,
       cancelledAt: null,
       status: "pending",
+      kind,
+      displayEndsAt: kind === "display" ? input.displayEndsAt : null,
+      displayEndedAt: null,
     };
     ownershipTransfersCol.set([transfer, ...ownershipTransfersCol.get()]);
     return mockDelay(transfer);
   },
 
   // The buyer accepting is what actually moves ownership — nothing changes on
-  // the artwork until this runs.
+  // the artwork until this runs. A display transfer accepted here moves
+  // nothing at all: custody on display is derived from the record and the
+  // date, so there is no state to write and none to unwind at expiry.
   accept: (transferId: string): Promise<OwnershipTransfer> => {
     const transfer = ownershipTransfersCol
       .get()
@@ -107,19 +136,42 @@ export const ownershipService = {
         .map((t) => (t.id === transferId ? accepted : t)),
     );
 
-    const current = resolveCustody(artwork);
-    writeArtwork({
-      ...artwork,
-      custody: {
-        ...current,
-        legalOwner: "customer",
-        legalOwnerName: transfer.toName,
-        custodian: current.custodian === "artist" ? "customer" : current.custodian,
-        locationLabel: `With ${transfer.toName}`,
-      },
-    });
+    if (transferKind(transfer) === "ownership") {
+      const current = resolveCustody(artwork);
+      writeArtwork({
+        ...artwork,
+        custody: {
+          ...current,
+          legalOwner: "customer",
+          legalOwnerName: transfer.toName,
+          custodian:
+            current.custodian === "artist" ? "customer" : current.custodian,
+          locationLabel: `With ${transfer.toName}`,
+        },
+      });
+    }
 
     return mockDelay(accepted);
+  },
+
+  // The owner pulling a piece back before the end date. The alternative — the
+  // date passing — needs no call at all.
+  endDisplay: (transferId: string): Promise<OwnershipTransfer> => {
+    const transfer = ownershipTransfersCol
+      .get()
+      .find((t) => t.id === transferId);
+    if (!transfer) return mockError("Display record not found");
+    if (!isDisplayActive(transfer))
+      return mockError("This display has already ended");
+
+    const ended: OwnershipTransfer = {
+      ...transfer,
+      displayEndedAt: new Date().toISOString(),
+    };
+    ownershipTransfersCol.set(
+      ownershipTransfersCol.get().map((t) => (t.id === transferId ? ended : t)),
+    );
+    return mockDelay(ended);
   },
 
   cancel: (transferId: string): Promise<OwnershipTransfer> => {
