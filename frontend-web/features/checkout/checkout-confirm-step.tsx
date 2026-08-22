@@ -10,6 +10,8 @@ import { useCreateOrderMutation } from "@/hooks/useOrders";
 import {
   CHECKOUT_DELIVERY_CHARGE,
   CHECKOUT_GST_RATE,
+  CHECKOUT_PLATFORM_FEE,
+  CHECKOUT_CONVENIENCE_FEE,
 } from "@/services/orderService";
 import { RazorpaySimulation } from "./razorpay-simulation";
 import type { Artwork } from "@/types/artwork";

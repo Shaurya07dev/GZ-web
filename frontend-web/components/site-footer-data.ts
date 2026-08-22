@@ -2,7 +2,10 @@ import type { ComponentType, SVGProps } from "react";
 import { Mail } from "lucide-react";
 import { InstagramGlyph, XGlyph, LinkedinGlyph } from "./social-icons";
 
-export type FooterLink = { label: string; href: string };
+export type FooterLink =
+  | { label: string; href: string; comingSoon?: false }
+  | { label: string; comingSoon: true };
+
 export type FooterColumn = { title: string; links: FooterLink[] };
 
 export const FOOTER_COLUMNS: FooterColumn[] = [
@@ -22,9 +25,9 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Join GalleryZone", href: "/register?role=artist" },
       { label: "Early Artist Program", href: "/register?role=artist" },
       { label: "Artist Survey", href: "/artist-survey" },
+      { label: "Collaborations", href: "/contact" },
       { label: "How It Works", href: "/about" },
-      { label: "Guidelines", href: "/about" },
-      { label: "Resources", href: "/about" },
+      { label: "MOU Agreement", href: "/artist-terms" },
       { label: "Artist Support", href: "/contact" },
     ],
   },
@@ -36,6 +39,16 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "How It Works", href: "/about" },
       { label: "FAQs", href: "/faq" },
       { label: "Collector Support", href: "/contact" },
+    ],
+  },
+  {
+    title: "CATEGORIES",
+    links: [
+      { label: "Paintings", href: "/marketplace" },
+      { label: "Sculptures", href: "/marketplace" },
+      { label: "Digital Art", href: "/marketplace" },
+      { label: "Handicrafts", comingSoon: true },
+      { label: "Canvas & Brushes", comingSoon: true },
     ],
   },
   {

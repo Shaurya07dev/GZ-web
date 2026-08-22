@@ -7,6 +7,8 @@ import { formatINR } from "@/lib/utils";
 import {
   CHECKOUT_GST_RATE,
   CHECKOUT_DELIVERY_CHARGE,
+  CHECKOUT_PLATFORM_FEE,
+  CHECKOUT_CONVENIENCE_FEE,
 } from "@/services/orderService";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
@@ -88,6 +90,18 @@ export function CheckoutReviewStep({
           <dt className="text-muted-foreground">GST (5%)</dt>
           <dd className="tabular-nums text-foreground">
             {formatINR(gstAmount)}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-muted-foreground">Platform fee</dt>
+          <dd className="tabular-nums text-emerald-500 font-medium">
+            {CHECKOUT_PLATFORM_FEE === 0 ? "Free" : formatINR(CHECKOUT_PLATFORM_FEE)}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-muted-foreground">Convenience fee</dt>
+          <dd className="tabular-nums text-emerald-500 font-medium">
+            {CHECKOUT_CONVENIENCE_FEE === 0 ? "Free" : formatINR(CHECKOUT_CONVENIENCE_FEE)}
           </dd>
         </div>
         <div className="flex items-center justify-between">

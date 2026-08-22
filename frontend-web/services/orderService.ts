@@ -19,6 +19,12 @@ import {
 // math for the pre-confirm price preview, so the two must stay in sync.
 export const CHECKOUT_GST_RATE = 0.05;
 export const CHECKOUT_DELIVERY_CHARGE = 250;
+// Platform fee and convenience fee are ₹0 during the early launch period.
+// These apply equally to marketplace and aggregator-channel sales.
+// Update both values here when pricing is finalised — nowhere else.
+export const CHECKOUT_PLATFORM_FEE = 0;
+export const CHECKOUT_CONVENIENCE_FEE = 0;
+
 
 export interface CreateOrderPayload {
   artworkId: string;

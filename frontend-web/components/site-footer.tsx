@@ -3,6 +3,28 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { FOOTER_COLUMNS, SOCIAL_LINKS } from "./site-footer-data";
+import type { FooterLink } from "./site-footer-data";
+
+function FooterLinkItem({ link }: { link: FooterLink }) {
+  if (link.comingSoon) {
+    return (
+      <span className="flex items-center gap-2 text-sm text-foreground/40 cursor-default select-none">
+        {link.label}
+        <span className="inline-flex items-center rounded-sm bg-gold/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.1em] text-gold uppercase leading-none">
+          Soon
+        </span>
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={link.href}
+      className="text-sm text-foreground/85 transition-colors hover:text-gold-bright"
+    >
+      {link.label}
+    </Link>
+  );
+}
 
 const footerStagger = {
   hidden: {},
@@ -21,7 +43,7 @@ export function SiteFooter() {
 
       <div className="relative z-10 mx-auto max-w-[1280px] px-6 lg:px-10">
         <motion.div
-          className="grid grid-cols-1 gap-14 pt-20 lg:grid-cols-[1fr_1.7fr] lg:gap-10 lg:pt-24"
+          className="grid grid-cols-1 gap-14 pt-20 lg:grid-cols-[1fr_2.2fr] lg:gap-10 lg:pt-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-10%" }}
@@ -71,7 +93,7 @@ export function SiteFooter() {
           <motion.div
             variants={footerFadeItem}
             transition={{ duration: 0.5, ease: "easeOut", delay: 0.06 }}
-            className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4"
+            className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-5"
           >
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.title} className="flex flex-col">
@@ -82,12 +104,7 @@ export function SiteFooter() {
                 <ul className="mt-4 flex flex-col gap-3">
                   {column.links.map((link) => (
                     <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="text-sm text-foreground/85 transition-colors hover:text-gold-bright"
-                      >
-                        {link.label}
-                      </Link>
+                      <FooterLinkItem link={link} />
                     </li>
                   ))}
                 </ul>
