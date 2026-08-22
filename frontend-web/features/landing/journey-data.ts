@@ -5,11 +5,8 @@ import {
   FileCheck2,
   CircleCheck,
   QrCode,
-  Nfc,
   Sparkles,
   Eye,
-  Heart,
-  MessageSquare,
   CreditCard,
   Truck,
   Handshake,
@@ -18,6 +15,10 @@ import {
   BadgeCheck,
   Radar,
   PackageCheck,
+  Globe,
+  Building2,
+  Wallet,
+  Clock3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,7 +48,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     number: "01",
     label: "Submit",
     description: "Artist submits their artwork and details.",
-    badge: "STEP 01 OF 05",
+    badge: "STEP 01 OF 06",
     detailDescription:
       "Artist provides artwork details, photos and authenticity information.",
     requirements: [
@@ -56,7 +57,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
       { icon: ShieldCheck, label: "Attach COA and supporting documents" },
     ],
     ctaLabel: "Submit Artwork",
-    ctaHref: "/register?role=artist",
+    ctaHref: "/artist-survey",
     previewLabel: "Artwork Preview",
     previewBadge: { icon: UploadCloud, label: "Submitted" },
     detailsLabel: "Artwork Details",
@@ -79,7 +80,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     number: "02",
     label: "Verify",
     description: "We verify authenticity and eligibility.",
-    badge: "STEP 02 OF 05",
+    badge: "STEP 02 OF 06",
     detailDescription:
       "Our team checks authenticity, eligibility and documentation before anything goes live.",
     requirements: [
@@ -88,7 +89,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
       { icon: CircleCheck, label: "Details match submitted documents" },
     ],
     ctaLabel: "View Verification Status",
-    ctaHref: "/register?role=artist",
+    ctaHref: "/artist-survey",
     previewLabel: "Verification Scan",
     previewBadge: { icon: Radar, label: "Under Review" },
     detailsLabel: "Verification Checklist",
@@ -101,7 +102,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     statusLabel: "Under Review",
     nextSteps: [
       { icon: ShieldCheck, label: "Approval", sub: "Curator sign-off" },
-      { icon: QrCode, label: "Digital ID", sub: "QR + NFC issued" },
+      { icon: QrCode, label: "Digital ID", sub: "QR issued" },
       { icon: Monitor, label: "Listing", sub: "Goes live on GalleryZone" },
     ],
   },
@@ -109,12 +110,12 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     number: "03",
     label: "List",
     description: "Artwork gets its digital identity and goes live.",
-    badge: "STEP 03 OF 05",
+    badge: "STEP 03 OF 06",
     detailDescription:
       "A verified digital identity is issued and the artwork goes live on the marketplace.",
     requirements: [
       { icon: QrCode, label: "Digital ID generated" },
-      { icon: Nfc, label: "NFC tag assigned" },
+      { icon: BadgeCheck, label: "QR tag assigned" },
       { icon: Sparkles, label: "Listed on marketplace" },
     ],
     ctaLabel: "View Listing",
@@ -137,28 +138,27 @@ export const JOURNEY_STEPS: JourneyStep[] = [
   },
   {
     number: "04",
-    label: "Discover",
-    description: "Collectors discover original art across our ecosystem.",
-    badge: "STEP 04 OF 05",
+    label: "Marketplace",
+    description: "Listed for direct sale to collectors browsing GalleryZone online.",
+    badge: "STEP 04 OF 06",
     detailDescription:
-      "Collectors browse, wishlist and inquire. Your artwork's reach grows across our ecosystem.",
+      "Your artwork is shown directly to collectors on the GalleryZone marketplace, no display partner in between.",
     requirements: [
-      { icon: Eye, label: "Marketplace impressions" },
-      { icon: Heart, label: "Wishlist saves" },
-      { icon: MessageSquare, label: "Collector inquiries" },
+      { icon: Globe, label: "Listed for direct sale" },
+      { icon: Wallet, label: "You keep 100% of your price" },
+      { icon: Truck, label: "Delivery billed to the buyer" },
     ],
-    ctaLabel: "View Insights",
+    ctaLabel: "Browse the Marketplace",
     ctaHref: "/marketplace",
-    previewLabel: "Marketplace Card",
-    previewBadge: { icon: Eye, label: "340 views" },
-    detailsLabel: "Discovery Stats",
+    previewLabel: "Marketplace Listing",
+    previewBadge: { icon: Eye, label: "Live to collectors" },
+    detailsLabel: "Marketplace Terms",
     detailsRows: [
-      { label: "Profile Views", value: "340" },
-      { label: "Wishlist Adds", value: "12" },
-      { label: "Inquiries", value: "3" },
-      { label: "Days Listed", value: "14" },
+      { label: "You receive", value: "100% of listed price" },
+      { label: "Delivery charge", value: "Paid by buyer" },
+      { label: "Settlement", value: "Within 7 days" },
     ],
-    statusLabel: "Marketplace",
+    statusLabel: "Direct Sale",
     nextSteps: [
       { icon: Handshake, label: "Offer", sub: "Buyer confirms" },
       { icon: CreditCard, label: "Payment", sub: "Secure checkout" },
@@ -167,9 +167,39 @@ export const JOURNEY_STEPS: JourneyStep[] = [
   },
   {
     number: "05",
+    label: "Aggregator",
+    description:
+      "A curated gallery partner displays your work in person and finds a buyer.",
+    badge: "STEP 05 OF 06",
+    detailDescription:
+      "A verified aggregator takes physical possession, displays it in their space, and works to find a buyer in person.",
+    requirements: [
+      { icon: Building2, label: "Displayed by a gallery partner" },
+      { icon: ShieldCheck, label: "Insurance required, at your cost" },
+      { icon: Clock3, label: "Held up to 30 days" },
+    ],
+    ctaLabel: "How Aggregators Work",
+    ctaHref: "/faq",
+    previewLabel: "Aggregator Placement",
+    previewBadge: { icon: Building2, label: "In display" },
+    detailsLabel: "Aggregator Terms",
+    detailsRows: [
+      { label: "Delivery & insurance", value: "Deducted from settlement" },
+      { label: "Insurance", value: "Mandatory, your cost" },
+      { label: "Display window", value: "Up to 30 days" },
+    ],
+    statusLabel: "In Display",
+    nextSteps: [
+      { icon: Handshake, label: "Sale recorded", sub: "Aggregator confirms" },
+      { icon: CreditCard, label: "Settlement", sub: "Minus charges" },
+      { icon: Truck, label: "Delivery", sub: "To the buyer" },
+    ],
+  },
+  {
+    number: "06",
     label: "Collect",
     description: "Secure payment, delivery and ownership transfer.",
-    badge: "STEP 05 OF 05",
+    badge: "STEP 06 OF 06",
     detailDescription:
       "Secure payment, insured delivery, and a digital ownership transfer that updates the artwork's history for good.",
     requirements: [

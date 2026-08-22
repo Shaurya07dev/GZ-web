@@ -6,39 +6,45 @@ import type { JourneyStep } from "./journey-data";
 export function JourneyStepDetail({ step }: { step: JourneyStep }) {
   return (
     <div className="grid grid-cols-1 overflow-hidden rounded-lg border border-border bg-card lg:grid-cols-[1.35fr_0.85fr_1fr]">
-      <div className="relative min-h-[420px] overflow-hidden p-6 sm:p-8">
-        <Image
-          src="/journey/studio.png"
-          alt="Artist's studio with an easel and painting in progress"
-          fill
-          sizes="600px"
-          className="object-cover object-right"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/10" />
+      
+      {/* Primary Pane: Storytelling */}
+      <div className="relative flex flex-col p-5 sm:p-6 lg:min-h-[420px] lg:p-8">
+        {/* Background Image (Desktop Only) */}
+        <div className="absolute inset-0 hidden lg:block dark">
+          <Image
+            src="/journey/studio.png"
+            alt="Artist's studio with an easel and painting in progress"
+            fill
+            sizes="(min-width: 1024px) 600px, 100vw"
+            className="object-cover object-right"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/10" />
+        </div>
 
-        <div className="relative z-10 flex h-full flex-col">
-          <span className="w-fit rounded-md border border-gold/50 px-3 py-1 text-xs font-medium tracking-wide text-gold-bright">
+        {/* Text Content */}
+        <div className="relative z-10 flex flex-col lg:h-full">
+          <span className="w-fit rounded-md border border-gold/50 px-3 py-1 text-xs font-medium tracking-wide text-gold-bright bg-background/50 lg:bg-transparent backdrop-blur-sm lg:backdrop-blur-none">
             {step.badge}
           </span>
-          <h3 className="mt-6 font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          <h3 className="mt-4 font-display text-4xl font-bold tracking-tight text-foreground lg:mt-6 lg:text-white sm:text-5xl">
             {step.label.toUpperCase()}
           </h3>
           <span className="mt-3 h-px w-6 bg-gold" />
-          <p className="mt-5 max-w-[220px] text-sm leading-relaxed text-foreground/85">
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-foreground/85 lg:mt-4 lg:text-white/85 lg:max-w-[220px]">
             {step.detailDescription}
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3 lg:mt-8 lg:flex lg:flex-wrap lg:gap-3">
             {step.requirements.map((req) => (
-              <div key={req.label} className="flex w-[92px] flex-col gap-2.5">
-                <span className="flex size-11 items-center justify-center rounded-md border border-gold/40">
+              <div key={req.label} className="flex flex-col gap-2 lg:w-[92px] lg:gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-gold/40 lg:size-11">
                   <req.icon
-                    className="size-4 text-gold-bright"
+                    className="size-3.5 text-gold-bright lg:size-4"
                     strokeWidth={1.75}
                   />
                 </span>
-                <span className="text-[11px] leading-snug text-muted-foreground">
+                <span className="text-[10px] leading-tight text-muted-foreground lg:text-[11px] lg:leading-snug lg:text-white/60">
                   {req.label}
                 </span>
               </div>
@@ -47,15 +53,27 @@ export function JourneyStepDetail({ step }: { step: JourneyStep }) {
 
           <Link
             href={step.ctaHref}
-            className="group mt-8 inline-flex w-fit items-center gap-2 rounded-md border border-gold/60 px-5 py-3 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
+            className="group mt-5 inline-flex w-fit items-center gap-2 rounded-md border border-gold/60 px-5 py-3 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 lg:mt-8"
           >
             {step.ctaLabel}
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
+
+        {/* Inline Image (Mobile Only) */}
+        <div className="relative mt-5 aspect-video w-full overflow-hidden rounded-md border border-border lg:hidden">
+          <Image
+            src="/journey/studio.png"
+            alt="Artist's studio with an easel and painting in progress"
+            fill
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-border p-6 lg:border-t-0 lg:border-l">
+      {/* Secondary Pane: Preview (Hidden on Mobile) */}
+      <div className="hidden flex-col gap-4 border-l border-border p-6 lg:flex">
         <p className="text-sm font-medium text-foreground">
           {step.previewLabel}
         </p>
@@ -76,7 +94,8 @@ export function JourneyStepDetail({ step }: { step: JourneyStep }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 border-t border-border p-6 lg:border-t-0 lg:border-l">
+      {/* Tertiary Pane: Details (Hidden on Mobile) */}
+      <div className="hidden flex-col gap-5 border-l border-border p-6 lg:flex">
         <p className="text-sm font-medium text-foreground">
           {step.detailsLabel}
         </p>

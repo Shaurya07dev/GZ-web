@@ -6,21 +6,18 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Users, Sparkles } from "lucide-react";
 import { OVERVIEW_PILLARS } from "./about-data";
-import { mockArtworks } from "@/lib/mock-data/artworks";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
 };
 
-const collageArtwork = mockArtworks.find(
-  (a) => a.id === "monsoon-over-madurai",
-);
+const collageImage = "/artworks/landscape.png";
 
 export function AboutOverviewSection() {
   return (
     <section className="relative overflow-hidden pt-16 pb-20 md:pt-20 md:pb-28">
-      <div className="mx-auto max-w-[1280px] px-6 lg:px-10">
+      <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
         {/* Hero */}
         <motion.div
           className="mx-auto max-w-2xl text-center"
@@ -46,7 +43,7 @@ export function AboutOverviewSection() {
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/register?role=artist"
+              href="/artist-survey"
               className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
             >
               Become an Early Artist
@@ -70,16 +67,14 @@ export function AboutOverviewSection() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <div className="relative aspect-4/3 overflow-hidden rounded-2xl border border-border sm:aspect-video lg:aspect-auto">
-            {collageArtwork && (
-              <Image
-                src={collageArtwork.thumbnailUrl}
-                alt=""
-                fill
-                sizes="(min-width: 1024px) 60vw, 100vw"
-                className="object-cover"
-                priority
-              />
-            )}
+            <Image
+              src={collageImage}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 60vw, 100vw"
+              className="object-cover"
+              priority
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-6">
               <p className="font-display text-xl font-medium text-white sm:text-2xl">
@@ -105,22 +100,6 @@ export function AboutOverviewSection() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3 border-t border-border pt-6">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-                <Sparkles
-                  className="size-4 text-gold-bright"
-                  strokeWidth={1.5}
-                />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-foreground">
-                  Gold ✦ Verified
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  The platform&rsquo;s clearest trust signal.
-                </p>
-              </div>
-            </div>
           </div>
         </motion.div>
 

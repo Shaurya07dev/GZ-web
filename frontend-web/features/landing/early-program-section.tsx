@@ -116,14 +116,14 @@ export function EarlyProgramSection() {
                 Limited to early members only
               </p>
 
-              <div className="mt-10 grid w-full grid-cols-2 gap-x-6 gap-y-6 text-left lg:hidden">
+              <div className="mt-8 grid w-full grid-cols-2 gap-x-4 gap-y-6 text-center lg:hidden">
                 {BENEFITS.map((benefit) => (
-                  <div key={benefit.title} className="flex flex-col gap-2">
+                  <div key={benefit.title} className="flex flex-col items-center gap-2">
                     <benefit.icon
                       className="size-5 text-gold-bright"
                       strokeWidth={1.5}
                     />
-                    <h3 className="font-display text-sm font-semibold text-foreground">
+                    <h3 className="font-display text-xs font-semibold text-foreground sm:text-sm">
                       {benefit.title}
                     </h3>
                   </div>

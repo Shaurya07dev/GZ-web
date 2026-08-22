@@ -62,6 +62,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Terms of Service", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Cookie Policy", href: "/cookies" },
+      { label: "Artist Terms", href: "/artist-terms" },
+      { label: "Aggregator Terms", href: "/aggregator-terms" },
     ],
   },
 ];
@@ -83,7 +85,13 @@ export const SOCIAL_LINKS: SocialLink[] = [
     rel: "noopener noreferrer",
   },
   { icon: XGlyph, href: "#", label: "X" },
-  { icon: LinkedinGlyph, href: "#", label: "LinkedIn" },
+  {
+    icon: LinkedinGlyph,
+    href: "https://www.linkedin.com/company/galleryzone/",
+    label: "LinkedIn",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  },
   {
     icon: Mail,
     href: "https://mail.google.com/mail/?view=cm&fs=1&to=galleryzone@zohomail.in",

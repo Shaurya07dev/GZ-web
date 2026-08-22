@@ -89,6 +89,7 @@ const SIMPLE_LINKS = [
   { label: "Explore", href: "/marketplace" },
   { label: "Artists", href: "/artists" },
   { label: "About", href: "/about" },
+  { label: "FAQ", href: "/faq" },
 ];
 
 export function SiteHeader() {

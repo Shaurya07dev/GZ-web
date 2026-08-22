@@ -77,9 +77,9 @@ export const VERIFICATION_TIERS: VerificationTier[] = [
 ];
 
 export const GOLD_VERIFIED = {
-  title: "Gold ✦ Verified",
+  title: "Verified",
   description:
-    "Clearing all three tiers unlocks the Gold ✦ Verified badge, shown on the artist's profile and every listing, GalleryZone's clearest signal that an identity, activity, and track record have all been confirmed.",
+    "Clearing all three tiers unlocks the Verified badge, shown on the artist's profile and every listing, GalleryZone's clearest signal that an identity, activity, and track record have all been confirmed.",
   icon: Sparkles,
 };
 

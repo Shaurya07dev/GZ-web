@@ -24,8 +24,8 @@ const CARDS: IdentityCardData[] = [
     icon: Scan,
     badgePosition: "top-right",
     variant: "image",
-    image: "/identity/identity-card.png",
-    imageAlt: "Vintage artwork photograph with a digital ID tag",
+    image: "/identity/identity-art.jpg",
+    imageAlt: "Original portrait artwork with an archival identity tag",
     digitalId: "GZ-8F3A-7021",
   },
   {
@@ -36,8 +36,8 @@ const CARDS: IdentityCardData[] = [
     icon: ShieldCheck,
     badgePosition: "bottom-right",
     variant: "image",
-    image: "/identity/certificate-card.png",
-    imageAlt: "Certificate of authenticity document",
+    image: "/identity/certificate-art.png",
+    imageAlt: "Certificate still life with an embossed authenticity seal",
   },
   {
     title: "Provenance",
@@ -46,12 +46,9 @@ const CARDS: IdentityCardData[] = [
     href: "/verify",
     icon: FileSearch,
     badgePosition: "bottom-right",
-    variant: "provenance",
-    events: [
-      { date: "May 14, 2024", label: "Created by Thomas Cole" },
-      { date: "May 16, 2024", label: "Acquired by Alex Morgan" },
-      { date: "Jun 02, 2025", label: "Transferred to Sam Roberts" },
-    ],
+    variant: "image",
+    image: "/identity/provenance-art.jpg",
+    imageAlt: "Certificate of provenance document beside a classic masterpiece painting",
   },
   {
     title: "Legacy",
@@ -61,8 +58,8 @@ const CARDS: IdentityCardData[] = [
     icon: Fingerprint,
     badgePosition: "bottom-right",
     variant: "image",
-    image: "/identity/legacy-card.png",
-    imageAlt: "Grand museum gallery interior",
+    image: "/identity/legacy-art.png",
+    imageAlt: "Curated art archive room with a legacy artwork",
   },
 ];
 
@@ -132,8 +129,8 @@ export function IdentitySection() {
                 />
                 <div className="relative h-full w-full overflow-hidden rounded-sm border-2 border-gold/70 shadow-[0_28px_60px_-16px_rgba(0,0,0,0.75)]">
                   <Image
-                    src="/identity/painting.png"
-                    alt="Framed landscape painting representing an authenticated artwork"
+                    src="/identity/identity-painting.png"
+                    alt="Original landscape painting representing an authenticated artwork"
                     fill
                     sizes="224px"
                     className="object-cover"

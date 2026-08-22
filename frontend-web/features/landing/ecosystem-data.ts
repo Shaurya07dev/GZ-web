@@ -49,8 +49,8 @@ export const ECOSYSTEM_PERSONAS: EcosystemPersona[] = [
     ],
     ctaLabel: "Explore as Artist",
     href: "/register?role=artist",
-    previewImage: "/ecosystem/artwork-1.png",
-    previewAlt: "Preview of an artist's uploaded artwork, Silent Reverie",
+    previewImage: "/ecosystem/artist-persona.jpg",
+    previewAlt: "Fine artist creating an expressive artwork on canvas in a sunlit loft studio",
   },
   {
     key: "collectors",
@@ -75,8 +75,8 @@ export const ECOSYSTEM_PERSONAS: EcosystemPersona[] = [
     ],
     ctaLabel: "Explore as Collector",
     href: "/register?role=customer",
-    previewImage: "/identity/painting.png",
-    previewAlt: "A framed painting owned by a collector",
+    previewImage: "/ecosystem/collector-persona.jpg",
+    previewAlt: "Art collector discovering fine artwork in a luxury marble gallery lounge",
   },
   {
     key: "galleries",
@@ -101,8 +101,8 @@ export const ECOSYSTEM_PERSONAS: EcosystemPersona[] = [
     ],
     ctaLabel: "Explore as Gallery",
     href: "/register?role=aggregator",
-    previewImage: "/identity/legacy-card.png",
-    previewAlt: "A grand museum gallery interior",
+    previewImage: "/ecosystem/gallery-persona.jpg",
+    previewAlt: "Prestigious contemporary art gallery displaying curated paintings and sculptures",
   },
   {
     key: "network",
@@ -127,7 +127,7 @@ export const ECOSYSTEM_PERSONAS: EcosystemPersona[] = [
     ],
     ctaLabel: "Explore the Network",
     href: "/about",
-    previewImage: "/artworks/collage-busts.png",
-    previewAlt: "An abstract collage representing the GalleryZone network",
+    previewImage: "/ecosystem/network-persona.jpg",
+    previewAlt: "Artistic painting of a global art network connecting artists, collectors and galleries through golden threads of light",
   },
 ];

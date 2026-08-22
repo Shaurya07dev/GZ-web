@@ -30,7 +30,21 @@ export function ClosingCtaSection() {
           viewport={{ once: true, margin: "-10%" }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
+          <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+            <SideRays
+              origin="bottom-right"
+              rayColor1="#e9c57a"
+              rayColor2="#8a6423"
+              speed={1.5}
+              intensity={1.6}
+              spread={1.8}
+              saturation={1.3}
+              blend={0.6}
+              falloff={1.8}
+              opacity={0.9}
+            />
+          </div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
             <div className="px-6 py-10 sm:px-8 md:px-12 md:py-12">
               <p className="text-sm font-medium tracking-[0.14em] text-gold-bright">
                 GET IN TOUCH
@@ -69,21 +83,7 @@ export function ClosingCtaSection() {
               </div>
             </div>
 
-            <div className="relative flex min-h-[280px] items-center justify-center overflow-hidden px-6 pb-14 sm:px-8 lg:min-h-0 lg:pb-0">
-              <div className="pointer-events-none absolute inset-0" aria-hidden>
-                <SideRays
-                  origin="top-right"
-                  rayColor1="#e9c57a"
-                  rayColor2="#8a6423"
-                  speed={1.5}
-                  intensity={1.6}
-                  spread={1.8}
-                  saturation={1.3}
-                  blend={0.6}
-                  falloff={1.8}
-                  opacity={0.9}
-                />
-              </div>
+            <div className="relative flex items-center justify-center px-6 pt-8 pb-10 sm:px-8 lg:pb-0 lg:pt-0">
               <Link
                 href="/contact"
                 className="group relative z-10 inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-to-b from-gold-bright to-gold px-6 py-4 text-sm font-semibold text-[#171310] shadow-[0_28px_70px_-14px_rgba(200,154,74,0.65)] transition-transform hover:scale-[1.02] sm:px-8 sm:py-5 sm:text-base lg:px-12 lg:py-7 lg:text-lg"

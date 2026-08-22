@@ -22,8 +22,8 @@ const ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/eye-pyramid.png",
     alt: "Graphite illustration of an eye within a pyramid",
-    leftPct: 12.5,
-    topPct: 71,
+    leftPct: 15,
+    topPct: 75,
     width: 196,
     height: 196,
     revealFrom: 0.12,
@@ -33,8 +33,8 @@ const ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/draped-figure.png",
     alt: "Illustration of a draped figure",
-    leftPct: 78,
-    topPct: 39,
+    leftPct: 85,
+    topPct: 40,
     width: 128,
     height: 178,
     revealFrom: 0.2,
@@ -44,8 +44,8 @@ const ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/landscape.png",
     alt: "Sepia landscape painting",
-    leftPct: 89,
-    topPct: 27,
+    leftPct: 75,
+    topPct: 15,
     width: 128,
     height: 142,
     revealFrom: 0.28,
@@ -55,8 +55,8 @@ const ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/collage-busts.png",
     alt: "Abstract collage of sculptural busts",
-    leftPct: 86,
-    topPct: 63,
+    leftPct: 85,
+    topPct: 75,
     width: 176,
     height: 170,
     revealFrom: 0.36,
@@ -66,7 +66,7 @@ const ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/portrait-woman.png",
     alt: "Portrait painting of a woman",
-    leftPct: 19,
+    leftPct: 35,
     topPct: 87,
     width: 138,
     height: 102,
@@ -77,8 +77,8 @@ const ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/framed-painting.png",
     alt: "Framed painting with a maroon mat",
-    leftPct: 75,
-    topPct: 82,
+    leftPct: 65,
+    topPct: 87,
     width: 136,
     height: 150,
     revealFrom: 0.52,
@@ -86,9 +86,9 @@ const ARTWORKS: ArtworkAnchor[] = [
     rotate: 3,
   },
   {
-    src: "/identity/identity-card.png",
-    alt: "Vintage artwork photograph with a digital ID tag",
-    leftPct: 25,
+    src: "/artworks/hero-original-art.png",
+    alt: "Original contemporary still-life painting",
+    leftPct: 30,
     topPct: 14,
     width: 118,
     height: 140,
@@ -96,29 +96,18 @@ const ARTWORKS: ArtworkAnchor[] = [
     revealTo: 0.86,
     rotate: -2,
   },
-  {
-    src: "/identity/certificate-card.png",
-    alt: "Certificate of authenticity document",
-    leftPct: 91,
-    topPct: 52,
-    width: 134,
-    height: 134,
-    revealFrom: 0.68,
-    revealTo: 0.94,
-    rotate: 2,
-  },
 ];
 
 // A separate, sparse set for mobile/tablet: four images pinned to the actual
 // screen corners, well clear of the centered headline band, instead of
-// naively shrinking the desktop 9-image scatter (which just pulls every
-// image inward toward the center and piles them on top of the text).
+// naively shrinking the desktop scatter (which just pulls every image
+// inward toward the center and piles them on top of the text).
 const MOBILE_ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/bird.png",
     alt: "Mixed-media still life with a bird",
-    leftPct: 20,
-    topPct: 13,
+    leftPct: 14,
+    topPct: 24,
     width: 84,
     height: 84,
     revealFrom: 0.05,
@@ -128,7 +117,7 @@ const MOBILE_ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/eye-pyramid.png",
     alt: "Graphite illustration of an eye within a pyramid",
-    leftPct: 80,
+    leftPct: 84,
     topPct: 15,
     width: 96,
     height: 96,
@@ -139,8 +128,8 @@ const MOBILE_ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/framed-painting.png",
     alt: "Framed painting with a maroon mat",
-    leftPct: 22,
-    topPct: 86,
+    leftPct: 20,
+    topPct: 82,
     width: 88,
     height: 96,
     revealFrom: 0.32,
@@ -150,8 +139,8 @@ const MOBILE_ARTWORKS: ArtworkAnchor[] = [
   {
     src: "/artworks/portrait-woman.png",
     alt: "Portrait painting of a woman",
-    leftPct: 79,
-    topPct: 87,
+    leftPct: 82,
+    topPct: 92,
     width: 96,
     height: 70,
     revealFrom: 0.46,

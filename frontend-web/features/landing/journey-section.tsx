@@ -12,9 +12,6 @@ export function JourneySection() {
   const [autoAdvancing, setAutoAdvancing] = useState(true);
   const step = JOURNEY_STEPS[activeIndex];
 
-  // Auto-advance only reschedules while `autoAdvancing` is true. A manual
-  // tab click turns it off for good (handleSelect below), so picking a step
-  // means staying on it — not just restarting the same countdown.
   useEffect(() => {
     if (!autoAdvancing) return;
     const timer = setTimeout(() => {
@@ -61,11 +58,14 @@ export function JourneySection() {
           viewport={{ once: true, margin: "-10%" }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
         >
-          <JourneyStepper
-            activeIndex={activeIndex}
-            onSelect={handleSelect}
-            autoAdvancing={autoAdvancing}
-          />
+          {/* Desktop Top Stepper */}
+          <div className="hidden lg:block">
+            <JourneyStepper
+              activeIndex={activeIndex}
+              onSelect={handleSelect}
+              autoAdvancing={autoAdvancing}
+            />
+          </div>
 
           <AnimatePresence mode="wait">
             <motion.p
@@ -88,10 +88,54 @@ export function JourneySection() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -16 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(e, { offset, velocity }) => {
+                  if (offset.x < -50 || velocity.x < -500) {
+                    handleSelect((activeIndex + 1) % JOURNEY_STEPS.length);
+                  } else if (offset.x > 50 || velocity.x > 500) {
+                    handleSelect(
+                      (activeIndex - 1 + JOURNEY_STEPS.length) %
+                        JOURNEY_STEPS.length,
+                    );
+                  }
+                }}
               >
                 <JourneyStepDetail step={step} />
               </motion.div>
             </AnimatePresence>
+          </div>
+
+          {/* Mobile Bottom Stepper */}
+          <div className="mt-8 flex flex-col items-center gap-6 lg:hidden">
+            <div className="flex w-full items-center justify-between px-2 sm:px-10">
+              {JOURNEY_STEPS.map((s, i) => (
+                <button
+                  key={s.number}
+                  onClick={() => handleSelect(i)}
+                  className="group flex flex-col items-center gap-2"
+                >
+                  <span
+                    className={`relative flex h-2 w-full min-w-[40px] items-center justify-center rounded-full transition-colors sm:min-w-[60px] ${
+                      i === activeIndex ? "bg-gold-bright" : "bg-border"
+                    }`}
+                  />
+                  <span
+                    className={`text-[10px] font-medium transition-colors sm:text-xs ${
+                      i === activeIndex
+                        ? "text-foreground"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] font-medium tracking-[0.2em] text-muted-foreground/60 uppercase">
+              &larr; Swipe to explore &rarr;
+            </p>
           </div>
         </motion.div>
       </div>

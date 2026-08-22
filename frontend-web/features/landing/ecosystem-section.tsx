@@ -45,7 +45,7 @@ export function EcosystemSection() {
           viewport={{ once: true, margin: "-10%" }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
         >
-          <nav className="flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
+          <nav className="hidden lg:flex flex-col gap-1 rounded-lg border border-border bg-card p-2">
             {ECOSYSTEM_PERSONAS.map((p, i) => {
               const Icon = p.navIcon;
               const active = i === activeIndex;
@@ -75,15 +75,46 @@ export function EcosystemSection() {
             })}
           </nav>
 
+          {/* Mobile Navigation (2x2 Pill Grid) */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:hidden">
+            {ECOSYSTEM_PERSONAS.map((p, i) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                className={`flex items-center justify-center text-center rounded-full px-2 py-2.5 text-[10px] sm:text-xs font-medium transition-colors ${
+                  i === activeIndex
+                    ? "bg-gold/15 text-gold-bright border border-gold/40 shadow-[0_0_15px_rgba(200,154,74,0.1)]"
+                    : "bg-card border border-border text-muted-foreground hover:bg-card/60"
+                }`}
+              >
+                {p.navLabel === "For Galleries & Aggregators" ? "For Galleries" : p.navLabel}
+              </button>
+            ))}
+          </div>
+
           <div className="relative min-h-[320px] overflow-hidden rounded-lg border border-border bg-card p-6 lg:p-7">
             <AnimatePresence mode="wait">
               <motion.div
                 key={persona.key}
                 className="relative z-10 max-w-[280px]"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
                 transition={{ duration: 0.25, ease: "easeOut" }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(e, { offset, velocity }) => {
+                  if (offset.x < -50 || velocity.x < -500) {
+                    setActiveIndex((activeIndex + 1) % ECOSYSTEM_PERSONAS.length);
+                  } else if (offset.x > 50 || velocity.x > 500) {
+                    setActiveIndex(
+                      (activeIndex - 1 + ECOSYSTEM_PERSONAS.length) %
+                        ECOSYSTEM_PERSONAS.length,
+                    );
+                  }
+                }}
               >
                 <p className="text-xs font-medium tracking-[0.14em] text-gold-bright">
                   {persona.eyebrow}
@@ -95,7 +126,7 @@ export function EcosystemSection() {
                   {persona.body}
                 </p>
 
-                <div className="mt-4 border-t border-border pt-4">
+                <div className="mt-4 border-t border-border pt-4 pointer-events-none">
                   <ul className="flex flex-col gap-3">
                     {persona.bullets.map((bullet) => {
                       const BulletIcon = bullet.icon;
@@ -154,20 +185,25 @@ export function EcosystemSection() {
           </div>
         </motion.div>
 
-        <div className="mt-10 flex items-center justify-center gap-2">
-          {ECOSYSTEM_PERSONAS.map((p, i) => (
-            <button
-              key={p.key}
-              type="button"
-              aria-label={`Show ${p.navLabel}`}
-              onClick={() => setActiveIndex(i)}
-              className={`rounded-full transition-all ${
-                i === activeIndex
-                  ? "h-2 w-6 bg-gold"
-                  : "size-2 bg-muted-foreground/40 hover:bg-muted-foreground/70"
-              }`}
-            />
-          ))}
+        <div className="mt-10 flex flex-col items-center gap-6">
+          <div className="flex items-center justify-center gap-2">
+            {ECOSYSTEM_PERSONAS.map((p, i) => (
+              <button
+                key={p.key}
+                type="button"
+                aria-label={`Show ${p.navLabel}`}
+                onClick={() => setActiveIndex(i)}
+                className={`rounded-full transition-all ${
+                  i === activeIndex
+                    ? "h-2 w-6 bg-gold"
+                    : "size-2 bg-muted-foreground/40 hover:bg-muted-foreground/70"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-[10px] font-medium tracking-[0.2em] text-muted-foreground/60 uppercase lg:hidden">
+            &larr; Swipe to explore &rarr;
+          </p>
         </div>
       </div>
     </section>
