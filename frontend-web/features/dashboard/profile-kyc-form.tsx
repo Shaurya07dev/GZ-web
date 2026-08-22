@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import {
   Camera,
   ShieldCheck,
-  Building2,
   Check,
   Lock,
   Globe2,
@@ -23,10 +22,10 @@ import { InstagramGlyph } from "@/components/social-icons";
 import {
   useArtistAccountProfile,
   useSaveArtistProfileMutation,
-  useSaveArtistBankMutation,
 } from "@/hooks/useArtistAccount";
 import { ARTIST } from "./dashboard-data";
 import { MouAgreement } from "./mou-agreement";
+import { ArtistNetworkPanel } from "./artist-network-panel";
 
 // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
 // literal "Z", then a checksum character.
@@ -41,11 +40,6 @@ type ProfileFormState = {
   website: string;
   socialProofVideoUrl: string;
   gstin: string;
-};
-
-type BankFormState = {
-  bankAccountNumber: string;
-  ifsc: string;
 };
 
 type ArtistAccountProfile = NonNullable<
@@ -73,7 +67,6 @@ export function ProfileKycForm() {
 
 function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   const saveProfileMutation = useSaveArtistProfileMutation();
-  const saveBankMutation = useSaveArtistBankMutation();
 
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
     fullName: profile.fullName,
@@ -87,11 +80,10 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   });
   const [profileSaved, setProfileSaved] = useState(false);
 
-  const [bankForm, setBankForm] = useState<BankFormState>({
-    bankAccountNumber: "",
-    ifsc: profile.ifsc,
-  });
   const [docsSubmitted, setDocsSubmitted] = useState(false);
+
+  // Signing is what reorders this page and unlocks collaborations.
+  const mouSigned = profile.mouAcceptance !== null;
 
   function updateProfile<K extends keyof ProfileFormState>(
     field: K,
@@ -99,13 +91,6 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   ) {
     setProfileForm((prev) => ({ ...prev, [field]: value }));
     setProfileSaved(false);
-  }
-
-  function updateBank<K extends keyof BankFormState>(
-    field: K,
-    value: BankFormState[K],
-  ) {
-    setBankForm((prev) => ({ ...prev, [field]: value }));
   }
 
   // GSTIN is optional. When one IS entered we check its shape locally (2-digit
@@ -123,18 +108,16 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     );
   }
 
-  function handleBankSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    saveBankMutation.mutate(bankForm, {
-      onSuccess: () => setBankForm((prev) => ({ ...prev, bankAccountNumber: "" })),
-    });
-  }
-
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-start">
-      <div className="lg:col-span-2">
-        <MouAgreement />
-      </div>
+      {/* The MOU leads the page until it is signed — it is the one thing an
+          artist has to do here. Once signed it moves to the bottom (below),
+          where it stays as reference rather than a task. */}
+      {!mouSigned && (
+        <div className="lg:col-span-2">
+          <MouAgreement />
+        </div>
+      )}
 
       <Link
         href="/dashboard/verification"
@@ -225,7 +208,12 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="instagram">Instagram handle</Label>
+            <Label htmlFor="instagram">
+              Instagram handle{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
             <div className="relative">
               <InstagramGlyph className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -238,7 +226,12 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="website">Website</Label>
+            <Label htmlFor="website">
+              Website{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
             <div className="relative">
               <Globe2 className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -252,7 +245,10 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           </div>
           <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="socialProofVideoUrl">
-              Behind-the-scenes video (YouTube / TikTok)
+              Behind-the-scenes video (YouTube / TikTok){" "}
+              <span className="font-normal text-muted-foreground">
+                (optional)
+              </span>
             </Label>
             <div className="relative">
               <Video className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -356,7 +352,8 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Submit an additional ID or address proof if support has requested
-              one for your account.
+              one for your account. PAN is preferred{" "}
+              <span className="text-muted-foreground/80">(optional)</span>.
             </p>
           </div>
 
@@ -382,73 +379,15 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           )}
         </div>
 
-        <form
-          onSubmit={handleBankSubmit}
-          className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6"
-        >
-          <h2 className="font-display text-base font-semibold text-foreground">
-            Bank account
-          </h2>
-
-          <div className="flex items-center gap-3 rounded-md border border-border p-3.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-              <Building2
-                className="size-4 text-gold-bright"
-                strokeWidth={1.5}
-              />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">
-                {profile.bankAccountMasked}
-              </p>
-              <p className="text-xs text-muted-foreground">Currently on file</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="bankAccountNumber">New account number</Label>
-            <Input
-              id="bankAccountNumber"
-              inputMode="numeric"
-              placeholder="Enter to update"
-              value={bankForm.bankAccountNumber}
-              onChange={(e) => updateBank("bankAccountNumber", e.target.value)}
-              className="h-10"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="ifsc">IFSC code</Label>
-            <Input
-              id="ifsc"
-              maxLength={11}
-              value={bankForm.ifsc}
-              onChange={(e) => updateBank("ifsc", e.target.value.toUpperCase())}
-              className="h-10"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={!bankForm.bankAccountNumber || saveBankMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
-            >
-              Update bank details
-            </button>
-            {saveBankMutation.isSuccess && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center gap-1.5 text-sm text-gold-bright"
-              >
-                <Check className="size-3.5" />
-                Updated
-              </motion.span>
-            )}
-          </div>
-        </form>
       </div>
+
+      <ArtistNetworkPanel mouSigned={mouSigned} />
+
+      {mouSigned && (
+        <div className="lg:col-span-2">
+          <MouAgreement />
+        </div>
+      )}
     </div>
   );
 }

@@ -498,19 +498,4 @@ export const artistDashboardService = {
     artistSettingsCol.set(updated);
     return mockDelay(updated);
   },
-
-  updateBankDetails: (input: {
-    bankAccountNumber: string;
-    ifsc: string;
-  }): Promise<{ bankAccountMasked: string; ifsc: string }> => {
-    if (!input.bankAccountNumber.trim())
-      return mockError("Enter an account number");
-    const last4 = input.bankAccountNumber.slice(-4);
-    const patch = {
-      bankAccountMasked: `•••• •••• •••• ${last4}`,
-      ifsc: input.ifsc,
-    };
-    artistProfileCol.set({ ...artistProfileCol.get(), ...patch });
-    return mockDelay(patch);
-  },
 };

@@ -3,6 +3,7 @@ import { KpiCards } from "@/features/dashboard/kpi-cards";
 import { VerificationProgress } from "@/features/dashboard/verification-progress";
 import { RecentActivityFeed } from "@/features/dashboard/recent-activity-feed";
 import { RevenueChart } from "@/features/dashboard/revenue-chart";
+import { RatingCard } from "@/features/dashboard/rating-card";
 
 export const metadata: Metadata = {
   title: "Dashboard | GalleryZone",
@@ -18,7 +19,10 @@ export default function DashboardOverviewPage() {
         <VerificationProgress />
       </div>
 
-      <RecentActivityFeed />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.4fr]">
+        <RatingCard />
+        <RecentActivityFeed />
+      </div>
     </div>
   );
 }

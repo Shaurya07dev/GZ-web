@@ -35,14 +35,3 @@ export function useAcceptMouMutation() {
     },
   });
 }
-
-export function useSaveArtistBankMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { bankAccountNumber: string; ifsc: string }) =>
-      artistDashboardService.updateBankDetails(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["artist-account-profile"] });
-    },
-  });
-}

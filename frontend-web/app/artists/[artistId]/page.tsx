@@ -8,6 +8,7 @@ import { ArtworkCard } from "@/components/shared/artwork-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ArtistProfileHeader } from "@/features/artists/artist-profile-header";
 import { ArtistStory } from "@/features/artists/artist-story";
+import { ArtistConnectButton } from "@/features/artists/artist-connect-button";
 import { artistService, artworkService } from "@/services/artworkService";
 
 // react's cache() dedupes the artist lookup between generateMetadata and the
@@ -57,6 +58,12 @@ export default async function ArtistProfilePage(
       <main className="flex flex-1 flex-col">
         <div className="mx-auto w-full max-w-[1200px] px-6 py-12 lg:px-10 lg:py-16">
           <ArtistProfileHeader artist={artist} />
+
+          {/* Artist-to-artist connect. Renders nothing unless the viewer is a
+              signed-in artist looking at someone else's profile. */}
+          <div className="mt-6 flex justify-center sm:justify-start">
+            <ArtistConnectButton artistId={artist.id} />
+          </div>
 
           <div className="mt-10 border-t border-border pt-10">
             <ArtistStory bio={artist.bio} />

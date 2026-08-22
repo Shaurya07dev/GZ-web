@@ -2,7 +2,13 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { FileSignature, ShieldCheck, Check, ScrollText } from "lucide-react";
+import {
+  FileSignature,
+  ShieldCheck,
+  Check,
+  ChevronRight,
+  ScrollText,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -113,12 +119,24 @@ export function MouAgreement({
           </p>
         </div>
 
-        <MouBody
-          document={document}
-          scrollRef={scrollRef}
-          onScroll={handleScroll}
-          compact
-        />
+        {/* Once signed, the document itself is reference material rather than
+            something to read — it collapses so the rest of the profile is not
+            pushed a screen down. <details> rather than state: the browser
+            already does this, including keyboard and find-in-page. */}
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-gold-bright transition-colors hover:text-gold">
+            <ChevronRight className="size-4 transition-transform group-open:rotate-90" />
+            Read the agreement
+          </summary>
+          <div className="mt-3">
+            <MouBody
+              document={document}
+              scrollRef={scrollRef}
+              onScroll={handleScroll}
+              compact
+            />
+          </div>
+        </details>
       </div>
     );
   }

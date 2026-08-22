@@ -10,6 +10,8 @@ import {
   adminStatusLabel,
 } from "@/features/admin/admin-status-badge";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { useArtistRatingsByUserId } from "@/hooks/useArtistNetwork";
+import { StarRating } from "@/components/shared/star-rating";
 import { ADMIN_TODAY } from "@/features/admin/admin-data";
 import type { AdminUser, UserRole, UserStatus } from "@/types/admin";
 
@@ -51,6 +53,13 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
   const { data: users, isPending } = useAdminUsers(role);
   const rows = users ?? [];
 
+  // Ratings are fetched for the whole page of artists in one call rather than
+  // one per row — the table renders every artist at once, so a per-row query
+  // would be one request per artist for a single column.
+  const { data: ratings } = useArtistRatingsByUserId(
+    role === "artist" ? rows.map((row) => row.id) : [],
+  );
+
   const identityColumn: AdminDataTableColumn<AdminUser> = {
     key: "name",
     header: role === "aggregator" ? "Company" : "Name",
@@ -81,6 +90,35 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
               ),
             sortable: true,
             sortValue: (row) => row.kycStatus ?? "",
+          },
+          {
+            key: "rating",
+            header: "Rating",
+            render: (row) => {
+              const rating = ratings?.[row.id];
+              if (!rating || rating.count === 0) {
+                return (
+                  <span className="text-xs text-muted-foreground">
+                    No ratings
+                  </span>
+                );
+              }
+              return (
+                <span className="flex items-center gap-2">
+                  <StarRating value={rating.average} size="sm" />
+                  <span className="text-sm tabular-nums text-foreground">
+                    {rating.average.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    ({rating.count})
+                  </span>
+                </span>
+              );
+            },
+            sortable: true,
+            // Unrated artists sort last either way rather than tying with a
+            // genuine 0.0, which no review can produce (the scale starts at 1).
+            sortValue: (row) => -(ratings?.[row.id]?.average ?? 0),
           },
         ]
       : role === "aggregator"

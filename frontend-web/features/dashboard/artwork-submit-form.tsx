@@ -716,37 +716,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
 
         <section className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6">
           <h2 className="font-display text-base font-semibold text-foreground">
-            Pricing & listing
+            Sales channel & pricing
           </h2>
-
-          <div className="flex flex-col gap-2 sm:max-w-xs">
-            <Label htmlFor="artistPrice">Your rate (₹)</Label>
-            <Input
-              id="artistPrice"
-              type="number"
-              min={1}
-              step={1}
-              placeholder="18000"
-              value={form.artistPrice}
-              onChange={(e) => updateField("artistPrice", e.target.value)}
-              className="h-10"
-            />
-            <p className="text-xs text-muted-foreground">
-              Your own price for this piece. It stays private — buyers never see
-              it. You receive this amount in full, less any shipping, insurance
-              and taxes, paid within 7 days of a confirmed sale.
-            </p>
-            {artistPriceNumber > 0 && (
-              <p className="flex items-baseline justify-between gap-3 rounded-md border border-gold/25 bg-gold/5 px-3 py-2 text-xs">
-                <span className="text-muted-foreground">
-                  Listed price buyers see
-                </span>
-                <span className="font-mono text-sm font-semibold tabular-nums text-gold-bright">
-                  ₹{customerPrice.toLocaleString("en-IN")}
-                </span>
-              </p>
-            )}
-          </div>
 
           <div className="flex flex-col gap-2.5">
             <Label>Sales channel</Label>
@@ -780,6 +751,35 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 );
               })}
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:max-w-xs">
+            <Label htmlFor="artistPrice">Your rate (₹)</Label>
+            <Input
+              id="artistPrice"
+              type="number"
+              min={1}
+              step={1}
+              placeholder="18000"
+              value={form.artistPrice}
+              onChange={(e) => updateField("artistPrice", e.target.value)}
+              className="h-10"
+            />
+            <p className="text-xs text-muted-foreground">
+              Your own price for this piece. It stays private — buyers never see
+              it. You receive this amount in full, less any shipping, insurance
+              and taxes, paid within 7 days of a confirmed sale.
+            </p>
+            {artistPriceNumber > 0 && (
+              <p className="flex items-baseline justify-between gap-3 rounded-md border border-gold/25 bg-gold/5 px-3 py-2 text-xs">
+                <span className="text-muted-foreground">
+                  Listed price buyers see
+                </span>
+                <span className="font-mono text-sm font-semibold tabular-nums text-gold-bright">
+                  ₹{customerPrice.toLocaleString("en-IN")}
+                </span>
+              </p>
+            )}
           </div>
 
           {aggregatorSelected && (
