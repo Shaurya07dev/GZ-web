@@ -154,3 +154,25 @@ export function useDecideDeactivationMutation() {
     },
   });
 }
+
+// --- Off-platform sale fees --------------------------------------------------
+
+export function useAdminExternalSaleFees() {
+  return useQuery({
+    queryKey: ["admin-external-fees"],
+    queryFn: () => adminService.listExternalSaleFees(),
+  });
+}
+
+export function useDecideExternalSaleFeeMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; approve: boolean; note?: string }) =>
+      adminService.decideExternalSaleFee(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-external-fees"] });
+      // The artist's own view of the fee changes with the decision.
+      queryClient.invalidateQueries({ queryKey: ["artist-penalties"] });
+    },
+  });
+}

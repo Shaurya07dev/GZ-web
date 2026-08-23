@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Image from "next/image";
+import { RarityBadge } from "@/components/shared/rarity-badge";
 import { motion } from "framer-motion";
 import type { ArtworkStatus } from "@/types/artwork";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
@@ -61,6 +62,9 @@ export function PortfolioBoard() {
                   sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                   className="object-cover"
                 />
+                <div className="absolute top-3 right-3">
+                  <RarityBadge rarity={artwork.rarityType} />
+                </div>
               </div>
               <div className="p-4">
                 <h3 className="truncate font-display text-base font-semibold text-foreground">

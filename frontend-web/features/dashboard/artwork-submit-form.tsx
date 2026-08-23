@@ -17,6 +17,7 @@ import {
   PlayCircle,
   ScrollText,
   TriangleAlert,
+  Clock3,
   Circle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,8 @@ import {
   AGGREGATOR_READY_FRAMING,
   FRAMING_LABEL,
   isAggregatorListed,
+  isPenaltyCollectable,
+  penaltyStatus,
   type Artwork,
   type FramingState,
   type ListingType,
@@ -148,7 +151,7 @@ function formStateFor(artwork: EditableArtwork): FormState {
     description: artwork.description,
     category: artwork.category,
     medium: artwork.medium,
-    rarityType: ("rarityType" in artwork ? (artwork as { rarityType?: string }).rarityType : "") as FormState["rarityType"] ?? "",
+    rarityType: artwork.rarityType ?? "",
     dimensions: artwork.dimensions ?? "",
     yearCreated: artwork.yearCreated ? String(artwork.yearCreated) : "",
     artistPrice: String(artwork.artistPrice || ""),
@@ -189,9 +192,18 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   const selfApproveMutation = useSelfApproveArtworkMutation();
 
   const { data: penalties } = useArtistPenalties();
-  const outstandingPenalty = (penalties ?? [])
-    .filter((penalty) => penalty.settledAt === null)
+  // Two different things, and conflating them is what made the old banner lie:
+  // an approved fee WILL be charged on this listing; one still under review may
+  // never be charged at all.
+  const approvedPenalty = (penalties ?? [])
+    .filter(isPenaltyCollectable)
     .reduce((sum, penalty) => sum + penalty.amount, 0);
+  const reviewingPenalty = (penalties ?? [])
+    .filter((penalty) => penaltyStatus(penalty) === "pending_review")
+    .reduce((sum, penalty) => sum + penalty.amount, 0);
+  const waivedNote = (penalties ?? []).find(
+    (penalty) => penaltyStatus(penalty) === "waived" && penalty.decisionNote,
+  );
 
   const artistPriceNumber = Number(form.artistPrice) || 0;
   // Aggregator display puts the physical piece in someone else's custody, so
@@ -270,6 +282,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
           packagingConfirmed: form.packagingConfirmed,
         },
         nfcTagId: form.nfcTagId || null,
+        rarityType: form.rarityType || null,
         images: images.map((img, i) => ({
           url: img.url,
           thumbnailUrl: img.url,
@@ -404,7 +417,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start"
     >
       <div className="flex flex-col gap-6">
-        {!isEdit && outstandingPenalty > 0 && (
+        {!isEdit && approvedPenalty > 0 && (
           <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
             <TriangleAlert
               className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -412,16 +425,43 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             />
             <div>
               <p className="text-sm font-medium text-foreground">
-                ₹{outstandingPenalty.toLocaleString("en-IN")} off-platform sale
-                fee is due on this listing
+                ₹{approvedPenalty.toLocaleString("en-IN")} off-platform sale fee
+                is due on this listing
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                You marked artwork as sold on another platform. The 1% fee is
-                charged to your wallet when you submit this piece for review.
-                Saving a draft doesn&rsquo;t trigger it.
+                You marked artwork as sold on another platform and GalleryZone
+                approved the fee. It is charged to your wallet when you submit
+                this piece for review. Saving a draft doesn&rsquo;t trigger it.
               </p>
             </div>
           </div>
+        )}
+
+        {!isEdit && reviewingPenalty > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
+            <Clock3
+              className="mt-0.5 size-4 shrink-0 text-gold-bright"
+              strokeWidth={1.75}
+            />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                ₹{reviewingPenalty.toLocaleString("en-IN")} off-platform sale
+                fee is with GalleryZone for review
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Selling elsewhere doesn&rsquo;t always mean a fee — a piece
+                promised to a gallery before you listed it, say. Nothing is
+                charged unless GalleryZone approves it, and this listing goes
+                through either way.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!isEdit && waivedNote && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            An earlier off-platform sale fee was waived: {waivedNote.decisionNote}
+          </p>
         )}
 
         <section className="rounded-lg border border-border bg-card p-5 sm:p-6">

@@ -13,10 +13,13 @@ import {
   isAggregatorListed,
   isDisplayActive,
   isMarketplaceListed,
+  isPenaltyCollectable,
+  penaltyStatus,
   resolveCustody,
   transferKind,
   type Artwork,
   type ArtworkStatus,
+  type ExternalSalePenalty,
   type OwnershipTransfer,
 } from "./artwork.ts";
 
@@ -90,6 +93,49 @@ const explicit = {
   },
 } as unknown as Artwork;
 assert.equal(resolveCustody(explicit).legalOwner, "galleryzone", "stored wins");
+
+// --- off-platform sale fee ---------------------------------------------------
+
+function penalty(over: Partial<ExternalSalePenalty>): ExternalSalePenalty {
+  return {
+    id: "pen-1",
+    artworkId: "aw-1",
+    artworkTitle: "Monsoon Reverie",
+    amount: 1_300,
+    createdAt: new Date(NOW - 3 * DAY).toISOString(),
+    settledAt: null,
+    ...over,
+  };
+}
+
+// The whole point of the change: raising a fee is not charging one.
+assert.equal(
+  isPenaltyCollectable(penalty({ status: "pending_review" })),
+  false,
+  "a fee nobody has reviewed is never collected",
+);
+assert.equal(
+  isPenaltyCollectable(penalty({ status: "waived" })),
+  false,
+  "a waived fee is never collected",
+);
+assert.equal(
+  isPenaltyCollectable(penalty({ status: "approved" })),
+  true,
+  "an approved, uncollected fee is collected",
+);
+assert.equal(
+  isPenaltyCollectable(
+    penalty({ status: "approved", settledAt: new Date(NOW).toISOString() }),
+  ),
+  false,
+  "an approved fee is only ever collected once",
+);
+
+// Records written before the fee became reviewable were charged automatically,
+// so they have to keep reading as approved rather than silently reverting to
+// "awaiting review" and being collected twice.
+assert.equal(penaltyStatus(penalty({})), "approved", "no status means approved");
 
 // --- display rights ----------------------------------------------------------
 

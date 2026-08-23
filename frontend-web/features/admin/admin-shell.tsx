@@ -11,6 +11,7 @@ import {
   IdCard,
   Banknote,
   UserMinus,
+  ReceiptText,
   Frame,
   Tags,
   Palette,
@@ -107,6 +108,11 @@ const NAV_GROUPS: AdminNavGroup[] = [
       // No badge: the pending count comes from adminService's KPI set, which
       // does not carry deactivations. Adding one there is a change to the
       // dashboard's numbers, not to this nav.
+      {
+        label: "Off-platform fees",
+        href: "/admin/moderation/external-fees",
+        icon: ReceiptText,
+      },
       {
         label: "Deactivations",
         href: "/admin/moderation/deactivations",

@@ -1,7 +1,9 @@
 import {
   ARTWORK_EDIT_WINDOW_DAYS,
   EXTERNAL_SALE_PENALTY_RATE,
+  isPenaltyCollectable,
   WITHDRAWABLE_STATUSES,
+  type ArtworkRarity,
   artworkEditState,
   type Artwork,
   type ArtworkImage,
@@ -61,14 +63,16 @@ function appendActivity(kind: ActivityKind, title: string, detail: string) {
   artistActivityCol.set([entry, ...artistActivityCol.get()]);
 }
 
-// Any penalty an artist owes for selling a piece elsewhere is collected the
-// next time they actually list something — drafts don't trigger it. Charged
-// as a wallet adjustment; the balance floors at 0 because there's no
+// A fee an artist owes for selling a piece elsewhere is collected the next
+// time they actually list something — drafts don't trigger it. Charged as a
+// wallet adjustment; the balance floors at 0 because there's no
 // negative-balance/recovery flow in the mock.
+//
+// Only fees an admin has APPROVED are collected. One still awaiting review, or
+// waived, is passed over — the artist is never charged for a decision nobody
+// has made.
 function settlePendingPenalties(listingTitle: string) {
-  const outstanding = artistPenaltiesCol
-    .get()
-    .filter((penalty) => penalty.settledAt === null);
+  const outstanding = artistPenaltiesCol.get().filter(isPenaltyCollectable);
   if (outstanding.length === 0) return;
 
   const now = new Date().toISOString();
@@ -130,6 +134,7 @@ export interface SubmitArtworkInput {
   insuranceOpted: boolean;
   physical: ArtworkPhysical;
   nfcTagId: string | null;
+  rarityType: ArtworkRarity | null;
   images: ArtworkImage[];
   mode: "draft" | "review";
 }
@@ -203,6 +208,7 @@ export const artistDashboardService = {
       statusHistory: [{ status, changedAt: now }],
       nfcTagId: input.nfcTagId,
       physical: input.physical,
+      rarityType: input.rarityType,
     };
 
     artistPricesCol.set({ ...artistPricesCol.get(), [id]: input.artistPrice });
@@ -262,6 +268,7 @@ export const artistDashboardService = {
       listingType: patch.listingType,
       insured: patch.insuranceOpted,
       physical: patch.physical,
+      rarityType: patch.rarityType,
       nfcTagId: patch.nfcTagId,
       images: patch.images.length > 0 ? patch.images : artwork.images,
       thumbnailUrl: patch.images[0]?.url ?? artwork.thumbnailUrl,
@@ -289,8 +296,10 @@ export const artistDashboardService = {
   },
 
   // "Sold on another platform": the piece leaves every GalleryZone channel at
-  // once, and a penalty of EXTERNAL_SALE_PENALTY_RATE of its listed price is
-  // queued against the artist's NEXT listing (settlePendingPenalties above).
+  // once, and a fee of EXTERNAL_SALE_PENALTY_RATE of its listed price is raised
+  // for review. It is NOT charged here and not charged automatically later —
+  // an admin decides whether it stands, and only then does it come out of the
+  // next listing (settlePendingPenalties above).
   markSoldElsewhere: (artworkId: string): Promise<Artwork> => {
     const inLive = artworksCol.get().find((a) => a.id === artworkId);
     const inPending = pendingArtworksCol.get().find((a) => a.id === artworkId);
@@ -332,13 +341,16 @@ export const artistDashboardService = {
       amount: Math.round(artwork.customerPrice * EXTERNAL_SALE_PENALTY_RATE),
       createdAt: now,
       settledAt: null,
+      status: "pending_review",
+      decidedAt: null,
+      decisionNote: null,
     };
     artistPenaltiesCol.set([penalty, ...artistPenaltiesCol.get()]);
 
     appendActivity(
       "artwork_submitted",
       `"${artwork.title}" marked sold elsewhere`,
-      `Removed from GalleryZone. ₹${penalty.amount.toLocaleString("en-IN")} will be charged on your next listing.`,
+      `Removed from GalleryZone. A ₹${penalty.amount.toLocaleString("en-IN")} fee has gone to GalleryZone for review — nothing is charged unless it is approved.`,
     );
 
     return mockDelay(updated);

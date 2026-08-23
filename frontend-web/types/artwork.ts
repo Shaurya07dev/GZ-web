@@ -98,6 +98,8 @@ export interface Artwork extends ArtworkSummary {
   // because the fixture records predate the fields; the form collects them on
   // every new listing and requires them once the aggregator channel is picked.
   physical?: ArtworkPhysical | null;
+  /** R / U / O / N. Absent on records that predate the field. */
+  rarityType?: ArtworkRarity | null;
 }
 
 // --- Physical details -------------------------------------------------------
@@ -243,6 +245,30 @@ export const WITHDRAWABLE_STATUSES = new Set<ArtworkStatus>([
   "marketplace",
 ]);
 
+// Rarity / edition type, shown as a badge over the artwork image. Held on the
+// Artwork itself rather than read back with `"rarityType" in artwork` casts —
+// the mobile client already models it this way.
+export type ArtworkRarity = "R" | "U" | "O" | "N";
+
+export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {
+  R: "Rare",
+  U: "Unique",
+  O: "Original",
+  N: "Normal",
+};
+
+// The off-platform sale fee is proposed, not imposed. Selling elsewhere can be
+// perfectly reasonable — a piece promised to a gallery before listing, a
+// commission that fell through — so an admin decides case by case whether it
+// is actually charged. Only an approved fee is ever collected.
+export type PenaltyStatus = "pending_review" | "approved" | "waived";
+
+export const PENALTY_STATUS_LABEL: Record<PenaltyStatus, string> = {
+  pending_review: "Awaiting review",
+  approved: "Approved",
+  waived: "Waived",
+};
+
 export interface ExternalSalePenalty {
   id: string;
   artworkId: string;
@@ -250,6 +276,21 @@ export interface ExternalSalePenalty {
   amount: number;
   createdAt: string;
   settledAt: string | null;
+  /** Absent on records written before the fee became reviewable — those were
+   *  charged automatically, so they read as already approved. */
+  status?: PenaltyStatus;
+  decidedAt?: string | null;
+  /** The admin's note, shown back to the artist. */
+  decisionNote?: string | null;
+}
+
+export function penaltyStatus(penalty: ExternalSalePenalty): PenaltyStatus {
+  return penalty.status ?? "approved";
+}
+
+/** Only an approved, uncollected fee is ever taken from a wallet. */
+export function isPenaltyCollectable(penalty: ExternalSalePenalty): boolean {
+  return penaltyStatus(penalty) === "approved" && penalty.settledAt === null;
 }
 
 // --- Ownership transfer (NFC passport hand-over) ----------------------------

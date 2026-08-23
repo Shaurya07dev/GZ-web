@@ -5,6 +5,7 @@
 // underlying records instead of each keeping its own copy.
 import type {
   Artwork,
+  ArtworkRarity,
   ArtworkStatus,
   ExternalSalePenalty,
   OwnershipTransfer,
@@ -69,6 +70,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
   artistPrice: number;
   status: ArtworkStatus;
   submittedDaysAgo: number;
+  rarity: ArtworkRarity;
 }> = [
   {
     id: "aw-1",
@@ -80,6 +82,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 28000,
     status: "marketplace",
     submittedDaysAgo: 34,
+    rarity: "O",
   },
   {
     id: "aw-2",
@@ -91,6 +94,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 15000,
     status: "pending_approval",
     submittedDaysAgo: 7,
+    rarity: "R",
   },
   {
     id: "aw-3",
@@ -102,6 +106,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 22000,
     status: "draft",
     submittedDaysAgo: 5,
+    rarity: "N",
   },
   {
     id: "aw-4",
@@ -113,6 +118,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 18000,
     status: "with_aggregator",
     submittedDaysAgo: 74,
+    rarity: "U",
   },
   {
     id: "aw-5",
@@ -124,6 +130,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 32000,
     status: "sold",
     submittedDaysAgo: 119,
+    rarity: "R",
   },
   {
     id: "aw-6",
@@ -135,6 +142,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 19500,
     status: "marketplace",
     submittedDaysAgo: 17,
+    rarity: "O",
   },
   {
     id: "aw-7",
@@ -146,6 +154,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     artistPrice: 24000,
     status: "draft",
     submittedDaysAgo: 6,
+    rarity: "U",
   },
 ];
 
@@ -178,6 +187,7 @@ function buildArtistSeedArtworks(): Artwork[] {
       socialProofLinks: [],
       statusHistory: [{ status: seed.status, changedAt: submittedAt }],
       nfcTagId: null,
+      rarityType: seed.rarity,
     };
   });
 }

@@ -1,4 +1,8 @@
-import type { Artwork } from "@/types/artwork";
+import {
+  penaltyStatus,
+  type Artwork,
+  type ExternalSalePenalty,
+} from "@/types/artwork";
 import type { Order } from "@/types/order";
 import type { ArtistProfile } from "@/types/artist";
 import type {
@@ -37,6 +41,7 @@ import { aggregatorService } from "@/services/aggregatorService";
 import {
   addressesCol,
   adminUsersCol,
+  artistPenaltiesCol,
   deactivationRequestsCol,
   artworksCol,
   ordersCol,
@@ -237,6 +242,39 @@ export const adminService = {
       return mockError("Only pending withdrawals can be rejected");
     if (!reason.trim()) return mockError("A rejection reason is required");
     return mockDelay({ id, status: "rejected" as const, reason });
+  },
+
+  // --- off-platform sale fees ----------------------------------------------
+  // The 1% fee is proposed by the system and decided by a person. Selling
+  // elsewhere is not automatically bad faith, so nothing is charged until this
+  // runs; artistDashboardService only collects fees marked approved.
+
+  listExternalSaleFees: (): Promise<ExternalSalePenalty[]> =>
+    mockDelay(
+      [...artistPenaltiesCol.get()].sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      ),
+    ),
+
+  decideExternalSaleFee: (input: {
+    id: string;
+    approve: boolean;
+    note?: string;
+  }): Promise<ExternalSalePenalty> => {
+    const all = artistPenaltiesCol.get();
+    const penalty = all.find((p) => p.id === input.id);
+    if (!penalty) return mockError(`Fee "${input.id}" not found`);
+    if (penaltyStatus(penalty) !== "pending_review")
+      return mockError("That fee has already been decided");
+
+    const decided: ExternalSalePenalty = {
+      ...penalty,
+      status: input.approve ? "approved" : "waived",
+      decidedAt: new Date().toISOString(),
+      decisionNote: input.note?.trim() ?? null,
+    };
+    artistPenaltiesCol.set(all.map((p) => (p.id === input.id ? decided : p)));
+    return mockDelay(decided);
   },
 
   // --- account deactivation ------------------------------------------------

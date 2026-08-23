@@ -22,6 +22,7 @@ import {
   useArtistDashboardArtworks,
   useMarkSoldElsewhereMutation,
 } from "@/hooks/useArtistArtworks";
+import { RarityBadge } from "@/components/shared/rarity-badge";
 import { ArtworkStatusPill } from "./artwork-status-pill";
 
 const FILTERS: { value: ArtworkStatus | "all"; label: string }[] = [
@@ -174,13 +175,9 @@ function ArtworkCard({
         <div className="absolute top-3 left-3">
           <ArtworkStatusPill status={artwork.status} />
         </div>
-        {"rarityType" in artwork && (artwork as { rarityType?: string }).rarityType && (
-          <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center rounded-sm bg-gold-bright px-1.5 py-0.5 text-[10px] font-bold text-background leading-none">
-              {String((artwork as { rarityType: string }).rarityType)}
-            </span>
-          </div>
-        )}
+        <div className="absolute top-3 right-3">
+          <RarityBadge rarity={artwork.rarityType} />
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
