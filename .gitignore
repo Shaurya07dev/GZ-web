@@ -1,10 +1,12 @@
-# This repo tracks the website (frontend-web/), the abandoned Expo mobile
-# attempt (mobile/, kept for reference, not developed further), and the
-# active Flutter mobile app (mobile_flutter/). Everything else at the root
-# (docs, PDFs, reference images, corpus data) is workspace scratch material
-# and stays untracked.
+# This repo tracks the website (frontend-web/) and the active Flutter mobile
+# app (mobile_flutter/). Everything else at the root (docs, PDFs, reference
+# images, corpus data) is workspace scratch material and stays untracked.
+#
+# mobile/ is the abandoned Expo attempt. It is kept on disk for one file,
+# mobile/migration-progress.md, and is deliberately NOT un-ignored here: it was
+# never going to be committed, and un-ignoring it only made git list its 58
+# files as untracked in every status and every editor sidebar, forever.
 /*
 !/frontend-web/
-!/mobile/
 !/mobile_flutter/
 !/.gitignore
