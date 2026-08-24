@@ -3,13 +3,8 @@
 import Image from "next/image";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatINR } from "@/lib/utils";
-import {
-  CHECKOUT_GST_RATE,
-  CHECKOUT_DELIVERY_CHARGE,
-  CHECKOUT_PLATFORM_FEE,
-  CHECKOUT_CONVENIENCE_FEE,
-} from "@/services/orderService";
+import { PriceBreakdown } from "@/components/shared/price-breakdown";
+import { checkoutTotal } from "@/lib/pricing";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
 
@@ -21,19 +16,16 @@ interface CheckoutReviewStepProps {
 }
 
 // Step 2 of checkout: a read-only summary before the customer commits.
-// The GST/delivery math here is pinned to orderService's own exported
-// constants (CHECKOUT_GST_RATE, CHECKOUT_DELIVERY_CHARGE) rather than a
-// second hardcoded copy, so this preview can never silently drift from
-// what orderService.create actually charges when "Place Order" is pressed.
+// The totals come from checkoutTotal() in lib/pricing.ts — the same function
+// orderService.create() uses to build the order — so this preview cannot drift
+// from what "Place Order" actually charges.
 export function CheckoutReviewStep({
   artwork,
   address,
   onBack,
   onContinue,
 }: CheckoutReviewStepProps) {
-  const gstAmount =
-    Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100;
-  const total = artwork.customerPrice + gstAmount + CHECKOUT_DELIVERY_CHARGE;
+  const totals = checkoutTotal(artwork.customerPrice);
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,44 +71,12 @@ export function CheckoutReviewStep({
         </p>
       </div>
 
-      <dl className="flex flex-col gap-2.5 rounded-lg border border-border bg-card p-4 text-sm">
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Artwork price</dt>
-          <dd className="tabular-nums text-foreground">
-            {formatINR(artwork.customerPrice)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">GST (5%)</dt>
-          <dd className="tabular-nums text-foreground">
-            {formatINR(gstAmount)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Platform fee</dt>
-          <dd className="tabular-nums text-emerald-500 font-medium">
-            {CHECKOUT_PLATFORM_FEE === 0 ? "Free" : formatINR(CHECKOUT_PLATFORM_FEE)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Convenience fee</dt>
-          <dd className="tabular-nums text-emerald-500 font-medium">
-            {CHECKOUT_CONVENIENCE_FEE === 0 ? "Free" : formatINR(CHECKOUT_CONVENIENCE_FEE)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-muted-foreground">Delivery</dt>
-          <dd className="tabular-nums text-foreground">
-            {formatINR(CHECKOUT_DELIVERY_CHARGE)}
-          </dd>
-        </div>
-        <div className="mt-1 flex items-center justify-between border-t border-border pt-2.5">
-          <dt className="font-medium text-foreground">Total</dt>
-          <dd className="font-display text-lg font-semibold tabular-nums text-gold-bright">
-            {formatINR(total)}
-          </dd>
-        </div>
-      </dl>
+      <PriceBreakdown
+        displayPrice={totals.displayPrice}
+        gstIncluded={totals.gstIncluded}
+        deliveryCharge={totals.deliveryCharge}
+        convenienceFee={totals.convenienceFee}
+      />
 
       <div className="flex items-center justify-between border-t border-border pt-5">
         <Button variant="outline" onClick={onBack}>

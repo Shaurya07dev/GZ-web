@@ -49,6 +49,7 @@ import {
 } from "@/features/dashboard/dashboard-data";
 import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
 import { getCollection, setCollection } from "./mock-db";
+import { displayPriceOf } from "./pricing";
 
 function collection<T>(key: string, seed: () => T) {
   return {
@@ -171,7 +172,7 @@ function buildArtistSeedArtworks(): Artwork[] {
       verifiedArtist: true,
       category: seed.category,
       medium: seed.medium,
-      customerPrice: Math.round(seed.artistPrice * 1.3),
+      customerPrice: displayPriceOf(seed.artistPrice),
       thumbnailUrl: seed.image,
       insured: seed.artistPrice > 20000,
       status: seed.status,

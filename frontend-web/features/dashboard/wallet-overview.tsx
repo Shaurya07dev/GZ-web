@@ -17,8 +17,13 @@ import { Label } from "@/components/ui/label";
 import {
   useArtistWallet,
   useArtistWalletTransactions,
+  usePendingSettlements,
   useRequestWithdrawalMutation,
+  useSimulateDeliveryMutation,
 } from "@/hooks/useArtistWallet";
+import { DevPanel } from "@/features/auth/components/dev-panel";
+import { ARTIST_PAYOUT_DAYS_AFTER_DELIVERY } from "@/lib/pricing";
+import type { Settlement } from "@/types/admin";
 import {
   useArtistAccountProfile,
   useSaveArtistProfileMutation,
@@ -46,7 +51,7 @@ export function WalletOverview() {
     },
     {
       key: "pending",
-      label: "Pending settlement",
+      label: "Awaiting delivery",
       value: wallet?.pendingBalance ?? 0,
       icon: Clock3,
       tone: "neutral" as const,
@@ -87,6 +92,8 @@ export function WalletOverview() {
         ))}
       </div>
 
+      <PendingSettlementsCard />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.5fr]">
         <WithdrawCard balance={wallet?.balance ?? 0} />
         <TransactionsCard transactions={transactions ?? []} />
@@ -102,6 +109,79 @@ export function WalletOverview() {
       )}
     </div>
   );
+}
+
+function formatDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(iso));
+}
+
+// Money from a sale is not yours to withdraw the moment it sells. It clears
+// 7 days after the artwork reaches the buyer, so this card exists to answer
+// "where is my money" before the artist has to ask.
+function PendingSettlementsCard() {
+  const { data: settlements } = usePendingSettlements();
+  const simulateDelivery = useSimulateDeliveryMutation();
+
+  if (!settlements || settlements.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 sm:p-6">
+      <div>
+        <h2 className="font-display text-base font-semibold text-foreground">
+          On the way to you
+        </h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Sales clear {ARTIST_PAYOUT_DAYS_AFTER_DELIVERY} days after the
+          artwork is delivered to the buyer.
+        </p>
+      </div>
+
+      <ul className="flex flex-col gap-2.5">
+        {settlements.map((settlement) => (
+          <li
+            key={settlement.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border px-3.5 py-3"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {settlement.artworkTitle}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {settlementStage(settlement)}
+              </p>
+            </div>
+            <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+              ₹{settlement.artistAmount.toLocaleString("en-IN")}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <DevPanel className="mt-1">
+        <span className="text-xs text-muted-foreground">
+          No courier is connected, so nothing here ever gets marked delivered.
+        </span>
+        <button
+          type="button"
+          disabled={simulateDelivery.isPending}
+          onClick={() => simulateDelivery.mutate(settlements[0]!.id)}
+          className="shrink-0 rounded border border-gold/40 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-gold-bright transition-colors hover:bg-gold/10 disabled:opacity-50"
+        >
+          Simulate delivery
+        </button>
+      </DevPanel>
+    </div>
+  );
+}
+
+function settlementStage(settlement: Settlement): string {
+  if (settlement.releaseAfter) {
+    return `Delivered — clears ${formatDay(settlement.releaseAfter)}`;
+  }
+  return "Waiting for the artwork to be delivered";
 }
 
 function WithdrawCard({ balance }: { balance: number }) {

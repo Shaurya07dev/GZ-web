@@ -1,29 +1,13 @@
 import type { Order } from "@/types/order";
-import type { Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { getArtworkById } from "@/lib/mock-data/helpers";
-import {
-  artworksCol,
-  artistActivityCol,
-  artistWalletCol,
-  artistWalletTransactionsCol,
-  artistSettlementsCol,
-  artistPricesCol,
-  CURRENT_ARTIST_ID,
-  CURRENT_ARTIST_NAME,
-  ordersCol,
-} from "@/lib/mock-collections";
+import { artworksCol, ordersCol } from "@/lib/mock-collections";
+import { checkoutTotal } from "@/lib/pricing";
+import { creditArtistSettlement } from "./artistPayoutService";
 
-// GST rate and flat delivery charge are pinned here as the single source of
-// truth — features/checkout/checkout-review-step.tsx mirrors this exact
-// math for the pre-confirm price preview, so the two must stay in sync.
-export const CHECKOUT_GST_RATE = 0.05;
-export const CHECKOUT_DELIVERY_CHARGE = 250;
-// Platform fee and convenience fee are ₹0 during the early launch period.
-// These apply equally to marketplace and aggregator-channel sales.
-// Update both values here when pricing is finalised — nowhere else.
-export const CHECKOUT_PLATFORM_FEE = 0;
-export const CHECKOUT_CONVENIENCE_FEE = 0;
+// Every rupee figure lives in lib/pricing.ts. Nothing in this file invents a
+// rate of its own — the checkout preview, the order record and the receipt all
+// read the same checkoutTotal().
 
 
 export interface CreateOrderPayload {
@@ -33,65 +17,9 @@ export interface CreateOrderPayload {
   payment?: Order["payment"];
 }
 
-// A sale settles into the artist's wallet immediately in this mock (no
-// pending/clearing period modeled) — only wired for the demo artist, since
-// she's the only artist this app has a wallet for.
-function settleIntoArtistWallet(
-  artwork: { id: string; title: string; artistId: string },
-  orderId: string,
-) {
-  if (artwork.artistId !== CURRENT_ARTIST_ID) return;
-
-  const artistPrice = artistPricesCol.get()[artwork.id];
-  const settlementAmount = Math.round((artistPrice ?? 0) * 0.98); // ~2% platform+aggregator pass-through in this mock
-  if (settlementAmount <= 0) return;
-
-  const wallet = artistWalletCol.get();
-  artistWalletCol.set({
-    ...wallet,
-    balance: wallet.balance + settlementAmount,
-  });
-
-  const transactions = artistWalletTransactionsCol.get();
-  artistWalletTransactionsCol.set([
-    {
-      id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-      type: "settlement" as const,
-      label: `Settlement: "${artwork.title}"`,
-      amount: settlementAmount,
-      date: new Date().toISOString().slice(0, 10),
-      status: "completed" as const,
-    },
-    ...transactions,
-  ]);
-
-  const now = new Date().toISOString();
-  const settlement: Settlement = {
-    id: `settle-${crypto.randomUUID().slice(0, 8)}`,
-    orderId,
-    artworkTitle: artwork.title,
-    artistName: CURRENT_ARTIST_NAME,
-    artistAmount: settlementAmount,
-    aggregatorCommission: 0,
-    platformRevenue: Math.round((artistPrice ?? 0) * 0.02),
-    status: "processed",
-    createdAt: now,
-    processedAt: now,
-  };
-  artistSettlementsCol.set([settlement, ...artistSettlementsCol.get()]);
-
-  artistActivityCol.set([
-    {
-      id: `act-${crypto.randomUUID().slice(0, 8)}`,
-      kind: "settlement" as const,
-      title: "Settlement received",
-      detail: `₹${settlementAmount.toLocaleString("en-IN")} credited for "${artwork.title}"`,
-      time: "Just now",
-    },
-    ...artistActivityCol.get(),
-  ]);
-}
-
+// A marketplace sale credits the artist's PENDING balance. It becomes
+// withdrawable 7 days after the piece is delivered — see
+// services/artistPayoutService.ts, which owns that whole rule.
 export const orderService = {
   list: (): Promise<Order[]> => mockDelay(ordersCol.get()),
 
@@ -105,16 +33,17 @@ export const orderService = {
       return mockError("This artwork is no longer available for purchase");
     }
 
-    const gstAmount =
-      Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100;
+    // GST is already inside customerPrice, so this is the portion of the price
+    // that IS tax — not an extra charge on top of it.
+    const totals = checkoutTotal(artwork.customerPrice);
     const now = new Date().toISOString();
     const order: Order = {
       id: `order-${crypto.randomUUID()}`,
       artworkId: payload.artworkId,
       addressId: payload.addressId,
       amount: artwork.customerPrice,
-      gstAmount,
-      deliveryCharge: CHECKOUT_DELIVERY_CHARGE,
+      gstAmount: totals.gstIncluded,
+      deliveryCharge: totals.deliveryCharge,
       // A paid order, because payment is collected before this is called.
       status: payload.payment ? "paid" : "pending",
       createdAt: now,
@@ -147,7 +76,12 @@ export const orderService = {
       ),
     );
 
-    settleIntoArtistWallet(artwork, order.id);
+    // Marketplace channel: the artist is paid their asking price in full.
+    creditArtistSettlement({
+      artwork,
+      orderId: order.id,
+      channel: "marketplace",
+    });
 
     return mockDelay(order);
   },

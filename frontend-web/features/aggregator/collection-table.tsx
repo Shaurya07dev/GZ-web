@@ -16,7 +16,12 @@ import { PriceTag } from "@/components/shared/price-tag";
 import { ExpiryCountdown } from "./expiry-countdown";
 import { EditDisplayPriceDialog } from "./edit-display-price-dialog";
 import { RecordSaleDialog } from "./record-sale-dialog";
-import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+import {
+  useAggregatorCollection,
+  useReleaseHoldingMutation,
+} from "@/hooks/useAggregatorCollection";
+import { formatINR } from "@/lib/utils";
+import { toast } from "sonner";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
 
@@ -44,6 +49,31 @@ export function CollectionTable() {
     useState<CollectionRow | null>(null);
   const [saleDialogHolding, setSaleDialogHolding] =
     useState<CollectionRow | null>(null);
+  const releaseMutation = useReleaseHoldingMutation();
+
+  // Returning an unsold piece refunds the advance but NOT the delivery charge
+  // — the money-flow sheet settles delivery only on a sale. That costs real
+  // money, so it is spelled out before the click rather than after it.
+  function handleReturn(holding: CollectionRow) {
+    const deliveryLost = holding.deliveryDeposit ?? 0;
+    const confirmed = window.confirm(
+      `Return "${holding.artwork.title}" to GalleryZone?
+
+` +
+        `Your ${formatINR(holding.advanceAmount)} advance comes back. ` +
+        (deliveryLost > 0
+          ? `The ${formatINR(deliveryLost)} delivery charge does not — it is only refunded when a piece sells.`
+          : ""),
+    );
+    if (!confirmed) return;
+    releaseMutation.mutate(holding.id, {
+      onSuccess: ({ refunded }) =>
+        toast.success("Returned to GalleryZone", {
+          description: `${formatINR(refunded)} advance credited back to your wallet.`,
+        }),
+      onError: (error) => toast.error(error.message),
+    });
+  }
 
   if (isPending) {
     return (
@@ -186,14 +216,26 @@ export function CollectionTable() {
                   </td>
 
                   <td className="px-4 py-3.5">
-                    <Button
-                      size="sm"
-                      variant={isSold ? "outline" : "default"}
-                      disabled={isSold}
-                      onClick={() => setSaleDialogHolding(holding)}
-                    >
-                      {isSold ? "Sale recorded" : "Record sale"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant={isSold ? "outline" : "default"}
+                        disabled={isSold}
+                        onClick={() => setSaleDialogHolding(holding)}
+                      >
+                        {isSold ? "Sale recorded" : "Record sale"}
+                      </Button>
+                      {!isSold && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={releaseMutation.isPending}
+                          onClick={() => handleReturn(holding)}
+                        >
+                          Return
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

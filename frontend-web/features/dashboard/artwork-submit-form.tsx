@@ -41,9 +41,14 @@ import {
   INSURANCE_RECOMMENDED_THRESHOLD,
   INSURANCE_PARTNER,
   ARTWORK_FORMATS,
-  CUSTOMER_MARKUP_MULTIPLIER,
   PLACEHOLDER_ARTWORK_IMAGES,
 } from "./artwork-submit-data";
+import {
+  GST_RATE,
+  basePriceOf,
+  displayPriceOf,
+  listingFeeOf,
+} from "@/lib/pricing";
 import {
   useArtistPenalties,
   useSelfApproveArtworkMutation,
@@ -139,6 +144,43 @@ function Requirement({
   );
 }
 
+// One line of the price ladder shown under "Your rate". The artist sees every
+// component of the listed price, so the number buyers see is never a mystery.
+function PriceRow({
+  label,
+  amount,
+  free,
+  emphasized,
+}: {
+  label: string;
+  amount: number;
+  free?: boolean;
+  emphasized?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span
+        className={
+          emphasized ? "text-foreground" : "text-muted-foreground"
+        }
+      >
+        {label}
+      </span>
+      <span
+        className={
+          emphasized
+            ? "font-mono text-sm font-semibold tabular-nums text-gold-bright"
+            : "font-mono tabular-nums text-muted-foreground"
+        }
+      >
+        {free && amount === 0
+          ? "Free"
+          : `₹${amount.toLocaleString("en-IN")}`}
+      </span>
+    </div>
+  );
+}
+
 export type EditableArtwork = Artwork & { artistPrice: number };
 
 // Seeds the form from an existing listing when editing. Everything the form
@@ -228,10 +270,19 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       ].filter((v): v is string => v !== null)
     : [];
   const aggregatorReady = missingForAggregator.length === 0;
-  const customerPrice = useMemo(
-    () => Math.round(artistPriceNumber * CUSTOMER_MARKUP_MULTIPLIER),
+  // The whole ladder, so the artist can see where every rupee of the
+  // difference between their rate and the listed price goes.
+  const basePrice = useMemo(
+    () => basePriceOf(artistPriceNumber),
     [artistPriceNumber],
   );
+  const customerPrice = useMemo(
+    () => displayPriceOf(artistPriceNumber),
+    [artistPriceNumber],
+  );
+  const gstIncluded = customerPrice - basePrice;
+  const listingFee = listingFeeOf(artistPriceNumber);
+  const gstPercent = GST_RATE * 100;
 
   function updateField<K extends keyof FormState>(
     field: K,
@@ -780,18 +831,25 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             />
             <p className="text-xs text-muted-foreground">
               Your own price for this piece. It stays private — buyers never see
-              it. You receive this amount in full, less any shipping, insurance
-              and taxes, paid within 7 days of a confirmed sale.
+              it. You&rsquo;re paid within 7 days of the artwork being
+              delivered.
             </p>
             {artistPriceNumber > 0 && (
-              <p className="flex items-baseline justify-between gap-3 rounded-md border border-gold/25 bg-gold/5 px-3 py-2 text-xs">
-                <span className="text-muted-foreground">
-                  Listed price buyers see
-                </span>
-                <span className="font-mono text-sm font-semibold tabular-nums text-gold-bright">
-                  ₹{customerPrice.toLocaleString("en-IN")}
-                </span>
-              </p>
+              <dl className="flex flex-col gap-1.5 rounded-md border border-gold/25 bg-gold/5 px-3 py-2.5 text-xs">
+                <PriceRow label="You receive" amount={artistPriceNumber} />
+                <PriceRow label="Listing fee" amount={listingFee} free />
+                <PriceRow
+                  label="GalleryZone margin"
+                  amount={basePrice - artistPriceNumber}
+                />
+                <PriceRow label={`GST (${gstPercent}%)`} amount={gstIncluded} />
+                <div className="my-0.5 h-px bg-gold/20" aria-hidden="true" />
+                <PriceRow
+                  label="Listed price buyers see"
+                  amount={customerPrice}
+                  emphasized
+                />
+              </dl>
             )}
           </div>
 
@@ -1090,8 +1148,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </div>
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              You receive your price in full. The listed price is your price ×
-              1.30 — that&rsquo;s what buyers see.
+              You receive your price in full. The listed price adds
+              GalleryZone&rsquo;s 30% margin and {gstPercent}% GST on top —
+              that&rsquo;s what buyers see.
             </p>
 
             {(insuranceRequired || form.insuranceOpted) && (

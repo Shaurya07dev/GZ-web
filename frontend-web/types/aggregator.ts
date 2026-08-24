@@ -3,6 +3,11 @@ export interface AggregatorHolding {
   artworkId: string;
   advancePercent: 5 | 3;
   advanceAmount: number;
+  // Paid with the advance before taking possession (MOU §7). The money-flow
+  // sheet returns it only if the piece sells — an unsold piece going back to
+  // GalleryZone refunds the advance alone. Optional because fixture holdings
+  // predate the field.
+  deliveryDeposit?: number;
   displayPrice: number; // aggregator-editable; floor = artwork.customerPrice
   assignedAt: string; // ISO
   expiresAt: string; // assignedAt + 30 days

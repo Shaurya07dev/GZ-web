@@ -47,6 +47,14 @@ export interface Settlement {
   status: SettlementStatus;
   createdAt: string;
   processedAt: string | null;
+  // The money-flow sheets pay the artist 7 days after DELIVERY, not after the
+  // sale. This is stamped when the piece is delivered; null means nothing has
+  // been delivered yet, so no clock is running. Optional because the fixture
+  // settlements predate the field.
+  releaseAfter?: string | null;
+  /** Links to the artist wallet row this settlement created, so releasing the
+   *  money can flip that row from pending to completed. */
+  walletTransactionId?: string;
 }
 
 // --- Account deactivation ----------------------------------------------------

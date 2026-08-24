@@ -20,6 +20,7 @@ import {
   advancePercentFor,
   advanceAmountFor,
 } from "@/services/aggregatorService";
+import { DELIVERY_CHARGE } from "@/lib/pricing";
 import { useReserveArtworkMutation } from "@/hooks/useAggregatorInventory";
 import type { ArtworkSummary } from "@/types/artwork";
 
@@ -44,8 +45,8 @@ export function ReserveArtworkDialog({
 
   if (!artwork) return null;
 
-  const advancePercent = advancePercentFor(artwork.customerPrice);
-  const advanceAmount = advanceAmountFor(artwork.customerPrice, advancePercent);
+  const advancePercent = advancePercentFor();
+  const advanceAmount = advanceAmountFor(artwork.customerPrice);
 
   function handleConfirm() {
     if (!artwork) return;
@@ -109,18 +110,37 @@ export function ReserveArtworkDialog({
           <PriceTag amount={artwork.customerPrice} className="text-sm" />
         </div>
 
-        <div className="flex items-center justify-between rounded-md border border-gold/25 bg-gold/5 px-3.5 py-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Advance due today
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {advancePercent}% of {formatINR(artwork.customerPrice)}
-            </p>
+        <div className="flex flex-col gap-2 rounded-md border border-gold/25 bg-gold/5 px-3.5 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Advance due today
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {advancePercent}% of {formatINR(artwork.customerPrice)}
+              </p>
+            </div>
+            <span className="font-mono text-sm tabular-nums text-foreground">
+              {formatINR(advanceAmount)}
+            </span>
           </div>
-          <span className="font-display text-lg font-semibold tabular-nums text-gold-bright">
-            {formatINR(advanceAmount)}
-          </span>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Delivery</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Returned when the piece sells
+              </p>
+            </div>
+            <span className="font-mono text-sm tabular-nums text-foreground">
+              {formatINR(DELIVERY_CHARGE)}
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center justify-between border-t border-gold/20 pt-2">
+            <p className="text-sm font-medium text-foreground">Payable now</p>
+            <span className="font-display text-lg font-semibold tabular-nums text-gold-bright">
+              {formatINR(advanceAmount + DELIVERY_CHARGE)}
+            </span>
+          </div>
         </div>
 
         <label className="flex items-start gap-2.5 rounded-md border border-dashed border-border px-3 py-2.5">

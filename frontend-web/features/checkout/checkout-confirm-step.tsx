@@ -7,12 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
-import {
-  CHECKOUT_DELIVERY_CHARGE,
-  CHECKOUT_GST_RATE,
-  CHECKOUT_PLATFORM_FEE,
-  CHECKOUT_CONVENIENCE_FEE,
-} from "@/services/orderService";
+import { checkoutTotal } from "@/lib/pricing";
 import { RazorpaySimulation } from "./razorpay-simulation";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
@@ -42,10 +37,7 @@ export function CheckoutConfirmStep({
   const createOrderMutation = useCreateOrderMutation();
   const [payOpen, setPayOpen] = useState(false);
 
-  const total =
-    artwork.customerPrice +
-    Math.round(artwork.customerPrice * CHECKOUT_GST_RATE * 100) / 100 +
-    CHECKOUT_DELIVERY_CHARGE;
+  const total = checkoutTotal(artwork.customerPrice).total;
 
   // Payment first, order second: an order only exists once the gateway has
   // returned a reference, so there is never a paid-but-orderless state or an
@@ -67,8 +59,8 @@ export function CheckoutConfirmStep({
   }
 
   if (placedOrder) {
-    const paidTotal =
-      placedOrder.amount + placedOrder.gstAmount + placedOrder.deliveryCharge;
+    // gstAmount is the tax already inside `amount`, never an addition to it.
+    const paidTotal = placedOrder.amount + placedOrder.deliveryCharge;
     return (
       <div className="flex flex-col items-center gap-5 py-6 text-center">
         <span className="flex size-14 items-center justify-center rounded-full border border-gold/40 bg-gold/10">

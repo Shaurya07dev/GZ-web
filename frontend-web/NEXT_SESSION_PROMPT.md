@@ -89,6 +89,28 @@ buttons, which skip the form.
 - Aggregator §8 — the aggregator **earns** 20% × (Listed − Artist Price).
 - Aggregator §10 — one nominated GalleryZone coordinator per premises.
 
+**From the money-flow sheets** (all of this is built, and
+`node --experimental-strip-types lib/pricing.check.ts` fails loudly if any of it
+regresses):
+
+- Artist listing fee 0% today, 1% of listing value (or a subscription) later.
+- GalleryZone's markup is 30% over the artist's price.
+- **GST is INSIDE the displayed price, never added at checkout.** ₹1,00,000
+  becomes ₹1,30,000 becomes ₹1,36,500. `Order.gstAmount` is the tax contained
+  in `Order.amount`, not an addition to it — summing the two charges the buyer
+  twice, which is exactly what the old code did.
+- Marketplace: the artist receives their full price, nothing deducted.
+- Aggregator: the artist receives their price less the delivery leg and 2%
+  convenience (₹1,00,000 → ₹95,500). This is what settles the placement-leg
+  contradiction between artist MOU §10 and aggregator MOU §7 — the artist pays.
+- The aggregator's advance is a flat 5% of the display price plus delivery, both
+  paid before possession. A sale returns both and pays 20% × (selling price −
+  **artist** price). An unsold return refunds the advance only.
+- **The artist is paid 7 days after DELIVERY, not after the sale** (Yash, 24 Aug
+  — the sheet's "or 7 days of sale" alternative is dropped). Sales land in the
+  pending balance; `services/artistPayoutService.ts` releases them lazily on
+  any wallet read.
+
 **From Yash directly:**
 
 - "Single-page website" meant session persistence, not hiding public pages: a
@@ -105,19 +127,33 @@ buttons, which skip the form.
 
 ## Blocked — do not guess these
 
-1. **Commission.** The meeting said 5% month 1 and 3% months 2–6. The signed
-   MOU says a flat 5% deposit paid and 20% of the markup earned, with no
-   month-based tier anywhere. Yash is sending a separate document covering
-   commission, GST and delivery. Until it arrives, leave the aggregator
-   portal's numbers alone.
-2. **GST.** Currently added on top at checkout (`CHECKOUT_GST_RATE = 0.05` in
-   `services/orderService.ts`). The handwritten note says it should already be
-   inside the display price. Same document.
-3. **Delivery charges.** Same document. **Shiprocket is the chosen carrier**
-   (client's call, 21 Aug) — see the delivery section below before quoting any
-   number.
-4. **Bank account.** The note says "bank account"; artists and aggregators
-   have one, collectors do not. Yash will confirm which he meant.
+The money-flow sheets arrived on **21 Aug 2026** (three photos in `d:/ArtGllery/`:
+`image_c8c04(1).HEIC`, `image_063b4(1).HEIC`, `image_c4a8d.HEIC` — HEIC does not
+open in the Read tool, convert with `ffmpeg -i in.HEIC out.png` first). They
+settle commission, GST placement and the payout rule; everything they settle is
+built and pinned by `lib/pricing.check.ts`. **Seven questions went to the client
+and are still open.** Each one is marked `OPEN` at its constant in
+`lib/pricing.ts`, so answering one is a single-value edit there:
+
+1. **Advance base.** Month 1 is 5% of the display price; months 2–5 are a
+   percentage of the artist price. Deliberate, or one base throughout?
+2. **Advance recurring or replaced?** A fresh advance each month held, or one
+   advance recalculated at renewal?
+3. **Month 6.** MOU §18 allows six months; both tables stop at five.
+4. **Does the monthly price decay apply to aggregator pieces?** The table's
+   base is ₹1,30,000, which is the marketplace price.
+5. **Delivery.** Flat ₹2,500 (built) or Shiprocket size bands.
+6. **GST rate.** The sheet says 5%; original art is normally 12% under
+   HSN 9701. `GST_RATE` in `lib/pricing.ts` re-prices the whole site.
+7. **The 2% convenience charge** is deducted from the artist on aggregator
+   sales only. Confirm marketplace artists really pay nothing.
+
+**The two schedules are deliberately NOT built** — the advance ladder (5/5/3/3/3%)
+and the price decay (0/2/4/6/8%) both depend on questions 1–4, and half a rule
+is worse than none. They are recorded in the money-flow memory, not in code.
+
+**Bank account.** The handwritten note says "bank account"; artists and
+aggregators have one, collectors do not. Yash will confirm which he meant.
 
 **Waiting on files**, each with its slot already built: logo, colour palette,
 insurance partner URL (`INSURANCE_PARTNER_URL` in
@@ -207,13 +243,19 @@ npx tsc --noEmit                                  # must be silent
 npx eslint features hooks services lib types app components
 npx next build --webpack                          # see the Turbopack note
 node --experimental-strip-types types/artwork.check.ts
+node --experimental-strip-types lib/pricing.check.ts
 ```
 
-The last one covers the 7-day edit window (including "bought on day 2"), the
+`pricing.check.ts` replays the client's own worked example end to end — both
+flows, both settlements, and the whole-flow balance that proves GalleryZone
+keeps ₹30,000 on a marketplace sale and ₹42,000 on an aggregator one. If a
+number on those sheets is ever quoted wrong, it fails there first.
+
+`artwork.check.ts` covers the 7-day edit window (including "bought on day 2"), the
 channel predicates, the 1% off-platform fee and custody derivation. It fails
 loudly if someone breaks those rules.
 
-`eslint` currently reports **9 warnings, 0 errors**, all pre-existing and in
+`eslint` currently reports **12 warnings, 0 errors**, all pre-existing and in
 files nobody has touched. Errors are not acceptable; that warning count is the
 baseline.
 

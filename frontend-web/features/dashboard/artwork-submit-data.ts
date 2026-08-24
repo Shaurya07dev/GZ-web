@@ -78,7 +78,6 @@ export const INSURANCE_RECOMMENDED_THRESHOLD = 20000;
 // the partner name into a link automatically.
 export const INSURANCE_PARTNER = "HDFC ERGO";
 export const INSURANCE_PARTNER_URL: string | null = null;
-export const CUSTOMER_MARKUP_MULTIPLIER = 1.3;
 
 // Stock photos pre-filling every image slot so the upload form is always
 // submittable with zero clicks (there's no backend to actually store a

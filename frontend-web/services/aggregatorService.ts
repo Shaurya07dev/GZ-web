@@ -5,6 +5,15 @@ import type {
 } from "@/types/aggregator";
 import { isAggregatorListed, type ArtworkSummary } from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
+import {
+  DELIVERY_CHARGE,
+  aggregatorAdvanceOf,
+  aggregatorCommissionOf,
+} from "@/lib/pricing";
+import {
+  artistPriceOf,
+  creditArtistSettlement,
+} from "./artistPayoutService";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { buyerInviteService } from "./buyerInviteService";
 import {
@@ -22,29 +31,22 @@ import {
 // inventory reserve flow, and the collection display).
 // ---------------------------------------------------------------------------
 
-// Advance-percent rule for NEW reservations made through reserve() below.
-// SAD §2.7 confirms advance_percent is always 5.00 or 3.00 but does not
-// specify the split rule, and the already-seeded holdings
-// (lib/mock-data/aggregator-holdings.ts) intentionally mix both without a
-// strict price threshold (real advance terms likely depend on factors this
-// mock doesn't model, e.g. category or negotiated terms). For reservations
-// created going forward, we pick one simple, consistent rule so the mock
-// behaves predictably: 5% under ₹25,000, 3% at or above.
-const ADVANCE_THRESHOLD = 25_000;
-
+// Aggregator MOU §7, confirmed by the money-flow sheets: the advance is a flat
+// 5% of the price the piece is being displayed at, paid with the delivery
+// charge before the aggregator takes possession. The older "5% under ₹25,000,
+// 3% above" split was this mock's own invention, made before the sheets
+// existed. Seeded fixture holdings still carry 3%, which is why the type keeps
+// the union.
+//
 // Exported (not just used internally by reserve() below) so
-// ReserveArtworkDialog can preview the exact advance percent/amount a
-// confirm click will produce, without duplicating the rule or waiting on a
-// round trip to find out.
-export function advancePercentFor(customerPrice: number): 5 | 3 {
-  return customerPrice < ADVANCE_THRESHOLD ? 5 : 3;
+// ReserveArtworkDialog can preview the exact advance a confirm click will
+// produce, without duplicating the rule or waiting on a round trip.
+export function advancePercentFor(): 5 {
+  return 5;
 }
 
-export function advanceAmountFor(
-  customerPrice: number,
-  advancePercent: 5 | 3,
-): number {
-  return Math.round((advancePercent / 100) * customerPrice);
+export function advanceAmountFor(displayPrice: number): number {
+  return aggregatorAdvanceOf(displayPrice);
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -124,7 +126,7 @@ export const aggregatorService = {
       return mockError("Artwork no longer available");
     }
 
-    const advancePercent = advancePercentFor(artwork.customerPrice);
+    const advancePercent = advancePercentFor();
     const assignedAt = new Date();
     const expiresAt = new Date(assignedAt.getTime() + THIRTY_DAYS_MS);
 
@@ -132,7 +134,10 @@ export const aggregatorService = {
       id: nextHoldingId(holdings),
       artworkId,
       advancePercent,
-      advanceAmount: advanceAmountFor(artwork.customerPrice, advancePercent),
+      advanceAmount: advanceAmountFor(artwork.customerPrice),
+      // Paid up front alongside the advance (MOU §7). Refunded on a sale;
+      // forfeited if the piece goes back unsold.
+      deliveryDeposit: DELIVERY_CHARGE,
       displayPrice: artwork.customerPrice, // floor, per SAD §2.7 — see edit-display-price-dialog.tsx for the raise-only enforcement
       assignedAt: assignedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
@@ -142,6 +147,45 @@ export const aggregatorService = {
     };
     holdingsCol.set([...holdings, holding]);
     return mockDelay(holding);
+  },
+
+  // The piece did not sell and goes back to GalleryZone. The money-flow sheet
+  // is explicit that only the advance comes back in this case — the delivery
+  // charge is settled only on a sale, so an unsold return costs the aggregator
+  // that leg. Frees the artwork to be reserved again.
+  releaseHolding(holdingId: string): Promise<{ refunded: number }> {
+    const holdings = holdingsCol.get();
+    const holding = holdings.find((h) => h.id === holdingId);
+    if (!holding) return mockError("Reservation not found");
+    if (holding.status !== "reserved") {
+      return mockError("This piece has already sold and cannot be returned");
+    }
+
+    const artwork = getArtworkById(holding.artworkId);
+    const refunded = holding.advanceAmount;
+    const now = new Date().toISOString();
+
+    if (refunded > 0) {
+      const wallet = aggregatorWalletCol.get();
+      aggregatorWalletCol.set({
+        ...wallet,
+        pendingBalance: wallet.pendingBalance + refunded,
+      });
+      aggregatorWalletTransactionsCol.set([
+        {
+          id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+          type: "refund",
+          label: `Advance returned: "${artwork?.title ?? "Artwork"}"`,
+          amount: refunded,
+          date: now.slice(0, 10),
+          status: "pending",
+        },
+        ...aggregatorWalletTransactionsCol.get(),
+      ]);
+    }
+
+    holdingsCol.set(holdings.filter((h) => h.id !== holdingId));
+    return mockDelay({ refunded });
   },
 
   listCollection(): Promise<
@@ -206,35 +250,58 @@ export const aggregatorService = {
       source: "aggregator_sale",
     });
 
-    // Credit the wallet at the same 20%-of-markup rate dashboardSummary()
-    // already uses (don't recompute a second formula) — see MOU §8's
-    // "Profit Share = 20% × (Listed Price − Artist Price)"; this mock has no
-    // artist_price field available here, so the markup base is
-    // (displayPrice − artwork.customerPrice), same substitution
-    // dashboardSummary() already documents and justifies.
+    // MOU §8: 20% x (selling price - ARTIST price). The old code compared
+    // against artwork.customerPrice — GalleryZone's price to the aggregator —
+    // which on the client's own worked example pays 4,000 instead of 10,000.
+    // The artist price is recoverable (artistPriceOf), so the substitution is
+    // no longer needed.
     const artwork = getArtworkById(payload.artworkId);
     if (artwork) {
-      const commission = Math.round(
-        0.2 * Math.max(0, holding.displayPrice - artwork.customerPrice),
-      );
-      if (commission > 0) {
+      const artistPrice = artistPriceOf(artwork);
+      const commission = aggregatorCommissionOf(holding.displayPrice, artistPrice);
+      // A sale returns the advance and the delivery deposit as well as paying
+      // commission — see the settlement block on the money-flow sheet:
+      // 7,500 advance + 2,500 delivery + 10,000 commission = 20,000.
+      const refund = holding.advanceAmount + (holding.deliveryDeposit ?? 0);
+      const credited = commission + refund;
+
+      if (credited > 0) {
         const wallet = aggregatorWalletCol.get();
         aggregatorWalletCol.set({
           ...wallet,
-          pendingBalance: wallet.pendingBalance + commission,
+          pendingBalance: wallet.pendingBalance + credited,
         });
-        aggregatorWalletTransactionsCol.set([
-          {
+        const rows = [
+          commission > 0 && {
             id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-            type: "commission",
+            type: "commission" as const,
             label: `Commission: "${artwork.title}"`,
             amount: commission,
             date: now.slice(0, 10),
-            status: "pending",
+            status: "pending" as const,
           },
+          refund > 0 && {
+            id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+            type: "refund" as const,
+            label: `Advance & delivery returned: "${artwork.title}"`,
+            amount: refund,
+            date: now.slice(0, 10),
+            status: "pending" as const,
+          },
+        ].filter((row) => row !== false);
+        aggregatorWalletTransactionsCol.set([
+          ...rows,
           ...aggregatorWalletTransactionsCol.get(),
         ]);
       }
+
+      // The artist's side of the same sale: their price less the delivery leg
+      // and 2% convenience (1,00,000 -> 95,500 on the sheet).
+      creditArtistSettlement({
+        artwork,
+        orderId: sale.id,
+        channel: "aggregator",
+      });
     }
 
     return mockDelay(updated);
@@ -271,18 +338,10 @@ export const aggregatorService = {
     return updated;
   },
 
-  // KPI derivation. Advance payments are collected at reservation time, not
-  // earned commission (that's realized on sale) — see the Onboarding
-  // Guide's "20% of the 30% markup" worked example (₹30,000 listed →
-  // ₹9,000 platform markup → ₹1,800 aggregator share). This mock layer
-  // deliberately never carries the private artist_price field, so there's no
-  // platform markup figure to take 20% of directly. The equivalent figure
-  // available here is the aggregator's own markup over the customerPrice
-  // floor (displayPrice - customerPrice) — commissionEarned is 20% of that,
-  // summed only across holdings that have actually sold. A holding sold at
-  // exactly the floor price (displayPrice === customerPrice, never raised)
-  // contributes ₹0, which is the correct, honest result of this formula, not
-  // a bug.
+  // KPI derivation. Advance payments are collected at reservation time and are
+  // not earnings — commission is realized on sale, at MOU §8's rate of 20% x
+  // (selling price - artist price), the same aggregatorCommissionOf() used
+  // when the sale is actually recorded.
   dashboardSummary(): Promise<{
     activeReservations: number;
     commissionEarned: number;
@@ -299,11 +358,7 @@ export const aggregatorService = {
     const commissionEarned = soldHoldings.reduce((sum, holding) => {
       const artwork = getArtworkById(holding.artworkId);
       if (!artwork) return sum;
-      const aggregatorMarkup = Math.max(
-        0,
-        holding.displayPrice - artwork.customerPrice,
-      );
-      return sum + 0.2 * aggregatorMarkup;
+      return sum + aggregatorCommissionOf(holding.displayPrice, artistPriceOf(artwork));
     }, 0);
 
     return mockDelay({

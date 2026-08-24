@@ -32,7 +32,12 @@ import {
   CURRENT_ARTIST_NAME,
   KPI_METRICS,
 } from "@/lib/mock-collections";
-import { CUSTOMER_MARKUP_MULTIPLIER } from "@/features/dashboard/artwork-submit-data";
+import { displayPriceOf } from "@/lib/pricing";
+import {
+  pendingArtistSettlements,
+  releaseDueArtistSettlements,
+  simulateDeliveryAndRelease,
+} from "./artistPayoutService";
 import type {
   ActivityEntry,
   ActivityKind,
@@ -193,7 +198,7 @@ export const artistDashboardService = {
       verifiedArtist: true,
       category: input.category,
       medium: input.medium,
-      customerPrice: Math.round(input.artistPrice * CUSTOMER_MARKUP_MULTIPLIER),
+      customerPrice: displayPriceOf(input.artistPrice),
       thumbnailUrl: input.images[0]?.url ?? "",
       insured: input.insuranceOpted,
       status,
@@ -264,7 +269,7 @@ export const artistDashboardService = {
       dimensions: patch.dimensions || null,
       yearCreated: patch.yearCreated || null,
       artistName: artwork.artistName,
-      customerPrice: Math.round(patch.artistPrice * CUSTOMER_MARKUP_MULTIPLIER),
+      customerPrice: displayPriceOf(patch.artistPrice),
       listingType: patch.listingType,
       insured: patch.insuranceOpted,
       physical: patch.physical,
@@ -392,14 +397,32 @@ export const artistDashboardService = {
   listPenalties: (): Promise<ExternalSalePenalty[]> =>
     mockDelay(artistPenaltiesCol.get()),
 
+  // Settlements are released lazily rather than on a timer: reading the wallet
+  // is the only moment the 7-days-after-delivery rule is observable, and this
+  // mock has no scheduler to run it any other way.
   getWallet: (): Promise<{
     balance: number;
     pendingBalance: number;
     lockedBalance: number;
-  }> => mockDelay(artistWalletCol.get()),
+  }> => {
+    releaseDueArtistSettlements();
+    return mockDelay(artistWalletCol.get());
+  },
 
-  listWalletTransactions: (): Promise<WalletTransaction[]> =>
-    mockDelay(artistWalletTransactionsCol.get()),
+  listWalletTransactions: (): Promise<WalletTransaction[]> => {
+    releaseDueArtistSettlements();
+    return mockDelay(artistWalletTransactionsCol.get());
+  },
+
+  /** Sales waiting on the 7-day post-delivery clock. */
+  listPendingSettlements: (): Promise<Settlement[]> =>
+    mockDelay(pendingArtistSettlements()),
+
+  /** Demo shortcut — nothing in this app marks a customer order delivered. */
+  simulateDelivery: (settlementId: string): Promise<void> => {
+    simulateDeliveryAndRelease(settlementId);
+    return mockDelay(undefined);
+  },
 
   requestWithdrawal: (amount: number): Promise<WalletTransaction> => {
     const wallet = artistWalletCol.get();

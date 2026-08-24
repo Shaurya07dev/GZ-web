@@ -30,3 +30,22 @@ export function useRecordSaleMutation() {
     },
   });
 }
+
+// Returning an unsold piece frees it for another aggregator, so Inventory has
+// to be invalidated too — same set as reserving, in reverse.
+export function useReleaseHoldingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (holdingId: string) =>
+      aggregatorService.releaseHolding(holdingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-wallet"] });
+      queryClient.invalidateQueries({
+        queryKey: ["aggregator-wallet-transactions"],
+      });
+    },
+  });
+}
