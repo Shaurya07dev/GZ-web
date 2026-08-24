@@ -112,7 +112,12 @@ export function CollectionTable() {
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
               <th className="px-4 py-3 font-medium">Artwork</th>
-              <th className="px-4 py-3 font-medium">Display price</th>
+              <th className="px-4 py-3 font-medium">
+                Display price
+                <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                  Incl. GST
+                </span>
+              </th>
               <th className="px-4 py-3 font-medium">Expiry</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Actions</th>

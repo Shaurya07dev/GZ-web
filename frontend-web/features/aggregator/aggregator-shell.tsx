@@ -41,7 +41,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
-import { AGGREGATOR } from "./aggregator-data";
+import { AGGREGATOR, AGGREGATOR_NOTIFICATION_GROUPS } from "./aggregator-data";
 import { signOut } from "@/lib/session";
 
 // Deliberately a parallel sibling to features/dashboard/dashboard-shell.tsx,
@@ -411,7 +411,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </h1>
       </div>
       <div className="flex items-center gap-2">
-        <NotificationsPopover />
+        <NotificationsPopover groups={AGGREGATOR_NOTIFICATION_GROUPS} />
         <SwitchMode width={44} height={24} />
       </div>
     </header>

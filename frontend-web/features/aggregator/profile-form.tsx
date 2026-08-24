@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,14 +13,37 @@ import {
   Building2,
   Lock,
   UserRoundCog,
+  BellRing,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GSTIN_PATTERN } from "@/components/shared/gst-number-card";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   useAggregatorProfile,
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
+import {
+  COUNTRY_CODES,
+  DEFAULT_COUNTRY_DIAL,
+  joinPhone,
+  splitPhone,
+} from "./country-codes";
+
+const DESIGNATION_PRESETS = [
+  "Gallery Manager",
+  "Owner or Director",
+  "Operations Manager",
+] as const;
+const DESIGNATION_OTHER = "__other__";
+
+const EMAIL_DOMAIN_SUGGESTIONS = ["gmail.com", "yahoo.com"];
 
 type AggregatorProfileData = NonNullable<
   ReturnType<typeof useAggregatorProfile>["data"]
@@ -86,10 +110,23 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
   const updateBankMutation = useUpdateAggregatorProfileMutation();
 
+  const initialPhone = splitPhone(profile.coordinatorPhone);
+  const [coordinatorDial, setCoordinatorDial] = useState(initialPhone.dial);
+  const [designationOption, setDesignationOption] = useState<string>(
+    (DESIGNATION_PRESETS as readonly string[]).includes(
+      profile.coordinatorDesignation,
+    )
+      ? profile.coordinatorDesignation
+      : DESIGNATION_OTHER,
+  );
+  const [emailFocused, setEmailFocused] = useState(false);
+
   const {
     register,
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -100,15 +137,33 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
       phone: profile.phone,
       addressLine1: profile.addressLine1,
       coordinatorDesignation: profile.coordinatorDesignation,
-      coordinatorPhone: profile.coordinatorPhone,
+      coordinatorPhone: initialPhone.number,
       coordinatorEmail: profile.coordinatorEmail,
     },
   });
 
+  const coordinatorEmailField = register("coordinatorEmail");
+  const emailValue = watch("coordinatorEmail");
+  const emailSuggestions = useMemo(() => {
+    const at = emailValue?.indexOf("@") ?? -1;
+    if (at <= 0) return [];
+    const local = emailValue.slice(0, at);
+    const domainTyped = emailValue.slice(at + 1).toLowerCase();
+    return EMAIL_DOMAIN_SUGGESTIONS.filter(
+      (domain) => domain.startsWith(domainTyped) && domain !== domainTyped,
+    ).map((domain) => `${local}@${domain}`);
+  }, [emailValue]);
+
   function onProfileSubmit(values: ProfileFormValues) {
-    updateProfileMutation.mutate(values, {
-      onError: (error) => toast.error(error.message),
-    });
+    updateProfileMutation.mutate(
+      {
+        ...values,
+        coordinatorPhone: joinPhone(coordinatorDial, values.coordinatorPhone),
+      },
+      {
+        onError: (error) => toast.error(error.message),
+      },
+    );
   }
 
   const {
@@ -256,6 +311,14 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
                 display-expiry reminders and inbound shipment alerts on your
                 behalf.
               </p>
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <BellRing
+                  className="size-3.5 shrink-0 text-gold-bright"
+                  strokeWidth={1.75}
+                />
+                We&rsquo;ll send a reminder every month to keep this contact
+                current.
+              </p>
             </div>
           </div>
 
@@ -281,40 +344,112 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
               <FieldLabel htmlFor="coordinatorDesignation">
                 Designation
               </FieldLabel>
-              <Input
-                id="coordinatorDesignation"
-                className="h-10"
-                placeholder="Gallery Manager"
-                {...register("coordinatorDesignation")}
-                aria-invalid={Boolean(errors.coordinatorDesignation)}
-              />
+              <Select
+                value={designationOption}
+                onValueChange={(value) => {
+                  if (value === null) return;
+                  setDesignationOption(value);
+                  if (value !== DESIGNATION_OTHER) {
+                    setValue("coordinatorDesignation", value, {
+                      shouldValidate: true,
+                    });
+                  } else {
+                    setValue("coordinatorDesignation", "", {
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger id="coordinatorDesignation" className="h-10 w-full">
+                  <SelectValue placeholder="Choose a designation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DESIGNATION_PRESETS.map((preset) => (
+                    <SelectItem key={preset} value={preset}>
+                      {preset}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={DESIGNATION_OTHER}>Other</SelectItem>
+                </SelectContent>
+              </Select>
+              {designationOption === DESIGNATION_OTHER && (
+                <Input
+                  className="h-10"
+                  placeholder="Enter their designation"
+                  {...register("coordinatorDesignation")}
+                  aria-invalid={Boolean(errors.coordinatorDesignation)}
+                />
+              )}
               <FieldError errors={[errors.coordinatorDesignation]} />
             </Field>
 
             <Field data-invalid={Boolean(errors.coordinatorPhone)}>
               <FieldLabel htmlFor="coordinatorPhone">Direct phone</FieldLabel>
-              <Input
-                id="coordinatorPhone"
-                type="tel"
-                className="h-10"
-                {...register("coordinatorPhone")}
-                aria-invalid={Boolean(errors.coordinatorPhone)}
-              />
+              <div className="flex gap-2">
+                <Select
+                  value={coordinatorDial}
+                  onValueChange={(value) => value && setCoordinatorDial(value)}
+                >
+                  <SelectTrigger className="h-10 w-24 shrink-0">
+                    <SelectValue placeholder={DEFAULT_COUNTRY_DIAL} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_CODES.map((country) => (
+                      <SelectItem key={country.iso} value={country.dial}>
+                        {country.dial} {country.iso}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="coordinatorPhone"
+                  type="tel"
+                  className="h-10"
+                  {...register("coordinatorPhone")}
+                  aria-invalid={Boolean(errors.coordinatorPhone)}
+                />
+              </div>
               <FieldError errors={[errors.coordinatorPhone]} />
             </Field>
 
             <Field
               data-invalid={Boolean(errors.coordinatorEmail)}
-              className="sm:col-span-2"
+              className="relative sm:col-span-2"
             >
               <FieldLabel htmlFor="coordinatorEmail">Email</FieldLabel>
               <Input
                 id="coordinatorEmail"
                 type="email"
                 className="h-10"
-                {...register("coordinatorEmail")}
+                autoComplete="off"
+                {...coordinatorEmailField}
+                onFocus={() => setEmailFocused(true)}
+                onBlur={(e) => {
+                  coordinatorEmailField.onBlur(e);
+                  setTimeout(() => setEmailFocused(false), 150);
+                }}
                 aria-invalid={Boolean(errors.coordinatorEmail)}
               />
+              {emailFocused && emailSuggestions.length > 0 && (
+                <ul className="absolute top-full z-10 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover shadow-md">
+                  {emailSuggestions.map((suggestion) => (
+                    <li key={suggestion}>
+                      <button
+                        type="button"
+                        className="block w-full px-3 py-2 text-left text-sm text-foreground hover:bg-accent"
+                        onClick={() => {
+                          setValue("coordinatorEmail", suggestion, {
+                            shouldValidate: true,
+                          });
+                          setEmailFocused(false);
+                        }}
+                      >
+                        {suggestion}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <FieldError errors={[errors.coordinatorEmail]} />
             </Field>
           </div>

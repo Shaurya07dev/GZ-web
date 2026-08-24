@@ -112,8 +112,10 @@ export function EditDisplayPriceDialog({
           <DialogTitle>Set the selling price</DialogTitle>
           <DialogDescription>
             &ldquo;{holding.artwork.title}&rdquo; &mdash; you may set this above
-            the marketplace price, never below it. Under your MOU (§6) you get
-            one opportunity to set it, so it is fixed once you confirm.
+            the marketplace price, never below it. This price is final and
+            GST-inclusive: it&rsquo;s the exact amount the customer pays,
+            don&rsquo;t add GST on top of it. Under your MOU (§6) you get one
+            opportunity to set it, so it is fixed once you confirm.
           </DialogDescription>
         </DialogHeader>
 
@@ -128,7 +130,7 @@ export function EditDisplayPriceDialog({
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
                 <FieldLabel htmlFor="displayPrice">
-                  Display price (₹)
+                  Display price (₹, GST included)
                 </FieldLabel>
                 <Input
                   id="displayPrice"
@@ -142,7 +144,8 @@ export function EditDisplayPriceDialog({
                   aria-invalid={fieldState.invalid}
                 />
                 <FieldDescription>
-                  Floor: {formatINR(floor)} (the marketplace price)
+                  Floor: {formatINR(floor)} (marketplace price, GST already
+                  included)
                 </FieldDescription>
                 <FieldError errors={[fieldState.error]} />
               </Field>

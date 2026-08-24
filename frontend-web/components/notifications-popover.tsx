@@ -7,12 +7,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import Notification4 from "@/components/ui/notification-04";
+import Notification4, {
+  type NotificationGroup,
+} from "@/components/ui/notification-04";
 
 // Shared across all four logged-in shells (Admin, Artist Dashboard,
 // Aggregator, Account) — one bell, same place in every Topbar, right next to
-// SwitchMode.
-export function NotificationsPopover() {
+// SwitchMode. `groups` is optional: omit it to get the shared generic mock
+// feed (today's behaviour for every shell); pass a role-specific list to
+// show that role's own items instead (see aggregator-shell.tsx).
+export function NotificationsPopover({
+  groups,
+}: {
+  groups?: NotificationGroup[];
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -29,7 +37,7 @@ export function NotificationsPopover() {
         sideOffset={10}
         className="w-auto rounded-3xl border-0 bg-transparent p-0 shadow-xl ring-0"
       >
-        <Notification4 onDismiss={() => setOpen(false)} />
+        <Notification4 groups={groups} onDismiss={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
   );

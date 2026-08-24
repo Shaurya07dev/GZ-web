@@ -7,8 +7,9 @@ import {
   ShieldCheck,
   Check,
   ChevronRight,
-  ScrollText,
+  ChevronDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -144,7 +145,7 @@ export function MouAgreement({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-lg border border-gold/30 bg-card p-5 sm:p-6"
+      className="flex flex-col gap-5 rounded-lg border border-gold/30 bg-card p-5 sm:p-6"
     >
       <div className="flex items-center gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
@@ -161,18 +162,23 @@ export function MouAgreement({
         </div>
       </div>
 
-      <MouBody
-        document={document}
-        scrollRef={scrollRef}
-        onScroll={handleScroll}
-      />
+      <SigningSteps readDone={readToEnd} agreeDone={agreed} signDone={isSuccess} />
 
-      {!readToEnd && (
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <ScrollText className="size-3.5 shrink-0" strokeWidth={1.75} />
-          Scroll to the end of the document to continue.
-        </p>
-      )}
+      <div className="relative">
+        <MouBody
+          document={document}
+          scrollRef={scrollRef}
+          onScroll={handleScroll}
+        />
+        {!readToEnd && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-center rounded-b-md bg-gradient-to-t from-background/95 via-background/60 to-transparent pb-2 pt-8">
+            <span className="flex items-center gap-1.5 rounded-full border border-gold/40 bg-card px-3 py-1 text-xs font-medium text-gold-bright shadow-sm">
+              <ChevronDown className="size-3.5 shrink-0 animate-bounce" strokeWidth={2} />
+              Scroll to the end to continue
+            </span>
+          </div>
+        )}
+      </div>
 
       <label className="flex cursor-pointer items-start gap-2.5 rounded-md border border-border p-3.5">
         <Checkbox
@@ -238,6 +244,58 @@ export function MouAgreement({
         )}
       </div>
     </form>
+  );
+}
+
+// Small progress cue so a first-time signer knows where they are in the
+// read -> agree -> sign flow before they've done any of it, rather than
+// discovering the rules (must scroll, must type your name) one disabled
+// control at a time.
+function SigningSteps({
+  readDone,
+  agreeDone,
+  signDone,
+}: {
+  readDone: boolean;
+  agreeDone: boolean;
+  signDone: boolean;
+}) {
+  const steps = [
+    { label: "Read", done: readDone },
+    { label: "Agree", done: agreeDone },
+    { label: "Sign", done: signDone },
+  ];
+
+  return (
+    <div className="flex items-center gap-2">
+      {steps.map((step, index) => (
+        <div key={step.label} className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors",
+                step.done
+                  ? "border-gold bg-gold-bright text-[#171310]"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              {step.done ? <Check className="size-3" strokeWidth={3} /> : index + 1}
+            </span>
+            <span
+              className={cn(
+                "text-xs font-medium",
+                step.done ? "text-foreground" : "text-muted-foreground",
+              )}
+            >
+              {step.label}
+            </span>
+          </div>
+          {index < steps.length - 1 && (
+            <span className="h-px w-6 shrink-0 bg-border sm:w-10" />
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
