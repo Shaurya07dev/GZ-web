@@ -64,6 +64,8 @@ buttons, which skip the form.
 | MOU gate on reserving | `/aggregator/inventory` | aggregator |
 | One-shot display price | `/aggregator/collection` | aggregator |
 | Paper COA request, ownership transfer (resale) | `/account/collection` | customer |
+| Bank account, withdraw store credit | `/account/wallet` | customer |
+| Resale listing, simulate a sale | `/account/resale` | customer |
 | Simulated Razorpay payment | `/checkout?artworkId=…` | customer |
 | Passport, ownership history | `/verify/<artworkId>` | anyone |
 | Transfer acceptance | `/transfer/<transferId>` | no account needed |
@@ -170,10 +172,15 @@ photos in `d:/ArtGllery/Project_Files/`: `image_c8c04(1).HEIC`, `image_063b4(1).
 `ffmpeg -i in.HEIC out.png` first), and the client answered the seven follow-up
 questions on 25 Aug. All of it is built and pinned by `lib/pricing.check.ts`.
 
-The one thing still genuinely open:
+Nothing about the money model is open any more. The last item — the note's bare
+"bank account" line — turned out to mean the BUYER, who had none: they can now
+add bank details in `/account/wallet` and take store credit out, for refunds
+they would rather have as money and for what they are paid when they resell.
 
-1. **Bank account.** The handwritten note says "bank account"; artists and
-   aggregators have one, collectors do not. Yash will confirm which he meant.
+**Still open: who collects the customer's money on an aggregator sale.** The
+app assumes GalleryZone does. If the aggregator takes payment at their premises
+instead, they need a screen showing what they owe GalleryZone per sale and a
+way to record the transfer — that does not exist. Asked, not yet answered.
 
 **Delivery is the one piece that cannot be finished here.** The client wants a
 LIVE Shiprocket quote off the weight and both addresses. That needs a server,

@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { formatINR } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +25,7 @@ import { useCollection } from "@/hooks/useCollection";
 import {
   useCustomerResaleListings,
   useCreateResaleListingMutation,
+  useCompleteResaleMutation,
   useWithdrawResaleListingMutation,
 } from "@/hooks/useCustomerResale";
 import { getArtworkById } from "@/lib/mock-data/helpers";
@@ -158,7 +160,12 @@ export function ResaleView() {
                     <PriceTag amount={l.listedPrice} className="text-sm" />
                   </div>
                   <ListingStatusPill status={l.status} />
-                  {l.status === "active" && <WithdrawButton id={l.id} />}
+                  {l.status === "active" && (
+                    <>
+                      <SimulateSaleButton id={l.id} />
+                      <WithdrawButton id={l.id} />
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -183,6 +190,33 @@ function ListingStatusPill({ status }: { status: string }) {
     >
       {status}
     </span>
+  );
+}
+
+// Nobody else exists to buy the piece in this demo, so this stands in for a
+// second collector. The point is the money: the proceeds land in the seller's
+// balance, where their bank details can take them out.
+function SimulateSaleButton({ id }: { id: string }) {
+  const completeMutation = useCompleteResaleMutation();
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        completeMutation.mutate(id, {
+          onSuccess: (listing) =>
+            toast.success("Resale complete", {
+              description: `${formatINR(listing.listedPrice)} added to your balance — withdraw it from Wallet.`,
+            }),
+          onError: (error) => toast.error(error.message),
+        })
+      }
+      disabled={completeMutation.isPending}
+      title="Demo only — stands in for a buyer"
+      className="inline-flex shrink-0 items-center gap-1 rounded-md border border-dashed border-gold/40 px-2.5 py-1.5 text-xs font-medium text-gold-bright transition-colors hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
+    >
+      Simulate sale
+    </button>
   );
 }
 
