@@ -287,6 +287,8 @@ node --experimental-strip-types lib/mock-db.check.ts
 # Imports a service, so it needs the "@/" alias resolver:
 node --import ./scripts/alias-loader.mjs --experimental-strip-types \
   services/aggregatorService.check.ts
+node --import ./scripts/alias-loader.mjs --experimental-strip-types \
+  services/profileStatsService.check.ts
 ```
 
 `scripts/alias-loader.mjs` teaches bare node the `@/` alias and the
@@ -298,6 +300,12 @@ service, and is why the first three checks only cover `lib/` and `types/`.
 flows, both settlements, and the whole-flow balance that proves GalleryZone
 keeps ₹30,000 on a marketplace sale and ₹42,000 on an aggregator one. If a
 number on those sheets is ever quoted wrong, it fails there first.
+
+`profileStatsService.check.ts` holds the privacy line: an artist's PUBLIC
+stats must never carry a figure their own price can be worked backwards from.
+ArtistPublicStats and ArtistPrivateStats are separate types fetched by separate
+calls, but a function returning the wrong object would still typecheck if the
+shapes ever converged — so the values are asserted, not just the types.
 
 `aggregatorService.check.ts` holds one rule: **anything the inventory grid
 offers must be reservable.** The grid and `reserve()` apply
