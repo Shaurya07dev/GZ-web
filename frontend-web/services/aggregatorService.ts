@@ -6,9 +6,11 @@ import type {
 import { isAggregatorListed, type ArtworkSummary } from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import {
-  DELIVERY_CHARGE,
+  AGGREGATOR_CYCLE_MONTHS,
+  aggregatorAdvanceForMonth,
   aggregatorAdvanceOf,
   aggregatorCommissionOf,
+  aggregatorOfferPriceOf,
 } from "@/lib/pricing";
 import {
   artistPriceOf,
@@ -78,15 +80,100 @@ function withArtwork(
   return { ...holding, artwork: toSummary(artwork) };
 }
 
+// --- The five-month cycle ---------------------------------------------------
+//
+// A piece that doesn't sell is offered to a different aggregator each month,
+// five times, each at a lower price and a different advance rate (see
+// lib/pricing.ts). The month is a property of the ARTWORK's journey, not of any
+// one aggregator, so it is counted from how many aggregators have already had
+// it — which is why returned holdings are kept rather than deleted.
+
+/** Placements this artwork has already been through, in order. */
+function pastHoldingsFor(artworkId: string): AggregatorHolding[] {
+  return holdingsCol
+    .get()
+    .filter((h) => h.artworkId === artworkId && h.status === "returned")
+    .sort((a, b) => a.assignedAt.localeCompare(b.assignedAt));
+}
+
+/** Which month of the cycle the NEXT placement of this artwork would be. */
+function cycleMonthFor(artworkId: string): number {
+  return pastHoldingsFor(artworkId).length + 1;
+}
+
+/** A reservable artwork, with this month's terms attached. */
+export type ReservableArtwork = ArtworkSummary & { offer: AggregatorOffer };
+
+export interface AggregatorOffer {
+  artworkId: string;
+  month: number;
+  /** GalleryZone's price to the aggregator this month, before their uplift. */
+  offerPrice: number;
+  /** What the marketplace shows — unaffected by the cycle. */
+  marketplacePrice: number;
+  advance: number;
+  advanceRate: number;
+  /** The figure the rate was applied to, so the UI can show the working. */
+  advanceBase: number;
+  advanceBasis: "display_price" | "artist_price";
+  deliveryCharge: number;
+  /** Advance plus delivery — the amount locked from the wallet on reserve. */
+  payable: number;
+  /** Whether the previous aggregator used their one price change. */
+  previousAggregatorChangedPrice: boolean;
+}
+
+function buildOffer(artwork: {
+  id: string;
+  customerPrice: number;
+}): AggregatorOffer {
+  const month = cycleMonthFor(artwork.id);
+  const artistPrice = artistPriceOf(artwork);
+  const offerPrice = aggregatorOfferPriceOf(artistPrice, month);
+  const past = pastHoldingsFor(artwork.id);
+  const previousAggregatorChangedPrice = Boolean(
+    past[past.length - 1]?.displayPriceSetAt,
+  );
+
+  const advance = aggregatorAdvanceForMonth({
+    month,
+    // Month 1 is charged on the display price, which at reservation time is
+    // the offer price — the aggregator has not set their own yet.
+    displayPrice: offerPrice,
+    artistPrice,
+    previousAggregatorChangedPrice,
+  });
+
+  return {
+    artworkId: artwork.id,
+    month,
+    offerPrice,
+    marketplacePrice: artwork.customerPrice,
+    advance: advance.advance,
+    advanceRate: advance.rate,
+    advanceBase: advance.base,
+    advanceBasis: advance.basis,
+    deliveryCharge: advance.deliveryCharge,
+    payable: advance.payable,
+    previousAggregatorChangedPrice,
+  };
+}
+
 export const aggregatorService = {
   // Reservable = eligible for aggregator display, still on the open
   // marketplace, and not already claimed by any holding (reserved or
   // already sold_pending_settlement) — checked against the live `holdings`
   // store, not a frozen fixture, so a just-reserved artwork can never be
   // reserved twice.
-  listReservableInventory(): Promise<ArtworkSummary[]> {
+  listReservableInventory(): Promise<ReservableArtwork[]> {
+    // A returned holding no longer claims its artwork — that is the whole
+    // point of the cycle: the piece goes back and the next aggregator can
+    // take it, at the next month's price.
     const claimedArtworkIds = new Set(
-      holdingsCol.get().map((h) => h.artworkId),
+      holdingsCol
+        .get()
+        .filter((h) => h.status !== "returned")
+        .map((h) => h.artworkId),
     );
     const reservable = artworksCol
       .get()
@@ -94,9 +181,19 @@ export const aggregatorService = {
         (artwork) =>
           isAggregatorListed(artwork.listingType) &&
           artwork.status === "marketplace" &&
-          !claimedArtworkIds.has(artwork.id),
+          !claimedArtworkIds.has(artwork.id) &&
+          // Past month five the piece leaves the aggregator channel: month six
+          // is the transit and problem buffer, not another placement.
+          cycleMonthFor(artwork.id) <= AGGREGATOR_CYCLE_MONTHS,
       );
-    return mockDelay(reservable.map(toSummary));
+    // Each card carries its own offer so the grid and the reserve dialog read
+    // the cycle rules from one place instead of each re-deriving them.
+    return mockDelay(
+      reservable.map((artwork) => ({
+        ...toSummary(artwork),
+        offer: buildOffer(artwork),
+      })),
+    );
   },
 
   // simulateConflict mirrors the real, documented 409 race condition (SAD
@@ -121,30 +218,72 @@ export const aggregatorService = {
 
     const artwork = getArtworkById(artworkId);
     const holdings = holdingsCol.get();
-    const alreadyClaimed = holdings.some((h) => h.artworkId === artworkId);
+    const alreadyClaimed = holdings.some(
+      (h) => h.artworkId === artworkId && h.status !== "returned",
+    );
     if (!artwork || alreadyClaimed) {
       return mockError("Artwork no longer available");
     }
 
-    const advancePercent = advancePercentFor();
+    const offer = buildOffer(artwork);
+    if (offer.month > AGGREGATOR_CYCLE_MONTHS) {
+      return mockError(
+        "This piece has finished its aggregator cycle and is going back to the artist",
+      );
+    }
+
+    // The advance is not a fresh payment every time — it is LOCKED from the
+    // aggregator's wallet. Deposit once, and each reservation holds what it
+    // needs; only a shortfall has to be topped up. Enforced here so a stale tab
+    // cannot reserve past the balance.
+    const wallet = aggregatorWalletCol.get();
+    const free = wallet.balance - wallet.lockedBalance;
+    if (free < offer.payable) {
+      const shortfall = offer.payable - free;
+      return mockError(
+        `Add ₹${shortfall.toLocaleString("en-IN")} to your wallet to reserve this piece — ₹${offer.payable.toLocaleString("en-IN")} needs to be held and only ₹${Math.max(0, free).toLocaleString("en-IN")} is free.`,
+      );
+    }
+
     const assignedAt = new Date();
     const expiresAt = new Date(assignedAt.getTime() + THIRTY_DAYS_MS);
 
     const holding: AggregatorHolding = {
       id: nextHoldingId(holdings),
       artworkId,
-      advancePercent,
-      advanceAmount: advanceAmountFor(artwork.customerPrice),
-      // Paid up front alongside the advance (MOU §7). Refunded on a sale;
-      // forfeited if the piece goes back unsold.
-      deliveryDeposit: DELIVERY_CHARGE,
-      displayPrice: artwork.customerPrice, // floor, per SAD §2.7 — see edit-display-price-dialog.tsx for the raise-only enforcement
+      advancePercent: offer.advanceRate === 0.05 ? 5 : 3,
+      advanceAmount: offer.advance,
+      // Held alongside the advance (MOU §7). Returned on a sale; forfeited if
+      // the piece goes back unsold.
+      deliveryDeposit: offer.deliveryCharge,
+      cycleMonth: offer.month,
+      // This month's offer price is the floor — see edit-display-price-dialog
+      // for the raise-only enforcement (SAD §2.7).
+      displayPrice: offer.offerPrice,
       assignedAt: assignedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
       status: "reserved",
       assignmentSource: "self_reserved",
       displayPriceSetAt: null,
+      returnedAt: null,
     };
+
+    aggregatorWalletCol.set({
+      ...wallet,
+      lockedBalance: wallet.lockedBalance + offer.payable,
+    });
+    aggregatorWalletTransactionsCol.set([
+      {
+        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+        type: "adjustment",
+        label: `Held for "${artwork.title}" — month ${offer.month} advance & delivery`,
+        amount: -offer.payable,
+        date: assignedAt.toISOString().slice(0, 10),
+        status: "pending",
+      },
+      ...aggregatorWalletTransactionsCol.get(),
+    ]);
+
     holdingsCol.set([...holdings, holding]);
     return mockDelay(holding);
   },
@@ -153,7 +292,9 @@ export const aggregatorService = {
   // is explicit that only the advance comes back in this case — the delivery
   // charge is settled only on a sale, so an unsold return costs the aggregator
   // that leg. Frees the artwork to be reserved again.
-  releaseHolding(holdingId: string): Promise<{ refunded: number }> {
+  releaseHolding(
+    holdingId: string,
+  ): Promise<{ refunded: number; deliveryLost: number }> {
     const holdings = holdingsCol.get();
     const holding = holdings.find((h) => h.id === holdingId);
     if (!holding) return mockError("Reservation not found");
@@ -162,36 +303,71 @@ export const aggregatorService = {
     }
 
     const artwork = getArtworkById(holding.artworkId);
-    const refunded = holding.advanceAmount;
+    const deliveryLost = holding.deliveryDeposit ?? 0;
+    const held = holding.advanceAmount + deliveryLost;
     const now = new Date().toISOString();
 
-    if (refunded > 0) {
-      const wallet = aggregatorWalletCol.get();
-      aggregatorWalletCol.set({
-        ...wallet,
-        pendingBalance: wallet.pendingBalance + refunded,
-      });
-      aggregatorWalletTransactionsCol.set([
-        {
-          id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-          type: "refund",
-          label: `Advance returned: "${artwork?.title ?? "Artwork"}"`,
-          amount: refunded,
-          date: now.slice(0, 10),
-          status: "pending",
-        },
-        ...aggregatorWalletTransactionsCol.get(),
-      ]);
-    }
+    // The advance and delivery were locked from the aggregator's own wallet,
+    // never taken from it, so nothing is "credited back" here — the hold is
+    // released. The delivery portion is the exception: the sheet settles it
+    // only on a sale, so an unsold return actually spends it.
+    const wallet = aggregatorWalletCol.get();
+    aggregatorWalletCol.set({
+      ...wallet,
+      lockedBalance: Math.max(0, wallet.lockedBalance - held),
+      balance: wallet.balance - deliveryLost,
+    });
 
-    holdingsCol.set(holdings.filter((h) => h.id !== holdingId));
-    return mockDelay({ refunded });
+    const rows = [
+      {
+        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+        type: "refund" as const,
+        label: `Advance released: "${artwork?.title ?? "Artwork"}"`,
+        amount: holding.advanceAmount,
+        date: now.slice(0, 10),
+        status: "completed" as const,
+      },
+      ...(deliveryLost > 0
+        ? [
+            {
+              id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+              type: "adjustment" as const,
+              label: `Delivery charged — "${artwork?.title ?? "Artwork"}" returned unsold`,
+              amount: -deliveryLost,
+              date: now.slice(0, 10),
+              status: "completed" as const,
+            },
+          ]
+        : []),
+    ];
+    aggregatorWalletTransactionsCol.set([
+      ...rows,
+      ...aggregatorWalletTransactionsCol.get(),
+    ]);
+
+    // Kept, not deleted: the next aggregator's price and advance are counted
+    // off how many placements this artwork has already been through.
+    holdingsCol.set(
+      holdings.map((h) =>
+        h.id === holdingId
+          ? { ...h, status: "returned" as const, returnedAt: now }
+          : h,
+      ),
+    );
+    return mockDelay({ refunded: holding.advanceAmount, deliveryLost });
   },
 
   listCollection(): Promise<
     Array<AggregatorHolding & { artwork: ArtworkSummary }>
   > {
-    return mockDelay(holdingsCol.get().map(withArtwork));
+    // Returned pieces are history for the cycle counter, not part of anyone's
+    // current collection.
+    return mockDelay(
+      holdingsCol
+        .get()
+        .filter((h) => h.status !== "returned")
+        .map(withArtwork),
+    );
   },
 
   // Matches POST /aggregators/sale (SAD §3.5): moves the matching *active*
@@ -259,36 +435,46 @@ export const aggregatorService = {
     if (artwork) {
       const artistPrice = artistPriceOf(artwork);
       const commission = aggregatorCommissionOf(holding.displayPrice, artistPrice);
-      // A sale returns the advance and the delivery deposit as well as paying
-      // commission — see the settlement block on the money-flow sheet:
-      // 7,500 advance + 2,500 delivery + 10,000 commission = 20,000.
-      const refund = holding.advanceAmount + (holding.deliveryDeposit ?? 0);
-      const credited = commission + refund;
+      // A sale settles all three lines on the sheet — 7,500 advance + 2,500
+      // delivery + 10,000 commission = 20,000. But the first two were LOCKED
+      // from this aggregator's own wallet rather than taken from it, so they
+      // are released, not credited. Only the commission is new money.
+      const held = holding.advanceAmount + (holding.deliveryDeposit ?? 0);
 
-      if (credited > 0) {
-        const wallet = aggregatorWalletCol.get();
-        aggregatorWalletCol.set({
-          ...wallet,
-          pendingBalance: wallet.pendingBalance + credited,
-        });
-        const rows = [
-          commission > 0 && {
-            id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-            type: "commission" as const,
-            label: `Commission: "${artwork.title}"`,
-            amount: commission,
-            date: now.slice(0, 10),
-            status: "pending" as const,
-          },
-          refund > 0 && {
-            id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-            type: "refund" as const,
-            label: `Advance & delivery returned: "${artwork.title}"`,
-            amount: refund,
-            date: now.slice(0, 10),
-            status: "pending" as const,
-          },
-        ].filter((row) => row !== false);
+      const wallet = aggregatorWalletCol.get();
+      aggregatorWalletCol.set({
+        ...wallet,
+        lockedBalance: Math.max(0, wallet.lockedBalance - held),
+        pendingBalance: wallet.pendingBalance + commission,
+      });
+
+      const rows = [
+        ...(held > 0
+          ? [
+              {
+                id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+                type: "refund" as const,
+                label: `Advance & delivery released: "${artwork.title}"`,
+                amount: held,
+                date: now.slice(0, 10),
+                status: "completed" as const,
+              },
+            ]
+          : []),
+        ...(commission > 0
+          ? [
+              {
+                id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+                type: "commission" as const,
+                label: `Commission: "${artwork.title}"`,
+                amount: commission,
+                date: now.slice(0, 10),
+                status: "pending" as const,
+              },
+            ]
+          : []),
+      ];
+      if (rows.length > 0) {
         aggregatorWalletTransactionsCol.set([
           ...rows,
           ...aggregatorWalletTransactionsCol.get(),

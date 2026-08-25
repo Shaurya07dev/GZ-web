@@ -6,7 +6,12 @@
 
 import assert from "node:assert/strict";
 import {
+  aggregatorAdvanceForMonth,
   aggregatorAdvanceOf,
+  aggregatorOfferPriceOf,
+  billableWeightKg,
+  deliveryZoneBetween,
+  estimateDelivery,
   aggregatorCommissionOf,
   artistPriceFrom,
   artistSettlementOf,
@@ -115,5 +120,110 @@ assert.equal(
 );
 assert.equal(isPayoutDue(delivered, new Date("2026-08-07T23:00:00.000Z").getTime()), false);
 assert.equal(isPayoutDue(delivered, new Date("2026-08-08T01:00:00.000Z").getTime()), true);
+
+// --- The five-month aggregator cycle ----------------------------------------
+
+// The price offered to each month's aggregator, straight off the sheet.
+assert.deepEqual(
+  [1, 2, 3, 4, 5].map((month) => aggregatorOfferPriceOf(ARTIST_PRICE, month)),
+  [130_000, 128_000, 126_000, 124_000, 122_000],
+  "offer price falls 2/4/6/8% of the artist price",
+);
+
+// Month 6 is the transit buffer. If it is ever used it holds at month 5.
+assert.equal(aggregatorOfferPriceOf(ARTIST_PRICE, 6), 122_000);
+assert.equal(aggregatorOfferPriceOf(ARTIST_PRICE, 9), 122_000);
+
+// The reduction comes out of GalleryZone's margin, never the artist's price,
+// and never touches what the marketplace shows.
+assert.equal(displayPriceOf(ARTIST_PRICE), 136_500, "marketplace price does not move");
+assert.equal(
+  aggregatorOfferPriceOf(ARTIST_PRICE, 5) - ARTIST_PRICE,
+  22_000,
+  "GalleryZone's margin absorbs the whole reduction",
+);
+
+// Advance, month by month. Month 1 is charged on the display price the
+// aggregator sets; every later month on the artist price.
+const monthOne = aggregatorAdvanceForMonth({
+  month: 1,
+  displayPrice: 150_000,
+  artistPrice: ARTIST_PRICE,
+});
+assert.equal(monthOne.advance, 7_500, "month 1: 5% of 1,50,000");
+assert.equal(monthOne.basis, "display_price");
+assert.equal(monthOne.payable, 7_500 + DELIVERY_CHARGE, "advance plus delivery");
+
+// Month 2 keeps 5% only when the previous aggregator used their price change.
+const monthTwoChanged = aggregatorAdvanceForMonth({
+  month: 2,
+  displayPrice: 150_000,
+  artistPrice: ARTIST_PRICE,
+  previousAggregatorChangedPrice: true,
+});
+assert.equal(monthTwoChanged.advance, 5_000, "month 2 after a price change: 5% of 1,00,000");
+assert.equal(monthTwoChanged.basis, "artist_price");
+
+const monthTwoUnchanged = aggregatorAdvanceForMonth({
+  month: 2,
+  displayPrice: 150_000,
+  artistPrice: ARTIST_PRICE,
+  previousAggregatorChangedPrice: false,
+});
+assert.equal(monthTwoUnchanged.advance, 3_000, "month 2 with no price change: 3%");
+
+// Months 3-5 are 3% of the artist price regardless of what anyone did.
+for (const month of [3, 4, 5]) {
+  for (const changed of [true, false]) {
+    assert.equal(
+      aggregatorAdvanceForMonth({
+        month,
+        displayPrice: 150_000,
+        artistPrice: ARTIST_PRICE,
+        previousAggregatorChangedPrice: changed,
+      }).advance,
+      3_000,
+      `month ${month} is always 3% of the artist price`,
+    );
+  }
+}
+
+// --- Delivery ----------------------------------------------------------------
+
+// Volumetric weight governs: a 4kg framed canvas in a 100x70x12cm box.
+assert.equal(
+  billableWeightKg({ actualKg: 4, lengthCm: 100, breadthCm: 70, heightCm: 12 }),
+  16.8,
+  "volumetric weight beats actual weight",
+);
+// A dense, small piece bills on its real weight instead.
+assert.equal(
+  billableWeightKg({ actualKg: 16.5, lengthCm: 45, breadthCm: 30, heightCm: 25 }),
+  16.5,
+);
+// No dimensions recorded — fall back to what the artist entered.
+assert.equal(billableWeightKg({ actualKg: 4 }), 4);
+
+// Distance matters as much as weight: the same parcel across the country costs
+// more than the same parcel across town.
+assert.equal(deliveryZoneBetween("560001", "560078"), "local");
+assert.equal(deliveryZoneBetween("560001", "562159"), "regional");
+assert.equal(deliveryZoneBetween("560001", "500001"), "metro");
+assert.equal(deliveryZoneBetween("560001", "110001"), "national");
+assert.equal(deliveryZoneBetween("560001", "190001"), "remote");
+
+const nearby = estimateDelivery({ billableKg: 16.8, fromPincode: "560001", toPincode: "560078" });
+const faraway = estimateDelivery({ billableKg: 16.8, fromPincode: "560001", toPincode: "110001" });
+assert.equal(nearby.zone, "local");
+assert.ok(faraway.charge > nearby.charge, "the same parcel costs more further away");
+assert.ok(nearby.estimated && faraway.estimated);
+
+const heavier = estimateDelivery({ billableKg: 34.6, fromPincode: "560001", toPincode: "110001" });
+assert.ok(heavier.charge > faraway.charge, "a bigger box costs more over the same distance");
+
+// Not enough to go on: fall back to the flat charge and say so.
+const unknown = estimateDelivery({ billableKg: 16.8, fromPincode: "560001", toPincode: null });
+assert.equal(unknown.charge, DELIVERY_CHARGE);
+assert.equal(unknown.estimated, false);
 
 console.log("lib/pricing.ts checks passed");

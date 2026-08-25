@@ -89,27 +89,52 @@ buttons, which skip the form.
 - Aggregator §8 — the aggregator **earns** 20% × (Listed − Artist Price).
 - Aggregator §10 — one nominated GalleryZone coordinator per premises.
 
-**From the money-flow sheets** (all of this is built, and
+**From the money-flow sheets and the client's 25 Aug answers** (all built, and
 `node --experimental-strip-types lib/pricing.check.ts` fails loudly if any of it
 regresses):
 
 - Artist listing fee 0% today, 1% of listing value (or a subscription) later.
 - GalleryZone's markup is 30% over the artist's price.
-- **GST is INSIDE the displayed price, never added at checkout.** ₹1,00,000
-  becomes ₹1,30,000 becomes ₹1,36,500. `Order.gstAmount` is the tax contained
-  in `Order.amount`, not an addition to it — summing the two charges the buyer
-  twice, which is exactly what the old code did.
+- **GST is 5% and sits INSIDE the displayed price, never added at checkout.**
+  ₹1,00,000 becomes ₹1,30,000 becomes ₹1,36,500. `Order.gstAmount` is the tax
+  contained in `Order.amount`, not an addition to it — summing the two charges
+  the buyer twice, which is what the old code did. (12% is the 2025 rate and no
+  longer applies; the client confirmed 5% under HSN 9701.)
 - Marketplace: the artist receives their full price, nothing deducted.
 - Aggregator: the artist receives their price less the delivery leg and 2%
-  convenience (₹1,00,000 → ₹95,500). This is what settles the placement-leg
+  convenience (₹1,00,000 → ₹95,500). That settles the placement-leg
   contradiction between artist MOU §10 and aggregator MOU §7 — the artist pays.
-- The aggregator's advance is a flat 5% of the display price plus delivery, both
-  paid before possession. A sale returns both and pays 20% × (selling price −
-  **artist** price). An unsold return refunds the advance only.
-- **The artist is paid 7 days after DELIVERY, not after the sale** (Yash, 24 Aug
-  — the sheet's "or 7 days of sale" alternative is dropped). Sales land in the
-  pending balance; `services/artistPayoutService.ts` releases them lazily on
-  any wallet read.
+- **The artist is paid 7 days after DELIVERY, not after the sale.** Sales land
+  in the pending balance; `services/artistPayoutService.ts` releases them lazily
+  on any wallet read.
+- Commission is 20% × (selling price − **artist** price), never against
+  GalleryZone's price to the aggregator.
+
+### The five-month aggregator cycle
+
+A piece that does not sell is offered to a **different aggregator each month**,
+five times. The sixth month is deliberately empty — it is the transit and
+problem buffer, not another placement. If month 6 is ever reached it holds at
+month 5's terms.
+
+| Month | Offered to the aggregator at | Advance |
+|---|---|---|
+| 1 | 1,30,000 | 5% of the **display** price |
+| 2 | 1,28,000 | 5% if the previous aggregator changed the price, else 3%, of the **artist** price |
+| 3 | 1,26,000 | 3% of the artist price |
+| 4 | 1,24,000 | 3% of the artist price |
+| 5 | 1,22,000 | 3% of the artist price |
+
+The monthly reduction is a percentage of the ARTIST's price and comes out of
+GalleryZone's margin. The artist is still paid in full, and **the marketplace
+price never moves** — the whole effect is on the aggregator price.
+
+Delivery rides alongside the advance every month. Both are **locked from the
+aggregator's wallet**, not charged: they deposit once, each reservation holds
+what it needs, and only a shortfall has to be topped up. A sale releases the
+hold and pays commission; an **unsold return releases the advance only** — the
+delivery is settled solely on a sale. Returned holdings are kept with status
+`"returned"`, because the cycle month is counted from them.
 
 **From Yash directly:**
 
@@ -127,33 +152,23 @@ regresses):
 
 ## Blocked — do not guess these
 
-The money-flow sheets arrived on **21 Aug 2026** (three photos in `d:/ArtGllery/`:
-`image_c8c04(1).HEIC`, `image_063b4(1).HEIC`, `image_c4a8d.HEIC` — HEIC does not
-open in the Read tool, convert with `ffmpeg -i in.HEIC out.png` first). They
-settle commission, GST placement and the payout rule; everything they settle is
-built and pinned by `lib/pricing.check.ts`. **Seven questions went to the client
-and are still open.** Each one is marked `OPEN` at its constant in
-`lib/pricing.ts`, so answering one is a single-value edit there:
+**The money model is fully settled.** The sheets arrived 21 Aug 2026 (three
+photos in `d:/ArtGllery/`: `image_c8c04(1).HEIC`, `image_063b4(1).HEIC`,
+`image_c4a8d.HEIC` — HEIC does not open in the Read tool, convert with
+`ffmpeg -i in.HEIC out.png` first), and the client answered the seven follow-up
+questions on 25 Aug. All of it is built and pinned by `lib/pricing.check.ts`.
 
-1. **Advance base.** Month 1 is 5% of the display price; months 2–5 are a
-   percentage of the artist price. Deliberate, or one base throughout?
-2. **Advance recurring or replaced?** A fresh advance each month held, or one
-   advance recalculated at renewal?
-3. **Month 6.** MOU §18 allows six months; both tables stop at five.
-4. **Does the monthly price decay apply to aggregator pieces?** The table's
-   base is ₹1,30,000, which is the marketplace price.
-5. **Delivery.** Flat ₹2,500 (built) or Shiprocket size bands.
-6. **GST rate.** The sheet says 5%; original art is normally 12% under
-   HSN 9701. `GST_RATE` in `lib/pricing.ts` re-prices the whole site.
-7. **The 2% convenience charge** is deducted from the artist on aggregator
-   sales only. Confirm marketplace artists really pay nothing.
+The one thing still genuinely open:
 
-**The two schedules are deliberately NOT built** — the advance ladder (5/5/3/3/3%)
-and the price decay (0/2/4/6/8%) both depend on questions 1–4, and half a rule
-is worse than none. They are recorded in the money-flow memory, not in code.
+1. **Bank account.** The handwritten note says "bank account"; artists and
+   aggregators have one, collectors do not. Yash will confirm which he meant.
 
-**Bank account.** The handwritten note says "bank account"; artists and
-aggregators have one, collectors do not. Yash will confirm which he meant.
+**Delivery is the one piece that cannot be finished here.** The client wants a
+LIVE Shiprocket quote off the weight and both addresses. That needs a server,
+so `estimateDelivery()` in `lib/pricing.ts` reproduces Shiprocket's own model —
+billable weight against a pincode distance zone — and is the single function
+their rate API replaces. Do not quote on size alone: distance moves the price as
+much as weight does.
 
 **Waiting on files**, each with its slot already built: logo, colour palette,
 insurance partner URL (`INSURANCE_PARTNER_URL` in

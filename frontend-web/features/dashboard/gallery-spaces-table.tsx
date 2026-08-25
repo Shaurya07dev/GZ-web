@@ -4,6 +4,7 @@ import Image from "next/image";
 import {
   BookmarkCheck,
   CircleCheckBig,
+  Undo2,
   GalleryVerticalEnd,
   CalendarRange,
   MapPin,
@@ -29,6 +30,11 @@ const STATUS_CONFIG: Record<
     label: "Sold, pending settlement",
     icon: CircleCheckBig,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  returned: {
+    label: "Returned",
+    icon: Undo2,
+    className: "border-border bg-muted/40 text-muted-foreground",
   },
 };
 

@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DevPanel } from "@/features/auth/components/dev-panel";
 import {
+  useAddAggregatorFundsMutation,
   useAggregatorWallet,
   useAggregatorWalletTransactions,
   useAggregatorRequestWithdrawalMutation,
@@ -36,26 +38,36 @@ export function WalletOverview() {
   const { data: profile } = useAggregatorProfile();
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
 
+  // Reserving artwork holds money here rather than charging a new payment each
+  // time, so "free" — what is left after the holds — is the number that decides
+  // whether the next piece can be taken.
+  const balance = wallet?.balance ?? 0;
+  const locked = wallet?.lockedBalance ?? 0;
+  const free = balance - locked;
+
   const summaryCards = [
     {
-      key: "balance",
-      label: "Available balance",
-      value: wallet?.balance ?? 0,
+      key: "free",
+      label: "Free to use",
+      value: free,
+      hint: "Available to reserve artwork or withdraw",
       icon: Wallet,
       tone: "gold" as const,
     },
     {
-      key: "pending",
-      label: "Pending settlement",
-      value: wallet?.pendingBalance ?? 0,
-      icon: Clock3,
+      key: "locked",
+      label: "Held against reservations",
+      value: locked,
+      hint: "Advances and delivery on pieces you are displaying",
+      icon: Lock,
       tone: "neutral" as const,
     },
     {
-      key: "locked",
-      label: "Locked",
-      value: wallet?.lockedBalance ?? 0,
-      icon: Lock,
+      key: "pending",
+      label: "Commission pending",
+      value: wallet?.pendingBalance ?? 0,
+      hint: "Earned on sales, waiting to be settled",
+      icon: Clock3,
       tone: "neutral" as const,
     },
   ];
@@ -83,12 +95,15 @@ export function WalletOverview() {
             <p className="mt-3 font-display text-3xl font-semibold tabular-nums text-foreground">
               ₹{card.value.toLocaleString("en-IN")}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
           </motion.div>
         ))}
       </div>
 
+      <AddFundsCard />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.5fr]">
-        <WithdrawCard balance={wallet?.balance ?? 0} />
+        <WithdrawCard balance={free} />
         <TransactionsCard transactions={transactions ?? []} />
       </div>
       {profile && (
@@ -101,6 +116,72 @@ export function WalletOverview() {
         />
       )}
     </div>
+  );
+}
+
+// Without this the wallet can never be funded, and with the advance now held
+// from it rather than charged separately, an empty wallet means nothing can be
+// reserved at all. Simulated, like the Razorpay checkout.
+function AddFundsCard() {
+  const addFunds = useAddAggregatorFundsMutation();
+  const [amount, setAmount] = useState("");
+  const amountNumber = Number(amount) || 0;
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (amountNumber <= 0) return;
+    addFunds.mutate(amountNumber, { onSuccess: () => setAmount("") });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+          <Wallet className="size-4 text-gold-bright" strokeWidth={1.75} />
+        </span>
+        <div>
+          <h2 className="font-display text-base font-semibold text-foreground">
+            Add funds
+          </h2>
+          <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+            Reserving artwork holds the advance and delivery from this balance.
+            Top up once and every reservation draws on it — the money comes back
+            when a piece sells.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="topUpAmount">Amount (₹)</Label>
+          <Input
+            id="topUpAmount"
+            type="number"
+            min={1}
+            step={1}
+            placeholder="25000"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="h-10 w-44"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={amountNumber <= 0 || addFunds.isPending}
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-gold/50 px-5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
+        >
+          {addFunds.isPending ? "Adding…" : "Add to wallet"}
+        </button>
+        <DevPanel className="w-full sm:w-auto">
+          <span className="text-xs text-muted-foreground">
+            No gateway is connected — this credits the wallet directly.
+          </span>
+        </DevPanel>
+      </div>
+    </form>
   );
 }
 

@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   BookmarkCheck,
   CircleCheckBig,
+  Undo2,
   GalleryVerticalEnd,
   Pencil,
   Lock,
@@ -41,6 +42,11 @@ const STATUS_CONFIG: Record<
     icon: CircleCheckBig,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
   },
+  returned: {
+    label: "Returned",
+    icon: Undo2,
+    className: "border-border bg-muted/40 text-muted-foreground",
+  },
 };
 
 export function CollectionTable() {
@@ -60,16 +66,20 @@ export function CollectionTable() {
       `Return "${holding.artwork.title}" to GalleryZone?
 
 ` +
-        `Your ${formatINR(holding.advanceAmount)} advance comes back. ` +
+        `Your ${formatINR(holding.advanceAmount)} advance is released back to your wallet. ` +
         (deliveryLost > 0
           ? `The ${formatINR(deliveryLost)} delivery charge does not — it is only refunded when a piece sells.`
           : ""),
     );
     if (!confirmed) return;
     releaseMutation.mutate(holding.id, {
-      onSuccess: ({ refunded }) =>
+      onSuccess: ({ refunded, deliveryLost }) =>
         toast.success("Returned to GalleryZone", {
-          description: `${formatINR(refunded)} advance credited back to your wallet.`,
+          description:
+            `${formatINR(refunded)} advance released.` +
+            (deliveryLost > 0
+              ? ` ${formatINR(deliveryLost)} delivery was charged.`
+              : ""),
         }),
       onError: (error) => toast.error(error.message),
     });

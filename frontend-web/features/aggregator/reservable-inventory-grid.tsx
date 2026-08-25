@@ -10,9 +10,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
+import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
+import { formatINR } from "@/lib/utils";
+import type { ReservableArtwork } from "@/services/aggregatorService";
 import { useAggregatorProfile } from "@/hooks/useAggregatorProfile";
 import { ReserveArtworkDialog } from "./reserve-artwork-dialog";
-import type { ArtworkSummary } from "@/types/artwork";
 
 // Same lower-bound verification treatment ArtworkCard uses -- ArtworkSummary
 // only carries a boolean verifiedArtist, not the full tier count, so this is
@@ -30,10 +32,10 @@ export function ReservableInventoryGrid() {
   // profile fetch never blocks a signed aggregator mid-session.
   const mouSigned = profile ? Boolean(profile.mouAcceptance) : undefined;
   const { data, isPending, isError } = useReservableInventory();
-  const [selected, setSelected] = useState<ArtworkSummary | null>(null);
+  const [selected, setSelected] = useState<ReservableArtwork | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  function openReserveDialog(artwork: ArtworkSummary) {
+  function openReserveDialog(artwork: ReservableArtwork) {
     setSelected(artwork);
     setDialogOpen(true);
   }
@@ -128,10 +130,11 @@ function InventoryArtworkCard({
   onReserve,
   disabled = false,
 }: {
-  artwork: ArtworkSummary;
+  artwork: ReservableArtwork;
   onReserve: () => void;
   disabled?: boolean;
 }) {
+  const { offer } = artwork;
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors duration-200 ease-out hover:border-gold/50">
       <Link
@@ -168,7 +171,23 @@ function InventoryArtworkCard({
             <VerifiedBadge verification={MINIMUM_VERIFICATION} size="sm" />
           )}
         </div>
-        <PriceTag amount={artwork.customerPrice} className="mt-1 text-base" />
+        {/* GalleryZone's price to YOU this month, not the marketplace price —
+            they are different numbers and confusing them is expensive. A piece
+            that has been round the cycle is offered cheaper each month. */}
+        <div className="mt-1 flex flex-col gap-0.5">
+          <PriceTag amount={offer.offerPrice} className="text-base" />
+          <p className="text-[11px] text-muted-foreground">
+            Your price · month {offer.month} of {AGGREGATOR_CYCLE_MONTHS}
+            {offer.month > 1 && (
+              <>
+                {" · was "}
+                <span className="line-through">
+                  {formatINR(offer.marketplacePrice)}
+                </span>
+              </>
+            )}
+          </p>
+        </div>
 
         <Button
           onClick={onReserve}
