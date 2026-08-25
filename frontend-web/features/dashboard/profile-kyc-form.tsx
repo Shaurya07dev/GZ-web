@@ -13,6 +13,7 @@ import {
   Video,
   ChevronRight,
   Receipt,
+  Truck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +42,17 @@ type ProfileFormState = {
   socialProofVideoUrl: string;
   gstin: string;
 };
+
+type PickupFormState = {
+  pickupLine1: string;
+  pickupLine2: string;
+  pickupCity: string;
+  pickupState: string;
+  pickupPincode: string;
+};
+
+// Six digits, and the first can't be 0 — no Indian pincode starts with one.
+const PINCODE_PATTERN = /^[1-9][0-9]{5}$/;
 
 type ArtistAccountProfile = NonNullable<
   ReturnType<typeof useArtistAccountProfile>["data"]
@@ -79,6 +91,40 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     gstin: profile.gstin ?? "",
   });
   const [profileSaved, setProfileSaved] = useState(false);
+
+  const [pickupForm, setPickupForm] = useState<PickupFormState>({
+    pickupLine1: profile.pickupLine1 ?? "",
+    pickupLine2: profile.pickupLine2 ?? "",
+    pickupCity: profile.pickupCity ?? "",
+    pickupState: profile.pickupState ?? "",
+    pickupPincode: profile.pickupPincode ?? "",
+  });
+  const [pickupSaved, setPickupSaved] = useState(false);
+
+  function updatePickup<K extends keyof PickupFormState>(
+    field: K,
+    value: PickupFormState[K],
+  ) {
+    setPickupForm((prev) => ({ ...prev, [field]: value }));
+    setPickupSaved(false);
+  }
+
+  const pincodeInvalid =
+    pickupForm.pickupPincode.trim().length > 0 &&
+    !PINCODE_PATTERN.test(pickupForm.pickupPincode.trim());
+  const pickupComplete =
+    pickupForm.pickupLine1.trim() !== "" &&
+    pickupForm.pickupCity.trim() !== "" &&
+    pickupForm.pickupState.trim() !== "" &&
+    PINCODE_PATTERN.test(pickupForm.pickupPincode.trim());
+
+  function handlePickupSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (pincodeInvalid) return;
+    saveProfileMutation.mutate(pickupForm, {
+      onSuccess: () => setPickupSaved(true),
+    });
+  }
 
   const [docsSubmitted, setDocsSubmitted] = useState(false);
 
@@ -312,6 +358,130 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             Save profile
           </button>
           {profileSaved && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-1.5 text-sm text-gold-bright"
+            >
+              <Check className="size-3.5" />
+              Saved
+            </motion.span>
+          )}
+        </div>
+      </form>
+
+      {/* Its own card, and its own save, because it is the opposite of the one
+          above: the public profile is what buyers see, this is what only a
+          courier ever sees. Without a pincode here no delivery can be priced —
+          Shiprocket quotes on the distance between two of them. */}
+      <form
+        onSubmit={handlePickupSubmit}
+        className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6 lg:order-last lg:col-span-2"
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+            <Truck className="size-4 text-gold-bright" strokeWidth={1.75} />
+          </span>
+          <div>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Pickup address
+            </h2>
+            <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+              Where your work is collected from. Private — buyers never see it.
+            </p>
+          </div>
+        </div>
+
+        {!pickupComplete && (
+          <p className="rounded-md border border-gold/30 bg-gold/5 px-3.5 py-2.5 text-xs leading-relaxed text-gold-bright">
+            Add this before your first sale. Delivery is priced on the distance
+            between your address and the buyer&rsquo;s, so without it we
+            can&rsquo;t quote a shipping cost for your work.
+          </p>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="pickupLine1">Address</Label>
+          <Input
+            id="pickupLine1"
+            placeholder="House / studio number and street"
+            value={pickupForm.pickupLine1}
+            onChange={(e) => updatePickup("pickupLine1", e.target.value)}
+            className="h-10"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="pickupLine2">
+            Area, landmark{" "}
+            <span className="font-normal text-muted-foreground">
+              (optional)
+            </span>
+          </Label>
+          <Input
+            id="pickupLine2"
+            placeholder="Locality or a nearby landmark"
+            value={pickupForm.pickupLine2}
+            onChange={(e) => updatePickup("pickupLine2", e.target.value)}
+            className="h-10"
+          />
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-3">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="pickupCity">City</Label>
+            <Input
+              id="pickupCity"
+              placeholder="Udaipur"
+              value={pickupForm.pickupCity}
+              onChange={(e) => updatePickup("pickupCity", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="pickupState">State</Label>
+            <Input
+              id="pickupState"
+              placeholder="Rajasthan"
+              value={pickupForm.pickupState}
+              onChange={(e) => updatePickup("pickupState", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="pickupPincode">PIN code</Label>
+            <Input
+              id="pickupPincode"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="313001"
+              value={pickupForm.pickupPincode}
+              onChange={(e) =>
+                updatePickup(
+                  "pickupPincode",
+                  e.target.value.replace(/[^0-9]/g, ""),
+                )
+              }
+              aria-invalid={pincodeInvalid}
+              className="h-10 font-mono"
+            />
+            {pincodeInvalid && (
+              <p className="text-xs text-destructive">
+                A PIN code is six digits.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={saveProfileMutation.isPending || pincodeInvalid}
+            className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
+          >
+            Save pickup address
+          </button>
+          {pickupSaved && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

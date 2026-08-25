@@ -195,6 +195,15 @@ export const PROFILE = {
   // Optional — an artist without a GSTIN leaves this blank. Used by
   // GalleryZone for invoicing/settlement only, never shown publicly.
   gstin: "",
+  // Where the courier collects. Private, and the one thing without which a
+  // delivery cannot be quoted at all: Shiprocket prices on the distance
+  // between two pincodes, and this is the origin for both the leg to an
+  // aggregator and the leg to a buyer.
+  pickupLine1: "14, Gangaur Ghat Marg",
+  pickupLine2: "Behind Bagore Ki Haveli",
+  pickupCity: "Udaipur",
+  pickupState: "Rajasthan",
+  pickupPincode: "313001",
 };
 
 // Every artist is on the founding-member plan: free for the first year.
