@@ -16,6 +16,11 @@ export const ARTIST = {
   name: "Devika Rao",
   avatar: "/early-program/avatar-3.png",
   verifiedTier: 2,
+  // Where she works, shown on her own profile summary. The pickup address on
+  // PROFILE below is the courier's origin and is never displayed publicly;
+  // this is the city line a collector would see.
+  location: "Udaipur, Rajasthan",
+  joinedAt: "2025-07-05T00:00:00.000Z",
 };
 
 export const KPI_METRICS = [

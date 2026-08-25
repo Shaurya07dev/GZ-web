@@ -31,6 +31,7 @@ export const mockCustomer: CustomerProfile = {
   name: "Aarav Shah",
   email: "aarav.shah@example.com",
   phone: "+919812345678",
+  joinedAt: "2025-11-04T00:00:00.000Z",
 };
 
 export const mockAddresses: Address[] = [

@@ -25,6 +25,8 @@ import {
   useSaveArtistProfileMutation,
 } from "@/hooks/useArtistAccount";
 import { ARTIST } from "./dashboard-data";
+import { ArtistNetworkPanel } from "./artist-network-panel";
+import { ArtistProfileSummary } from "./artist-profile-summary";
 import { MouAgreement } from "./mou-agreement";
 
 // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
@@ -127,8 +129,8 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
 
   const [docsSubmitted, setDocsSubmitted] = useState(false);
 
-  // Signing is what reorders this page: unsigned artists get the agreement
-  // first, signed ones get it last.
+  // Signing reorders this page (unsigned artists get the agreement first)
+  // and is what unlocks proposing a collaboration.
   const mouSigned = profile.mouAcceptance !== null;
 
   function updateProfile<K extends keyof ProfileFormState>(
@@ -164,6 +166,10 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           <MouAgreement />
         </div>
       )}
+
+      {/* Both halves of their profile, side by side and labelled — the one
+          place the public and private figures legitimately appear together. */}
+      <ArtistProfileSummary location={ARTIST.location} />
 
       <Link
         href="/dashboard/verification"
@@ -549,6 +555,8 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           )}
         </div>
       </div>
+
+      <ArtistNetworkPanel mouSigned={mouSigned} />
 
       {mouSigned && (
         <div className="lg:col-span-2">

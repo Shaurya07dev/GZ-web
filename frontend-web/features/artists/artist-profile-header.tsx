@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { MapPin } from "lucide-react";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import {
   InstagramGlyph,
@@ -62,6 +63,19 @@ export function ArtistProfileHeader({ artist }: ArtistProfileHeaderProps) {
             {artist.name}
           </h1>
           <VerifiedBadge verification={artist.verification} />
+        </div>
+
+        {/* What they make, before anything about GalleryZone. A visitor
+            deciding whether to keep reading wants this, not our badge. */}
+        <p className="max-w-lg text-base text-foreground/90">
+          {artist.headline}
+        </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
+          <span className="flex items-center gap-1.5">
+            <MapPin className="size-3.5" strokeWidth={1.75} />
+            {artist.location}
+          </span>
         </div>
 
         <p className="max-w-md text-sm text-muted-foreground">

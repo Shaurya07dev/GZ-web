@@ -37,4 +37,7 @@ export interface CustomerProfile {
   bankAccountName?: string;
   bankAccountNumber?: string;
   bankIfsc?: string;
+
+  /** Collecting on GalleryZone since. ISO. */
+  joinedAt: string;
 }

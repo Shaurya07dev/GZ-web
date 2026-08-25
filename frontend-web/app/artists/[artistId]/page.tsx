@@ -8,7 +8,10 @@ import { ArtworkCard } from "@/components/shared/artwork-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ArtistProfileHeader } from "@/features/artists/artist-profile-header";
 import { ArtistStory } from "@/features/artists/artist-story";
+import { ArtistConnectButton } from "@/features/artists/artist-connect-button";
+import { ArtistStatStrip } from "@/features/artists/artist-stat-strip";
 import { artistService, artworkService } from "@/services/artworkService";
+import { profileStatsService } from "@/services/profileStatsService";
 
 // react's cache() dedupes the artist lookup between generateMetadata and the
 // page component within a single request (same reasoning as
@@ -49,7 +52,10 @@ export default async function ArtistProfilePage(
     notFound();
   }
 
-  const listings = await artworkService.listByArtist(artistId);
+  const [listings, stats] = await Promise.all([
+    artworkService.listByArtist(artistId),
+    profileStatsService.artistPublic(artistId),
+  ]);
 
   return (
     <>
@@ -61,7 +67,13 @@ export default async function ArtistProfilePage(
           {/* Artist-to-artist connect. Renders nothing unless the viewer is a
               signed-in artist looking at someone else's profile. */}
           <div className="mt-6 flex justify-center sm:justify-start">
+            <ArtistConnectButton artistId={artist.id} />
           </div>
+
+          {/* Before the bio: how much work there is, how much has sold, what
+              it costs. A collector decides on these and reads the story
+              afterwards. */}
+          <ArtistStatStrip stats={stats} className="mt-8" />
 
           <div className="mt-10 border-t border-border pt-10">
             <ArtistStory bio={artist.bio} />

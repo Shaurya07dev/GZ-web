@@ -23,11 +23,19 @@ import type { MessageThread } from "@/types/message";
 import type { SupportTicket } from "@/types/support";
 import type { ResaleListing } from "@/types/resale";
 import type { ArtistReview } from "@/types/artist-rating";
+import type {
+  ArtistCollaboration,
+  ArtistConnection,
+} from "@/types/artist-network";
 import { mockArtworks } from "./mock-data/artworks";
 import { mockAggregatorHoldings } from "./mock-data/aggregator-holdings";
 import { mockOrders, mockAddresses, mockCustomer } from "./mock-data/customer";
 import { mockPendingArtworks, mockAdminUsers } from "./mock-data/admin";
 import { mockArtistReviews } from "./mock-data/artist-reviews";
+import {
+  mockArtistCollaborations,
+  mockArtistConnections,
+} from "./mock-data/artist-network";
 import {
   ARTIST,
   KPI_METRICS,
@@ -543,6 +551,18 @@ export const artistPenaltiesCol = collection<ExternalSalePenalty[]>(
 export const artistReviewsCol = collection<ArtistReview[]>(
   "artistReviews",
   () => [...mockArtistReviews],
+);
+
+// --- Artist network (services/artistNetworkService.ts) ---------------------
+// Artist-to-artist. Start from the seed and are written to from the profile
+// page and the public artist page.
+export const artistConnectionsCol = collection<ArtistConnection[]>(
+  "artistConnections",
+  () => [...mockArtistConnections],
+);
+export const artistCollaborationsCol = collection<ArtistCollaboration[]>(
+  "artistCollaborations",
+  () => [...mockArtistCollaborations],
 );
 
 export const artistSettingsCol = collection("artistSettings", () => ({

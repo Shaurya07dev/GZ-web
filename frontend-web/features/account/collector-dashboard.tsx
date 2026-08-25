@@ -20,6 +20,7 @@ import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import { mockCustomer } from "./account-data";
+import { CollectorProfileCard } from "./collector-profile-card";
 
 export function CollectorDashboard() {
   const { data: profile } = useCustomerProfile();
@@ -62,6 +63,9 @@ export function CollectorDashboard() {
 
   return (
     <div className="flex flex-col gap-8">
+      {/* Who they are and what they own, before the activity feed. */}
+      <CollectorProfileCard name={customer.name} />
+
       <div>
         <h2 className="font-display text-xl font-semibold text-foreground">
           Welcome back, {customer.name.split(" ")[0]}

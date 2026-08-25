@@ -16,6 +16,19 @@ export interface ArtistProfile {
   profileImageUrl: string;
   verification: ArtistVerificationState;
   socialLinks: ArtistSocialLink[];
+
+  /**
+   * One line, in plain words, of what they actually make. Sits under the name
+   * on the public profile, where the bio is too long to help someone deciding
+   * whether to keep reading.
+   */
+  headline: string;
+
+  /** Where they work. City and state — never a street address. */
+  location: string;
+
+  /** On GalleryZone since. ISO. */
+  joinedAt: string;
 }
 
 export function verifiedTierCount(v: ArtistVerificationState): 0 | 1 | 2 | 3 {

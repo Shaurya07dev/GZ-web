@@ -1,0 +1,136 @@
+"use client";
+
+import Link from "next/link";
+import {
+  CircleCheckBig,
+  Clock,
+  FileEdit,
+  Frame,
+  Landmark,
+  MapPin,
+  Star,
+  Store,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatINR } from "@/lib/utils";
+import { CURRENT_ARTIST_ID } from "@/lib/mock-collections";
+import {
+  useArtistPrivateStats,
+  useArtistPublicStats,
+} from "@/hooks/useProfileStats";
+
+// The artist's own profile at a glance: both halves, side by side, which is
+// the one place they legitimately appear together.
+//
+// The split is deliberate and labelled on screen. The left column is what any
+// visitor to their public page can see; the right is what only they can. An
+// artist who cannot tell which is which will either under-share or assume we
+// are publishing their earnings — and the second is the one that loses trust.
+
+function joinedLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function ArtistProfileSummary({ location }: { location?: string }) {
+  const { data: pub, isPending: pubPending } = useArtistPublicStats(CURRENT_ARTIST_ID);
+  const { data: mine, isPending: minePending } = useArtistPrivateStats(CURRENT_ARTIST_ID);
+
+  if (pubPending || minePending || !pub || !mine) {
+    return <Skeleton className="h-56 w-full rounded-lg lg:col-span-2" />;
+  }
+
+  const publicCells = [
+    { key: "listed", label: "Listed", value: String(pub.artworksListed), icon: Frame },
+    { key: "sold", label: "Sold", value: String(pub.worksSold), icon: CircleCheckBig },
+    { key: "display", label: "At galleries", value: String(pub.onDisplay), icon: Store },
+    {
+      key: "rating",
+      label: "Rating",
+      value: pub.rating.count === 0 ? "—" : pub.rating.average.toFixed(1),
+      icon: Star,
+    },
+  ];
+
+  const privateCells = [
+    { key: "earned", label: "Withdrawable", value: formatINR(mine.lifetimeEarnings), icon: Landmark },
+    { key: "pending", label: "On the way", value: formatINR(mine.pendingEarnings), icon: Clock },
+    {
+      key: "average",
+      label: "Average per sale",
+      value: mine.averageSalePrice === 0 ? "—" : formatINR(mine.averageSalePrice),
+      icon: Landmark,
+    },
+    { key: "drafts", label: "Drafts", value: String(mine.drafts + mine.awaitingReview), icon: FileEdit },
+  ];
+
+  return (
+    <section className="rounded-lg border border-border bg-card p-5 sm:p-6 lg:col-span-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-display text-lg font-semibold text-foreground">
+          Your profile
+        </h2>
+        <p className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
+          {location && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="size-3.5" strokeWidth={1.75} />
+              {location}
+            </span>
+          )}
+          <span>Since {joinedLabel(pub.joinedAt)}</span>
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-6 sm:grid-cols-2">
+        <div>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            What collectors see
+          </h3>
+          <dl className="mt-3 grid grid-cols-4 gap-3">
+            {publicCells.map((cell) => (
+              <div key={cell.key} className="flex flex-col gap-1">
+                <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <cell.icon className="size-3" strokeWidth={1.75} />
+                  {cell.label}
+                </dt>
+                <dd className="font-display text-lg font-semibold tabular-nums text-foreground">
+                  {cell.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <Link
+            href={`/artists/${CURRENT_ARTIST_ID}`}
+            className="mt-3 inline-block text-xs text-gold-bright underline-offset-4 hover:underline"
+          >
+            View your public profile
+          </Link>
+        </div>
+
+        <div className="sm:border-l sm:border-border sm:pl-6">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Only you see this
+          </h3>
+          <dl className="mt-3 grid grid-cols-4 gap-3">
+            {privateCells.map((cell) => (
+              <div key={cell.key} className="flex flex-col gap-1">
+                <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <cell.icon className="size-3" strokeWidth={1.75} />
+                  {cell.label}
+                </dt>
+                <dd className="font-display text-lg font-semibold tabular-nums text-foreground">
+                  {cell.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            Your prices and earnings are never shown on your public page.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
