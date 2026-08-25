@@ -2,13 +2,13 @@ import { Percent, ArrowRight } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 
 // Static explainer, no query -- the 20%/30% split is a platform constant
-// (Onboarding Guide's worked example), not per-holding data. The worked
-// numbers below (₹30,000 listed -> ₹9,000 markup -> ₹1,800 aggregator
-// share) match that guide's own example exactly, not an invented figure.
+// (Onboarding Guide's worked example), not per-holding data. Worked off a
+// round ₹1,00,000 listed price so the split reads cleanly: 30% markup =
+// ₹30,000, and the aggregator's 20% of that markup = ₹6,000.
 const WORKED_EXAMPLE = {
-  listed: 30_000,
-  markup: 9_000,
-  aggregatorShare: 1_800,
+  listed: 100_000,
+  markup: 30_000,
+  aggregatorShare: 6_000,
 };
 
 export function CommissionExplainer() {

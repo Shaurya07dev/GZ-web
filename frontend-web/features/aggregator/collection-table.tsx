@@ -108,7 +108,7 @@ export function CollectionTable() {
   return (
     <>
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[840px] border-collapse text-sm">
+        <table className="w-full min-w-[960px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
               <th className="px-4 py-3 font-medium">Artwork</th>
@@ -116,6 +116,12 @@ export function CollectionTable() {
                 Display price
                 <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
                   Incl. GST
+                </span>
+              </th>
+              <th className="px-4 py-3 font-medium">
+                Delivery
+                <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                  Refunded on sale
                 </span>
               </th>
               <th className="px-4 py-3 font-medium">Expiry</th>
@@ -193,9 +199,19 @@ export function CollectionTable() {
                     </button>
                     {!isSold && !priceLocked && (
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        You can set this once
+                        Can&rsquo;t edit after you set the display price
                       </p>
                     )}
+                  </td>
+
+                  <td className="px-4 py-3.5">
+                    <PriceTag
+                      amount={holding.deliveryDeposit ?? 0}
+                      className="text-sm"
+                    />
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Refunded only on sale
+                    </p>
                   </td>
 
                   <td className="px-4 py-3.5">
