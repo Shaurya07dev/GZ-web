@@ -10,7 +10,7 @@ import {
   adminStatusLabel,
 } from "@/features/admin/admin-status-badge";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
-import { useArtistRatingsByUserId } from "@/hooks/useArtistNetwork";
+import { useArtistRatingsByUserId } from "@/hooks/useArtistRating";
 import { StarRating } from "@/components/shared/star-rating";
 import { ADMIN_TODAY } from "@/features/admin/admin-data";
 import type { AdminUser, UserRole, UserStatus } from "@/types/admin";

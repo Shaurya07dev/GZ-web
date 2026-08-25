@@ -2,14 +2,14 @@
 
 import { Star } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
-import { useArtistRating, useArtistReviews } from "@/hooks/useArtistNetwork";
+import { useArtistRating, useArtistReviews } from "@/hooks/useArtistRating";
 import { CURRENT_ARTIST_ID } from "@/lib/mock-collections";
-import { STAR_VALUES, type StarRating as Stars } from "@/types/artist-network";
+import { STAR_VALUES, type StarRating as Stars } from "@/types/artist-rating";
 
 // The artist's own rating, on their dashboard. Buyers leave a rating after a
 // delivered order; this is the read side of that — there is no backend yet, so
 // the reviews are seeded rather than collected (see lib/mock-data/
-// artist-network.ts). Admin sees the same numbers for every artist in the
+// artist-rating.ts). Admin sees the same numbers for every artist in the
 // Artists table.
 
 function formatDate(iso: string): string {
