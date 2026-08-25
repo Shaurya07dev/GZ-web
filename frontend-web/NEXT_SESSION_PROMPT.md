@@ -283,6 +283,7 @@ npx eslint features hooks services lib types app components
 npx next build --webpack                          # see the Turbopack note
 node --experimental-strip-types types/artwork.check.ts
 node --experimental-strip-types lib/pricing.check.ts
+node --experimental-strip-types lib/mock-db.check.ts
 ```
 
 `pricing.check.ts` replays the client's own worked example end to end — both
@@ -316,6 +317,15 @@ baseline.
   `node --experimental-strip-types`. Leave it.
 - **Line endings.** Git warns about LF → CRLF on almost every add. Harmless;
   compare files with `diff --strip-trailing-cr` or every line looks changed.
+- **A seed that gains a field used to crash returning visitors, and only them.**
+  `getCollection` seeds `localStorage` on first read and never looked at the
+  seed again, so anyone who had used the site still had the old object and every
+  page reading the new field threw. The server rendered from a fresh seed and
+  looked perfectly fine, which is what made it hard to see — a 200 from `curl`
+  proves nothing about this. Object collections are now merged under their seed
+  (stored values still win; arrays untouched), and `lib/mock-db.check.ts` guards
+  it. **Test a UI change in a browser that has used the site before, not only a
+  clean one.**
 - **The preview lags.** Twice the deployment was serving an older commit than
   `main`. Confirm what is actually deployed before concluding a fix didn't
   work — and remember client-rendered blocks never appear in the server HTML,

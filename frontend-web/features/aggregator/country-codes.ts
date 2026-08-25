@@ -28,9 +28,14 @@ export const DEFAULT_COUNTRY_DIAL = "+91";
  * Splits a stored "+91 98450 33127" style phone string into a known dial
  * code and the rest. Falls back to the default dial code when the value
  * doesn't start with a recognised one (e.g. legacy fixtures with no code).
+ *
+ * Accepts null/undefined because this reads a persisted profile, and a profile
+ * saved before the coordinator fields existed simply has no phone on it.
  */
-export function splitPhone(value: string): { dial: string; number: string } {
-  const trimmed = value.trim();
+export function splitPhone(
+  value: string | null | undefined,
+): { dial: string; number: string } {
+  const trimmed = (value ?? "").trim();
   const match = COUNTRY_CODES.find((c) => trimmed.startsWith(`${c.dial} `));
   if (match) {
     return { dial: match.dial, number: trimmed.slice(match.dial.length).trim() };
