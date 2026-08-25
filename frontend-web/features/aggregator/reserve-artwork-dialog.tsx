@@ -60,10 +60,12 @@ export function ReserveArtworkDialog({
           setSimulateConflict(false);
         },
         onError: (error) => {
-          // Mirrors the real 409 race-condition UX (SAD §3.5): the dialog
-          // closes and the card is deliberately left in the grid (query
-          // isn't invalidated on error), same as if another aggregator had
-          // genuinely reserved it first.
+          // Mirrors the real 409 race-condition UX (SAD §3.5). The grid is
+          // refetched rather than left as it was: a reserve that fails is
+          // usually the grid disagreeing with the store, and leaving the card
+          // sitting there means the next click fails the same way and the one
+          // after that. Harmless for the simulated conflict, which changes
+          // nothing — that card comes straight back.
           toast.error(error.message);
           onOpenChange(false);
           setSimulateConflict(false);

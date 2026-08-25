@@ -284,18 +284,33 @@ npx next build --webpack                          # see the Turbopack note
 node --experimental-strip-types types/artwork.check.ts
 node --experimental-strip-types lib/pricing.check.ts
 node --experimental-strip-types lib/mock-db.check.ts
+# Imports a service, so it needs the "@/" alias resolver:
+node --import ./scripts/alias-loader.mjs --experimental-strip-types \
+  services/aggregatorService.check.ts
 ```
+
+`scripts/alias-loader.mjs` teaches bare node the `@/` alias and the
+extensionless imports TS allows. Without it a check script can only import
+modules that themselves import nothing aliased — which rules out every
+service, and is why the first three checks only cover `lib/` and `types/`.
 
 `pricing.check.ts` replays the client's own worked example end to end — both
 flows, both settlements, and the whole-flow balance that proves GalleryZone
 keeps ₹30,000 on a marketplace sale and ₹42,000 on an aggregator one. If a
 number on those sheets is ever quoted wrong, it fails there first.
 
+`aggregatorService.check.ts` holds one rule: **anything the inventory grid
+offers must be reservable.** The grid and `reserve()` apply
+overlapping-but-separate conditions, and nothing checked that the second never
+refuses what the first offered — which is exactly how "Artwork no longer
+available" ended up on a card the grid had just rendered. It also pins each
+refusal to its own message.
+
 `artwork.check.ts` covers the 7-day edit window (including "bought on day 2"), the
 channel predicates, the 1% off-platform fee and custody derivation. It fails
 loudly if someone breaks those rules.
 
-`eslint` currently reports **12 warnings, 0 errors**, all pre-existing and in
+`eslint` currently reports **13 warnings, 0 errors**, all pre-existing and in
 files nobody has touched. Errors are not acceptable; that warning count is the
 baseline.
 

@@ -257,13 +257,28 @@ export const aggregatorService = {
       );
     }
 
+    // Three different failures used to share one "Artwork no longer
+    // available", which made a report of it impossible to act on: nobody
+    // could tell whether the piece had gone, someone else had taken it, or
+    // the grid was showing something the store no longer had. Each says what
+    // actually happened now.
     const artwork = getArtworkById(artworkId);
+    if (!artwork) {
+      return mockError(
+        "That piece is no longer listed. Refresh to see what is available.",
+      );
+    }
+
     const holdings = holdingsCol.get();
-    const alreadyClaimed = holdings.some(
+    const claim = holdings.find(
       (h) => h.artworkId === artworkId && h.status !== "returned",
     );
-    if (!artwork || alreadyClaimed) {
-      return mockError("Artwork no longer available");
+    if (claim) {
+      return mockError(
+        claim.status === "sold_pending_settlement"
+          ? "This piece has already been sold."
+          : "Another aggregator reserved this piece first.",
+      );
     }
 
     const offer = buildOffer(artwork);
