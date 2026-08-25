@@ -7,7 +7,6 @@ import {
   CircleCheckBig,
   Undo2,
   GalleryVerticalEnd,
-  Pencil,
   Lock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -179,7 +178,7 @@ export function CollectionTable() {
 
                   <td className="px-4 py-3.5">
                     {/* MOU §6 — one opportunity to set the selling price.
-                        Once set it is locked, so the pencil disappears and
+                        Once set it is locked, so the lock icon appears and
                         the cell says why. */}
                     <button
                       type="button"
@@ -202,18 +201,12 @@ export function CollectionTable() {
                         amount={holding.displayPrice}
                         className="text-sm"
                       />
-                      {!isSold &&
-                        (priceLocked ? (
-                          <Lock
-                            className="size-3 text-muted-foreground"
-                            strokeWidth={1.75}
-                          />
-                        ) : (
-                          <Pencil
-                            className="size-3 text-muted-foreground"
-                            strokeWidth={1.75}
-                          />
-                        ))}
+                      {!isSold && priceLocked && (
+                        <Lock
+                          className="size-3 text-muted-foreground"
+                          strokeWidth={1.75}
+                        />
+                      )}
                     </button>
                     {!isSold && (
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
