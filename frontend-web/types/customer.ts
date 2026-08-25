@@ -31,4 +31,10 @@ export interface CustomerProfile {
   phone: string;
   /** Optional — buyers who want GST invoices. Never shown publicly. */
   gstin?: string;
+  // Where money goes back OUT to a buyer: a refund they want as money rather
+  // than store credit, and the proceeds when they resell a piece they own.
+  // Optional, because most buyers only ever pay in and never need it.
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
 }

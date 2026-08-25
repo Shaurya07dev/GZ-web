@@ -63,7 +63,10 @@ buttons, which skip the form.
 | Aggregator MOU + coordinator | `/aggregator/profile` | aggregator |
 | MOU gate on reserving | `/aggregator/inventory` | aggregator |
 | One-shot display price | `/aggregator/collection` | aggregator |
+| Owed to GalleryZone, mark transferred | `/aggregator/settlements` | aggregator |
 | Paper COA request, ownership transfer (resale) | `/account/collection` | customer |
+| Bank account, withdraw store credit | `/account/wallet` | customer |
+| Resale listing, simulate a sale | `/account/resale` | customer |
 | Simulated Razorpay payment | `/checkout?artworkId=…` | customer |
 | Passport, ownership history | `/verify/<artworkId>` | anyone |
 | Transfer acceptance | `/transfer/<transferId>` | no account needed |
@@ -72,8 +75,8 @@ buttons, which skip the form.
 
 ## Decisions that are settled — do not re-ask or re-derive
 
-**From the signed MOUs** (`d:\ArtGllery\MOU of Artist.pdf`,
-`d:\ArtGllery\GZ_MOU_ Aggregator.pdf`, both transcribed into
+**From the signed MOUs** (`d:\ArtGllery\Project_Files\MOU of Artist.pdf`,
+`d:\ArtGllery\Project_Files\GZ_MOU_ Aggregator.pdf`, both transcribed into
 `features/dashboard/mou-data.ts` and `features/aggregator/aggregator-mou-data.ts`):
 
 - Artist §9 — transit insurance mandatory; declining shifts all liability to
@@ -89,27 +92,64 @@ buttons, which skip the form.
 - Aggregator §8 — the aggregator **earns** 20% × (Listed − Artist Price).
 - Aggregator §10 — one nominated GalleryZone coordinator per premises.
 
-**From the money-flow sheets** (all of this is built, and
+**From the money-flow sheets and the client's 25 Aug answers** (all built, and
 `node --experimental-strip-types lib/pricing.check.ts` fails loudly if any of it
 regresses):
 
 - Artist listing fee 0% today, 1% of listing value (or a subscription) later.
 - GalleryZone's markup is 30% over the artist's price.
-- **GST is INSIDE the displayed price, never added at checkout.** ₹1,00,000
-  becomes ₹1,30,000 becomes ₹1,36,500. `Order.gstAmount` is the tax contained
-  in `Order.amount`, not an addition to it — summing the two charges the buyer
-  twice, which is exactly what the old code did.
+- **GST is 5%, sits INSIDE the displayed price, and is charged on the GOODS
+  only.** Not on delivery, not on commission, and no party invoices another for
+  it. Every "and GST on that too?" question has the same answer: no.
+  ₹1,00,000 becomes ₹1,30,000 becomes ₹1,36,500. `Order.gstAmount` is the tax
+  contained in `Order.amount`, not an addition to it — summing the two charges
+  the buyer twice, which is what the old code did. (12% is the 2025 rate and no
+  longer applies; the client confirmed 5% under HSN 9701.)
 - Marketplace: the artist receives their full price, nothing deducted.
 - Aggregator: the artist receives their price less the delivery leg and 2%
-  convenience (₹1,00,000 → ₹95,500). This is what settles the placement-leg
+  convenience (₹1,00,000 → ₹95,500). That settles the placement-leg
   contradiction between artist MOU §10 and aggregator MOU §7 — the artist pays.
-- The aggregator's advance is a flat 5% of the display price plus delivery, both
-  paid before possession. A sale returns both and pays 20% × (selling price −
-  **artist** price). An unsold return refunds the advance only.
-- **The artist is paid 7 days after DELIVERY, not after the sale** (Yash, 24 Aug
-  — the sheet's "or 7 days of sale" alternative is dropped). Sales land in the
-  pending balance; `services/artistPayoutService.ts` releases them lazily on
-  any wallet read.
+- **The artist is paid 7 days after DELIVERY, not after the sale.** Sales land
+  in the pending balance; `services/artistPayoutService.ts` releases them lazily
+  on any wallet read.
+- Commission is 20% × (selling price − **artist** price), never against
+  GalleryZone's price to the aggregator.
+
+### The five-month aggregator cycle
+
+A piece that does not sell is offered to a **different aggregator each month**,
+up to five times, inside a **180-day listing** that starts at the first
+placement. At day 180 it goes back to the artist regardless.
+
+Nobody new takes a piece with fewer than thirty days left on that clock — a
+stub is not a placement. Instead **the aggregator who already has it keeps it
+through to day 180**. The client's own example: 160 days used, 20 left, so no
+sixth aggregator and the fifth holds it to the end.
+
+**Only the first aggregator sets the selling price.** From month two the price
+is GalleryZone's calculated figure, because from month two they are also paying
+a 3% advance on the artist price instead of 5% on the display price — cheaper
+to hold, but not theirs to re-price. Raising the price in month one raises the
+advance, and the extra is held from the wallet on the spot.
+
+| Month | Offered to the aggregator at | Advance |
+|---|---|---|
+| 1 | 1,30,000 | 5% of the **display** price |
+| 2 | 1,28,000 | 5% if the previous aggregator changed the price, else 3%, of the **artist** price |
+| 3 | 1,26,000 | 3% of the artist price |
+| 4 | 1,24,000 | 3% of the artist price |
+| 5 | 1,22,000 | 3% of the artist price |
+
+The monthly reduction is a percentage of the ARTIST's price and comes out of
+GalleryZone's margin. The artist is still paid in full, and **the marketplace
+price never moves** — the whole effect is on the aggregator price.
+
+Delivery rides alongside the advance every month. Both are **locked from the
+aggregator's wallet**, not charged: they deposit once, each reservation holds
+what it needs, and only a shortfall has to be topped up. A sale releases the
+hold and pays commission; an **unsold return releases the advance only** — the
+delivery is settled solely on a sale. Returned holdings are kept with status
+`"returned"`, because the cycle month is counted from them.
 
 **From Yash directly:**
 
@@ -127,33 +167,32 @@ regresses):
 
 ## Blocked — do not guess these
 
-The money-flow sheets arrived on **21 Aug 2026** (three photos in `d:/ArtGllery/`:
-`image_c8c04(1).HEIC`, `image_063b4(1).HEIC`, `image_c4a8d.HEIC` — HEIC does not
-open in the Read tool, convert with `ffmpeg -i in.HEIC out.png` first). They
-settle commission, GST placement and the payout rule; everything they settle is
-built and pinned by `lib/pricing.check.ts`. **Seven questions went to the client
-and are still open.** Each one is marked `OPEN` at its constant in
-`lib/pricing.ts`, so answering one is a single-value edit there:
+**The money model is fully settled.** The sheets arrived 21 Aug 2026 (three
+photos in `d:/ArtGllery/Project_Files/`: `image_c8c04(1).HEIC`, `image_063b4(1).HEIC`,
+`image_c4a8d.HEIC` — HEIC does not open in the Read tool, convert with
+`ffmpeg -i in.HEIC out.png` first), and the client answered the seven follow-up
+questions on 25 Aug. All of it is built and pinned by `lib/pricing.check.ts`.
 
-1. **Advance base.** Month 1 is 5% of the display price; months 2–5 are a
-   percentage of the artist price. Deliberate, or one base throughout?
-2. **Advance recurring or replaced?** A fresh advance each month held, or one
-   advance recalculated at renewal?
-3. **Month 6.** MOU §18 allows six months; both tables stop at five.
-4. **Does the monthly price decay apply to aggregator pieces?** The table's
-   base is ₹1,30,000, which is the marketplace price.
-5. **Delivery.** Flat ₹2,500 (built) or Shiprocket size bands.
-6. **GST rate.** The sheet says 5%; original art is normally 12% under
-   HSN 9701. `GST_RATE` in `lib/pricing.ts` re-prices the whole site.
-7. **The 2% convenience charge** is deducted from the artist on aggregator
-   sales only. Confirm marketplace artists really pay nothing.
+Nothing about the money model is open any more. The last item — the note's bare
+"bank account" line — turned out to mean the BUYER, who had none: they can now
+add bank details in `/account/wallet` and take store credit out, for refunds
+they would rather have as money and for what they are paid when they resell.
 
-**The two schedules are deliberately NOT built** — the advance ladder (5/5/3/3/3%)
-and the price decay (0/2/4/6/8%) both depend on questions 1–4, and half a rule
-is worse than none. They are recorded in the money-flow memory, not in code.
+**Settled 25 Aug: the aggregator collects on GalleryZone's behalf, never for
+themselves.** The buyer pays GalleryZone directly using the account details on
+the checkout page (a UPI QR appears there once `PAYEE_UPI_ID` in `lib/payee.ts`
+is filled in). If the buyer pays cash at the counter, the aggregator owes
+GalleryZone the WHOLE sale price — not the sale less commission — and their
+commission settles separately afterwards. Recording a sale asks which of the
+two happened; cash sales appear as "Owed to GalleryZone" above the settlements
+table with a Mark transferred action.
 
-**Bank account.** The handwritten note says "bank account"; artists and
-aggregators have one, collectors do not. Yash will confirm which he meant.
+**Delivery is the one piece that cannot be finished here.** The client wants a
+LIVE Shiprocket quote off the weight and both addresses. That needs a server,
+so `estimateDelivery()` in `lib/pricing.ts` reproduces Shiprocket's own model —
+billable weight against a pincode distance zone — and is the single function
+their rate API replaces. Do not quote on size alone: distance moves the price as
+much as weight does.
 
 **Waiting on files**, each with its slot already built: logo, colour palette,
 insurance partner URL (`INSURANCE_PARTNER_URL` in
@@ -244,6 +283,7 @@ npx eslint features hooks services lib types app components
 npx next build --webpack                          # see the Turbopack note
 node --experimental-strip-types types/artwork.check.ts
 node --experimental-strip-types lib/pricing.check.ts
+node --experimental-strip-types lib/mock-db.check.ts
 ```
 
 `pricing.check.ts` replays the client's own worked example end to end — both
@@ -277,6 +317,15 @@ baseline.
   `node --experimental-strip-types`. Leave it.
 - **Line endings.** Git warns about LF → CRLF on almost every add. Harmless;
   compare files with `diff --strip-trailing-cr` or every line looks changed.
+- **A seed that gains a field used to crash returning visitors, and only them.**
+  `getCollection` seeds `localStorage` on first read and never looked at the
+  seed again, so anyone who had used the site still had the old object and every
+  page reading the new field threw. The server rendered from a fresh seed and
+  looked perfectly fine, which is what made it hard to see — a 200 from `curl`
+  proves nothing about this. Object collections are now merged under their seed
+  (stored values still win; arrays untouched), and `lib/mock-db.check.ts` guards
+  it. **Test a UI change in a browser that has used the site before, not only a
+  clean one.**
 - **The preview lags.** Twice the deployment was serving an older commit than
   `main`. Confirm what is actually deployed before concluding a fix didn't
   work — and remember client-rendered blocks never appear in the server HTML,

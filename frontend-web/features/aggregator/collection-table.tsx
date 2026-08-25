@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   BookmarkCheck,
   CircleCheckBig,
+  Undo2,
   GalleryVerticalEnd,
   Pencil,
   Lock,
@@ -21,6 +22,7 @@ import {
   useReleaseHoldingMutation,
 } from "@/hooks/useAggregatorCollection";
 import { formatINR } from "@/lib/utils";
+import { canSetDisplayPrice } from "@/lib/pricing";
 import { toast } from "sonner";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
@@ -41,6 +43,11 @@ const STATUS_CONFIG: Record<
     icon: CircleCheckBig,
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
   },
+  returned: {
+    label: "Returned",
+    icon: Undo2,
+    className: "border-border bg-muted/40 text-muted-foreground",
+  },
 };
 
 export function CollectionTable() {
@@ -60,16 +67,20 @@ export function CollectionTable() {
       `Return "${holding.artwork.title}" to GalleryZone?
 
 ` +
-        `Your ${formatINR(holding.advanceAmount)} advance comes back. ` +
+        `Your ${formatINR(holding.advanceAmount)} advance is released back to your wallet. ` +
         (deliveryLost > 0
           ? `The ${formatINR(deliveryLost)} delivery charge does not — it is only refunded when a piece sells.`
           : ""),
     );
     if (!confirmed) return;
     releaseMutation.mutate(holding.id, {
-      onSuccess: ({ refunded }) =>
+      onSuccess: ({ refunded, deliveryLost }) =>
         toast.success("Returned to GalleryZone", {
-          description: `${formatINR(refunded)} advance credited back to your wallet.`,
+          description:
+            `${formatINR(refunded)} advance released.` +
+            (deliveryLost > 0
+              ? ` ${formatINR(deliveryLost)} delivery was charged.`
+              : ""),
         }),
       onError: (error) => toast.error(error.message),
     });
@@ -132,7 +143,12 @@ export function CollectionTable() {
           <tbody>
             {data.map((holding) => {
               const isSold = holding.status === "sold_pending_settlement";
-              const priceLocked = Boolean(holding.displayPriceSetAt);
+              // Two different reasons the price can't be touched, and they
+              // need different words: you already used your one change, or the
+              // price was never yours to set because you aren't the first
+              // aggregator to display this piece.
+              const canPrice = canSetDisplayPrice(holding.cycleMonth ?? 1);
+              const priceLocked = Boolean(holding.displayPriceSetAt) || !canPrice;
               const status = STATUS_CONFIG[holding.status];
               return (
                 <tr
@@ -174,9 +190,11 @@ export function CollectionTable() {
                       }
                       disabled={isSold || priceLocked}
                       title={
-                        priceLocked
-                          ? "Set once already — the selling price is fixed (MOU §6)"
-                          : undefined
+                        !canPrice
+                          ? "GalleryZone sets the price for this piece — only the first aggregator to display a work can price it"
+                          : priceLocked
+                            ? "Set once already — the selling price is fixed (MOU §6)"
+                            : undefined
                       }
                       className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 -ml-1.5 transition-colors enabled:hover:bg-muted disabled:cursor-not-allowed"
                     >
@@ -197,9 +215,13 @@ export function CollectionTable() {
                           />
                         ))}
                     </button>
-                    {!isSold && !priceLocked && (
+                    {!isSold && (
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Can&rsquo;t edit after you set the display price
+                        {!canPrice
+                          ? "Set by GalleryZone"
+                          : priceLocked
+                            ? "Price fixed"
+                            : "Can’t edit after you set the display price"}
                       </p>
                     )}
                   </td>

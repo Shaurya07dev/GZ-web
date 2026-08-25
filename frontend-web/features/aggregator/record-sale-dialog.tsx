@@ -43,6 +43,9 @@ const recordSaleSchema = z.object({
   city: z.string().min(2, "Enter the city"),
   state: z.string().min(2, "Enter the state"),
   pincode: z.string().regex(/^\d{6}$/, "Enter a valid 6-digit pincode"),
+  paymentRoute: z.enum(["direct_to_galleryzone", "cash_at_premises"], {
+    message: "Choose how the buyer paid",
+  }),
   deliveryMode: z.enum(["courier", "self_pickup"], {
     message: "Select a delivery mode",
   }),
@@ -58,6 +61,7 @@ const EMPTY_VALUES: RecordSaleFormValues = {
   city: "",
   state: "",
   pincode: "",
+  paymentRoute: "direct_to_galleryzone",
   deliveryMode: "courier",
 };
 
@@ -104,6 +108,7 @@ export function RecordSaleDialog({
           state: values.state,
           pincode: values.pincode,
         },
+        paymentRoute: values.paymentRoute,
         deliveryMode: values.deliveryMode,
       },
       {
@@ -304,6 +309,42 @@ export function RecordSaleDialog({
                       <SelectItem value="self_pickup">Self pickup</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="paymentRoute"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="paymentRoute">
+                    How did the buyer pay?
+                  </FieldLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) => field.onChange(value)}
+                  >
+                    <SelectTrigger id="paymentRoute" className="h-10 w-full">
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="direct_to_galleryzone">
+                        Paid GalleryZone directly (transfer or UPI)
+                      </SelectItem>
+                      <SelectItem value="cash_at_premises">
+                        Cash, collected by you
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {/* Cash is GalleryZone's money in the aggregator's till. Say
+                      so at the moment they choose it, not at settlement. */}
+                  <p className="text-xs text-muted-foreground">
+                    {field.value === "cash_at_premises"
+                      ? "You will owe GalleryZone the full sale amount. Your commission is settled separately."
+                      : "Nothing to transfer — the money reached GalleryZone directly."}
+                  </p>
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

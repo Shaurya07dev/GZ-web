@@ -2,6 +2,8 @@ import type { AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Settlement } from "@/types/admin";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 import { getArtworkById } from "@/lib/mock-data/helpers";
+import { aggregatorCommissionOf } from "@/lib/pricing";
+import { artistPriceOf } from "./artistPayoutService";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import {
   aggregatorSalesCol,
@@ -66,13 +68,14 @@ function toShipment(sale: AggregatorSale): AggregatorShipment {
   };
 }
 
+// MOU §8: 20% x (selling price - ARTIST price). Must stay identical to what
+// aggregatorService.recordSale() credited, or processSettlement() will fail to
+// find the pending row it is meant to settle.
 function commissionForSale(sale: AggregatorSale): number {
   const holding = holdingsCol.get().find((h) => h.id === sale.holdingId);
   const artwork = getArtworkById(sale.artworkId);
   if (!holding || !artwork) return 0;
-  return Math.round(
-    0.2 * Math.max(0, holding.displayPrice - artwork.customerPrice),
-  );
+  return aggregatorCommissionOf(holding.displayPrice, artistPriceOf(artwork));
 }
 
 export const aggregatorSalesService = {
@@ -138,11 +141,39 @@ export const aggregatorSalesService = {
   listWalletTransactions: (): Promise<WalletTransaction[]> =>
     mockDelay(aggregatorWalletTransactionsCol.get()),
 
+  // Reserving artwork LOCKS money from this wallet rather than charging a
+  // fresh payment each time, so the aggregator tops it up once and every
+  // placement holds what it needs. Simulated, like the Razorpay checkout.
+  addFunds: (amount: number): Promise<WalletTransaction> => {
+    if (amount <= 0) return mockError("Enter an amount to add");
+
+    const wallet = aggregatorWalletCol.get();
+    aggregatorWalletCol.set({ ...wallet, balance: wallet.balance + amount });
+
+    const transaction: WalletTransaction = {
+      id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+      type: "adjustment",
+      label: "Wallet top-up",
+      amount,
+      date: new Date().toISOString().slice(0, 10),
+      status: "completed",
+    };
+    aggregatorWalletTransactionsCol.set([
+      transaction,
+      ...aggregatorWalletTransactionsCol.get(),
+    ]);
+    return mockDelay(transaction);
+  },
+
   requestWithdrawal: (amount: number): Promise<WalletTransaction> => {
     const wallet = aggregatorWalletCol.get();
+    const free = wallet.balance - wallet.lockedBalance;
     if (amount < 1000) return mockError("Minimum withdrawal is ₹1,000");
-    if (amount > wallet.balance)
-      return mockError("Exceeds your available balance");
+    // Money held against an active reservation is not yours to take out.
+    if (amount > free)
+      return mockError(
+        `Only ₹${Math.max(0, free).toLocaleString("en-IN")} is free — the rest is held against artwork you have reserved`,
+      );
 
     aggregatorWalletCol.set({ ...wallet, balance: wallet.balance - amount });
 
@@ -160,6 +191,47 @@ export const aggregatorSalesService = {
     ]);
 
     return mockDelay(transaction);
+  },
+
+  // Cash the aggregator took at the counter is GalleryZone's money, and the
+  // whole of it is owed — not the sale less their commission. The commission
+  // settles separately through processSettlement() below, which is what stops
+  // an aggregator netting off at the till and everyone arguing later.
+  listRemittancesDue: (): Promise<AggregatorSale[]> =>
+    mockDelay(
+      aggregatorSalesCol
+        .get()
+        .filter(
+          (sale) =>
+            sale.paymentRoute === "cash_at_premises" && !sale.remittedAt,
+        ),
+    ),
+
+  markRemitted: (saleId: string): Promise<AggregatorSale> => {
+    const sales = aggregatorSalesCol.get();
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return mockError("Sale not found");
+    if (sale.remittedAt) return mockError("Already marked as transferred");
+
+    const updated: AggregatorSale = {
+      ...sale,
+      remittedAt: new Date().toISOString(),
+    };
+    aggregatorSalesCol.set(sales.map((s) => (s.id === saleId ? updated : s)));
+
+    aggregatorWalletTransactionsCol.set([
+      {
+        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+        type: "adjustment",
+        label: `Transferred to GalleryZone — sale ${sale.id.slice(0, 12)}`,
+        amount: -sale.soldPrice,
+        date: updated.remittedAt!.slice(0, 10),
+        status: "completed",
+      },
+      ...aggregatorWalletTransactionsCol.get(),
+    ]);
+
+    return mockDelay(updated);
   },
 
   listSettlements: (): Promise<Settlement[]> =>

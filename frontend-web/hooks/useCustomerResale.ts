@@ -21,6 +21,22 @@ export function useCreateResaleListingMutation() {
   });
 }
 
+// Demo only: no second collector exists to buy the piece, so this stands in
+// for one. Credits the seller's wallet, which is the part that matters.
+export function useCompleteResaleMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => customerResaleService.completeSale(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer-resale-listings"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-wallet"] });
+      queryClient.invalidateQueries({
+        queryKey: ["customer-wallet-transactions"],
+      });
+    },
+  });
+}
+
 export function useWithdrawResaleListingMutation() {
   const queryClient = useQueryClient();
   return useMutation({
