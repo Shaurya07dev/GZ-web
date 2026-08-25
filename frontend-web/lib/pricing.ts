@@ -29,6 +29,13 @@
 // Confirmed by the client (25 Aug): 5% is the current HSN 9701 rate. The 12%
 // figure is the 2025 one and no longer applies. Changing this number re-prices
 // every listing on the site.
+//
+// GST is charged on the price of the GOODS and on nothing else — the customer's
+// price for the artwork, which on the client's example is the aggregator's
+// 1,50,000. Delivery is not taxed, commission is not taxed, and no party
+// invoices another for GST. Every "and GST on top of that too" question has the
+// same answer: no. checkoutTotal() and aggregatorCommissionOf() are where this
+// is enforced, and lib/pricing.check.ts asserts it in both directions.
 export const GST_RATE = 0.05;
 
 /** GalleryZone's margin over the artist's price, before GST. */

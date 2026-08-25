@@ -121,6 +121,46 @@ assert.equal(
 assert.equal(isPayoutDue(delivered, new Date("2026-08-07T23:00:00.000Z").getTime()), false);
 assert.equal(isPayoutDue(delivered, new Date("2026-08-08T01:00:00.000Z").getTime()), true);
 
+// --- GST is charged on the goods and on nothing else -------------------------
+//
+// Client, 25 Aug: "GST is always charged on total price of good and is not
+// charged anywhere else. So it will be on final customer price. That is as per
+// example 1,50,000."
+
+// The tax in the aggregator order is exactly 5% of 1,50,000 — the artwork — and
+// not a rupee more, even though the customer pays 1,60,000 in total.
+assert.equal(aggregatorCheckout.gstIncluded, 7_500, "GST is 5% of the artwork price");
+assert.equal(
+  aggregatorCheckout.gstIncluded,
+  Math.round(150_000 * 0.05),
+  "the GST base is the artwork price, not the order total",
+);
+
+// Delivery is never taxed: adding it must not move the tax figure at all.
+assert.equal(
+  checkoutTotal(aggregatorDisplay).gstIncluded,
+  gstIncludedIn(aggregatorDisplay),
+  "delivery is outside the GST base",
+);
+assert.ok(
+  aggregatorCheckout.gstIncluded < Math.round(aggregatorCheckout.total * 0.05),
+  "taxing the whole order total would be more than taxing the artwork alone",
+);
+
+// Commission is not taxed either — 20% of the markup, with nothing added.
+assert.equal(
+  aggregatorCommissionOf(aggregatorDisplay, ARTIST_PRICE),
+  Math.round(50_000 * 0.2),
+  "commission carries no GST of its own",
+);
+
+// And the artist's settlement is a plain deduction, never a tax calculation.
+assert.equal(
+  artistOnAggregator.net,
+  ARTIST_PRICE - artistOnAggregator.deliveryDeduction - artistOnAggregator.convenienceDeduction,
+  "no GST anywhere in the artist's settlement",
+);
+
 // --- The five-month aggregator cycle ----------------------------------------
 
 // The price offered to each month's aggregator, straight off the sheet.

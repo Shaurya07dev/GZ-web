@@ -72,8 +72,8 @@ buttons, which skip the form.
 
 ## Decisions that are settled — do not re-ask or re-derive
 
-**From the signed MOUs** (`d:\ArtGllery\MOU of Artist.pdf`,
-`d:\ArtGllery\GZ_MOU_ Aggregator.pdf`, both transcribed into
+**From the signed MOUs** (`d:\ArtGllery\Project_Files\MOU of Artist.pdf`,
+`d:\ArtGllery\Project_Files\GZ_MOU_ Aggregator.pdf`, both transcribed into
 `features/dashboard/mou-data.ts` and `features/aggregator/aggregator-mou-data.ts`):
 
 - Artist §9 — transit insurance mandatory; declining shifts all liability to
@@ -95,7 +95,9 @@ regresses):
 
 - Artist listing fee 0% today, 1% of listing value (or a subscription) later.
 - GalleryZone's markup is 30% over the artist's price.
-- **GST is 5% and sits INSIDE the displayed price, never added at checkout.**
+- **GST is 5%, sits INSIDE the displayed price, and is charged on the GOODS
+  only.** Not on delivery, not on commission, and no party invoices another for
+  it. Every "and GST on that too?" question has the same answer: no.
   ₹1,00,000 becomes ₹1,30,000 becomes ₹1,36,500. `Order.gstAmount` is the tax
   contained in `Order.amount`, not an addition to it — summing the two charges
   the buyer twice, which is what the old code did. (12% is the 2025 rate and no
@@ -153,7 +155,7 @@ delivery is settled solely on a sale. Returned holdings are kept with status
 ## Blocked — do not guess these
 
 **The money model is fully settled.** The sheets arrived 21 Aug 2026 (three
-photos in `d:/ArtGllery/`: `image_c8c04(1).HEIC`, `image_063b4(1).HEIC`,
+photos in `d:/ArtGllery/Project_Files/`: `image_c8c04(1).HEIC`, `image_063b4(1).HEIC`,
 `image_c4a8d.HEIC` — HEIC does not open in the Read tool, convert with
 `ffmpeg -i in.HEIC out.png` first), and the client answered the seven follow-up
 questions on 25 Aug. All of it is built and pinned by `lib/pricing.check.ts`.
