@@ -7,7 +7,6 @@ import {
   CircleCheckBig,
   Undo2,
   GalleryVerticalEnd,
-  Pencil,
   Lock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -119,7 +118,7 @@ export function CollectionTable() {
   return (
     <>
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[840px] border-collapse text-sm">
+        <table className="w-full min-w-[960px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
               <th className="px-4 py-3 font-medium">Artwork</th>
@@ -127,6 +126,12 @@ export function CollectionTable() {
                 Display price
                 <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
                   Incl. GST
+                </span>
+              </th>
+              <th className="px-4 py-3 font-medium">
+                Delivery
+                <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                  Refunded on sale
                 </span>
               </th>
               <th className="px-4 py-3 font-medium">Expiry</th>
@@ -173,7 +178,7 @@ export function CollectionTable() {
 
                   <td className="px-4 py-3.5">
                     {/* MOU §6 — one opportunity to set the selling price.
-                        Once set it is locked, so the pencil disappears and
+                        Once set it is locked, so the lock icon appears and
                         the cell says why. */}
                     <button
                       type="button"
@@ -196,18 +201,12 @@ export function CollectionTable() {
                         amount={holding.displayPrice}
                         className="text-sm"
                       />
-                      {!isSold &&
-                        (priceLocked ? (
-                          <Lock
-                            className="size-3 text-muted-foreground"
-                            strokeWidth={1.75}
-                          />
-                        ) : (
-                          <Pencil
-                            className="size-3 text-muted-foreground"
-                            strokeWidth={1.75}
-                          />
-                        ))}
+                      {!isSold && priceLocked && (
+                        <Lock
+                          className="size-3 text-muted-foreground"
+                          strokeWidth={1.75}
+                        />
+                      )}
                     </button>
                     {!isSold && (
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -215,9 +214,19 @@ export function CollectionTable() {
                           ? "Set by GalleryZone"
                           : priceLocked
                             ? "Price fixed"
-                            : "You can set this once"}
+                            : "Can’t edit after you set the display price"}
                       </p>
                     )}
+                  </td>
+
+                  <td className="px-4 py-3.5">
+                    <PriceTag
+                      amount={holding.deliveryDeposit ?? 0}
+                      className="text-sm"
+                    />
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      Refunded only on sale
+                    </p>
                   </td>
 
                   <td className="px-4 py-3.5">
