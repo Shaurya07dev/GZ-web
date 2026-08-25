@@ -52,6 +52,7 @@ export interface RecordSalePayload {
     pincode: string;
   };
   deliveryMode: "courier" | "self_pickup";
+  paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
 }
 
 // Persisted result of recordSale() — buyer/price/delivery details Orders &
@@ -71,6 +72,14 @@ export interface AggregatorSale {
     pincode: string;
   };
   deliveryMode: "courier" | "self_pickup";
+  // The aggregator collects "on behalf of GalleryZone", never for themselves.
+  // Either the buyer paid GalleryZone directly (transfer or UPI, using the
+  // details on the checkout page), or the aggregator took cash — in which case
+  // they owe GalleryZone the WHOLE sale price and their commission is settled
+  // separately afterwards. They never net it off at the counter.
+  paymentRoute?: "direct_to_galleryzone" | "cash_at_premises";
+  /** Set when the aggregator has transferred cash they collected. */
+  remittedAt?: string | null;
   soldAt: string; // ISO
   shipmentStatus: "preparing" | "dispatched" | "delivered";
   dispatchedAt: string | null;

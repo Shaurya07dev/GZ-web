@@ -63,6 +63,7 @@ buttons, which skip the form.
 | Aggregator MOU + coordinator | `/aggregator/profile` | aggregator |
 | MOU gate on reserving | `/aggregator/inventory` | aggregator |
 | One-shot display price | `/aggregator/collection` | aggregator |
+| Owed to GalleryZone, mark transferred | `/aggregator/settlements` | aggregator |
 | Paper COA request, ownership transfer (resale) | `/account/collection` | customer |
 | Bank account, withdraw store credit | `/account/wallet` | customer |
 | Resale listing, simulate a sale | `/account/resale` | customer |
@@ -177,10 +178,14 @@ Nothing about the money model is open any more. The last item — the note's bar
 add bank details in `/account/wallet` and take store credit out, for refunds
 they would rather have as money and for what they are paid when they resell.
 
-**Still open: who collects the customer's money on an aggregator sale.** The
-app assumes GalleryZone does. If the aggregator takes payment at their premises
-instead, they need a screen showing what they owe GalleryZone per sale and a
-way to record the transfer — that does not exist. Asked, not yet answered.
+**Settled 25 Aug: the aggregator collects on GalleryZone's behalf, never for
+themselves.** The buyer pays GalleryZone directly using the account details on
+the checkout page (a UPI QR appears there once `PAYEE_UPI_ID` in `lib/payee.ts`
+is filled in). If the buyer pays cash at the counter, the aggregator owes
+GalleryZone the WHOLE sale price — not the sale less commission — and their
+commission settles separately afterwards. Recording a sale asks which of the
+two happened; cash sales appear as "Owed to GalleryZone" above the settlements
+table with a Mark transferred action.
 
 **Delivery is the one piece that cannot be finished here.** The client wants a
 LIVE Shiprocket quote off the weight and both addresses. That needs a server,

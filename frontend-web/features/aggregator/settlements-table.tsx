@@ -20,8 +20,11 @@ import {
 } from "@/features/admin/admin-status-badge";
 import {
   useAggregatorSettlements,
+  useMarkRemittedMutation,
   useProcessSettlementMutation,
+  useRemittancesDue,
 } from "@/hooks/useAggregatorSettlements";
+import { PayeeDetails } from "@/components/shared/payee-details";
 import { formatINR } from "@/lib/utils";
 import type { Settlement, SettlementStatus } from "@/types/admin";
 
@@ -109,6 +112,8 @@ export function SettlementsTable() {
 
   return (
     <>
+      <RemittancesDueCard />
+
       <AdminDataTable
         rows={settlements ?? []}
         columns={columns}
@@ -139,6 +144,82 @@ export function SettlementsTable() {
         onClose={() => setActive(null)}
       />
     </>
+  );
+}
+
+// Cash taken at the counter belongs to GalleryZone, and the WHOLE sale price
+// is owed — not the sale less commission. This sits above the settlements
+// table because it is the aggregator's obligation, where everything below is
+// their entitlement, and mixing the two is how people end up netting off.
+function RemittancesDueCard() {
+  const { data: due } = useRemittancesDue();
+  const markRemitted = useMarkRemittedMutation();
+
+  if (!due || due.length === 0) return null;
+
+  const total = due.reduce((sum, sale) => sum + sale.soldPrice, 0);
+
+  return (
+    <div className="mb-6 flex flex-col gap-4 rounded-lg border border-gold/40 bg-gold/5 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-base font-semibold text-foreground">
+            Owed to GalleryZone
+          </h2>
+          <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+            Cash you collected on GalleryZone&rsquo;s behalf. Transfer the full
+            amount — your commission is settled separately, below.
+          </p>
+        </div>
+        <span className="font-display text-2xl font-semibold tabular-nums text-gold-bright">
+          {formatINR(total)}
+        </span>
+      </div>
+
+      <ul className="flex flex-col gap-2">
+        {due.map((sale) => (
+          <li
+            key={sale.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background px-3.5 py-3"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {sale.buyerName}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                Sold {new Date(sale.soldAt).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-sm tabular-nums text-foreground">
+                {formatINR(sale.soldPrice)}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={markRemitted.isPending}
+                onClick={() =>
+                  markRemitted.mutate(sale.id, {
+                    onSuccess: () => toast.success("Marked as transferred"),
+                    onError: (error) => toast.error(error.message),
+                  })
+                }
+              >
+                Mark transferred
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <PayeeDetails
+        amount={total}
+        note={`GZ remittance ${due.length} sale${due.length > 1 ? "s" : ""}`}
+      />
+    </div>
   );
 }
 

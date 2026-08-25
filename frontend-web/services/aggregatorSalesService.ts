@@ -193,6 +193,47 @@ export const aggregatorSalesService = {
     return mockDelay(transaction);
   },
 
+  // Cash the aggregator took at the counter is GalleryZone's money, and the
+  // whole of it is owed — not the sale less their commission. The commission
+  // settles separately through processSettlement() below, which is what stops
+  // an aggregator netting off at the till and everyone arguing later.
+  listRemittancesDue: (): Promise<AggregatorSale[]> =>
+    mockDelay(
+      aggregatorSalesCol
+        .get()
+        .filter(
+          (sale) =>
+            sale.paymentRoute === "cash_at_premises" && !sale.remittedAt,
+        ),
+    ),
+
+  markRemitted: (saleId: string): Promise<AggregatorSale> => {
+    const sales = aggregatorSalesCol.get();
+    const sale = sales.find((s) => s.id === saleId);
+    if (!sale) return mockError("Sale not found");
+    if (sale.remittedAt) return mockError("Already marked as transferred");
+
+    const updated: AggregatorSale = {
+      ...sale,
+      remittedAt: new Date().toISOString(),
+    };
+    aggregatorSalesCol.set(sales.map((s) => (s.id === saleId ? updated : s)));
+
+    aggregatorWalletTransactionsCol.set([
+      {
+        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+        type: "adjustment",
+        label: `Transferred to GalleryZone — sale ${sale.id.slice(0, 12)}`,
+        amount: -sale.soldPrice,
+        date: updated.remittedAt!.slice(0, 10),
+        status: "completed",
+      },
+      ...aggregatorWalletTransactionsCol.get(),
+    ]);
+
+    return mockDelay(updated);
+  },
+
   listSettlements: (): Promise<Settlement[]> =>
     mockDelay(aggregatorSettlementsCol.get()),
 

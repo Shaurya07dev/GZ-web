@@ -8,6 +8,26 @@ export function useAggregatorSettlements() {
   });
 }
 
+export function useRemittancesDue() {
+  return useQuery({
+    queryKey: ["aggregator-remittances"],
+    queryFn: () => aggregatorSalesService.listRemittancesDue(),
+  });
+}
+
+export function useMarkRemittedMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (saleId: string) => aggregatorSalesService.markRemitted(saleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["aggregator-remittances"] });
+      queryClient.invalidateQueries({
+        queryKey: ["aggregator-wallet-transactions"],
+      });
+    },
+  });
+}
+
 export function useProcessSettlementMutation() {
   const queryClient = useQueryClient();
   return useMutation({

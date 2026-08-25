@@ -449,6 +449,10 @@ export const aggregatorService = {
       buyerPhone: payload.buyerPhone,
       deliveryAddress: payload.deliveryAddress,
       deliveryMode: payload.deliveryMode,
+      paymentRoute: payload.paymentRoute,
+      // Cash taken at the counter is GalleryZone's money sitting in the
+      // aggregator's till until they transfer it.
+      remittedAt: null,
       soldAt: now,
       shipmentStatus: "preparing",
       dispatchedAt: null,
