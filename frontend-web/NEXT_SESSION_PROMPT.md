@@ -115,9 +115,19 @@ regresses):
 ### The five-month aggregator cycle
 
 A piece that does not sell is offered to a **different aggregator each month**,
-five times. The sixth month is deliberately empty — it is the transit and
-problem buffer, not another placement. If month 6 is ever reached it holds at
-month 5's terms.
+up to five times, inside a **180-day listing** that starts at the first
+placement. At day 180 it goes back to the artist regardless.
+
+Nobody new takes a piece with fewer than thirty days left on that clock — a
+stub is not a placement. Instead **the aggregator who already has it keeps it
+through to day 180**. The client's own example: 160 days used, 20 left, so no
+sixth aggregator and the fifth holds it to the end.
+
+**Only the first aggregator sets the selling price.** From month two the price
+is GalleryZone's calculated figure, because from month two they are also paying
+a 3% advance on the artist price instead of 5% on the display price — cheaper
+to hold, but not theirs to re-price. Raising the price in month one raises the
+advance, and the extra is held from the wallet on the spot.
 
 | Month | Offered to the aggregator at | Advance |
 |---|---|---|

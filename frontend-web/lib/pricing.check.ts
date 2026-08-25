@@ -10,6 +10,11 @@ import {
   aggregatorAdvanceOf,
   aggregatorOfferPriceOf,
   billableWeightKg,
+  canPlaceWithAnotherAggregator,
+  canSetDisplayPrice,
+  daysLeftInListing,
+  listingEndsAt,
+  placementWindow,
   deliveryZoneBetween,
   estimateDelivery,
   aggregatorCommissionOf,
@@ -226,6 +231,89 @@ for (const month of [3, 4, 5]) {
       `month ${month} is always 3% of the artist price`,
     );
   }
+}
+
+// --- The 180-day listing, and who keeps the leftover -------------------------
+//
+// Client, 25 Aug: "if 160 days went in 5 months with aggregator then for the
+// remaining 20 days it will not go for more aggregator — the art will extend
+// its time with the last aggregator itself. And then sent back to artist upon
+// its 180 days completion."
+
+const CYCLE_START = "2026-01-01T00:00:00.000Z";
+const day = (n: number) => new Date(Date.parse(CYCLE_START) + n * 86_400_000);
+
+assert.equal(
+  listingEndsAt(CYCLE_START).toISOString().slice(0, 10),
+  "2026-06-30",
+  "the listing runs 180 days from the first placement",
+);
+
+// A placement that starts with plenty of room ends after its own thirty days.
+const early = placementWindow({ cycleStartedAt: CYCLE_START, assignedAt: day(0) });
+assert.equal(early.expiresAt.toISOString().slice(0, 10), "2026-01-31");
+assert.equal(early.extended, false);
+
+// The client's own case: a placement beginning on day 130 would naturally end
+// on day 160, leaving 20 days — too short for anyone else, so this aggregator
+// keeps the piece all the way to day 180 instead.
+const last = placementWindow({ cycleStartedAt: CYCLE_START, assignedAt: day(130) });
+assert.equal(
+  last.expiresAt.toISOString().slice(0, 10),
+  listingEndsAt(CYCLE_START).toISOString().slice(0, 10),
+  "the last aggregator absorbs the leftover rather than the piece moving again",
+);
+assert.equal(last.extended, true);
+
+// Exactly thirty days left is still a real placement, not a stub.
+const exact = placementWindow({ cycleStartedAt: CYCLE_START, assignedAt: day(120) });
+assert.equal(exact.extended, false, "a full thirty days is not a leftover");
+
+// Nobody new takes a piece with under thirty days on the clock.
+assert.equal(
+  canPlaceWithAnotherAggregator({
+    cycleStartedAt: CYCLE_START,
+    placementsSoFar: 3,
+    now: day(160).getTime(),
+  }),
+  false,
+  "20 days left: no new aggregator",
+);
+assert.equal(
+  canPlaceWithAnotherAggregator({
+    cycleStartedAt: CYCLE_START,
+    placementsSoFar: 3,
+    now: day(100).getTime(),
+  }),
+  true,
+);
+// Five placements is the ceiling even with time to spare.
+assert.equal(
+  canPlaceWithAnotherAggregator({
+    cycleStartedAt: CYCLE_START,
+    placementsSoFar: 5,
+    now: day(10).getTime(),
+  }),
+  false,
+  "five aggregators maximum",
+);
+// A piece nobody has taken yet has not started its clock.
+assert.equal(
+  canPlaceWithAnotherAggregator({ cycleStartedAt: null, placementsSoFar: 0 }),
+  true,
+);
+assert.equal(daysLeftInListing(CYCLE_START, day(160).getTime()), 20);
+assert.equal(daysLeftInListing(CYCLE_START, day(200).getTime()), 0, "never negative");
+
+// --- Only the first aggregator prices the piece ------------------------------
+
+assert.equal(canSetDisplayPrice(1), true, "the first aggregator sets the price");
+for (const month of [2, 3, 4, 5, 6]) {
+  assert.equal(
+    canSetDisplayPrice(month),
+    false,
+    `month ${month} takes GalleryZone's calculated price`,
+  );
 }
 
 // --- Delivery ----------------------------------------------------------------

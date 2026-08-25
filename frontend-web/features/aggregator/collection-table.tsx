@@ -22,6 +22,7 @@ import {
   useReleaseHoldingMutation,
 } from "@/hooks/useAggregatorCollection";
 import { formatINR } from "@/lib/utils";
+import { canSetDisplayPrice } from "@/lib/pricing";
 import { toast } from "sonner";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
@@ -136,7 +137,12 @@ export function CollectionTable() {
           <tbody>
             {data.map((holding) => {
               const isSold = holding.status === "sold_pending_settlement";
-              const priceLocked = Boolean(holding.displayPriceSetAt);
+              // Two different reasons the price can't be touched, and they
+              // need different words: you already used your one change, or the
+              // price was never yours to set because you aren't the first
+              // aggregator to display this piece.
+              const canPrice = canSetDisplayPrice(holding.cycleMonth ?? 1);
+              const priceLocked = Boolean(holding.displayPriceSetAt) || !canPrice;
               const status = STATUS_CONFIG[holding.status];
               return (
                 <tr
@@ -178,9 +184,11 @@ export function CollectionTable() {
                       }
                       disabled={isSold || priceLocked}
                       title={
-                        priceLocked
-                          ? "Set once already — the selling price is fixed (MOU §6)"
-                          : undefined
+                        !canPrice
+                          ? "GalleryZone sets the price for this piece — only the first aggregator to display a work can price it"
+                          : priceLocked
+                            ? "Set once already — the selling price is fixed (MOU §6)"
+                            : undefined
                       }
                       className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 -ml-1.5 transition-colors enabled:hover:bg-muted disabled:cursor-not-allowed"
                     >
@@ -201,9 +209,13 @@ export function CollectionTable() {
                           />
                         ))}
                     </button>
-                    {!isSold && !priceLocked && (
+                    {!isSold && (
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        You can set this once
+                        {!canPrice
+                          ? "Set by GalleryZone"
+                          : priceLocked
+                            ? "Price fixed"
+                            : "You can set this once"}
                       </p>
                     )}
                   </td>

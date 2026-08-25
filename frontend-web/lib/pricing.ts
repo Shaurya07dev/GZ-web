@@ -220,6 +220,83 @@ export function aggregatorAdvanceOf(displayPrice: number): number {
 
 export const AGGREGATOR_CYCLE_MONTHS = 5;
 
+/** Artist MOU §18 — the whole listing runs 180 days and then the piece goes home. */
+export const AGGREGATOR_LISTING_DAYS = 180;
+
+/** One aggregator's display window. */
+export const AGGREGATOR_PLACEMENT_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function addDays(from: string | Date, days: number): Date {
+  return new Date(new Date(from).getTime() + days * DAY_MS);
+}
+
+/** When the artwork must be back with the artist, whatever has happened since. */
+export function listingEndsAt(cycleStartedAt: string | Date): Date {
+  return addDays(cycleStartedAt, AGGREGATOR_LISTING_DAYS);
+}
+
+export function daysLeftInListing(
+  cycleStartedAt: string | Date,
+  now: number = Date.now(),
+): number {
+  return Math.max(
+    0,
+    Math.ceil((listingEndsAt(cycleStartedAt).getTime() - now) / DAY_MS),
+  );
+}
+
+/**
+ * Whether there is room to hand the piece to ANOTHER aggregator. A stub of
+ * fewer than thirty days is not a placement — nobody is shipped a painting for
+ * a fortnight — so the remainder goes to whoever already has it.
+ */
+export function canPlaceWithAnotherAggregator({
+  cycleStartedAt,
+  placementsSoFar,
+  now = Date.now(),
+}: {
+  cycleStartedAt: string | Date | null;
+  placementsSoFar: number;
+  now?: number;
+}): boolean {
+  if (cycleStartedAt === null) return true; // nothing placed yet — the clock hasn't started
+  if (placementsSoFar >= AGGREGATOR_CYCLE_MONTHS) return false;
+  return daysLeftInListing(cycleStartedAt, now) >= AGGREGATOR_PLACEMENT_DAYS;
+}
+
+export interface PlacementWindow {
+  expiresAt: Date;
+  /**
+   * True when this aggregator keeps the piece past the usual thirty days
+   * because the leftover was too short to place with anyone else.
+   */
+  extended: boolean;
+}
+
+/**
+ * A placement runs thirty days — unless doing so would leave a stub shorter
+ * than another placement, in which case this aggregator holds it through to the
+ * end of the 180 days rather than the piece making a pointless extra journey.
+ */
+export function placementWindow({
+  cycleStartedAt,
+  assignedAt,
+}: {
+  cycleStartedAt: string | Date;
+  assignedAt: string | Date;
+}): PlacementWindow {
+  const listingEnd = listingEndsAt(cycleStartedAt);
+  const naturalEnd = addDays(assignedAt, AGGREGATOR_PLACEMENT_DAYS);
+  const leftover = listingEnd.getTime() - naturalEnd.getTime();
+
+  if (leftover < AGGREGATOR_PLACEMENT_DAYS * DAY_MS) {
+    return { expiresAt: listingEnd, extended: leftover > 0 };
+  }
+  return { expiresAt: naturalEnd, extended: false };
+}
+
 // The reduction is a percentage of the ARTIST's price, taken off the price
 // GalleryZone offers the next aggregator. It comes out of GalleryZone's own
 // margin: the artist is still paid their full price, and the marketplace
@@ -248,6 +325,19 @@ export function aggregatorOfferPriceOf(
 ): number {
   const reduction = Math.round(artistPrice * aggregatorDiscountRateOf(month));
   return basePriceOf(artistPrice) - reduction;
+}
+
+/**
+ * Whether this month's aggregator may set the selling price.
+ *
+ * Only the first one can. From month two the price is GalleryZone's calculated
+ * figure and the aggregator takes it as offered — because from month two they
+ * are also getting the piece at a 3% advance on the artist price instead of 5%
+ * on the display price. Cheaper to hold, but not theirs to re-price; the client
+ * called it "a double down offer" and did not want both halves given away.
+ */
+export function canSetDisplayPrice(month: number): boolean {
+  return month <= 1;
 }
 
 export interface AggregatorAdvance {

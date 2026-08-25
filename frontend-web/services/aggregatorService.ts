@@ -6,11 +6,16 @@ import type {
 import { isAggregatorListed, type ArtworkSummary } from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import {
-  AGGREGATOR_CYCLE_MONTHS,
+  AGGREGATOR_LISTING_DAYS,
   aggregatorAdvanceForMonth,
   aggregatorAdvanceOf,
   aggregatorCommissionOf,
   aggregatorOfferPriceOf,
+  canPlaceWithAnotherAggregator,
+  canSetDisplayPrice,
+  daysLeftInListing,
+  placementWindow,
+  withGst,
 } from "@/lib/pricing";
 import {
   artistPriceOf,
@@ -51,8 +56,6 @@ export function advanceAmountFor(displayPrice: number): number {
   return aggregatorAdvanceOf(displayPrice);
 }
 
-const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-
 // Holdings are backed by lib/mock-db.ts via holdingsCol (lib/mock-collections.ts)
 // so reserve()/recordSale()/updateDisplayPrice() survive a refresh and are
 // visible across tabs/portals — an artwork reserved via Inventory actually
@@ -64,6 +67,10 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 // after this service reserves it — every check in this file and in the
 // Aggregator Portal's pages treats `holdings` (not artwork.status) as the
 // real source of truth for what's reserved/sold.
+function formatHeld(amount: number): string {
+  return `₹${amount.toLocaleString("en-IN")}`;
+}
+
 function nextHoldingId(current: AggregatorHolding[]): string {
   return `hold-${current.length + 1}-${Date.now().toString(36)}`;
 }
@@ -101,6 +108,27 @@ function cycleMonthFor(artworkId: string): number {
   return pastHoldingsFor(artworkId).length + 1;
 }
 
+/**
+ * When this artwork's 180-day listing started — the first time any aggregator
+ * took it. Null means it has never been placed, so the clock has not started.
+ */
+function cycleStartFor(artworkId: string): string | null {
+  const all = holdingsCol
+    .get()
+    .filter((h) => h.artworkId === artworkId)
+    .sort((a, b) => a.assignedAt.localeCompare(b.assignedAt));
+  return all[0]?.assignedAt ?? null;
+}
+
+/** Can this piece go to another aggregator, or is its listing done? */
+function isPlaceable(artworkId: string, now: number = Date.now()): boolean {
+  return canPlaceWithAnotherAggregator({
+    cycleStartedAt: cycleStartFor(artworkId),
+    placementsSoFar: pastHoldingsFor(artworkId).length,
+    now,
+  });
+}
+
 /** A reservable artwork, with this month's terms attached. */
 export type ReservableArtwork = ArtworkSummary & { offer: AggregatorOffer };
 
@@ -116,6 +144,10 @@ export interface AggregatorOffer {
   /** The figure the rate was applied to, so the UI can show the working. */
   advanceBase: number;
   advanceBasis: "display_price" | "artist_price";
+  /** Only the first aggregator may set the selling price. */
+  canSetPrice: boolean;
+  /** Days left on the artwork's 180-day listing. */
+  daysLeftInListing: number;
   deliveryCharge: number;
   /** Advance plus delivery — the amount locked from the wallet on reserve. */
   payable: number;
@@ -129,8 +161,12 @@ function buildOffer(artwork: {
 }): AggregatorOffer {
   const month = cycleMonthFor(artwork.id);
   const artistPrice = artistPriceOf(artwork);
-  const offerPrice = aggregatorOfferPriceOf(artistPrice, month);
+  // GST-inclusive, exactly like Artwork.customerPrice — the aggregator's floor
+  // and the customer's price have to be the same kind of number, or the
+  // commission (which strips GST back out) is computed against the wrong base.
+  const offerPrice = withGst(aggregatorOfferPriceOf(artistPrice, month));
   const past = pastHoldingsFor(artwork.id);
+  const cycleStartedAt = cycleStartFor(artwork.id);
   const previousAggregatorChangedPrice = Boolean(
     past[past.length - 1]?.displayPriceSetAt,
   );
@@ -156,6 +192,10 @@ function buildOffer(artwork: {
     deliveryCharge: advance.deliveryCharge,
     payable: advance.payable,
     previousAggregatorChangedPrice,
+    canSetPrice: canSetDisplayPrice(month),
+    daysLeftInListing: cycleStartedAt
+      ? daysLeftInListing(cycleStartedAt)
+      : AGGREGATOR_LISTING_DAYS,
   };
 }
 
@@ -182,9 +222,10 @@ export const aggregatorService = {
           isAggregatorListed(artwork.listingType) &&
           artwork.status === "marketplace" &&
           !claimedArtworkIds.has(artwork.id) &&
-          // Past month five the piece leaves the aggregator channel: month six
-          // is the transit and problem buffer, not another placement.
-          cycleMonthFor(artwork.id) <= AGGREGATOR_CYCLE_MONTHS,
+          // Five placements, or fewer if the 180 days run out first. A stub of
+          // under thirty days is never placed with a new aggregator — it goes
+          // to whoever already has the piece.
+          isPlaceable(artwork.id),
       );
     // Each card carries its own offer so the grid and the reserve dialog read
     // the cycle rules from one place instead of each re-deriving them.
@@ -226,9 +267,9 @@ export const aggregatorService = {
     }
 
     const offer = buildOffer(artwork);
-    if (offer.month > AGGREGATOR_CYCLE_MONTHS) {
+    if (!isPlaceable(artworkId)) {
       return mockError(
-        "This piece has finished its aggregator cycle and is going back to the artist",
+        "This piece has finished its listing period and is going back to the artist",
       );
     }
 
@@ -246,7 +287,13 @@ export const aggregatorService = {
     }
 
     const assignedAt = new Date();
-    const expiresAt = new Date(assignedAt.getTime() + THIRTY_DAYS_MS);
+    // Thirty days, unless what would be left over afterwards is too short to
+    // place with anyone else — then this aggregator keeps it to the end of the
+    // artist's 180 days rather than the piece making one more pointless trip.
+    const { expiresAt, extended } = placementWindow({
+      cycleStartedAt: cycleStartFor(artworkId) ?? assignedAt,
+      assignedAt,
+    });
 
     const holding: AggregatorHolding = {
       id: nextHoldingId(holdings),
@@ -262,6 +309,7 @@ export const aggregatorService = {
       displayPrice: offer.offerPrice,
       assignedAt: assignedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
+      windowExtended: extended,
       status: "reserved",
       assignmentSource: "self_reserved",
       displayPriceSetAt: null,
@@ -448,13 +496,17 @@ export const aggregatorService = {
         pendingBalance: wallet.pendingBalance + commission,
       });
 
+      // The client's answer on the advance was "both" — it always comes back
+      // AND it is adjusted against what is owed. Both are true at once if it is
+      // settled as one statement rather than two movements: the advance is set
+      // off against the sale, and the aggregator ends up whole either way.
       const rows = [
         ...(held > 0
           ? [
               {
                 id: `wt-${crypto.randomUUID().slice(0, 8)}`,
                 type: "refund" as const,
-                label: `Advance & delivery released: "${artwork.title}"`,
+                label: `"${artwork.title}" sold — ${formatHeld(held)} advance & delivery set off against settlement`,
                 amount: held,
                 date: now.slice(0, 10),
                 status: "completed" as const,
@@ -510,14 +562,64 @@ export const aggregatorService = {
     if (index === -1) {
       throw new Error(`aggregatorService: no holding "${holdingId}"`);
     }
-    if (holdings[index].displayPriceSetAt) {
+    const holding = holdings[index];
+
+    // Only the FIRST aggregator prices the piece. After that the price is
+    // GalleryZone's calculated figure, because from month two the aggregator is
+    // already getting a cheaper advance — they don't get both.
+    if (!canSetDisplayPrice(holding.cycleMonth ?? 1)) {
+      throw new Error(
+        "The selling price is set by GalleryZone for this piece — only the first aggregator to display a work can price it",
+      );
+    }
+    if (holding.displayPriceSetAt) {
       throw new Error(
         "The selling price for this artwork has already been set and cannot be changed (MOU §6)",
       );
     }
+
+    // Month one's advance is 5% of the DISPLAY price, so raising the price
+    // raises the advance. The difference is held from the wallet on the spot —
+    // "if the amount is on the higher side he needs to deposit the extra".
+    const artwork = getArtworkById(holding.artworkId);
+    const newAdvance = artwork
+      ? aggregatorAdvanceForMonth({
+          month: holding.cycleMonth ?? 1,
+          displayPrice,
+          artistPrice: artistPriceOf(artwork),
+        }).advance
+      : holding.advanceAmount;
+    const topUp = Math.max(0, newAdvance - holding.advanceAmount);
+
+    if (topUp > 0) {
+      const wallet = aggregatorWalletCol.get();
+      const free = wallet.balance - wallet.lockedBalance;
+      if (free < topUp) {
+        throw new Error(
+          `Raising the price raises the advance. Add ₹${(topUp - free).toLocaleString("en-IN")} to your wallet first — ₹${topUp.toLocaleString("en-IN")} more needs to be held.`,
+        );
+      }
+      aggregatorWalletCol.set({
+        ...wallet,
+        lockedBalance: wallet.lockedBalance + topUp,
+      });
+      aggregatorWalletTransactionsCol.set([
+        {
+          id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+          type: "adjustment",
+          label: `Additional advance held — "${artwork?.title ?? "Artwork"}" priced up`,
+          amount: -topUp,
+          date: new Date().toISOString().slice(0, 10),
+          status: "pending",
+        },
+        ...aggregatorWalletTransactionsCol.get(),
+      ]);
+    }
+
     const updated: AggregatorHolding = {
-      ...holdings[index],
+      ...holding,
       displayPrice,
+      advanceAmount: newAdvance,
       displayPriceSetAt: new Date().toISOString(),
     };
     holdingsCol.set(holdings.map((h, i) => (i === index ? updated : h)));

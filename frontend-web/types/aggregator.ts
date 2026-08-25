@@ -28,6 +28,11 @@ export interface AggregatorHolding {
   cycleMonth?: number;
   /** Set when the piece went back to GalleryZone unsold. */
   returnedAt?: string | null;
+  // True when this placement runs past the usual thirty days because what would
+  // have been left of the artist's 180 days was too short to hand to anyone
+  // else. The last aggregator keeps it rather than the piece making one more
+  // journey for a fortnight.
+  windowExtended?: boolean;
   // Distinguishes an aggregator-initiated reservation (Browse → Reserve) from
   // GalleryZone proactively placing inventory at this aggregator's premises
   // (MOU §4). Drives the My Inventory filter tabs.
