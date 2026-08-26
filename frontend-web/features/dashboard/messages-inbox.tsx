@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, Mail, MailOpen } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { DoodleBackdrop } from "@/components/shared/doodle-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useArtistMessages,
@@ -46,62 +47,65 @@ export function MessagesInbox() {
   }
 
   return (
-    <div className="flex flex-col divide-y divide-border rounded-lg border border-border bg-card">
-      {messages.map((message) => {
-        const expanded = expandedId === message.id;
-        return (
-          <div key={message.id} className="flex flex-col">
-            <button
-              type="button"
-              onClick={() => toggle(message)}
-              className="flex items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
-            >
-              <span className="mt-0.5 shrink-0 text-muted-foreground">
-                {message.unread ? (
-                  <Mail className="size-4 text-gold-bright" strokeWidth={2} />
-                ) : (
-                  <MailOpen className="size-4" strokeWidth={1.75} />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <p
-                    className={cn(
-                      "truncate text-sm",
-                      message.unread
-                        ? "font-semibold text-foreground"
-                        : "font-medium text-foreground",
-                    )}
-                  >
-                    {message.subject}
+    <div className="relative overflow-hidden rounded-lg border border-border bg-card">
+      <DoodleBackdrop />
+      <div className="relative flex flex-col divide-y divide-border">
+        {messages.map((message) => {
+          const expanded = expandedId === message.id;
+          return (
+            <div key={message.id} className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => toggle(message)}
+                className="flex items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
+              >
+                <span className="mt-0.5 shrink-0 text-muted-foreground">
+                  {message.unread ? (
+                    <Mail className="size-4 text-gold-bright" strokeWidth={2} />
+                  ) : (
+                    <MailOpen className="size-4" strokeWidth={1.75} />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <p
+                      className={cn(
+                        "truncate text-sm",
+                        message.unread
+                          ? "font-semibold text-foreground"
+                          : "font-medium text-foreground",
+                      )}
+                    >
+                      {message.subject}
+                    </p>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {new Date(message.receivedAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {message.from} &middot; {message.preview}
                   </p>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {new Date(message.receivedAt).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
                 </div>
-                <p className="truncate text-xs text-muted-foreground">
-                  {message.from} &middot; {message.preview}
-                </p>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
-                  expanded && "rotate-180",
-                )}
-              />
-            </button>
+                <ChevronDown
+                  className={cn(
+                    "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
+                    expanded && "rotate-180",
+                  )}
+                />
+              </button>
 
-            {expanded && (
-              <div className="px-4 pb-4 pl-11 text-sm leading-relaxed text-muted-foreground">
-                {message.body}
-              </div>
-            )}
-          </div>
-        );
-      })}
+              {expanded && (
+                <div className="px-4 pb-4 pl-11 text-sm leading-relaxed text-muted-foreground">
+                  {message.body}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

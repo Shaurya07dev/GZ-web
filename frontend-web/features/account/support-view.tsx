@@ -5,6 +5,7 @@ import { Mail, Phone, Fingerprint, RotateCcw, Repeat2, Check } from "lucide-reac
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { DoodleBackdrop } from "@/components/shared/doodle-backdrop";
 import {
   useCustomerSupport,
   useSubmitCustomerTicketMutation,
@@ -106,9 +107,10 @@ export function CollectorSupportView() {
       <div className="flex flex-col gap-6">
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6"
+          className="relative overflow-hidden flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6"
         >
-          <div>
+          <DoodleBackdrop />
+          <div className="relative">
             <h2 className="font-display text-base font-semibold text-foreground">
               Raise a ticket
             </h2>
@@ -118,7 +120,7 @@ export function CollectorSupportView() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="relative flex flex-col gap-1.5">
             <Label htmlFor="ticketSubject">Subject</Label>
             <Input
               id="ticketSubject"
@@ -129,7 +131,7 @@ export function CollectorSupportView() {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="relative flex flex-col gap-1.5">
             <Label htmlFor="ticketMessage">Message</Label>
             <Textarea
               id="ticketMessage"
@@ -145,13 +147,13 @@ export function CollectorSupportView() {
             disabled={
               !subject.trim() || !message.trim() || submitMutation.isPending
             }
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-40"
+            className="relative inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-40"
           >
             Submit ticket
           </button>
 
           {submitMutation.isSuccess && (
-            <p className="flex items-center gap-1.5 text-sm text-gold-bright">
+            <p className="relative flex items-center gap-1.5 text-sm text-gold-bright">
               <Check className="size-3.5" />
               Ticket submitted.
             </p>
@@ -159,11 +161,12 @@ export function CollectorSupportView() {
         </form>
 
         {tickets && tickets.length > 0 && (
-          <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
-            <h2 className="font-display text-base font-semibold text-foreground">
+          <div className="relative overflow-hidden rounded-lg border border-border bg-card p-5 sm:p-6">
+            <DoodleBackdrop />
+            <h2 className="relative font-display text-base font-semibold text-foreground">
               Your tickets
             </h2>
-            <div className="mt-3 flex flex-col divide-y divide-border">
+            <div className="relative mt-3 flex flex-col divide-y divide-border">
               {tickets.map((ticket) => (
                 <div key={ticket.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-center justify-between gap-3">
