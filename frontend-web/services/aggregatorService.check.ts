@@ -153,4 +153,56 @@ assert.equal(
   "reserve() must take only an artwork id — a second argument that can make it fail is how the reported bug happened",
 );
 
+// --- The aggregator cannot move the price -----------------------------------
+//
+// MOU §6 used to give the first aggregator one opportunity to set the selling
+// price. That is withdrawn: GalleryZone calculates the price in every month of
+// the cycle and the aggregator displays the piece at it. So there is no setter
+// to call, and the price a piece is reserved at is the price it carries in the
+// collection.
+
+assert.equal(
+  (aggregatorService as Record<string, unknown>).updateDisplayPrice,
+  undefined,
+  "the aggregator has no way to set a selling price — GalleryZone calculates it",
+);
+
+reset();
+{
+  sign();
+  aggregatorWalletCol.set({
+    ...aggregatorWalletCol.get(),
+    balance: 5_000_000,
+  });
+
+  const inventory = await aggregatorService.listReservableInventory();
+  const offered = new Map(inventory.map((a) => [a.id, a.offer.offerPrice]));
+  for (const artwork of inventory) {
+    await aggregatorService.reserve(artwork.id);
+  }
+
+  // The seeds ship holdings of their own, so only the ones just reserved are
+  // compared against the offer they came from.
+  const justReserved = (await aggregatorService.listCollection()).filter((h) =>
+    offered.has(h.artworkId),
+  );
+  assert.equal(
+    justReserved.length,
+    inventory.length,
+    "every card reserved turns into a holding",
+  );
+  for (const holding of justReserved) {
+    assert.equal(
+      holding.displayPrice,
+      offered.get(holding.artworkId),
+      `"${holding.artwork.title}" is displayed at the price it was offered at`,
+    );
+    assert.equal(
+      holding.displayPriceSetAt,
+      null,
+      "nothing on the aggregator side stamps a price",
+    );
+  }
+}
+
 console.log("services/aggregatorService.ts reserve checks passed");

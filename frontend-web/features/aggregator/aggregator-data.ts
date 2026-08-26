@@ -31,8 +31,8 @@ export const AGGREGATOR_NOTIFICATION_GROUPS: NotificationGroup[] = [
       {
         id: "new-order",
         source: { name: "GalleryZone", initials: "GZ" },
-        title: "Display price set",
-        subtitle: "Your selling price was locked in on a reserved piece",
+        title: "Display price confirmed",
+        subtitle: "GalleryZone set the selling price on a reserved piece",
         timestamp: "5h ago",
         unread: true,
       },

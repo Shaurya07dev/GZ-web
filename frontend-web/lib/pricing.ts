@@ -327,19 +327,6 @@ export function aggregatorOfferPriceOf(
   return basePriceOf(artistPrice) - reduction;
 }
 
-/**
- * Whether this month's aggregator may set the selling price.
- *
- * Only the first one can. From month two the price is GalleryZone's calculated
- * figure and the aggregator takes it as offered — because from month two they
- * are also getting the piece at a 3% advance on the artist price instead of 5%
- * on the display price. Cheaper to hold, but not theirs to re-price; the client
- * called it "a double down offer" and did not want both halves given away.
- */
-export function canSetDisplayPrice(month: number): boolean {
-  return month <= 1;
-}
-
 export interface AggregatorAdvance {
   month: number;
   rate: number;

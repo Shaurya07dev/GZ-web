@@ -11,7 +11,6 @@ import {
   aggregatorOfferPriceOf,
   billableWeightKg,
   canPlaceWithAnotherAggregator,
-  canSetDisplayPrice,
   daysLeftInListing,
   listingEndsAt,
   placementWindow,
@@ -304,17 +303,6 @@ assert.equal(
 );
 assert.equal(daysLeftInListing(CYCLE_START, day(160).getTime()), 20);
 assert.equal(daysLeftInListing(CYCLE_START, day(200).getTime()), 0, "never negative");
-
-// --- Only the first aggregator prices the piece ------------------------------
-
-assert.equal(canSetDisplayPrice(1), true, "the first aggregator sets the price");
-for (const month of [2, 3, 4, 5, 6]) {
-  assert.equal(
-    canSetDisplayPrice(month),
-    false,
-    `month ${month} takes GalleryZone's calculated price`,
-  );
-}
 
 // --- Delivery ----------------------------------------------------------------
 

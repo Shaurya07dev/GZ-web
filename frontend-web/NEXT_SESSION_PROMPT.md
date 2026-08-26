@@ -86,7 +86,9 @@ buttons, which skip the form.
   on paper after a sale, and the artist signs it by hand. That last clause is
   what the client's confusing "COA sign" comment meant.
 - Artist §17/§18 — thirty-day aggregator display, six-month listing period.
-- Aggregator §6 — one opportunity to set the selling price.
+- Aggregator §6 — one opportunity to set the selling price. **Withdrawn by
+  Yash on 26 Aug 2026 — see below. The clause is still in the signed PDF; the
+  product no longer offers it.**
 - Aggregator §7 — the aggregator **pays** a flat 5% security deposit plus
   delivery before taking possession.
 - Aggregator §8 — the aggregator **earns** 20% × (Listed − Artist Price).
@@ -126,11 +128,29 @@ stub is not a placement. Instead **the aggregator who already has it keeps it
 through to day 180**. The client's own example: 160 days used, 20 left, so no
 sixth aggregator and the fifth holds it to the end.
 
-**Only the first aggregator sets the selling price.** From month two the price
-is GalleryZone's calculated figure, because from month two they are also paying
-a 3% advance on the artist price instead of 5% on the display price — cheaper
-to hold, but not theirs to re-price. Raising the price in month one raises the
-advance, and the extra is held from the wallet on the spot.
+**No aggregator sets the selling price — GalleryZone does, in every month.**
+
+Until 26 Aug 2026 the first aggregator got one price change (MOU §6), locked
+once used. Yash removed it: *"no change of price"*. The whole surface is gone,
+not hidden — `canSetDisplayPrice()`, `updateDisplayPrice()` and
+`EditDisplayPriceDialog` were deleted, and the collection table shows the price
+as plain text reading "Set by GalleryZone" rather than a disabled control that
+invites a click.
+
+The consequence worth knowing: **the price a piece is reserved at is the price
+it sells at.** `aggregatorService.check.ts` asserts both halves — that the
+service exposes no setter, and that every holding carries the offer price it
+was reserved at.
+
+This contradicts the signed aggregator MOU §6, which still grants the
+opportunity. The PDF was not amended; only the product changed. If that matters
+commercially, it is a conversation with the client, not a code change. Do not
+"restore" the dialog because the MOU mentions it.
+
+`aggregatorAdvanceForMonth()` is deliberately untouched: month 1 is still 5% of
+the display price and later months 3% of the artist price, and its
+`previousAggregatorChangedPrice` branch stays because holdings saved before
+this change can still carry a `displayPriceSetAt`. Nothing new sets it.
 
 | Month | Offered to the aggregator at | Advance |
 |---|---|---|

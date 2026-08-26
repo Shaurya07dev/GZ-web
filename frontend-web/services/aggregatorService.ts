@@ -12,7 +12,6 @@ import {
   aggregatorCommissionOf,
   aggregatorOfferPriceOf,
   canPlaceWithAnotherAggregator,
-  canSetDisplayPrice,
   daysLeftInListing,
   placementWindow,
   withGst,
@@ -57,7 +56,7 @@ export function advanceAmountFor(displayPrice: number): number {
 }
 
 // Holdings are backed by lib/mock-db.ts via holdingsCol (lib/mock-collections.ts)
-// so reserve()/recordSale()/updateDisplayPrice() survive a refresh and are
+// so reserve()/recordSale() survive a refresh and are
 // visible across tabs/portals — an artwork reserved via Inventory actually
 // disappears from inventory and shows up in Collection, for good. This
 // intentionally does NOT mutate the shared `artworksCol` records — that
@@ -144,8 +143,6 @@ export interface AggregatorOffer {
   /** The figure the rate was applied to, so the UI can show the working. */
   advanceBase: number;
   advanceBasis: "display_price" | "artist_price";
-  /** Only the first aggregator may set the selling price. */
-  canSetPrice: boolean;
   /** Days left on the artwork's 180-day listing. */
   daysLeftInListing: number;
   deliveryCharge: number;
@@ -173,8 +170,8 @@ function buildOffer(artwork: {
 
   const advance = aggregatorAdvanceForMonth({
     month,
-    // Month 1 is charged on the display price, which at reservation time is
-    // the offer price — the aggregator has not set their own yet.
+    // Month 1 is charged on the display price, which is GalleryZone's offer
+    // price — the aggregator cannot move it.
     displayPrice: offerPrice,
     artistPrice,
     previousAggregatorChangedPrice,
@@ -192,7 +189,6 @@ function buildOffer(artwork: {
     deliveryCharge: advance.deliveryCharge,
     payable: advance.payable,
     previousAggregatorChangedPrice,
-    canSetPrice: canSetDisplayPrice(month),
     daysLeftInListing: cycleStartedAt
       ? daysLeftInListing(cycleStartedAt)
       : AGGREGATOR_LISTING_DAYS,
@@ -309,8 +305,8 @@ export const aggregatorService = {
       // the piece goes back unsold.
       deliveryDeposit: offer.deliveryCharge,
       cycleMonth: offer.month,
-      // This month's offer price is the floor — see edit-display-price-dialog
-      // for the raise-only enforcement (SAD §2.7).
+      // GalleryZone's calculated figure for this month, and the price the
+      // piece sells at. The aggregator displays it; they do not price it.
       displayPrice: offer.offerPrice,
       assignedAt: assignedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
@@ -552,87 +548,6 @@ export const aggregatorService = {
     }
 
     return mockDelay(updated);
-  },
-
-  // Synchronous, deliberately not a mockDelay-wrapped async mutation:
-  // EditDisplayPriceDialog only needs to update local state (a single
-  // number) and does so via queryClient.setQueryData for instant UI
-  // feedback. This method exists purely so that update also lands in the
-  // persisted store — without it, the next unrelated
-  // ["aggregator-collection"] refetch would silently revert the edited price.
-  // One opportunity only (MOU §6). Enforced here, not just by hiding the
-  // button, so a stale tab can't post a second price.
-  updateDisplayPrice(
-    holdingId: string,
-    displayPrice: number,
-  ): AggregatorHolding {
-    const holdings = holdingsCol.get();
-    const index = holdings.findIndex((h) => h.id === holdingId);
-    if (index === -1) {
-      throw new Error(`aggregatorService: no holding "${holdingId}"`);
-    }
-    const holding = holdings[index];
-
-    // Only the FIRST aggregator prices the piece. After that the price is
-    // GalleryZone's calculated figure, because from month two the aggregator is
-    // already getting a cheaper advance — they don't get both.
-    if (!canSetDisplayPrice(holding.cycleMonth ?? 1)) {
-      throw new Error(
-        "The selling price is set by GalleryZone for this piece — only the first aggregator to display a work can price it",
-      );
-    }
-    if (holding.displayPriceSetAt) {
-      throw new Error(
-        "The selling price for this artwork has already been set and cannot be changed (MOU §6)",
-      );
-    }
-
-    // Month one's advance is 5% of the DISPLAY price, so raising the price
-    // raises the advance. The difference is held from the wallet on the spot —
-    // "if the amount is on the higher side he needs to deposit the extra".
-    const artwork = getArtworkById(holding.artworkId);
-    const newAdvance = artwork
-      ? aggregatorAdvanceForMonth({
-          month: holding.cycleMonth ?? 1,
-          displayPrice,
-          artistPrice: artistPriceOf(artwork),
-        }).advance
-      : holding.advanceAmount;
-    const topUp = Math.max(0, newAdvance - holding.advanceAmount);
-
-    if (topUp > 0) {
-      const wallet = aggregatorWalletCol.get();
-      const free = wallet.balance - wallet.lockedBalance;
-      if (free < topUp) {
-        throw new Error(
-          `Raising the price raises the advance. Add ₹${(topUp - free).toLocaleString("en-IN")} to your wallet first — ₹${topUp.toLocaleString("en-IN")} more needs to be held.`,
-        );
-      }
-      aggregatorWalletCol.set({
-        ...wallet,
-        lockedBalance: wallet.lockedBalance + topUp,
-      });
-      aggregatorWalletTransactionsCol.set([
-        {
-          id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-          type: "adjustment",
-          label: `Additional advance held — "${artwork?.title ?? "Artwork"}" priced up`,
-          amount: -topUp,
-          date: new Date().toISOString().slice(0, 10),
-          status: "pending",
-        },
-        ...aggregatorWalletTransactionsCol.get(),
-      ]);
-    }
-
-    const updated: AggregatorHolding = {
-      ...holding,
-      displayPrice,
-      advanceAmount: newAdvance,
-      displayPriceSetAt: new Date().toISOString(),
-    };
-    holdingsCol.set(holdings.map((h, i) => (i === index ? updated : h)));
-    return updated;
   },
 
   // KPI derivation. Advance payments are collected at reservation time and are

@@ -7,21 +7,18 @@ import {
   CircleCheckBig,
   Undo2,
   GalleryVerticalEnd,
-  Lock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { ExpiryCountdown } from "./expiry-countdown";
-import { EditDisplayPriceDialog } from "./edit-display-price-dialog";
 import { RecordSaleDialog } from "./record-sale-dialog";
 import {
   useAggregatorCollection,
   useReleaseHoldingMutation,
 } from "@/hooks/useAggregatorCollection";
 import { formatINR } from "@/lib/utils";
-import { canSetDisplayPrice } from "@/lib/pricing";
 import { toast } from "sonner";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
@@ -51,8 +48,6 @@ const STATUS_CONFIG: Record<
 
 export function CollectionTable() {
   const { data, isPending, isError } = useAggregatorCollection();
-  const [priceDialogHolding, setPriceDialogHolding] =
-    useState<CollectionRow | null>(null);
   const [saleDialogHolding, setSaleDialogHolding] =
     useState<CollectionRow | null>(null);
   const releaseMutation = useReleaseHoldingMutation();
@@ -142,12 +137,6 @@ export function CollectionTable() {
           <tbody>
             {data.map((holding) => {
               const isSold = holding.status === "sold_pending_settlement";
-              // Two different reasons the price can't be touched, and they
-              // need different words: you already used your one change, or the
-              // price was never yours to set because you aren't the first
-              // aggregator to display this piece.
-              const canPrice = canSetDisplayPrice(holding.cycleMonth ?? 1);
-              const priceLocked = Boolean(holding.displayPriceSetAt) || !canPrice;
               const status = STATUS_CONFIG[holding.status];
               return (
                 <tr
@@ -177,44 +166,14 @@ export function CollectionTable() {
                   </td>
 
                   <td className="px-4 py-3.5">
-                    {/* MOU §6 — one opportunity to set the selling price.
-                        Once set it is locked, so the lock icon appears and
-                        the cell says why. */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        !isSold &&
-                        !priceLocked &&
-                        setPriceDialogHolding(holding)
-                      }
-                      disabled={isSold || priceLocked}
-                      title={
-                        !canPrice
-                          ? "GalleryZone sets the price for this piece — only the first aggregator to display a work can price it"
-                          : priceLocked
-                            ? "Set once already — the selling price is fixed (MOU §6)"
-                            : undefined
-                      }
-                      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 -ml-1.5 transition-colors enabled:hover:bg-muted disabled:cursor-not-allowed"
-                    >
-                      <PriceTag
-                        amount={holding.displayPrice}
-                        className="text-sm"
-                      />
-                      {!isSold && priceLocked && (
-                        <Lock
-                          className="size-3 text-muted-foreground"
-                          strokeWidth={1.75}
-                        />
-                      )}
-                    </button>
+                    {/* Not editable, by anyone, in any month. GalleryZone
+                        calculates the selling price and the aggregator
+                        displays the piece at it — so this is plain text, not
+                        a disabled control that invites a click. */}
+                    <PriceTag amount={holding.displayPrice} className="text-sm" />
                     {!isSold && (
                       <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {!canPrice
-                          ? "Set by GalleryZone"
-                          : priceLocked
-                            ? "Price fixed"
-                            : "Can’t edit after you set the display price"}
+                        Set by GalleryZone
                       </p>
                     )}
                   </td>
@@ -279,12 +238,6 @@ export function CollectionTable() {
           </tbody>
         </table>
       </div>
-
-      <EditDisplayPriceDialog
-        holding={priceDialogHolding}
-        open={priceDialogHolding !== null}
-        onOpenChange={(open) => !open && setPriceDialogHolding(null)}
-      />
 
       <RecordSaleDialog
         holding={saleDialogHolding}
