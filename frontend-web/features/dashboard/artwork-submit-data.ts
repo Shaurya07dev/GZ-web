@@ -10,19 +10,6 @@ export const ARTWORK_CATEGORIES = [
   { value: "ceramics", label: "Ceramics" },
 ];
 
-// Rarity/edition type of the artwork — R=Rare, U=Unique, O=Original, N=Normal.
-// Displayed as a badge on the artwork card in the artist's dashboard.
-export const ARTWORK_RARITY_TYPES: {
-  value: "R" | "U" | "O" | "N";
-  label: string;
-  description: string;
-}[] = [
-  { value: "R", label: "Rare (R)", description: "Limited or one-of-a-kind with exceptional provenance." },
-  { value: "U", label: "Unique (U)", description: "Singular piece — the only one in existence." },
-  { value: "O", label: "Original (O)", description: "Hand-made original by the artist." },
-  { value: "N", label: "Normal (N)", description: "Open edition or standard listing." },
-];
-
 export const ARTWORK_MEDIUMS = [
   { value: "oil-on-canvas", label: "Oil on Canvas" },
   { value: "acrylic-on-canvas", label: "Acrylic on Canvas" },

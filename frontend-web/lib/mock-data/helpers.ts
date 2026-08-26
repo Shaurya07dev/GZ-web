@@ -60,6 +60,7 @@ export function toSummary(artwork: Artwork): ArtworkSummary {
     insured,
     status,
     listingType,
+    rarityType,
   } = artwork;
   return {
     id,
@@ -74,6 +75,7 @@ export function toSummary(artwork: Artwork): ArtworkSummary {
     insured,
     status,
     listingType,
+    rarityType: rarityType ?? null,
   };
 }
 
@@ -87,6 +89,7 @@ export function filterArtworks(
     if (!isPubliclyListed(artwork)) return false;
     if (filters.category && artwork.category !== filters.category) return false;
     if (filters.medium && artwork.medium !== filters.medium) return false;
+    if (filters.rarity && artwork.rarityType !== filters.rarity) return false;
     if (
       typeof filters.minPrice === "number" &&
       artwork.customerPrice < filters.minPrice

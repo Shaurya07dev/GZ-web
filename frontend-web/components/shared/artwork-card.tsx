@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
+import { RarityBadge } from "@/components/shared/rarity-badge";
 import type { ArtworkStatus, ArtworkSummary } from "@/types/artwork";
 
 interface ArtworkCardProps {
@@ -87,6 +88,11 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
             {statusBadge.label}
           </span>
         )}
+
+        <RarityBadge
+          rarity={artwork.rarityType}
+          className="absolute top-2.5 right-12 z-10"
+        />
 
         <motion.button
           type="button"

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/adminService";
+import type { ArtworkRarity } from "@/types/artwork";
 
 // ---------------------------------------------------------------------------
 // Catalog: the all-artworks table (public + admin-only sets combined), the
@@ -38,6 +39,29 @@ export function useDelistArtworkMutation() {
       queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
       queryClient.invalidateQueries({ queryKey: ["admin-artwork", artworkId] });
       queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+// The rank shows on the public marketplace card, so the marketplace queries
+// have to be dropped too — not just the admin ones.
+export function useSetArtworkRarityMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      artworkId,
+      rarity,
+    }: {
+      artworkId: string;
+      rarity: ArtworkRarity | null;
+    }) => adminService.setArtworkRarity(artworkId, rarity),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin-artwork", variables.artworkId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["artwork", variables.artworkId] });
     },
   });
 }

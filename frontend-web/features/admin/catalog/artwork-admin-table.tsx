@@ -12,7 +12,12 @@ import {
 } from "@/features/admin/admin-status-badge";
 import { useAdminArtworks } from "@/hooks/useAdminCatalog";
 import { formatINR } from "@/lib/utils";
-import { LISTING_TYPE_LABEL, type Artwork } from "@/types/artwork";
+import {
+  ARTWORK_RARITY_OPTIONS,
+  LISTING_TYPE_LABEL,
+  type Artwork,
+} from "@/types/artwork";
+import { RarityBadge } from "@/components/shared/rarity-badge";
 
 export function ArtworkAdminTable() {
   const { data: artworks, isPending } = useAdminArtworks();
@@ -61,6 +66,20 @@ export function ArtworkAdminTable() {
       ),
       sortable: true,
       sortValue: (row) => row.category,
+    },
+    {
+      key: "rarity",
+      header: "Rank",
+      render: (row) =>
+        row.rarityType ? (
+          <RarityBadge rarity={row.rarityType} />
+        ) : (
+          <span className="text-xs text-muted-foreground">Unranked</span>
+        ),
+      sortable: true,
+      // Unranked sorts last rather than first: the useful question is "what has
+      // GalleryZone ranked", and blanks at the top bury the answer.
+      sortValue: (row) => row.rarityType ?? "ZZ",
     },
     {
       key: "status",
@@ -118,6 +137,19 @@ export function ArtworkAdminTable() {
           label: "Category",
           options: categories.map((c) => ({ value: c, label: c })),
           matches: (row, value) => row.category === value,
+        },
+        {
+          key: "rarity",
+          label: "Rank",
+          options: [
+            ...ARTWORK_RARITY_OPTIONS.map((o) => ({
+              value: o.value,
+              label: `${o.value} — ${o.label}`,
+            })),
+            { value: "none", label: "Unranked" },
+          ],
+          matches: (row, value) =>
+            value === "none" ? !row.rarityType : row.rarityType === value,
         },
       ]}
       emptyTitle="No artworks"

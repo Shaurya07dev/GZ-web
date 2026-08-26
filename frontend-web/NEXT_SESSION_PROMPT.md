@@ -357,6 +357,14 @@ lock that also freezes the aggregator's own money is a different bug from no
 lock at all. It was written against `free = balance - lockedBalance` and
 verified by breaking that line and watching it fail.
 
+`artworkRarity.check.ts` holds who owns the R / U / O / N rank: **GalleryZone,
+never the artist.** A new submission is unranked, an admin ranks it, and an
+artist editing the listing afterwards must not erase that. The second rule
+nearly shipped broken — `updateArtwork()` wrote `rarityType: patch.rarityType`
+from the artist's form payload, so the moment the field left that form, every
+edit would have silently blanked the rank with nothing erroring. Verified by
+reintroducing exactly that line and watching the check fail.
+
 `artwork.check.ts` covers the 7-day edit window (including "bought on day 2"), the
 channel predicates, the 1% off-platform fee and custody derivation. It fails
 loudly if someone breaks those rules.

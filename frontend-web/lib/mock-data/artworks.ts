@@ -109,6 +109,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "marketplace",
     listingType: "marketplace_only",
+    rarityType: "U",
     description:
       "Painted over three sittings during the 2025 monsoon, this canvas builds the Madurai coastline in layered oil washes, working wet-into-wet to catch the exact grey-gold light that appears just as the rain breaks. The palette-knife work in the foreground surf is left deliberately raw against the smoother sky. Ships with a signed Certificate of Authenticity and a linked studio video of the final varnishing pass.",
     dimensions: "24x36 in",
@@ -180,6 +181,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "marketplace",
     listingType: "marketplace_and_aggregator",
+    rarityType: "O",
     description:
       "One of the earliest paintings in Meera's current coastal body of work, revisiting a stretch of shoreline she has returned to for three years running. The tideline itself is built up in a heavier impasto than the rest of the canvas, marking where land and water meet. Eligible for gallery display through GalleryZone's aggregator network as well as direct marketplace sale.",
     dimensions: "18x24 in",
@@ -219,6 +221,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "reserved",
     listingType: "marketplace_and_aggregator",
+    rarityType: "R",
     description:
       "Cast using the lost-wax method in Arjun's family workshop, this study reworks a seated-figure motif that recurs across four generations of his family's carving practice. The bronze is left in its natural patina rather than polished, so the surface will keep shifting tone over years of handling. Currently reserved through a partner aggregator ahead of gallery display.",
     dimensions: "18 in H x 9 in W x 7 in D",
@@ -258,6 +261,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "marketplace",
     listingType: "marketplace_only",
+    rarityType: "R",
     description:
       "A single block of Makrana marble, carved entirely by hand over four months with no mechanical finishing on the final surface passes. The torso form continues a study Arjun has returned to several times, each version testing a different balance of rough-cut and polished stone. Base included.",
     dimensions: "22 in H x 10 in W x 8 in D",
@@ -327,6 +331,7 @@ export const mockArtworks: Artwork[] = [
     insured: false,
     status: "marketplace",
     listingType: "marketplace_only",
+    rarityType: "U",
     description:
       "Shot on medium-format film on the final night Metro Talkies screened a film before closing for good, printed as edition 2 of 9 on archival cotton rag paper. Kavya hand-processes every negative herself and scans at high resolution before printing, so grain and tonal range stay true to the original film stock. Signed and numbered on the reverse.",
     dimensions: "16x20 in",
@@ -363,6 +368,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "reserved",
     listingType: "marketplace_and_aggregator",
+    rarityType: "N",
     description:
       "Part of Kavya's ongoing series on Bengaluru's disappearing single-screen cinemas, this print looks down from an empty balcony section onto a projector booth mid reel-change. Edition of 9, printed on archival cotton rag paper from a hand-processed medium-format negative. Currently on reserve for gallery display.",
     dimensions: "20x24 in",
@@ -436,6 +442,7 @@ export const mockArtworks: Artwork[] = [
     insured: false,
     status: "marketplace",
     listingType: "marketplace_and_aggregator",
+    rarityType: "O",
     description:
       "The seventh in an ongoing series studying the ferry ghats of the Hooghly at different times of day, etched on a copper plate and hand-inked for each pull. This impression uses a heavier plate tone than earlier editions in the series, pushing the steps further into shadow. Eligible for aggregator display alongside its marketplace listing.",
     dimensions: "14x18 in",
@@ -472,6 +479,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "reserved",
     listingType: "marketplace_and_aggregator",
+    rarityType: "N",
     description:
       "A four-colour linocut built from Rohan's sketches of the second-hand book stalls along College Street, printed in four separate registered passes. Each colour block was hand-cut and aligned individually, so slight registration variation between prints in the edition is expected and part of the process. Currently on reserve for gallery display.",
     dimensions: "16x20 in",
@@ -506,6 +514,7 @@ export const mockArtworks: Artwork[] = [
     insured: false,
     status: "marketplace",
     listingType: "marketplace_only",
+    rarityType: "O",
     description:
       "A wall-hung textile piece hand-embroidered on handwoven cotton, dyed using kusum flower and iron-mordant baths mixed in small batches. Ananya draws the design directly onto the cloth freehand before stitching, so no two pieces in this series share an identical layout. Comes with a fabric-care card and a wooden hanging dowel.",
     dimensions: "22x30 in",
@@ -575,6 +584,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "marketplace",
     listingType: "marketplace_only",
+    rarityType: "U",
     description:
       "Built up in thin acrylic layers over several weeks, this canvas fractures a stairwell in Ishaan's own apartment block into overlapping planes of colour until the architecture starts to read as botanical. He works without preparatory sketches, building the composition directly on the canvas and painting out sections that don't hold. Full studio session filmed start to finish.",
     dimensions: "30x30 in",
@@ -612,6 +622,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "marketplace",
     listingType: "marketplace_only",
+    rarityType: "O",
     description:
       "Ishaan's largest canvas to date, breaking the Delhi skyline seen from his studio window into a grid of overlapping vantage points painted in separate sessions and reassembled as one composition. The underlying pencil grid is still faintly visible beneath the paint in several passages, left intentionally. Ships stretched and ready to hang.",
     dimensions: "36x48 in",
@@ -729,6 +740,7 @@ export const mockArtworks: Artwork[] = [
     insured: true,
     status: "sold",
     listingType: "marketplace_and_aggregator",
+    rarityType: "N",
     description:
       "An earlier, smaller panel in Priya's welded-metal series, built around a cut radio dial salvaged from a decommissioned workshop. The pigment layer was applied in three separate sessions to let each coat oxidize the metal differently before the next. Sold through a partner aggregator; settlement in progress.",
     dimensions: "24 in H x 32 in W x 3 in D",

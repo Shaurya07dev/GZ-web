@@ -73,6 +73,8 @@ export interface ArtworkSummary {
   insured: boolean;
   status: ArtworkStatus;
   listingType: ListingType;
+  /** GalleryZone's rank. Absent on records nobody has ranked yet. */
+  rarityType?: ArtworkRarity | null;
 }
 
 export interface Artwork extends ArtworkSummary {
@@ -98,8 +100,6 @@ export interface Artwork extends ArtworkSummary {
   // because the fixture records predate the fields; the form collects them on
   // every new listing and requires them once the aggregator channel is picked.
   physical?: ArtworkPhysical | null;
-  /** R / U / O / N. Absent on records that predate the field. */
-  rarityType?: ArtworkRarity | null;
 }
 
 // --- Physical details -------------------------------------------------------
@@ -248,6 +248,10 @@ export const WITHDRAWABLE_STATUSES = new Set<ArtworkStatus>([
 // Rarity / edition type, shown as a badge over the artwork image. Held on the
 // Artwork itself rather than read back with `"rarityType" in artwork` casts —
 // the mobile client already models it this way.
+//
+// GalleryZone decides this, not the artist. It is a ranking the platform puts
+// its name behind, so an artist cannot self-declare their work Rare — the
+// admin sets it from /admin/artworks/<id>.
 export type ArtworkRarity = "R" | "U" | "O" | "N";
 
 export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {
@@ -256,6 +260,33 @@ export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {
   O: "Original",
   N: "Normal",
 };
+
+export const ARTWORK_RARITY_OPTIONS: {
+  value: ArtworkRarity;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "R",
+    label: "Rare",
+    description: "Limited or one-of-a-kind with exceptional provenance.",
+  },
+  {
+    value: "U",
+    label: "Unique",
+    description: "Singular piece — the only one in existence.",
+  },
+  {
+    value: "O",
+    label: "Original",
+    description: "Hand-made original by the artist.",
+  },
+  {
+    value: "N",
+    label: "Normal",
+    description: "Open edition or standard listing.",
+  },
+];
 
 // The off-platform sale fee is proposed, not imposed. Selling elsewhere can be
 // perfectly reasonable — a piece promised to a gallery before listing, a
@@ -388,6 +419,8 @@ export interface ArtworkFilters {
   minPrice?: number;
   maxPrice?: number;
   medium?: string;
+  /** GalleryZone's rank — R / U / O / N. */
+  rarity?: ArtworkRarity;
   query?: string;
   sortBy?: "newest" | "price_asc" | "price_desc";
 }

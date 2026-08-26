@@ -3,7 +3,6 @@ import {
   EXTERNAL_SALE_PENALTY_RATE,
   isPenaltyCollectable,
   WITHDRAWABLE_STATUSES,
-  type ArtworkRarity,
   artworkEditState,
   type Artwork,
   type ArtworkImage,
@@ -139,7 +138,6 @@ export interface SubmitArtworkInput {
   insuranceOpted: boolean;
   physical: ArtworkPhysical;
   nfcTagId: string | null;
-  rarityType: ArtworkRarity | null;
   images: ArtworkImage[];
   mode: "draft" | "review";
 }
@@ -213,7 +211,8 @@ export const artistDashboardService = {
       statusHistory: [{ status, changedAt: now }],
       nfcTagId: input.nfcTagId,
       physical: input.physical,
-      rarityType: input.rarityType,
+      // Unranked until an admin sets it — see ARTWORK_RARITY_OPTIONS.
+      rarityType: null,
     };
 
     artistPricesCol.set({ ...artistPricesCol.get(), [id]: input.artistPrice });
@@ -273,7 +272,6 @@ export const artistDashboardService = {
       listingType: patch.listingType,
       insured: patch.insuranceOpted,
       physical: patch.physical,
-      rarityType: patch.rarityType,
       nfcTagId: patch.nfcTagId,
       images: patch.images.length > 0 ? patch.images : artwork.images,
       thumbnailUrl: patch.images[0]?.url ?? artwork.thumbnailUrl,

@@ -81,6 +81,8 @@ export type AuditAction =
   | "artwork.approved"
   | "artwork.rejected"
   | "artwork.delisted"
+  | "artwork.ranked"
+  | "artwork.rank_cleared"
   | "kyc.approved"
   | "kyc.rejected"
   | "withdrawal.approved"

@@ -21,6 +21,8 @@ import type { AuditAction, AuditLogEntry } from "@/types/admin";
 const ACTION_LABEL: Record<AuditAction, string> = {
   "artwork.approved": "Artwork approved",
   "artwork.rejected": "Artwork rejected",
+  "artwork.ranked": "Artwork ranked",
+  "artwork.rank_cleared": "Artwork rank cleared",
   "artwork.delisted": "Artwork delisted",
   "kyc.approved": "KYC approved",
   "kyc.rejected": "KYC rejected",

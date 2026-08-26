@@ -1,6 +1,7 @@
 import {
   penaltyStatus,
   type Artwork,
+  type ArtworkRarity,
   type ExternalSalePenalty,
 } from "@/types/artwork";
 import type { Order } from "@/types/order";
@@ -334,6 +335,30 @@ export const adminService = {
     const artwork = findArtwork(id);
     if (!artwork) return mockError(`Artwork "${id}" not found`);
     return mockDelay({ id, status: "returned" as const });
+  },
+
+  // GalleryZone ranks the work, the artist does not. The rank is written back
+  // to whichever collection actually holds the piece — a work still awaiting
+  // approval lives in pendingArtworksCol, and ranking it there is the point:
+  // an admin reviewing a submission is exactly when they judge it.
+  setArtworkRarity: (
+    id: string,
+    rarity: ArtworkRarity | null,
+  ): Promise<Artwork> => {
+    const artwork = findArtwork(id);
+    if (!artwork) return mockError(`Artwork "${id}" not found`);
+
+    const updated: Artwork = { ...artwork, rarityType: rarity };
+    const replace = (list: Artwork[]) =>
+      list.map((a) => (a.id === id ? updated : a));
+
+    if (artworksCol.get().some((a) => a.id === id)) {
+      artworksCol.set(replace(artworksCol.get()));
+    }
+    if (pendingArtworksCol.get().some((a) => a.id === id)) {
+      pendingArtworksCol.set(replace(pendingArtworksCol.get()));
+    }
+    return mockDelay(updated);
   },
 
   listCategories: (): Promise<Category[]> => mockDelay(mockCategories),

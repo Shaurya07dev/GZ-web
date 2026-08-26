@@ -13,7 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { mockArtworks } from "@/lib/mock-data/artworks";
-import type { ArtworkFilters } from "@/types/artwork";
+import {
+  ARTWORK_RARITY_OPTIONS,
+  type ArtworkFilters,
+  type ArtworkRarity,
+} from "@/types/artwork";
 
 // Sentinel for "no selection" in the Select primitives below, which need a
 // real string value - mapped back to `undefined` on the ArtworkFilters
@@ -51,6 +55,7 @@ function hasActiveStructuredFilters(filters: ArtworkFilters): boolean {
   return Boolean(
     filters.category ||
     filters.medium ||
+    filters.rarity ||
     typeof filters.minPrice === "number" ||
     typeof filters.maxPrice === "number" ||
     (filters.sortBy && filters.sortBy !== "newest"),
@@ -117,6 +122,35 @@ export function MarketplaceFilters({
             {MEDIUM_OPTIONS.map((medium) => (
               <SelectItem key={medium} value={medium}>
                 {medium}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-xs text-muted-foreground">Rank</Label>
+        <Select
+          value={filters.rarity ?? ALL_VALUE}
+          onValueChange={(value) =>
+            onChange({
+              ...filters,
+              rarity:
+                value && value !== ALL_VALUE
+                  ? (value as ArtworkRarity)
+                  : undefined,
+            })
+          }
+        >
+          <SelectTrigger className="h-10 w-[152px]">
+            <SelectValue placeholder="Any rank" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Any rank</SelectItem>
+            {ARTWORK_RARITY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <span className="font-semibold">{option.value}</span>
+                <span className="ml-1.5">{option.label}</span>
               </SelectItem>
             ))}
           </SelectContent>

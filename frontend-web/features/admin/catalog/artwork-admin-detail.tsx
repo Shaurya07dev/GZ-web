@@ -9,11 +9,21 @@ import { EyeOff, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
-import { useDelistArtworkMutation } from "@/hooks/useAdminCatalog";
+import {
+  useDelistArtworkMutation,
+  useSetArtworkRarityMutation,
+} from "@/hooks/useAdminCatalog";
+import { RarityBadge } from "@/components/shared/rarity-badge";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
-import type { Artwork, ArtworkStatus } from "@/types/artwork";
+import {
+  ARTWORK_RARITY_LABEL,
+  ARTWORK_RARITY_OPTIONS,
+  type Artwork,
+  type ArtworkRarity,
+  type ArtworkStatus,
+} from "@/types/artwork";
 
 const STATUS_LABEL: Record<ArtworkStatus, string> = {
   draft: "Draft saved",
@@ -35,6 +45,7 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const delistMutation = useDelistArtworkMutation();
+  const rarityMutation = useSetArtworkRarityMutation();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const isLive = artwork.status === "marketplace";
@@ -44,6 +55,35 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const history = [...artwork.statusHistory].sort(
     (a, b) => new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
   );
+
+  // Clicking the rank a piece already carries clears it — an admin who ranked
+  // something wrongly needs a way back to unranked, and a separate Clear button
+  // for four buttons is more chrome than the job deserves.
+  function handleRarity(next: ArtworkRarity) {
+    const rarity = artwork.rarityType === next ? null : next;
+    rarityMutation.mutate(
+      { artworkId: artwork.id, rarity },
+      {
+        onSuccess: () => {
+          appendAudit({
+            adminName: ADMIN.name,
+            action: rarity ? "artwork.ranked" : "artwork.rank_cleared",
+            entityType: "artwork",
+            entityId: artwork.id,
+            entityLabel: artwork.title,
+            detail: rarity ? ARTWORK_RARITY_LABEL[rarity] : undefined,
+          });
+          toast.success(
+            rarity
+              ? `Ranked ${ARTWORK_RARITY_OPTIONS.find((o) => o.value === rarity)?.label}`
+              : "Rank cleared",
+            { description: `“${artwork.title}” on the marketplace card.` },
+          );
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  }
 
   async function handleDelist() {
     try {
@@ -204,6 +244,53 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
             View public passport
             <ExternalLink className="size-3.5" />
           </Link>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Rank
+            </h2>
+            <RarityBadge rarity={artwork.rarityType} />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            GalleryZone decides this, not the artist. It shows on the artwork
+            image everywhere a buyer sees the piece, and buyers can filter by it.
+          </p>
+          <div className="mt-3 flex flex-col gap-1.5">
+            {ARTWORK_RARITY_OPTIONS.map((option) => {
+              const active = artwork.rarityType === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleRarity(option.value)}
+                  disabled={rarityMutation.isPending}
+                  aria-pressed={active}
+                  className={`flex items-start gap-2.5 rounded-md border px-3 py-2 text-left transition-colors disabled:opacity-50 ${
+                    active
+                      ? "border-gold bg-gold/10"
+                      : "border-border hover:border-gold/50 hover:bg-muted/40"
+                  }`}
+                >
+                  <span className="mt-px w-4 shrink-0 font-mono text-xs font-bold text-gold-bright">
+                    {option.value}
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-foreground">
+                      {option.label}
+                    </span>
+                    <span className="text-[11px] leading-snug text-muted-foreground">
+                      {option.description}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Selecting the current rank again clears it.
+          </p>
         </section>
 
         <section className="rounded-xl border border-border bg-card p-5">
