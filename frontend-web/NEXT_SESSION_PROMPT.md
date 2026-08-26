@@ -348,6 +348,15 @@ The lesson worth keeping: **a dev affordance inside a dialog that performs a
 real action is a bug waiting to be reported as a mystery.** Demo toggles that
 force failure do not belong on the path a customer clicks.
 
+`aggregatorWallet.check.ts` holds the client's handwritten rule: **the advance
+is locked and cannot be withdrawn.** It funds a wallet, reserves a real piece,
+then proves the full balance is refused, one rupee past the free figure is
+refused, the free part still pays out, and unsettled commission in
+`pendingBalance` is not withdrawable either. That last one matters because a
+lock that also freezes the aggregator's own money is a different bug from no
+lock at all. It was written against `free = balance - lockedBalance` and
+verified by breaking that line and watching it fail.
+
 `artwork.check.ts` covers the 7-day edit window (including "bought on day 2"), the
 channel predicates, the 1% off-platform fee and custody derivation. It fails
 loudly if someone breaks those rules.
