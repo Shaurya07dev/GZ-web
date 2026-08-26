@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { EyeOff, ExternalLink } from "lucide-react";
+import { EyeOff, ExternalLink, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
@@ -14,12 +14,15 @@ import {
   useSetArtworkRarityMutation,
 } from "@/hooks/useAdminCatalog";
 import { RarityBadge } from "@/components/shared/rarity-badge";
+import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
 import {
   ARTWORK_RARITY_LABEL,
   ARTWORK_RARITY_OPTIONS,
+  CUSTODY_PARTY_LABEL,
+  resolveCustody,
   type Artwork,
   type ArtworkRarity,
   type ArtworkStatus,
@@ -47,8 +50,19 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const delistMutation = useDelistArtworkMutation();
   const rarityMutation = useSetArtworkRarityMutation();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const isLive = artwork.status === "marketplace";
+  // A transfer is recorded as coming FROM whoever currently holds the piece,
+  // not from GalleryZone — an admin acting on an owner's behalf must not
+  // rewrite the chain to say the platform owned it. The named owner is used
+  // when a transfer has already put one on the record.
+  const custody = resolveCustody(artwork);
+  const currentOwner =
+    custody.legalOwnerName ??
+    (custody.legalOwner === "artist"
+      ? artwork.artistName
+      : CUSTODY_PARTY_LABEL[custody.legalOwner]);
   const sortedImages = [...artwork.images].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
@@ -311,8 +325,29 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
             <EyeOff className="size-4" />
             Delist from marketplace
           </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setTransferOpen(true)}
+            className="mt-2 w-full"
+          >
+            <Send className="size-4" />
+            Transfer rights
+          </Button>
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            Ownership or a display loan, on behalf of {currentOwner}. The other
+            side still has to accept the link before anything moves.
+          </p>
         </section>
       </div>
+
+      <TransferRightsDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        artworkId={artwork.id}
+        artworkTitle={artwork.title}
+        fromName={currentOwner}
+      />
 
       <ConfirmActionDialog
         open={confirmOpen}
