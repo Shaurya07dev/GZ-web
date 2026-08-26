@@ -139,4 +139,18 @@ reset();
   );
 }
 
+// --- reserve() takes an artwork id and nothing else -------------------------
+//
+// A `simulateConflict` flag used to sit here, wired to a dev checkbox inside
+// the confirm dialog. One stray click on it and every reservation failed with
+// "Artwork no longer available" — the checks above all passed the whole time,
+// because they call reserve() directly and never touch the dialog. No second
+// argument may sabotage a real reservation again.
+
+assert.equal(
+  aggregatorService.reserve.length,
+  1,
+  "reserve() must take only an artwork id — a second argument that can make it fail is how the reported bug happened",
+);
+
 console.log("services/aggregatorService.ts reserve checks passed");

@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +11,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { PriceTag } from "@/components/shared/price-tag";
 import { formatINR } from "@/lib/utils";
 import type { ReservableArtwork } from "@/services/aggregatorService";
@@ -37,7 +34,6 @@ export function ReserveArtworkDialog({
   open,
   onOpenChange,
 }: ReserveArtworkDialogProps) {
-  const [simulateConflict, setSimulateConflict] = useState(false);
   const reserveMutation = useReserveArtworkMutation();
   const { data: wallet } = useAggregatorWallet();
 
@@ -49,29 +45,22 @@ export function ReserveArtworkDialog({
 
   function handleConfirm() {
     if (!artwork) return;
-    reserveMutation.mutate(
-      { artworkId: artwork.id, simulateConflict },
-      {
-        onSuccess: () => {
-          toast.success("Artwork reserved", {
-            description: `"${artwork.title}" is now in your Collection.`,
-          });
-          onOpenChange(false);
-          setSimulateConflict(false);
-        },
-        onError: (error) => {
-          // Mirrors the real 409 race-condition UX (SAD §3.5). The grid is
-          // refetched rather than left as it was: a reserve that fails is
-          // usually the grid disagreeing with the store, and leaving the card
-          // sitting there means the next click fails the same way and the one
-          // after that. Harmless for the simulated conflict, which changes
-          // nothing — that card comes straight back.
-          toast.error(error.message);
-          onOpenChange(false);
-          setSimulateConflict(false);
-        },
+    reserveMutation.mutate(artwork.id, {
+      onSuccess: () => {
+        toast.success("Artwork reserved", {
+          description: `"${artwork.title}" is now in your Collection.`,
+        });
+        onOpenChange(false);
       },
-    );
+      onError: (error) => {
+        // The grid is refetched rather than left as it was: a reserve that
+        // fails is usually the grid disagreeing with the store, and leaving
+        // the card sitting there means the next click fails the same way and
+        // the one after that.
+        toast.error(error.message);
+        onOpenChange(false);
+      },
+    });
   }
 
   return (
@@ -160,30 +149,6 @@ export function ReserveArtworkDialog({
             piece. Money is held, not spent — it comes back when the piece sells.
           </p>
         )}
-
-        <label className="flex items-start gap-2.5 rounded-md border border-dashed border-border px-3 py-2.5">
-          <Checkbox
-            checked={simulateConflict}
-            onCheckedChange={(checked) => setSimulateConflict(checked)}
-            className="mt-0.5"
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-              <AlertTriangle
-                className="size-3 text-muted-foreground"
-                strokeWidth={2}
-              />
-              Simulate reservation conflict
-              <span className="rounded-sm border border-border px-1 py-px text-[9px] font-semibold tracking-wide text-muted-foreground uppercase">
-                Dev
-              </span>
-            </span>
-            <span className="text-[11px] leading-snug text-muted-foreground">
-              Demos the 409 &ldquo;lost the race&rdquo; error another aggregator
-              can trigger.
-            </span>
-          </span>
-        </label>
 
         <DialogFooter>
           <Button

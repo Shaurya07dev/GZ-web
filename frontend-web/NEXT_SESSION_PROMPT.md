@@ -307,12 +307,26 @@ ArtistPublicStats and ArtistPrivateStats are separate types fetched by separate
 calls, but a function returning the wrong object would still typecheck if the
 shapes ever converged — so the values are asserted, not just the types.
 
-`aggregatorService.check.ts` holds one rule: **anything the inventory grid
-offers must be reservable.** The grid and `reserve()` apply
+`aggregatorService.check.ts` holds two rules. The first: **anything the
+inventory grid offers must be reservable.** The grid and `reserve()` apply
 overlapping-but-separate conditions, and nothing checked that the second never
-refuses what the first offered — which is exactly how "Artwork no longer
-available" ended up on a card the grid had just rendered. It also pins each
-refusal to its own message.
+refuses what the first offered. It also pins each refusal to its own message.
+
+The second was added after that first rule failed to catch the actual bug.
+"Artwork no longer available" on every card turned out not to be a state
+problem at all: the confirm dialog carried a **"Simulate reservation conflict"
+dev checkbox**, wired to a `simulateConflict` argument that made `reserve()`
+return exactly that string. The whole thing sat in a full-width `<label>`
+directly above the Confirm button, and Base UI's checkbox paints an invisible
+`after:-inset-x-3 after:-inset-y-2` hit area on top of that — one stray click
+and every reservation failed. Every check passed the entire time, because they
+call `reserve()` directly and never open the dialog. The checkbox and the
+argument are both gone, and `reserve.length === 1` is asserted so no second
+argument can sabotage a real reservation again.
+
+The lesson worth keeping: **a dev affordance inside a dialog that performs a
+real action is a bug waiting to be reported as a mystery.** Demo toggles that
+force failure do not belong on the path a customer clicks.
 
 `artwork.check.ts` covers the 7-day edit window (including "bought on day 2"), the
 channel predicates, the 1% off-platform fee and custody derivation. It fails

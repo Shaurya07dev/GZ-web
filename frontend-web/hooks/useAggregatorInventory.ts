@@ -8,11 +8,6 @@ export function useReservableInventory() {
   });
 }
 
-interface ReserveArtworkInput {
-  artworkId: string;
-  simulateConflict?: boolean;
-}
-
 // Reserving moves an artwork out of Inventory and into Collection, and
 // changes the "active reservations" KPI on the Dashboard — all three
 // queries are invalidated together so every page reflects the new state on
@@ -20,8 +15,7 @@ interface ReserveArtworkInput {
 export function useReserveArtworkMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ artworkId, simulateConflict }: ReserveArtworkInput) =>
-      aggregatorService.reserve(artworkId, simulateConflict),
+    mutationFn: (artworkId: string) => aggregatorService.reserve(artworkId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });

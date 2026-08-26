@@ -237,17 +237,7 @@ export const aggregatorService = {
     );
   },
 
-  // simulateConflict mirrors the real, documented 409 race condition (SAD
-  // §3.5: "Response 409 Conflict (lost the race to another aggregator)")
-  // rather than an invented error path.
-  reserve(
-    artworkId: string,
-    simulateConflict = false,
-  ): Promise<AggregatorHolding> {
-    if (simulateConflict) {
-      return mockError("Artwork no longer available");
-    }
-
+  reserve(artworkId: string): Promise<AggregatorHolding> {
     // MOU first, inventory second: an unsigned aggregator has no agreement
     // covering custody, pricing or settlement, so they cannot take possession
     // of anyone's artwork. Enforced here rather than only in the UI.
