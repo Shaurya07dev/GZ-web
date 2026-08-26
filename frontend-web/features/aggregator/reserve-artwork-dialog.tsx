@@ -16,7 +16,11 @@ import { formatINR } from "@/lib/utils";
 import type { ReservableArtwork } from "@/services/aggregatorService";
 import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import { useReserveArtworkMutation } from "@/hooks/useAggregatorInventory";
-import { useAggregatorWallet } from "@/hooks/useAggregatorWallet";
+import {
+  useAggregatorWallet,
+  useAddAggregatorFundsMutation,
+} from "@/hooks/useAggregatorWallet";
+import { DevPanel } from "@/features/auth/components/dev-panel";
 
 interface ReserveArtworkDialogProps {
   artwork: ReservableArtwork | null;
@@ -35,6 +39,7 @@ export function ReserveArtworkDialog({
   onOpenChange,
 }: ReserveArtworkDialogProps) {
   const reserveMutation = useReserveArtworkMutation();
+  const addFunds = useAddAggregatorFundsMutation();
   const { data: wallet } = useAggregatorWallet();
 
   if (!artwork) return null;
@@ -42,6 +47,20 @@ export function ReserveArtworkDialog({
   const { offer } = artwork;
   const free = wallet ? wallet.balance - wallet.lockedBalance : 0;
   const shortfall = Math.max(0, offer.payable - free);
+
+  // The deposit is a real step of the real flow (MOU §7), so this tops the
+  // wallet up and stops — it does not reserve for you. What it removes is
+  // having to leave a half-finished reservation, walk to /aggregator/wallet,
+  // work out the number yourself and come back.
+  function handleTopUp() {
+    addFunds.mutate(shortfall, {
+      onSuccess: () =>
+        toast.success(`${formatINR(shortfall)} added`, {
+          description: "Confirm the reservation to hold it against this piece.",
+        }),
+      onError: (error) => toast.error(error.message),
+    });
+  }
 
   function handleConfirm() {
     if (!artwork) return;
@@ -144,10 +163,26 @@ export function ReserveArtworkDialog({
         </div>
 
         {shortfall > 0 && (
-          <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            Add {formatINR(shortfall)} to your wallet before reserving this
-            piece. Money is held, not spent — it comes back when the piece sells.
-          </p>
+          <DevPanel className="items-start">
+            <span className="flex flex-1 flex-col gap-0.5">
+              <span className="text-xs font-medium text-foreground">
+                {formatINR(shortfall)} short
+              </span>
+              <span className="text-[11px] leading-snug text-muted-foreground">
+                No gateway is connected, so this credits the wallet directly —
+                the same top-up as the Wallet page. Money is held, not spent: it
+                comes back when the piece sells.
+              </span>
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleTopUp}
+              disabled={addFunds.isPending}
+            >
+              {addFunds.isPending ? "Adding…" : `Add ${formatINR(shortfall)}`}
+            </Button>
+          </DevPanel>
         )}
 
         <DialogFooter>
@@ -158,7 +193,15 @@ export function ReserveArtworkDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={reserveMutation.isPending}>
+          <Button
+            onClick={handleConfirm}
+            disabled={reserveMutation.isPending || shortfall > 0}
+            title={
+              shortfall > 0
+                ? `Add ${formatINR(shortfall)} to your wallet first`
+                : undefined
+            }
+          >
             {reserveMutation.isPending ? "Reserving…" : "Confirm reservation"}
           </Button>
         </DialogFooter>
