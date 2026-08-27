@@ -131,7 +131,9 @@ export function CoaNfcBoard() {
           onOpenChange={(open) => !open && setTransferring(null)}
           artworkId={transferring.id}
           artworkTitle={transferring.title}
-          fromName={ARTIST.name}
+          fromName={
+            resolveCustody(transferring).legalOwnerName ?? ARTIST.name
+          }
         />
       )}
     </div>
@@ -147,13 +149,15 @@ function HistoryDialog({
 }) {
   return (
     <Dialog open={Boolean(artwork)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>History</DialogTitle>
         </DialogHeader>
         {artwork ? (
           <>
-            <p className="text-sm text-muted-foreground">{artwork.title}</p>
+            <p className="-mt-1 text-sm text-muted-foreground">
+              {artwork.title}
+            </p>
             <ArtworkHistory artwork={artwork} />
           </>
         ) : null}
@@ -192,7 +196,7 @@ function CertificateDialog({
       open={Boolean(artwork)}
       onOpenChange={(open) => !open && onClose()}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
         {artwork ? (
           <>
             <DialogHeader>
@@ -209,7 +213,7 @@ function CertificateDialog({
               </p>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 text-sm">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-4">
               <div>
                 <dt className="text-xs text-muted-foreground">Issued</dt>
                 <dd className="text-foreground">
@@ -231,7 +235,8 @@ function CertificateDialog({
               <div>
                 <dt className="text-xs text-muted-foreground">Legal owner</dt>
                 <dd className="text-foreground">
-                  {CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner]}
+                  {resolveCustody(artwork).legalOwnerName ??
+                    CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner]}
                 </dd>
               </div>
               <div>
@@ -242,7 +247,7 @@ function CertificateDialog({
                   {CUSTODY_PARTY_LABEL[resolveCustody(artwork).custodian]}
                 </dd>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-2 sm:col-span-4">
                 <dt className="text-xs text-muted-foreground">Location</dt>
                 <dd className="text-foreground">
                   {resolveCustody(artwork).locationLabel}

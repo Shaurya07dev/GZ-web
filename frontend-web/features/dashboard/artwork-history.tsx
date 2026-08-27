@@ -2,49 +2,49 @@
 
 import { useMemo } from "react";
 import {
-  FileEdit,
-  ScanLine,
-  UserRoundCheck,
-  Printer,
-  PackageCheck,
   Award,
-  Clock3,
   Building2,
+  CalendarClock,
+  CircleDot,
+  Clock3,
+  FileEdit,
+  PackageCheck,
+  Printer,
+  ScanLine,
   Truck,
   Undo2,
-  CalendarClock,
+  UserRoundCheck,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Artwork, OwnershipTransfer } from "@/types/artwork";
-import { isDisplayActive, transferKind } from "@/types/artwork";
+import { isDisplayActive, resolveCustody, transferKind } from "@/types/artwork";
 import { useArtworkTransfers } from "@/hooks/useOwnershipTransfers";
 import { useArtworkCoaRequests } from "@/hooks/usePhysicalCoa";
 
-// Two histories, not one merged stream.
+// Two histories, side by side, because a certificate answers two questions that
+// are not the same question: WHO OWNS THIS, and WHO IS ALLOWED TO SHOW IT. A
+// piece can be owned by a collector in Chennai and hanging in a gallery in Pune.
 //
-// A certificate answers two different questions and they are not the same
-// question: WHO OWNS THIS, and WHO IS ALLOWED TO SHOW IT. A piece can be owned
-// by a collector in Chennai and hanging in a gallery in Pune, and the old
-// single timeline interleaved those two stories so tightly that neither could
-// be read — a "Returned to the artist" row sat between two ownership transfers
-// as if it were one.
-//
-// Ownership moves permanently and only on acceptance. Display rights are loans:
-// they expire on a date, they never change the owner, and the piece coming back
-// is the normal end of one, not an incident.
+// They are also shaped differently, so they are drawn differently rather than as
+// one timeline component used twice. Ownership is a CHAIN — it moves once, in
+// one direction, and only the last link is current. Display rights are
+// EPISODES — each has a start and an end, they do not accumulate, and the piece
+// coming back is the normal end of one rather than an incident.
 
-type HistoryEvent = {
+type Event = {
   at: string;
   icon: typeof FileEdit;
   label: string;
   detail?: string;
+  /** Renders as the live state of this record rather than a past event. */
+  state?: "current" | "pending";
 };
 
-// Which side of the certificate each status belongs to. Splitting by status is
-// only honest because the two paths don't share one: a piece heading to an
-// aggregator goes reserved -> preparing_dispatch -> in_transit ->
+// Splitting by status is only honest because the two paths share none: a piece
+// heading to an aggregator goes reserved -> preparing_dispatch -> in_transit ->
 // with_aggregator, and a piece that has been bought goes sold -> delivered ->
-// completed. Anything new has to be classified here deliberately, which is why
-// this is an explicit map rather than a list of exceptions.
+// completed. Explicit maps rather than a list of exceptions, so a new status has
+// to be given a side deliberately or it simply will not appear.
 const OWNERSHIP_STATUS: Record<string, string> = {
   draft: "Listing created by the artist",
   pending_approval: "Submitted to GalleryZone for review",
@@ -56,42 +56,35 @@ const OWNERSHIP_STATUS: Record<string, string> = {
   sold_externally: "Sold outside GalleryZone",
 };
 
-const DISPLAY_STATUS: Record<string, string> = {
-  reserved: "Reserved for aggregator display",
-  preparing_dispatch: "Being prepared for dispatch",
-  in_transit: "In transit to the display space",
-  with_aggregator: "On display with an aggregator",
-  returned: "Came back from display",
-};
-
-const DISPLAY_STATUS_ICON: Record<string, typeof FileEdit> = {
-  reserved: Clock3,
-  preparing_dispatch: PackageCheck,
-  in_transit: Truck,
-  with_aggregator: Building2,
-  returned: Undo2,
-};
+const DISPLAY_STATUS: Record<string, { label: string; icon: typeof FileEdit }> =
+  {
+    reserved: { label: "Reserved for aggregator display", icon: Clock3 },
+    preparing_dispatch: { label: "Being prepared for dispatch", icon: PackageCheck },
+    in_transit: { label: "In transit to the display space", icon: Truck },
+    with_aggregator: { label: "On display with an aggregator", icon: Building2 },
+    returned: { label: "Came back from display", icon: Undo2 },
+  };
 
 export function ArtworkHistory({ artwork }: { artwork: Artwork }) {
   const { data: transfers } = useArtworkTransfers(artwork.id);
   const { data: coaRequests } = useArtworkCoaRequests(artwork.id);
 
-  const { ownership, display } = useMemo(() => {
-    const ownership: HistoryEvent[] = [];
-    const display: HistoryEvent[] = [];
+  const { ownership, display, ownerName } = useMemo(() => {
+    const ownership: Event[] = [];
+    const display: Event[] = [];
 
     for (const event of artwork.statusHistory) {
-      if (OWNERSHIP_STATUS[event.status]) {
-        ownership.push({
-          at: event.changedAt,
-          icon: FileEdit,
-          label: OWNERSHIP_STATUS[event.status],
-        });
-      } else if (DISPLAY_STATUS[event.status]) {
+      const owned = OWNERSHIP_STATUS[event.status];
+      if (owned) {
+        ownership.push({ at: event.changedAt, icon: FileEdit, label: owned });
+        continue;
+      }
+      const shown = DISPLAY_STATUS[event.status];
+      if (shown) {
         display.push({
           at: event.changedAt,
-          icon: DISPLAY_STATUS_ICON[event.status] ?? Building2,
-          label: DISPLAY_STATUS[event.status],
+          icon: shown.icon,
+          label: shown.label,
         });
       }
     }
@@ -105,9 +98,8 @@ export function ArtworkHistory({ artwork }: { artwork: Artwork }) {
       detail: artwork.coaCertificateNumber,
     });
 
-    // There is no timestamp for tagging in the mock data — the tag is either
-    // attached or it isn't — so it is pinned to the certificate's date rather
-    // than inventing one.
+    // No timestamp exists for tagging — the tag is either attached or it is not
+    // — so it is pinned to the certificate's date rather than invented.
     if (artwork.nfcTagId) {
       ownership.push({
         at: artwork.coaIssueDate,
@@ -122,15 +114,7 @@ export function ArtworkHistory({ artwork }: { artwork: Artwork }) {
       if (transferKind(transfer) === "display") {
         display.push(displayEvent(transfer));
       } else {
-        ownership.push({
-          at: transfer.acceptedAt ?? transfer.initiatedAt,
-          icon: transfer.status === "accepted" ? UserRoundCheck : Clock3,
-          label:
-            transfer.status === "accepted"
-              ? `Ownership transferred to ${transfer.toName}`
-              : `Transfer to ${transfer.toName} awaiting acceptance`,
-          detail: `From ${transfer.fromName}`,
-        });
+        ownership.push(ownershipEvent(transfer));
       }
     }
 
@@ -151,26 +135,32 @@ export function ArtworkHistory({ artwork }: { artwork: Artwork }) {
       }
     }
 
-    const newestFirst = (a: HistoryEvent, b: HistoryEvent) =>
-      b.at.localeCompare(a.at);
+    const newestFirst = (a: Event, b: Event) => b.at.localeCompare(a.at);
+    const custody = resolveCustody(artwork);
     return {
       ownership: ownership.sort(newestFirst),
       display: display.sort(newestFirst),
+      ownerName: custody.legalOwnerName ?? artwork.artistName,
     };
   }, [artwork, transfers, coaRequests]);
 
-  if (ownership.length === 0 && display.length === 0) return null;
+  const onDisplayNow = display.some((e) => e.state === "current");
 
   return (
-    <div className="flex flex-col gap-5 border-t border-border pt-4">
-      <Timeline
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Panel
+        icon={UserRoundCheck}
         title="Ownership"
-        caption="Who owns this piece. Every hand-over is recorded when the other side accepts it."
+        summary={`Now with ${ownerName}`}
+        caption="Who owns this piece. Each hand-over is recorded when the other side accepts it."
         events={ownership}
         emptyText="Nothing recorded yet."
       />
-      <Timeline
+      <Panel
+        icon={Building2}
         title="Display rights"
+        summary={onDisplayNow ? "On display now" : "Not on display"}
+        summaryMuted={!onDisplayNow}
         caption="Who has been allowed to show it. A loan never changes the owner."
         events={display}
         emptyText="This piece has never been out on display."
@@ -179,28 +169,48 @@ export function ArtworkHistory({ artwork }: { artwork: Artwork }) {
   );
 }
 
-function displayEvent(transfer: OwnershipTransfer): HistoryEvent {
+function ownershipEvent(transfer: OwnershipTransfer): Event {
   if (transfer.status === "pending") {
     return {
       at: transfer.initiatedAt,
       icon: Clock3,
-      label: `Display rights offered to ${transfer.toName}`,
+      label: `Transfer to ${transfer.toName}`,
+      detail: `From ${transfer.fromName}`,
+      state: "pending",
+    };
+  }
+  return {
+    at: transfer.acceptedAt ?? transfer.initiatedAt,
+    icon: UserRoundCheck,
+    label: `Transferred to ${transfer.toName}`,
+    detail: `From ${transfer.fromName}`,
+  };
+}
+
+function displayEvent(transfer: OwnershipTransfer): Event {
+  if (transfer.status === "pending") {
+    return {
+      at: transfer.initiatedAt,
+      icon: Clock3,
+      label: `Offered to ${transfer.toName}`,
       detail: "Awaiting acceptance",
+      state: "pending",
     };
   }
 
   const at = transfer.acceptedAt ?? transfer.initiatedAt;
 
-  // A loan that has run its course reads differently from one still running,
-  // and "ended early" is a different fact again — the owner pulled it back.
+  // A loan still running, one that ran its course, and one the owner pulled
+  // back early are three different facts.
   if (isDisplayActive(transfer)) {
     return {
       at,
       icon: CalendarClock,
-      label: `On display with ${transfer.toName}`,
+      label: `With ${transfer.toName}`,
       detail: transfer.displayEndsAt
         ? `Until ${formatDate(transfer.displayEndsAt)}`
         : undefined,
+      state: "current",
     };
   }
 
@@ -208,53 +218,97 @@ function displayEvent(transfer: OwnershipTransfer): HistoryEvent {
   return {
     at,
     icon: Undo2,
-    label: `Display with ${transfer.toName} ended`,
+    label: `With ${transfer.toName}`,
     detail: endedOn
       ? `${transfer.displayEndedAt ? "Ended early" : "Ran to"} ${formatDate(endedOn)}`
-      : undefined,
+      : "Ended",
   };
 }
 
-function Timeline({
+function Panel({
+  icon: Icon,
   title,
+  summary,
+  summaryMuted = false,
   caption,
   events,
   emptyText,
 }: {
+  icon: typeof FileEdit;
   title: string;
+  summary: string;
+  summaryMuted?: boolean;
   caption: string;
-  events: HistoryEvent[];
+  events: Event[];
   emptyText: string;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {title}
-      </p>
-      <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
-        {caption}
-      </p>
+    <section className="flex flex-col rounded-lg border border-border bg-card">
+      <header className="flex flex-col gap-2 border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-gold/30 bg-gold/10">
+            <Icon className="size-3.5 text-gold-bright" strokeWidth={1.75} />
+          </span>
+          <h3 className="flex-1 text-sm font-semibold text-foreground">
+            {title}
+          </h3>
+          <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            {events.length}
+          </span>
+        </div>
+        <p
+          className={cn(
+            "text-xs font-medium",
+            summaryMuted ? "text-muted-foreground" : "text-gold-bright",
+          )}
+        >
+          {summary}
+        </p>
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          {caption}
+        </p>
+      </header>
 
       {events.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{emptyText}</p>
+        <p className="px-4 py-6 text-center text-xs text-muted-foreground">
+          {emptyText}
+        </p>
       ) : (
-        <ol className="mt-1 flex flex-col">
+        <ol className="flex flex-col px-4 py-3">
           {events.map((event, i) => (
             <li key={`${event.at}-${event.label}-${i}`} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-background">
+                <span
+                  className={cn(
+                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border",
+                    event.state === "current"
+                      ? "border-gold bg-gold/15"
+                      : "border-border bg-background",
+                  )}
+                >
                   <event.icon
-                    className="size-3 text-gold-bright"
+                    className={cn(
+                      "size-3",
+                      event.state === "current"
+                        ? "text-gold-bright"
+                        : "text-muted-foreground",
+                    )}
                     strokeWidth={1.75}
                   />
                 </span>
                 {i < events.length - 1 && (
-                  <span className="w-px flex-1 bg-border" aria-hidden="true" />
+                  <span className="w-px flex-1 bg-border" aria-hidden />
                 )}
               </div>
-              <div className="pb-3">
-                <p className="text-sm text-foreground">{event.label}</p>
-                <p className="text-xs text-muted-foreground">
+
+              <div className="min-w-0 flex-1 pb-4">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-sm leading-snug text-foreground">
+                    {event.label}
+                  </p>
+                  {event.state && <StateChip state={event.state} />}
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {formatDate(event.at)}
                   {event.detail ? ` · ${event.detail}` : ""}
                 </p>
@@ -263,7 +317,24 @@ function Timeline({
           ))}
         </ol>
       )}
-    </div>
+    </section>
+  );
+}
+
+function StateChip({ state }: { state: "current" | "pending" }) {
+  const current = state === "current";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium",
+        current
+          ? "border-gold/50 bg-gold/10 text-gold-bright"
+          : "border-border bg-muted/50 text-muted-foreground",
+      )}
+    >
+      <CircleDot className="size-2.5" strokeWidth={2.5} />
+      {current ? "Active" : "Awaiting"}
+    </span>
   );
 }
 
