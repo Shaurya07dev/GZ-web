@@ -11,29 +11,25 @@ import type {
   OwnershipTransfer,
   PhysicalCoaRequest,
 } from "@/types/artwork";
-import type { AggregatorHolding, AggregatorSale, GallerySpace } from "@/types/aggregator";
+import type {
+  AggregatorHolding,
+  AggregatorSale,
+  GallerySpace,
+} from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { Address, BuyerInvite, CustomerProfile } from "@/types/customer";
-import type {
-  AdminUser,
-  DeactivationRequest,
-  Settlement,
-} from "@/types/admin";
+import type { AdminUser, DeactivationRequest, Settlement } from "@/types/admin";
 import type { MessageThread } from "@/types/message";
 import type { SupportTicket } from "@/types/support";
 import type { ResaleListing } from "@/types/resale";
 import type { ArtistReview } from "@/types/artist-rating";
-import type {
-  ArtistConnection,
-} from "@/types/artist-network";
+import type { ArtistConnection } from "@/types/artist-network";
 import { mockArtworks } from "./mock-data/artworks";
 import { mockAggregatorHoldings } from "./mock-data/aggregator-holdings";
 import { mockOrders, mockAddresses, mockCustomer } from "./mock-data/customer";
 import { mockPendingArtworks, mockAdminUsers } from "./mock-data/admin";
 import { mockArtistReviews } from "./mock-data/artist-reviews";
-import {
-  mockArtistConnections,
-} from "./mock-data/artist-network";
+import { mockArtistConnections } from "./mock-data/artist-network";
 import {
   ARTIST,
   KPI_METRICS,
@@ -179,7 +175,12 @@ function buildArtistSeedArtworks(): Artwork[] {
       dimensions: null,
       yearCreated: seed.year,
       images: [
-        { url: seed.image, thumbnailUrl: seed.image, sortOrder: 0, altText: seed.title },
+        {
+          url: seed.image,
+          thumbnailUrl: seed.image,
+          sortOrder: 0,
+          altText: seed.title,
+        },
       ],
       coaCertificateNumber: `GZ-COA-2026-${seed.id.toUpperCase()}`,
       coaIssueDate: submittedAt,
@@ -288,10 +289,10 @@ const AGGREGATOR_MESSAGE_SEED: MessageThread[] = [
   {
     id: "agg-msg-3",
     from: "GalleryZone Insurance Desk",
-    subject: "Damage report acknowledged — \"Salvaged Frequencies\"",
+    subject: 'Damage report acknowledged — "Salvaged Frequencies"',
     preview:
       "We received your transit-damage report and have opened a claim review.",
-    body: "Your damage report for \"Salvaged Frequencies\" (minor corner abrasion noted on receipt) is logged under claim REF-DMG-2026-0810. A GalleryZone adjuster will follow up within 2 business days. Do not attempt repairs until instructed — photos on file are sufficient for now.",
+    body: 'Your damage report for "Salvaged Frequencies" (minor corner abrasion noted on receipt) is logged under claim REF-DMG-2026-0810. A GalleryZone adjuster will follow up within 2 business days. Do not attempt repairs until instructed — photos on file are sufficient for now.',
     unread: false,
     receivedAt: "2026-08-08T15:20:00.000Z",
   },
@@ -308,10 +309,10 @@ const AGGREGATOR_MESSAGE_SEED: MessageThread[] = [
   {
     id: "agg-msg-5",
     from: "GalleryZone Settlements",
-    subject: "Settlement pending for \"Salvaged Frequencies\"",
+    subject: 'Settlement pending for "Salvaged Frequencies"',
     preview:
       "Sale recorded — aggregator commission will credit after delivery confirmation.",
-    body: "You recorded a sale for \"Salvaged Frequencies\" on 5 Jul 2026. Settlement (20% of your markup over the listed price) will credit to your wallet once delivery is confirmed and the 7-day settlement window clears. Track status under Wallet and Settlements.",
+    body: 'You recorded a sale for "Salvaged Frequencies" on 5 Jul 2026. Settlement (20% of your markup over the listed price) will credit to your wallet once delivery is confirmed and the 7-day settlement window clears. Track status under Wallet and Settlements.',
     unread: false,
     receivedAt: "2026-07-05T18:45:00.000Z",
   },
@@ -346,10 +347,16 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
   avatar: AGGREGATOR.avatar,
   gstNumber: "29ABCDE1234F1Z5",
   phone: "+91 98450 12345",
+  // ISO country the business operates from -- distinct from the phone dial
+  // codes, which only say where a number rings.
+  country: "IN",
   addressLine1: "14 Church Street, Bengaluru, Karnataka 560001",
   bankAccountMasked: "•••• •••• •••• 4821",
   ifsc: "HDFC0001234",
   securityDepositStatus: "active" as const,
+  // Identity verification (admin KYC queue) -- null means never submitted.
+  // Masked the same way as bankAccountMasked: only the last 4 digits persist.
+  aadhaarMasked: null as string | null,
   // The nominated GalleryZone coordinator (aggregator MOU §10) — audit
   // notices, expiry reminders and inbound shipment alerts go to this person.
   coordinatorDesignation: "Gallery Manager",
@@ -487,8 +494,9 @@ const ARTIST_MESSAGE_SEED: MessageThread[] = [
     id: "msg-1",
     from: "GalleryZone Curation Team",
     subject: '"Terracotta Study No. 4" is pending review',
-    preview: "Your submission is with a curator for quality and authenticity review.",
-    body: "Thanks for submitting \"Terracotta Study No. 4.\" A curator is reviewing it for quality, authenticity, and pricing confidentiality. You'll be notified as soon as a decision is made — most reviews complete within 2-3 business days.",
+    preview:
+      "Your submission is with a curator for quality and authenticity review.",
+    body: 'Thanks for submitting "Terracotta Study No. 4." A curator is reviewing it for quality, authenticity, and pricing confidentiality. You\'ll be notified as soon as a decision is made — most reviews complete within 2-3 business days.',
     unread: true,
     receivedAt: "2026-08-09T10:15:00.000Z",
   },
@@ -496,7 +504,8 @@ const ARTIST_MESSAGE_SEED: MessageThread[] = [
     id: "msg-2",
     from: "GalleryZone Admin",
     subject: "Additional documentation requested",
-    preview: "We need a clearer signature close-up before your KYC can be approved.",
+    preview:
+      "We need a clearer signature close-up before your KYC can be approved.",
     body: "Your Aadhaar and signature proof are on file, but the signature close-up photo is too blurred to verify against your Certificate of Authenticity. Please re-upload a sharper close-up from your Profile & KYC page.",
     unread: true,
     receivedAt: "2026-08-07T14:32:00.000Z",
@@ -505,7 +514,8 @@ const ARTIST_MESSAGE_SEED: MessageThread[] = [
     id: "msg-3",
     from: "GalleryZone Insurance Desk",
     subject: "Consider transit insurance for high-value pieces",
-    preview: "Artworks valued above ₹20,000 are strongly recommended for transit insurance.",
+    preview:
+      "Artworks valued above ₹20,000 are strongly recommended for transit insurance.",
     body: "A couple of your listed pieces are priced above ₹20,000. Transit insurance (partnered with HDFC ERGO) protects you against unforeseen damage in shipping — uninsured artworks bear no platform liability if something goes wrong in transit.",
     unread: false,
     receivedAt: "2026-08-02T09:00:00.000Z",
@@ -513,9 +523,9 @@ const ARTIST_MESSAGE_SEED: MessageThread[] = [
   {
     id: "msg-4",
     from: "GalleryZone Settlements",
-    subject: "Settlement processed for \"Whispers in Bronze\"",
+    subject: 'Settlement processed for "Whispers in Bronze"',
     preview: "Your payout has been credited to your GalleryZone wallet.",
-    body: "Good news — \"Whispers in Bronze\" sold, and your settlement has been processed and credited to your wallet. You can withdraw to your linked bank account any time above the ₹1,000 minimum.",
+    body: 'Good news — "Whispers in Bronze" sold, and your settlement has been processed and credited to your wallet. You can withdraw to your linked bank account any time above the ₹1,000 minimum.',
     unread: false,
     receivedAt: "2026-07-20T11:45:00.000Z",
   },
@@ -592,9 +602,7 @@ export const artistSettlementsCol = collection<Settlement[]>(
       aggregatorCommission: 0,
       platformRevenue: Math.round(32000 * 0.02),
       status: "processed",
-      createdAt: new Date(
-        Date.now() - 119 * 24 * 60 * 60 * 1000,
-      ).toISOString(),
+      createdAt: new Date(Date.now() - 119 * 24 * 60 * 60 * 1000).toISOString(),
       processedAt: new Date(
         Date.now() - 118 * 24 * 60 * 60 * 1000,
       ).toISOString(),

@@ -10,7 +10,7 @@ export default function AdminKycQueuePage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="KYC queue"
-        description="Identity checks waiting on verification. Artists cannot be paid out until this clears."
+        description="Identity checks waiting on verification. Artists and aggregators cannot be paid out until this clears."
       />
       <KycQueueTable />
     </div>

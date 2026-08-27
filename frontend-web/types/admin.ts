@@ -15,7 +15,7 @@ export interface AdminUser {
   status: UserStatus;
   createdAt: string; // ISO
   lastLoginAt: string | null;
-  kycStatus?: KycStatus; // artists only
+  kycStatus?: KycStatus; // artists and aggregators only
   companyName?: string; // aggregators only
 }
 

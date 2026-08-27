@@ -16,10 +16,7 @@ import {
   placementWindow,
   withGst,
 } from "@/lib/pricing";
-import {
-  artistPriceOf,
-  creditArtistSettlement,
-} from "./artistPayoutService";
+import { artistPriceOf, creditArtistSettlement } from "./artistPayoutService";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { buyerInviteService } from "./buyerInviteService";
 import {
@@ -211,18 +208,16 @@ export const aggregatorService = {
         .filter((h) => h.status !== "returned")
         .map((h) => h.artworkId),
     );
-    const reservable = artworksCol
-      .get()
-      .filter(
-        (artwork) =>
-          isAggregatorListed(artwork.listingType) &&
-          artwork.status === "marketplace" &&
-          !claimedArtworkIds.has(artwork.id) &&
-          // Five placements, or fewer if the 180 days run out first. A stub of
-          // under thirty days is never placed with a new aggregator — it goes
-          // to whoever already has the piece.
-          isPlaceable(artwork.id),
-      );
+    const reservable = artworksCol.get().filter(
+      (artwork) =>
+        isAggregatorListed(artwork.listingType) &&
+        artwork.status === "marketplace" &&
+        !claimedArtworkIds.has(artwork.id) &&
+        // Five placements, or fewer if the 180 days run out first. A stub of
+        // under thirty days is never placed with a new aggregator — it goes
+        // to whoever already has the piece.
+        isPlaceable(artwork.id),
+    );
     // Each card carries its own offer so the grid and the reserve dialog read
     // the cycle rules from one place instead of each re-deriving them.
     return mockDelay(
@@ -487,7 +482,10 @@ export const aggregatorService = {
     const artwork = getArtworkById(payload.artworkId);
     if (artwork) {
       const artistPrice = artistPriceOf(artwork);
-      const commission = aggregatorCommissionOf(holding.displayPrice, artistPrice);
+      const commission = aggregatorCommissionOf(
+        holding.displayPrice,
+        artistPrice,
+      );
       // A sale settles all three lines on the sheet — 7,500 advance + 2,500
       // delivery + 10,000 commission = 20,000. But the first two were LOCKED
       // from this aggregator's own wallet rather than taken from it, so they
@@ -558,6 +556,7 @@ export const aggregatorService = {
     activeReservations: number;
     commissionEarned: number;
     pendingSettlements: number;
+    conversionRate: number | null;
   }> {
     const holdings = holdingsCol.get();
     const activeReservations = holdings.filter(
@@ -566,17 +565,31 @@ export const aggregatorService = {
     const soldHoldings = holdings.filter(
       (h) => h.status === "sold_pending_settlement",
     );
+    const returnedHoldings = holdings.filter((h) => h.status === "returned");
     const pendingSettlements = soldHoldings.length;
     const commissionEarned = soldHoldings.reduce((sum, holding) => {
       const artwork = getArtworkById(holding.artworkId);
       if (!artwork) return sum;
-      return sum + aggregatorCommissionOf(holding.displayPrice, artistPriceOf(artwork));
+      return (
+        sum +
+        aggregatorCommissionOf(holding.displayPrice, artistPriceOf(artwork))
+      );
     }, 0);
+
+    // Conversion is measured over concluded reservations only (sold or
+    // returned) -- a still-active reservation hasn't gone either way yet, so
+    // counting it would understate the rate for no reason.
+    const concludedCount = soldHoldings.length + returnedHoldings.length;
+    const conversionRate =
+      concludedCount === 0
+        ? null
+        : Math.round((soldHoldings.length / concludedCount) * 100);
 
     return mockDelay({
       activeReservations,
       commissionEarned: Math.round(commissionEarned),
       pendingSettlements,
+      conversionRate,
     });
   },
 };

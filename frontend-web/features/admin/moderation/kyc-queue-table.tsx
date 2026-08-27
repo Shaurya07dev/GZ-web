@@ -49,13 +49,15 @@ export function KycQueueTable() {
   const columns: AdminDataTableColumn<AdminUser>[] = [
     {
       key: "name",
-      header: "Artist",
+      header: "Name",
       render: (row) => (
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
             {row.name}
           </p>
-          <p className="truncate text-xs text-muted-foreground">{row.email}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {row.email} · <span className="capitalize">{row.role}</span>
+          </p>
         </div>
       ),
       sortable: true,
@@ -183,7 +185,7 @@ function KycReviewDialog({
       });
       setRejectOpen(false);
       toast.success("KYC rejected", {
-        description: "The artist can resubmit their documents.",
+        description: "They can resubmit their documents.",
       });
       onClose();
     } catch {
@@ -275,7 +277,7 @@ function KycReviewDialog({
         open={rejectOpen}
         onOpenChange={setRejectOpen}
         title={user ? `Reject ${user.name}'s KYC?` : "Reject KYC?"}
-        description="The artist sees this reason and can resubmit."
+        description="They see this reason and can resubmit."
         presets={REJECT_PRESETS}
         isPending={rejectMutation.isPending}
         onSubmit={handleReject}

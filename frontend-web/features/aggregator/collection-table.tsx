@@ -46,10 +46,20 @@ const STATUS_CONFIG: Record<
   },
 };
 
+type StatusFilter = "all" | AggregatorHolding["status"];
+
+const STATUS_TABS: Array<{ key: StatusFilter; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "reserved", label: "Reserved" },
+  { key: "sold_pending_settlement", label: "Sold" },
+  { key: "returned", label: "Returned" },
+];
+
 export function CollectionTable() {
   const { data, isPending, isError } = useAggregatorCollection();
   const [saleDialogHolding, setSaleDialogHolding] =
     useState<CollectionRow | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const releaseMutation = useReleaseHoldingMutation();
 
   // Returning an unsold piece refunds the advance but NOT the delivery charge
@@ -110,134 +120,181 @@ export function CollectionTable() {
     );
   }
 
+  const filtered =
+    statusFilter === "all"
+      ? data
+      : data.filter((holding) => holding.status === statusFilter);
+
   return (
     <>
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[960px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
-              <th className="px-4 py-3 font-medium">Artwork</th>
-              <th className="px-4 py-3 font-medium">
-                Display price
-                <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
-                  Incl. GST
-                </span>
-              </th>
-              <th className="px-4 py-3 font-medium">
-                Delivery
-                <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
-                  Refunded on sale
-                </span>
-              </th>
-              <th className="px-4 py-3 font-medium">Expiry</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((holding) => {
-              const isSold = holding.status === "sold_pending_settlement";
-              const status = STATUS_CONFIG[holding.status];
-              return (
-                <tr
-                  key={holding.id}
-                  className="border-b border-border last:border-0"
-                >
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
-                        <Image
-                          src={holding.artwork.thumbnailUrl}
-                          alt={holding.artwork.title}
-                          fill
-                          sizes="48px"
-                          className="object-cover"
-                        />
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {STATUS_TABS.map((tab) => {
+          const count =
+            tab.key === "all"
+              ? data.length
+              : data.filter((h) => h.status === tab.key).length;
+          const active = statusFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                active
+                  ? "border-gold/50 bg-gold/10 text-gold-bright"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {tab.label}
+              <span
+                className={
+                  active ? "text-gold-bright/70" : "text-muted-foreground/70"
+                }
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={GalleryVerticalEnd}
+          title="No holdings with this status"
+          description="Try a different filter above."
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full min-w-[960px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
+                <th className="px-4 py-3 font-medium">Artwork</th>
+                <th className="px-4 py-3 font-medium">
+                  Display price
+                  <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                    Incl. GST
+                  </span>
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  Delivery
+                  <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                    Refunded on sale
+                  </span>
+                </th>
+                <th className="px-4 py-3 font-medium">Expiry</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((holding) => {
+                const isSold = holding.status === "sold_pending_settlement";
+                const status = STATUS_CONFIG[holding.status];
+                return (
+                  <tr
+                    key={holding.id}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                          <Image
+                            src={holding.artwork.thumbnailUrl}
+                            alt={holding.artwork.title}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-foreground">
+                            {holding.artwork.title}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {holding.artwork.artistName}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-foreground">
-                          {holding.artwork.title}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {holding.artwork.artistName}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="px-4 py-3.5">
-                    {/* Not editable, by anyone, in any month. GalleryZone
-                        calculates the selling price and the aggregator
-                        displays the piece at it — so this is plain text, not
-                        a disabled control that invites a click. */}
-                    <PriceTag amount={holding.displayPrice} className="text-sm" />
-                    {!isSold && (
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Set by GalleryZone
-                      </p>
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3.5">
-                    <PriceTag
-                      amount={holding.deliveryDeposit ?? 0}
-                      className="text-sm"
-                    />
-                    <p className="mt-0.5 text-[11px] text-muted-foreground">
-                      Refunded only on sale
-                    </p>
-                  </td>
-
-                  <td className="px-4 py-3.5">
-                    {isSold ? (
-                      <span className="text-xs text-muted-foreground">
-                        &mdash;
-                      </span>
-                    ) : (
-                      <ExpiryCountdown
-                        expiresAt={holding.expiresAt}
-                        className="w-32"
+                    <td className="px-4 py-3.5">
+                      {/* Not editable, by anyone, in any month. GalleryZone
+                            calculates the selling price and the aggregator
+                            displays the piece at it — so this is plain text, not
+                            a disabled control that invites a click. */}
+                      <PriceTag
+                        amount={holding.displayPrice}
+                        className="text-sm"
                       />
-                    )}
-                  </td>
-
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${status.className}`}
-                    >
-                      <status.icon className="size-3" strokeWidth={2} />
-                      {status.label}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant={isSold ? "outline" : "default"}
-                        disabled={isSold}
-                        onClick={() => setSaleDialogHolding(holding)}
-                      >
-                        {isSold ? "Sale recorded" : "Record sale"}
-                      </Button>
                       {!isSold && (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          Set by GalleryZone
+                        </p>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <PriceTag
+                        amount={holding.deliveryDeposit ?? 0}
+                        className="text-sm"
+                      />
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        Refunded only on sale
+                      </p>
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      {isSold ? (
+                        <span className="text-xs text-muted-foreground">
+                          &mdash;
+                        </span>
+                      ) : (
+                        <ExpiryCountdown
+                          expiresAt={holding.expiresAt}
+                          className="w-32"
+                        />
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${status.className}`}
+                      >
+                        <status.icon className="size-3" strokeWidth={2} />
+                        {status.label}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2">
                         <Button
                           size="sm"
-                          variant="outline"
-                          disabled={releaseMutation.isPending}
-                          onClick={() => handleReturn(holding)}
+                          variant={isSold ? "outline" : "default"}
+                          disabled={isSold}
+                          onClick={() => setSaleDialogHolding(holding)}
                         >
-                          Return
+                          {isSold ? "Sale recorded" : "Record sale"}
                         </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                        {!isSold && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={releaseMutation.isPending}
+                            onClick={() => handleReturn(holding)}
+                          >
+                            Return
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <RecordSaleDialog
         holding={saleDialogHolding}

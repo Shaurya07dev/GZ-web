@@ -555,8 +555,8 @@ export const mockPendingArtworks: Artwork[] = [
 // are the only ones the customer fixtures contain.
 //
 // 15 further users are admin-only, spanning artists / aggregators /
-// customers with mixed account status. Five artists sit in submitted or
-// under_review KYC so the KYC queue has real work waiting.
+// customers with mixed account status. Five artists and two aggregators sit
+// in submitted or under_review KYC so the KYC queue has real work waiting.
 // ---------------------------------------------------------------------------
 
 interface ArtistAdminMeta {
@@ -724,6 +724,7 @@ const adminOnlyUsers: AdminUser[] = [
     createdAt: daysAgo(288),
     lastLoginAt: daysAgo(0),
     companyName: AGGREGATOR.companyName,
+    kycStatus: "approved",
   },
   {
     id: "user-agg-kala-collective",
@@ -735,6 +736,7 @@ const adminOnlyUsers: AdminUser[] = [
     createdAt: daysAgo(205),
     lastLoginAt: daysAgo(3),
     companyName: "Kala Collective",
+    kycStatus: "submitted",
   },
   {
     id: "user-agg-fort-kochi",
@@ -746,6 +748,7 @@ const adminOnlyUsers: AdminUser[] = [
     createdAt: daysAgo(141),
     lastLoginAt: daysAgo(8),
     companyName: "Fort Kochi Art Rooms",
+    kycStatus: "under_review",
   },
   {
     id: "user-agg-baithak",
@@ -757,6 +760,7 @@ const adminOnlyUsers: AdminUser[] = [
     createdAt: daysAgo(77),
     lastLoginAt: daysAgo(40),
     companyName: "Baithak Gallery",
+    kycStatus: "rejected",
   },
 
   // --- Customers --------------------------------------------------------
@@ -825,7 +829,7 @@ export const KYC_QUEUE_STATUSES: KycStatus[] = ["submitted", "under_review"];
 
 export function isInKycQueue(user: AdminUser): boolean {
   return (
-    user.role === "artist" &&
+    (user.role === "artist" || user.role === "aggregator") &&
     !!user.kycStatus &&
     KYC_QUEUE_STATUSES.includes(user.kycStatus)
   );

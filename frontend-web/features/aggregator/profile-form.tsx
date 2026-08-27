@@ -14,6 +14,7 @@ import {
   Lock,
   UserRoundCog,
   BellRing,
+  Fingerprint,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GSTIN_PATTERN } from "@/components/shared/gst-number-card";
@@ -45,6 +46,17 @@ const DESIGNATION_OTHER = "__other__";
 
 const EMAIL_DOMAIN_SUGGESTIONS = ["gmail.com", "yahoo.com"];
 
+// A number's local part (dial code stripped off) has to fall in this range
+// regardless of which country it's from -- E.164 caps the whole number at 15
+// digits, and nothing real is shorter than 6.
+const PHONE_NUMBER_PATTERN = /^[0-9]{6,14}$/;
+function isValidPhoneNumber(value: string): boolean {
+  return PHONE_NUMBER_PATTERN.test(value.replace(/\s+/g, ""));
+}
+
+// 12 digits, optionally grouped as 4-4-4 the way Aadhaar is normally printed.
+const AADHAAR_PATTERN = /^[0-9]{12}$/;
+
 type AggregatorProfileData = NonNullable<
   ReturnType<typeof useAggregatorProfile>["data"]
 >;
@@ -61,7 +73,11 @@ const profileSchema = z.object({
       (value) => value.length === 0 || GSTIN_PATTERN.test(value),
       "Enter a valid 15-character GSTIN, or leave it blank",
     ),
-  phone: z.string().trim().min(10, "Enter a valid phone number"),
+  phone: z
+    .string()
+    .trim()
+    .refine(isValidPhoneNumber, "Enter a valid phone number"),
+  country: z.string().trim().min(2, "Select a country"),
   addressLine1: z.string().trim().min(5, "Enter your business address"),
   // MOU §10 requires one nominated GalleryZone coordinator per premises. All
   // three are required: audit notices, expiry reminders and inbound shipment
@@ -70,10 +86,24 @@ const profileSchema = z.object({
     .string()
     .trim()
     .min(2, "Enter their role, e.g. Gallery Manager"),
-  coordinatorPhone: z.string().trim().min(10, "Enter a valid phone number"),
+  coordinatorPhone: z
+    .string()
+    .trim()
+    .refine(isValidPhoneNumber, "Enter a valid phone number"),
   coordinatorEmail: z.string().trim().email("Enter a valid email address"),
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const identitySchema = z.object({
+  aadhaarNumber: z
+    .string()
+    .trim()
+    .refine(
+      (value) => AADHAAR_PATTERN.test(value.replace(/\s+/g, "")),
+      "Enter a valid 12-digit Aadhaar number",
+    ),
+});
+type IdentityFormValues = z.infer<typeof identitySchema>;
 
 // Mirrors artistDashboardService.updateBankDetails's masking contract:
 // only the last 4 digits are ever persisted/displayed, so the full number
@@ -109,9 +139,12 @@ export function ProfileForm() {
 function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
   const updateBankMutation = useUpdateAggregatorProfileMutation();
+  const updateIdentityMutation = useUpdateAggregatorProfileMutation();
 
   const initialPhone = splitPhone(profile.coordinatorPhone);
+  const initialCompanyPhone = splitPhone(profile.phone);
   const [coordinatorDial, setCoordinatorDial] = useState(initialPhone.dial);
+  const [companyDial, setCompanyDial] = useState(initialCompanyPhone.dial);
   const [designationOption, setDesignationOption] = useState<string>(
     (DESIGNATION_PRESETS as readonly string[]).includes(
       profile.coordinatorDesignation,
@@ -120,6 +153,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
       : DESIGNATION_OTHER,
   );
   const [emailFocused, setEmailFocused] = useState(false);
+  const [identitySubmitted, setIdentitySubmitted] = useState(false);
 
   const {
     register,
@@ -134,7 +168,8 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
       companyName: profile.companyName,
       contactPerson: profile.contactPerson,
       gstNumber: profile.gstNumber,
-      phone: profile.phone,
+      phone: initialCompanyPhone.number,
+      country: profile.country,
       addressLine1: profile.addressLine1,
       coordinatorDesignation: profile.coordinatorDesignation,
       coordinatorPhone: initialPhone.number,
@@ -158,6 +193,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
     updateProfileMutation.mutate(
       {
         ...values,
+        phone: joinPhone(companyDial, values.phone),
         coordinatorPhone: joinPhone(coordinatorDial, values.coordinatorPhone),
       },
       {
@@ -184,6 +220,31 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
         onSuccess: () => {
           toast.success("Bank details updated");
           resetBank({ bankAccountNumber: "", ifsc: values.ifsc });
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  }
+
+  const {
+    register: registerIdentity,
+    handleSubmit: handleIdentitySubmit,
+    reset: resetIdentity,
+    formState: { errors: identityErrors, isSubmitting: isIdentitySubmitting },
+  } = useForm<IdentityFormValues>({
+    resolver: zodResolver(identitySchema),
+    defaultValues: { aadhaarNumber: "" },
+  });
+
+  function onIdentitySubmit(values: IdentityFormValues) {
+    const digits = values.aadhaarNumber.replace(/\s+/g, "");
+    const last4 = digits.slice(-4);
+    updateIdentityMutation.mutate(
+      { aadhaarMasked: `XXXX XXXX ${last4}` },
+      {
+        onSuccess: () => {
+          setIdentitySubmitted(true);
+          resetIdentity({ aadhaarNumber: "" });
         },
         onError: (error) => toast.error(error.message),
       },
@@ -270,17 +331,59 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
 
           <Field data-invalid={Boolean(errors.phone)}>
             <FieldLabel htmlFor="phone">Phone</FieldLabel>
-            <Input
-              id="phone"
-              type="tel"
-              className="h-10"
-              {...register("phone")}
-              aria-invalid={Boolean(errors.phone)}
-            />
+            <div className="flex gap-2">
+              <Select
+                value={companyDial}
+                onValueChange={(value) => value && setCompanyDial(value)}
+              >
+                <SelectTrigger className="h-10 w-24 shrink-0">
+                  <SelectValue placeholder={DEFAULT_COUNTRY_DIAL} />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_CODES.map((country) => (
+                    <SelectItem key={country.iso} value={country.dial}>
+                      {country.dial} {country.iso}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id="phone"
+                type="tel"
+                className="h-10"
+                {...register("phone")}
+                aria-invalid={Boolean(errors.phone)}
+              />
+            </div>
             <FieldError errors={[errors.phone]} />
           </Field>
 
-          <Field data-invalid={Boolean(errors.addressLine1)} className="sm:col-span-2">
+          <Field data-invalid={Boolean(errors.country)}>
+            <FieldLabel htmlFor="country">Country</FieldLabel>
+            <Select
+              value={watch("country")}
+              onValueChange={(value) =>
+                value && setValue("country", value, { shouldValidate: true })
+              }
+            >
+              <SelectTrigger id="country" className="h-10 w-full">
+                <SelectValue placeholder="Select a country" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_CODES.map((country) => (
+                  <SelectItem key={country.iso} value={country.iso}>
+                    {country.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError errors={[errors.country]} />
+          </Field>
+
+          <Field
+            data-invalid={Boolean(errors.addressLine1)}
+            className="sm:col-span-2"
+          >
             <FieldLabel htmlFor="addressLine1">Business address</FieldLabel>
             <Input
               id="addressLine1"
@@ -360,7 +463,10 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
                   }
                 }}
               >
-                <SelectTrigger id="coordinatorDesignation" className="h-10 w-full">
+                <SelectTrigger
+                  id="coordinatorDesignation"
+                  className="h-10 w-full"
+                >
                   <SelectValue placeholder="Choose a designation" />
                 </SelectTrigger>
                 <SelectContent>
@@ -487,9 +593,9 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
             </span>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-            Held per your onboarding MOU and refunded after a final audit if
-            you exit the program. This is managed by GalleryZone admin —
-            contact support with questions.
+            Held per your onboarding MOU and refunded after a final audit if you
+            exit the program. This is managed by GalleryZone admin — contact
+            support with questions.
           </p>
         </div>
 
@@ -573,6 +679,89 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
               <span className="flex items-center gap-1.5 text-sm text-gold-bright">
                 <Check className="size-3.5" />
                 Updated
+              </span>
+            )}
+          </div>
+        </form>
+
+        <form
+          onSubmit={handleIdentitySubmit(onIdentitySubmit)}
+          className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Identity verification
+            </h2>
+            {profile.aadhaarMasked ? (
+              <span className="flex items-center gap-1.5 rounded-full border border-gold/35 bg-gold/10 px-2.5 py-1 text-xs font-medium text-gold-bright">
+                <ShieldCheck className="size-3" />
+                Submitted
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Not submitted
+              </span>
+            )}
+          </div>
+
+          {profile.aadhaarMasked && (
+            <div className="flex items-center gap-3 rounded-md border border-border p-3.5">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+                <Fingerprint
+                  className="size-4 text-gold-bright"
+                  strokeWidth={1.5}
+                />
+              </span>
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 truncate text-sm font-medium text-foreground">
+                  <Lock className="size-3 shrink-0 text-muted-foreground" />
+                  {profile.aadhaarMasked}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Aadhaar currently on file
+                </p>
+              </div>
+            </div>
+          )}
+
+          <Field data-invalid={Boolean(identityErrors.aadhaarNumber)}>
+            <FieldLabel htmlFor="aadhaarNumber">
+              {profile.aadhaarMasked
+                ? "Replace Aadhaar number"
+                : "Aadhaar number"}
+            </FieldLabel>
+            <Input
+              id="aadhaarNumber"
+              inputMode="numeric"
+              placeholder="XXXX XXXX XXXX"
+              className="h-10"
+              {...registerIdentity("aadhaarNumber")}
+              aria-invalid={Boolean(identityErrors.aadhaarNumber)}
+            />
+            <FieldError errors={[identityErrors.aadhaarNumber]} />
+          </Field>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Encrypted at rest and used only for identity verification.
+            GalleryZone admin reviews every submission before approving it.
+          </p>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={
+                isIdentitySubmitting || updateIdentityMutation.isPending
+              }
+              className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
+            >
+              {updateIdentityMutation.isPending && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Submit for review
+            </button>
+            {identitySubmitted && (
+              <span className="flex items-center gap-1.5 text-sm text-gold-bright">
+                <Check className="size-3.5" />
+                Submitted for review
               </span>
             )}
           </div>
