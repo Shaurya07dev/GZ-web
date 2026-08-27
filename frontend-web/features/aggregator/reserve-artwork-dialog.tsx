@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -38,6 +39,7 @@ export function ReserveArtworkDialog({
   open,
   onOpenChange,
 }: ReserveArtworkDialogProps) {
+  const router = useRouter();
   const reserveMutation = useReserveArtworkMutation();
   const addFunds = useAddAggregatorFundsMutation();
   const { data: wallet } = useAggregatorWallet();
@@ -66,8 +68,15 @@ export function ReserveArtworkDialog({
     if (!artwork) return;
     reserveMutation.mutate(artwork.id, {
       onSuccess: () => {
+        // Name the destination the way the sidebar names it. This said
+        // "Collection", which is not a word that appears anywhere in the nav —
+        // so the one question it left was the one it was meant to answer.
         toast.success("Artwork reserved", {
-          description: `"${artwork.title}" is now in your Collection.`,
+          description: `"${artwork.title}" is now in My Inventory.`,
+          action: {
+            label: "Open",
+            onClick: () => router.push("/aggregator/collection"),
+          },
         });
         onOpenChange(false);
       },

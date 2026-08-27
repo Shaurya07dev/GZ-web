@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -80,6 +81,7 @@ export function RecordSaleDialog({
   open,
   onOpenChange,
 }: RecordSaleDialogProps) {
+  const router = useRouter();
   const recordSaleMutation = useRecordSaleMutation();
 
   const { control, handleSubmit, reset } = useForm<RecordSaleFormValues>({
@@ -115,6 +117,10 @@ export function RecordSaleDialog({
         onSuccess: () => {
           toast.success("Sale recorded", {
             description: `"${holding.artwork.title}" is now pending settlement. The buyer's purchase is held against ${values.buyerEmail} — it appears in their collection when they sign up with that address.`,
+            action: {
+              label: "Settlements",
+              onClick: () => router.push("/aggregator/settlements"),
+            },
           });
           onOpenChange(false);
         },
