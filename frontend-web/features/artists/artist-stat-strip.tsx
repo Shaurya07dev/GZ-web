@@ -80,16 +80,11 @@ export function ArtistStatStrip({
             </span>
           )}
 
-          {/* Two is the point at which "they collaborate" is true rather than
-              "they collaborated once". */}
           {stats.connections > 0 && (
             <span className="text-muted-foreground">
               Connected with {stats.connections}{" "}
               {stats.connections === 1 ? "artist" : "artists"}
-              {stats.collaborations > 0 &&
-                ` · ${stats.collaborations} completed ${
-                  stats.collaborations === 1 ? "collaboration" : "collaborations"
-                }`}
+
             </span>
           )}
         </div>

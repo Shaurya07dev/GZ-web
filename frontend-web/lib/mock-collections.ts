@@ -24,7 +24,6 @@ import type { SupportTicket } from "@/types/support";
 import type { ResaleListing } from "@/types/resale";
 import type { ArtistReview } from "@/types/artist-rating";
 import type {
-  ArtistCollaboration,
   ArtistConnection,
 } from "@/types/artist-network";
 import { mockArtworks } from "./mock-data/artworks";
@@ -33,7 +32,6 @@ import { mockOrders, mockAddresses, mockCustomer } from "./mock-data/customer";
 import { mockPendingArtworks, mockAdminUsers } from "./mock-data/admin";
 import { mockArtistReviews } from "./mock-data/artist-reviews";
 import {
-  mockArtistCollaborations,
   mockArtistConnections,
 } from "./mock-data/artist-network";
 import {
@@ -559,10 +557,6 @@ export const artistReviewsCol = collection<ArtistReview[]>(
 export const artistConnectionsCol = collection<ArtistConnection[]>(
   "artistConnections",
   () => [...mockArtistConnections],
-);
-export const artistCollaborationsCol = collection<ArtistCollaboration[]>(
-  "artistCollaborations",
-  () => [...mockArtistCollaborations],
 );
 
 export const artistSettingsCol = collection("artistSettings", () => ({

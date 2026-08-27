@@ -40,8 +40,6 @@ export interface ArtistPublicStats {
   rating: ArtistRating;
   /** Accepted artist-to-artist connections. */
   connections: number;
-  /** Collaborations that actually completed. */
-  collaborations: number;
   joinedAt: string;
   verifiedTiers: 0 | 1 | 2 | 3;
 }

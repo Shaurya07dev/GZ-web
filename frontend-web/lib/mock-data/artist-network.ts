@@ -1,13 +1,10 @@
-import type {
-  ArtistCollaboration,
-  ArtistConnection,
-} from "@/types/artist-network";
+import type { ArtistConnection } from "@/types/artist-network";
 import { mockArtists } from "./artists";
 import { ARTIST } from "@/features/dashboard/dashboard-data";
 
 // The demo's artist-to-artist graph. There is no backend, so nothing here is
-// earned at runtime — the write paths (send a request, accept it, propose a
-// collaboration) act on this seed.
+// earned at runtime — the write paths (send a request, accept it) act on this
+// seed.
 
 const DEMO_ARTIST_ID = "devika-rao";
 
@@ -21,9 +18,9 @@ function publicArtist(id: string) {
   return artist;
 }
 
-// One accepted connection so the demo artist has a peer to collaborate with,
-// and one incoming request waiting on them so Accept/Ignore has something to
-// act on the first time the page is opened.
+// One accepted connection so the demo artist already has a peer, and one
+// incoming request waiting on them so Accept/Ignore has something to act on the
+// first time the page is opened.
 export const mockArtistConnections: ArtistConnection[] = [
   {
     id: "conn-1",
@@ -50,22 +47,6 @@ export const mockArtistConnections: ArtistConnection[] = [
     message:
       "Planning a sculpture-and-canvas pairing for a Jaipur show. Interested?",
     requestedAt: daysAgo(3),
-    respondedAt: null,
-  },
-];
-
-export const mockArtistCollaborations: ArtistCollaboration[] = [
-  {
-    id: "collab-1",
-    proposerId: "meera-nair",
-    proposerName: publicArtist("meera-nair").name,
-    partnerId: DEMO_ARTIST_ID,
-    partnerName: ARTIST.name,
-    title: "Two Coasts",
-    brief:
-      "A paired series — six canvases each, hung as alternating pairs, on the monsoon light either side of the peninsula.",
-    status: "proposed",
-    proposedAt: daysAgo(6),
     respondedAt: null,
   },
 ];

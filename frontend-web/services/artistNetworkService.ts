@@ -1,20 +1,17 @@
 import {
-  artistCollaborationsCol,
   artistConnectionsCol,
-  artistProfileCol,
   CURRENT_ARTIST_ID,
   CURRENT_ARTIST_NAME,
 } from "@/lib/mock-collections";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import {
   involvesArtist,
-  type ArtistCollaboration,
   type ArtistConnection,
 } from "@/types/artist-network";
 import { ARTIST } from "@/features/dashboard/dashboard-data";
 import { mockArtists } from "@/lib/mock-data/artists";
 
-// Artist-to-artist connections and collaborations. Same shape as every other
+// Artist-to-artist connections. Same shape as every other
 // service here: fixture data behind mockDelay, persisted through
 // lib/mock-collections.ts. The rules live in this file, not in the components,
 // so a stale tab cannot get around a hidden button.
@@ -52,15 +49,6 @@ function findBetween(
       (c.requesterId === a && c.recipientId === b) ||
       (c.requesterId === b && c.recipientId === a),
   );
-}
-
-function isConnected(a: string, b: string): boolean {
-  return findBetween(artistConnectionsCol.get(), a, b)?.status === "accepted";
-}
-
-/** Signing the MOU is what unlocks collaborations — see MouAgreement. */
-function mouSigned(): boolean {
-  return artistProfileCol.get().mouAcceptance !== null;
 }
 
 export const artistNetworkService = {
@@ -148,102 +136,6 @@ export const artistNetworkService = {
     };
     artistConnectionsCol.set(
       connections.map((c) => (c.id === updated.id ? updated : c)),
-    );
-    return mockDelay(updated);
-  },
-
-  // --- Collaborations ------------------------------------------------------
-
-  listCollaborations: (artistId: string): Promise<ArtistCollaboration[]> =>
-    mockDelay(
-      artistCollaborationsCol
-        .get()
-        .filter((c) => c.proposerId === artistId || c.partnerId === artistId)
-        .sort((a, b) => b.proposedAt.localeCompare(a.proposedAt)),
-    ),
-
-  proposeCollaboration: (input: {
-    proposerId: string;
-    partnerId: string;
-    title: string;
-    brief: string;
-  }): Promise<ArtistCollaboration> => {
-    // Both gates are enforced here as well as in the UI: the MOU is the
-    // agreement that makes joint work possible at all, and a collaboration
-    // with someone you are not connected to is not a collaboration.
-    if (input.proposerId === CURRENT_ARTIST_ID && !mouSigned())
-      return mockError("Sign your MOU before proposing a collaboration");
-    if (!isConnected(input.proposerId, input.partnerId))
-      return mockError("Connect with this artist first");
-    if (!input.title.trim()) return mockError("Give the collaboration a title");
-    if (!input.brief.trim()) return mockError("Describe what you have in mind");
-
-    const collaboration: ArtistCollaboration = {
-      id: nextId("collab"),
-      proposerId: input.proposerId,
-      proposerName: artistDisplay(input.proposerId).name,
-      partnerId: input.partnerId,
-      partnerName: artistDisplay(input.partnerId).name,
-      title: input.title.trim(),
-      brief: input.brief.trim(),
-      status: "proposed",
-      proposedAt: nowIso(),
-      respondedAt: null,
-    };
-    artistCollaborationsCol.set([
-      ...artistCollaborationsCol.get(),
-      collaboration,
-    ]);
-    return mockDelay(collaboration);
-  },
-
-  respondToCollaboration: (input: {
-    collaborationId: string;
-    viewerId: string;
-    accept: boolean;
-  }): Promise<ArtistCollaboration> => {
-    const all = artistCollaborationsCol.get();
-    const collaboration = all.find((c) => c.id === input.collaborationId);
-    if (!collaboration) return mockError("Collaboration not found");
-    if (collaboration.partnerId !== input.viewerId)
-      return mockError("Only the invited artist can answer this");
-    if (collaboration.status !== "proposed")
-      return mockError("That proposal has already been answered");
-
-    const updated: ArtistCollaboration = {
-      ...collaboration,
-      status: input.accept ? "active" : "declined",
-      respondedAt: nowIso(),
-    };
-    artistCollaborationsCol.set(
-      all.map((c) => (c.id === updated.id ? updated : c)),
-    );
-    return mockDelay(updated);
-  },
-
-  // Either side can mark finished work done; there is nothing to arbitrate.
-  completeCollaboration: (input: {
-    collaborationId: string;
-    viewerId: string;
-  }): Promise<ArtistCollaboration> => {
-    const all = artistCollaborationsCol.get();
-    const collaboration = all.find((c) => c.id === input.collaborationId);
-    if (!collaboration) return mockError("Collaboration not found");
-    if (
-      collaboration.proposerId !== input.viewerId &&
-      collaboration.partnerId !== input.viewerId
-    )
-      return mockError("You are not part of this collaboration");
-    if (collaboration.status !== "active")
-      return mockError("Only an active collaboration can be completed");
-
-    const updated: ArtistCollaboration = {
-      ...collaboration,
-      status: "completed",
-      respondedAt: nowIso(),
-    };
-    artistCollaborationsCol.set(
-      all.map((c) => (c.id === updated.id ? updated : c)),
     );
     return mockDelay(updated);
   },

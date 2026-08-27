@@ -611,6 +611,16 @@ const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
     joinedDaysAgo: 214,
     lastLoginDaysAgo: 9,
   },
+  // The artist the dashboard is signed in as. She used to be hand-written
+  // below as "user-artist-devika-rao" because she was not in mockArtists; now
+  // that she is, she derives like everyone else and the hand-written row would
+  // have made her two different people in the users table.
+  "devika-rao": {
+    status: "active",
+    kycStatus: "approved",
+    joinedDaysAgo: 168,
+    lastLoginDaysAgo: 0,
+  },
 };
 
 const derivedArtistUsers: AdminUser[] = mockArtists.map((artist, i) => {
@@ -666,21 +676,6 @@ const adminOnlyUsers: AdminUser[] = [
     createdAt: daysAgo(34),
     lastLoginAt: daysAgo(1),
     kycStatus: "under_review",
-  },
-  {
-    // The same artist the Artist Dashboard is signed in as
-    // (features/dashboard/dashboard-data.ts's ARTIST), so she resolves in
-    // admin too. Not imported from there: that module pulls in lucide-react
-    // icons, which has no business inside a fixture file.
-    id: "user-artist-devika-rao",
-    name: "Devika Rao",
-    email: "devika.rao@example.com",
-    phone: "+919845112252",
-    role: "artist",
-    status: "active",
-    createdAt: daysAgo(168),
-    lastLoginAt: daysAgo(0),
-    kycStatus: "approved",
   },
   {
     id: "user-artist-sameer-joshi",
@@ -888,7 +883,7 @@ const WITHDRAWAL_SEEDS: WithdrawalSeed[] = [
   },
   {
     id: "wd-1004",
-    userId: "user-artist-devika-rao",
+    userId: "user-devika-rao",
     amount: 12800,
     bankAccountMasked: "XXXXXXXX6903",
     walletBalance: 21450,
@@ -1367,7 +1362,7 @@ export const mockAuditLog: AuditLogEntry[] = [
     adminName: "Sneha Kulkarni",
     action: "kyc.approved",
     entityType: "user",
-    entityId: "user-artist-devika-rao",
+    entityId: "user-devika-rao",
     entityLabel: "Devika Rao",
     createdAt: daysAgo(34),
   },

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { artistNetworkService } from "@/services/artistNetworkService";
 
-// Artist-to-artist connections and collaborations. Page → Hook → Service, like
+// Artist-to-artist connections. Page → Hook → Service, like
 // every other data path here; components never call the service directly.
 // Ratings live in useArtistRating.
 
@@ -51,49 +51,5 @@ export function useRespondToConnectionMutation() {
   return useConnectionMutation(
     (input: { connectionId: string; viewerId: string; accept: boolean }) =>
       artistNetworkService.respondToConnection(input),
-  );
-}
-
-export function useArtistCollaborations(artistId: string) {
-  return useQuery({
-    queryKey: ["artist-collaborations", artistId],
-    queryFn: () => artistNetworkService.listCollaborations(artistId),
-  });
-}
-
-function useCollaborationMutation<TInput>(
-  mutationFn: (input: TInput) => Promise<unknown>,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["artist-collaborations"] });
-    },
-  });
-}
-
-export function useProposeCollaborationMutation() {
-  return useCollaborationMutation(
-    (input: {
-      proposerId: string;
-      partnerId: string;
-      title: string;
-      brief: string;
-    }) => artistNetworkService.proposeCollaboration(input),
-  );
-}
-
-export function useRespondToCollaborationMutation() {
-  return useCollaborationMutation(
-    (input: { collaborationId: string; viewerId: string; accept: boolean }) =>
-      artistNetworkService.respondToCollaboration(input),
-  );
-}
-
-export function useCompleteCollaborationMutation() {
-  return useCollaborationMutation(
-    (input: { collaborationId: string; viewerId: string }) =>
-      artistNetworkService.completeCollaboration(input),
   );
 }

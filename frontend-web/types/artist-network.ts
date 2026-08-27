@@ -1,5 +1,4 @@
-// Artist-to-artist connections, and the collaborations that grow out of them.
-// A connection is what makes a collaboration possible, so they live together.
+// Artist-to-artist connections.
 //
 // Deliberately separate from types/artist-rating.ts: a rating is a COLLECTOR's
 // view of an artist, earned on a sale. These are how artists relate to each
@@ -59,40 +58,3 @@ export function involvesArtist(
     connection.requesterId === artistId || connection.recipientId === artistId
   );
 }
-
-export type CollaborationStatus =
-  | "proposed"
-  | "active"
-  | "completed"
-  | "declined";
-
-// A joint piece or show between two artists who are already connected. Same
-// two-sided storage as a connection: one record, read from either end.
-export interface ArtistCollaboration {
-  id: string;
-  proposerId: string;
-  proposerName: string;
-  partnerId: string;
-  partnerName: string;
-  title: string;
-  brief: string;
-  status: CollaborationStatus;
-  proposedAt: string; // ISO
-  respondedAt: string | null;
-}
-
-export function collaborationPeerName(
-  collaboration: ArtistCollaboration,
-  viewerId: string,
-): string {
-  return collaboration.proposerId === viewerId
-    ? collaboration.partnerName
-    : collaboration.proposerName;
-}
-
-export const COLLABORATION_STATUS_LABEL: Record<CollaborationStatus, string> = {
-  proposed: "Proposed",
-  active: "Active",
-  completed: "Completed",
-  declined: "Declined",
-};

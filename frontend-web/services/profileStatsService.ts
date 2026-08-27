@@ -18,7 +18,6 @@ import {
   aggregatorSalesCol,
   aggregatorProfileCol,
   aggregatorWalletCol,
-  artistCollaborationsCol,
   artistConnectionsCol,
   artistPricesCol,
   artistReviewsCol,
@@ -84,14 +83,6 @@ function artistPublic(artistId: string): ArtistPublicStats {
   const connections = artistConnectionsCol
     .get()
     .filter((c) => involvesArtist(c, artistId) && c.status === "accepted");
-  const collaborations = artistCollaborationsCol
-    .get()
-    .filter(
-      (c) =>
-        (c.proposerId === artistId || c.partnerId === artistId) &&
-        c.status === "completed",
-    );
-
   return {
     artworksListed: listed.length,
     worksSold: sold.length,
@@ -103,7 +94,6 @@ function artistPublic(artistId: string): ArtistPublicStats {
     listedPriceRange: rangeOf(listed.map((a) => a.customerPrice)),
     rating: summarizeRating(artistId, artistReviewsCol.get()),
     connections: connections.length,
-    collaborations: collaborations.length,
     joinedAt: identity.joinedAt,
     verifiedTiers: identity.verifiedTiers,
   };

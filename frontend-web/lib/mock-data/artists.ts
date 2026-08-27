@@ -1,6 +1,6 @@
 import type { ArtistProfile } from "@/types/artist";
 
-// Seven artist profiles spanning every verification-tier combination the UI
+// Eight artist profiles spanning every verification-tier combination the UI
 // needs to render: two fully Gold-verified (all three tiers), one tier-1
 // only, one tier-1 + tier-2, two unusual partial combinations, and one
 // freshly registered artist with zero tiers complete. Bios are original
@@ -8,6 +8,29 @@ import type { ArtistProfile } from "@/types/artist";
 // copy (empowerment + authenticity + process transparency), stored as
 // sanitized-at-display rich text (simple <p> markup) per types/artist.ts.
 export const mockArtists: ArtistProfile[] = [
+  // The signed-in demo artist. She was left out of this list on purpose once,
+  // on the grounds that she is "the dashboard artist, not a public one" — but
+  // her work is on the marketplace under her name, and her own dashboard links
+  // to /artists/devika-rao. Without a profile here that link 404s and every
+  // artwork card of hers points at a page that does not exist. Being signed in
+  // is not a reason to have no public identity.
+  {
+    id: "devika-rao",
+    headline: "Oil and ceramic · Rajasthani light, indoors and out",
+    location: "Udaipur, Rajasthan",
+    joinedAt: "2025-07-05T00:00:00.000Z",
+    name: "Devika Rao",
+    bio: "<p>Devika works between two materials that rarely share a studio — oil on canvas and fired ceramic — and treats them as the same problem. Both are about how a surface holds light after the sun has gone off it, which in Udaipur happens fast and twice a day.</p><p>Her canvases start outdoors and finish indoors from memory, and the terracotta pieces are thrown and glazed in the same room. Every work ships with a signed Certificate of Authenticity.</p>",
+    profileImageUrl: "/early-program/avatar-3.png",
+    verification: {
+      tier1SocialMedia: true,
+      tier2ActivePlan: true,
+      tier3FirstSale: false,
+    },
+    socialLinks: [
+      { platform: "instagram", url: "https://www.instagram.com/" },
+    ],
+  },
   {
     id: "meera-nair",
     headline: "Oil painter · monsoon light on the Tamil coastline",

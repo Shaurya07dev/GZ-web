@@ -130,7 +130,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   const [docsSubmitted, setDocsSubmitted] = useState(false);
 
   // Signing reorders this page (unsigned artists get the agreement first)
-  // and is what unlocks proposing a collaboration.
+  // and is what gates listing work for aggregator display.
   const mouSigned = profile.mouAcceptance !== null;
 
   function updateProfile<K extends keyof ProfileFormState>(
@@ -556,7 +556,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
         </div>
       </div>
 
-      <ArtistNetworkPanel mouSigned={mouSigned} />
+      <ArtistNetworkPanel />
 
       {mouSigned && (
         <div className="lg:col-span-2">
