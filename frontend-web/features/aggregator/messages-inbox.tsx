@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ChevronDown, Mail, MailOpen } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
-import { DoodleBackdrop } from "@/components/shared/doodle-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAggregatorMessages,
@@ -48,9 +47,8 @@ export function AggregatorMessagesInbox() {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border bg-card">
-      <DoodleBackdrop />
-      <div className="relative flex flex-col divide-y divide-border">
+    <div className="relative overflow-hidden rounded-lg border border-border bg-card/70 backdrop-blur-[2px]">
+      <div className="flex flex-col divide-y divide-border">
         {messages.map((message) => {
           const expanded = expandedId === message.id;
           return (

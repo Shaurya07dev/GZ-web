@@ -108,7 +108,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenuClick={() => setMobileOpen(true)} />
-        <main className="flex-1 px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <main className="relative flex-1 overflow-hidden px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
           {children}
         </main>
       </div>

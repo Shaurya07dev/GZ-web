@@ -20,15 +20,23 @@ export function AggregatorMouAgreement() {
     );
   }
 
+  // Unsigned, this is the most important thing on the page — nothing can be
+  // reserved until it is done, so it sits above the profile form. Signed, it is
+  // a receipt: still here to re-read, but no longer the first thing between the
+  // aggregator and their own details. CSS order rather than a reshuffle in the
+  // page, so the page stays a server component and this stays the one file that
+  // knows whether it has been signed.
   return (
-    <MouAgreement
-      document={AGGREGATOR_MOU}
-      signerName={profile.contactPerson}
-      acceptance={profile.mouAcceptance}
-      onSign={(input) => acceptMutation.mutate(input)}
-      isPending={acceptMutation.isPending}
-      error={acceptMutation.error}
-      isSuccess={acceptMutation.isSuccess}
-    />
+    <div className={profile.mouAcceptance ? "order-last" : undefined}>
+      <MouAgreement
+        document={AGGREGATOR_MOU}
+        signerName={profile.contactPerson}
+        acceptance={profile.mouAcceptance}
+        onSign={(input) => acceptMutation.mutate(input)}
+        isPending={acceptMutation.isPending}
+        error={acceptMutation.error}
+        isSuccess={acceptMutation.isSuccess}
+      />
+    </div>
   );
 }
