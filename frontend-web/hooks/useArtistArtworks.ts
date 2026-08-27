@@ -46,21 +46,6 @@ export function useUpdateArtworkMutation() {
   });
 }
 
-// Demo-only instant approval — see the service note.
-export function useSelfApproveArtworkMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (artworkId: string) =>
-      artistDashboardService.selfApproveArtwork(artworkId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
-      queryClient.invalidateQueries({ queryKey: ["artist-kpis"] });
-      queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
-      queryClient.invalidateQueries({ queryKey: ["artworks"] });
-    },
-  });
-}
-
 // Off-platform sale fees owed but not yet charged. Read on the Add Artwork
 // form (so the artist sees the fee before listing) and after marking a piece
 // sold elsewhere.

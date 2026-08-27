@@ -185,7 +185,12 @@ export const artistDashboardService = {
       return mockError("Enter your price for this artwork");
 
     const now = new Date().toISOString();
-    const status = input.mode === "draft" ? "draft" : "pending_approval";
+    // Submitting publishes. There is no curator sitting behind this mock, so a
+    // piece that waited for one waited forever — the whole flow after listing
+    // (reserve, display, sale, settlement) was unreachable without an admin
+    // detour. The review step is still RECORDED, so the artwork's history reads
+    // truthfully: submitted, then approved, a moment apart.
+    const status = input.mode === "draft" ? "draft" : "marketplace";
     const id = `aw-${crypto.randomUUID().slice(0, 8)}`;
 
     const artwork: Artwork = {
@@ -208,7 +213,13 @@ export const artistDashboardService = {
       coaCertificateNumber: `GZ-COA-${new Date().getFullYear()}-${id.toUpperCase()}`,
       coaIssueDate: now,
       socialProofLinks: [],
-      statusHistory: [{ status, changedAt: now }],
+      statusHistory:
+        input.mode === "draft"
+          ? [{ status: "draft" as const, changedAt: now }]
+          : [
+              { status: "pending_approval" as const, changedAt: now },
+              { status: "marketplace" as const, changedAt: now },
+            ],
       nfcTagId: input.nfcTagId,
       physical: input.physical,
       // Unranked until an admin sets it — see ARTWORK_RARITY_OPTIONS.
@@ -216,15 +227,23 @@ export const artistDashboardService = {
     };
 
     artistPricesCol.set({ ...artistPricesCol.get(), [id]: input.artistPrice });
-    pendingArtworksCol.set([artwork, ...pendingArtworksCol.get()]);
-    if (input.mode === "review") settlePendingPenalties(artwork.title);
+    // A draft is still the artist's own; a published piece belongs in the live
+    // collection the marketplace reads.
+    if (input.mode === "draft") {
+      pendingArtworksCol.set([artwork, ...pendingArtworksCol.get()]);
+    } else {
+      artworksCol.set([artwork, ...artworksCol.get()]);
+      settlePendingPenalties(artwork.title);
+    }
 
     appendActivity(
-      input.mode === "draft" ? "artwork_submitted" : "artwork_submitted",
+      "artwork_submitted",
       input.mode === "draft"
         ? `"${artwork.title}" saved as draft`
-        : `"${artwork.title}" submitted`,
-      input.mode === "draft" ? "Not yet sent for review" : "Awaiting admin review",
+        : `"${artwork.title}" is live`,
+      input.mode === "draft"
+        ? "Not yet sent for review"
+        : "Approved automatically and listed on the marketplace",
     );
 
     return mockDelay(artwork);
@@ -357,39 +376,6 @@ export const artistDashboardService = {
     );
 
     return mockDelay(updated);
-  },
-
-  // Demo shortcut: approve one's own submission without waiting for an admin.
-  // Real approval is adminService.approveArtwork and stays the only path in
-  // production — this exists so the preview can be walked end to end in one
-  // sitting instead of across three days.
-  selfApproveArtwork: (artworkId: string): Promise<Artwork> => {
-    const pending = pendingArtworksCol.get();
-    const artwork = pending.find((a) => a.id === artworkId);
-    if (!artwork || artwork.artistId !== CURRENT_ARTIST_ID)
-      return mockError("Artwork not found");
-    if (artwork.status !== "pending_approval")
-      return mockError("Only a submitted artwork can be approved");
-
-    const now = new Date().toISOString();
-    const approved: Artwork = {
-      ...artwork,
-      status: "marketplace",
-      statusHistory: [
-        ...artwork.statusHistory,
-        { status: "marketplace", changedAt: now },
-      ],
-    };
-    pendingArtworksCol.set(pending.filter((a) => a.id !== artworkId));
-    artworksCol.set([...artworksCol.get(), approved]);
-
-    appendActivity(
-      "artwork_approved",
-      `"${approved.title}" approved`,
-      "Approved instantly for the demo — normally a curator reviews this",
-    );
-
-    return mockDelay(approved);
   },
 
   listPenalties: (): Promise<ExternalSalePenalty[]> =>
