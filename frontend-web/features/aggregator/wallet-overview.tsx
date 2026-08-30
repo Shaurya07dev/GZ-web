@@ -308,7 +308,11 @@ function TransactionsCard({
         Transaction history
       </h2>
 
-      <div className="mt-3 flex flex-col">
+      <div
+        className={`mt-3 flex flex-col ${
+          transactions.length > 5 ? "max-h-[320px] overflow-y-auto pr-1" : ""
+        }`}
+      >
         {transactions.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No transactions yet.

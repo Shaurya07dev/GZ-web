@@ -9,16 +9,19 @@ import { Label } from "@/components/ui/label";
 // literal "Z", then a checksum character.
 export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
-// Shown in every portal's Earnings & Wallet page. GST is optional for everyone
-// — leaving it blank is a valid answer and must never block a payout. When a
-// number IS entered, its shape is checked locally; there is no GST portal
-// integration, which the business deliberately does not want.
+// Shown in every portal's Earnings & Wallet page. Optional for aggregators —
+// leaving it blank is a valid answer there. Required for artists, mirroring
+// the same field on their Profile page (GalleryZone won't approve listings
+// without it). When a number IS entered, its shape is checked locally; there
+// is no GST portal integration, which the business deliberately does not
+// want.
 export function GstNumberCard({
   value,
   onSave,
   isPending = false,
   isSuccess = false,
   description,
+  required = false,
 }: {
   value: string;
   onSave: (gstin: string) => void;
@@ -26,10 +29,14 @@ export function GstNumberCard({
   isSuccess?: boolean;
   /** Who this GST number is used for — differs by portal. */
   description: string;
+  /** Artists must be GST-registered before listing; aggregators aren't. */
+  required?: boolean;
 }) {
   const [gstin, setGstin] = useState(value);
   const trimmed = gstin.trim();
-  const invalid = trimmed.length > 0 && !GSTIN_PATTERN.test(trimmed);
+  const invalid = required
+    ? trimmed.length === 0 || !GSTIN_PATTERN.test(trimmed)
+    : trimmed.length > 0 && !GSTIN_PATTERN.test(trimmed);
   const unchanged = trimmed === value.trim();
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -51,7 +58,7 @@ export function GstNumberCard({
           <h2 className="font-display text-base font-semibold text-foreground">
             GST number{" "}
             <span className="text-sm font-normal text-muted-foreground">
-              (optional)
+              {required ? "(required)" : "(optional)"}
             </span>
           </h2>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
@@ -64,6 +71,7 @@ export function GstNumberCard({
         <Label htmlFor="walletGstin">GSTIN</Label>
         <Input
           id="walletGstin"
+          required={required}
           maxLength={15}
           placeholder="22AAAAA0000A1Z5"
           value={gstin}
@@ -73,12 +81,17 @@ export function GstNumberCard({
         />
         {invalid ? (
           <p className="text-xs text-destructive">
-            That doesn&rsquo;t look like a valid GSTIN. Leave it blank if you
-            don&rsquo;t have one.
+            {required && trimmed.length === 0
+              ? "GST registration is required."
+              : required
+                ? "That doesn&rsquo;t look like a valid GSTIN."
+                : "That doesn&rsquo;t look like a valid GSTIN. Leave it blank if you don&rsquo;t have one."}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Only if you&rsquo;re GST-registered. Never shown publicly.
+            {required
+              ? "Never shown publicly."
+              : "Only if you&rsquo;re GST-registered. Never shown publicly."}
           </p>
         )}
       </div>

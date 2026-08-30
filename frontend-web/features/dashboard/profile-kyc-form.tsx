@@ -215,6 +215,84 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
         <ChevronRight className="size-4" />
       </Link>
 
+      {/* Sits to the left of Public profile in the same row — identity/KYC
+          proof paired beside the profile it verifies. */}
+      <div className="flex flex-col gap-6">
+        <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Aadhaar verification
+            </h2>
+            <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
+              <ShieldCheck className="size-3" />
+              Verified
+            </span>
+          </div>
+          <p className="mt-3 flex items-center gap-2 font-mono text-sm text-foreground">
+            <Lock className="size-3.5 text-muted-foreground" />
+            {profile.aadhaarMasked}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Encrypted at rest and used only for identity verification. Contact
+            support to update your Aadhaar details.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 sm:p-6">
+          <div>
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Identity documents
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Submit an additional ID or address proof if support has requested
+              one for your account.{" "}
+              <span className="text-muted-foreground/80">(optional)</span>
+            </p>
+          </div>
+
+          <FileUploader
+            title="Upload documents"
+            acceptedFormats={["jpg", "pdf", "svg", "png", "docx"]}
+            maxFiles={3}
+            maxSizeMB={10}
+            submitLabel="Submit for review"
+            onSubmit={() => setDocsSubmitted(true)}
+            className="max-w-none shadow-none ring-1 ring-border"
+          />
+
+          {docsSubmitted && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex items-center gap-1.5 text-sm text-gold-bright"
+            >
+              <Check className="size-3.5" />
+              Submitted for review
+            </motion.p>
+          )}
+        </div>
+
+        <div className="flex items-start gap-3 rounded-lg border border-dashed border-gold/40 bg-card p-5 sm:p-6">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+            <Palette className="size-4 text-gold-bright" strokeWidth={1.75} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-base font-semibold text-foreground">
+                Commissions
+              </h2>
+              <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-medium text-gold-bright">
+                Coming soon
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Let collectors commission a custom piece directly from you, start
+              to finish, through GalleryZone.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <form
         onSubmit={handleProfileSubmit}
         className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6"
@@ -223,7 +301,13 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           Public profile
         </h2>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">Profile photo</p>
+            <p className="text-xs text-muted-foreground">
+              Shown on your public artist page.
+            </p>
+          </div>
           <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-gold/40">
             <Image
               src={ARTIST.avatar}
@@ -239,12 +323,6 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             >
               <Camera className="size-4" />
             </button>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">Profile photo</p>
-            <p className="text-xs text-muted-foreground">
-              Shown on your public artist page.
-            </p>
           </div>
         </div>
 
@@ -622,82 +700,6 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           </span>
         </a>
       )}
-
-      <div className="flex flex-col gap-6">
-        <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-base font-semibold text-foreground">
-              Aadhaar verification
-            </h2>
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
-              <ShieldCheck className="size-3" />
-              Verified
-            </span>
-          </div>
-          <p className="mt-3 flex items-center gap-2 font-mono text-sm text-foreground">
-            <Lock className="size-3.5 text-muted-foreground" />
-            {profile.aadhaarMasked}
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Encrypted at rest and used only for identity verification. Contact
-            support to update your Aadhaar details.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 sm:p-6">
-          <div>
-            <h2 className="font-display text-base font-semibold text-foreground">
-              Identity documents
-            </h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Submit an additional ID or address proof if support has requested
-              one for your account.{" "}
-              <span className="text-muted-foreground/80">(optional)</span>
-            </p>
-          </div>
-
-          <FileUploader
-            title="Upload documents"
-            acceptedFormats={["jpg", "pdf", "svg", "png", "docx"]}
-            maxFiles={3}
-            maxSizeMB={10}
-            submitLabel="Submit for review"
-            onSubmit={() => setDocsSubmitted(true)}
-            className="max-w-none shadow-none ring-1 ring-border"
-          />
-
-          {docsSubmitted && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center gap-1.5 text-sm text-gold-bright"
-            >
-              <Check className="size-3.5" />
-              Submitted for review
-            </motion.p>
-          )}
-        </div>
-
-        <div className="flex items-start gap-3 rounded-lg border border-dashed border-gold/40 bg-card p-5 sm:p-6">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-            <Palette className="size-4 text-gold-bright" strokeWidth={1.75} />
-          </span>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-base font-semibold text-foreground">
-                Commissions
-              </h2>
-              <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-medium text-gold-bright">
-                Coming soon
-              </span>
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Let collectors commission a custom piece directly from you, start
-              to finish, through GalleryZone.
-            </p>
-          </div>
-        </div>
-      </div>
 
       <ArtistNetworkPanel />
 

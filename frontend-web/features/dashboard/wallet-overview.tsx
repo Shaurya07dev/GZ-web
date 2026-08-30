@@ -105,6 +105,7 @@ export function WalletOverview() {
           isPending={saveProfileMutation.isPending}
           isSuccess={saveProfileMutation.isSuccess}
           description="Used on your settlement statements and invoices. Also editable from your profile."
+          required
         />
       )}
     </div>
@@ -307,7 +308,11 @@ function TransactionsCard({
         Transaction history
       </h2>
 
-      <div className="mt-3 flex flex-col">
+      <div
+        className={`mt-3 flex flex-col ${
+          transactions.length > 5 ? "max-h-[320px] overflow-y-auto pr-1" : ""
+        }`}
+      >
         {transactions.map((tx) => (
           <TransactionRow key={tx.id} tx={tx} />
         ))}
