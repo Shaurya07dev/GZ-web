@@ -1,0 +1,252 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ArrowLeft, PackageSearch } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PriceTag } from "@/components/shared/price-tag";
+import { formatINR } from "@/lib/utils";
+import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
+import { useReservableArtwork } from "@/hooks/useAggregatorInventory";
+import { useReserveArtworkMutation } from "@/hooks/useAggregatorInventory";
+import {
+  useAggregatorWallet,
+  useAddAggregatorFundsMutation,
+} from "@/hooks/useAggregatorWallet";
+import { DevPanel } from "@/features/auth/components/dev-panel";
+import { CycleStepper } from "./cycle-stepper";
+
+// Full-page replacement for what used to be a confirm dialog. Reserving is a
+// real commitment — it holds money from the wallet for thirty days — so it
+// gets its own screen and its own back button rather than a modal you could
+// mis-click through. Confirming lands on the new holding's detail page
+// (holding-detail.tsx), which is the "what happens next" this flow used to
+// leave to a toast.
+export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
+  const router = useRouter();
+  const { data: artwork, isPending, isError } =
+    useReservableArtwork(artworkId);
+  const reserveMutation = useReserveArtworkMutation();
+  const addFunds = useAddAggregatorFundsMutation();
+  const { data: wallet } = useAggregatorWallet();
+
+  if (isPending) {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col gap-4">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="aspect-[4/5] w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+    );
+  }
+
+  if (isError || !artwork) {
+    return (
+      <EmptyState
+        icon={PackageSearch}
+        title="This piece isn't reservable"
+        description="It may have just been taken by another aggregator, or its listing period has ended."
+        action={
+          <Link
+            href="/aggregator/inventory"
+            className="text-sm font-medium text-gold-bright hover:underline"
+          >
+            Back to inventory
+          </Link>
+        }
+      />
+    );
+  }
+
+  const { offer } = artwork;
+  const free = wallet ? wallet.balance - wallet.lockedBalance : 0;
+  const shortfall = Math.max(0, offer.payable - free);
+
+  function handleTopUp() {
+    addFunds.mutate(shortfall, {
+      onSuccess: () =>
+        toast.success(`${formatINR(shortfall)} added`, {
+          description: "Confirm the reservation to hold it against this piece.",
+        }),
+      onError: (error) => toast.error(error.message),
+    });
+  }
+
+  function handleConfirm() {
+    reserveMutation.mutate(artworkId, {
+      onSuccess: (holding) => {
+        toast.success("Artwork reserved", {
+          description: `"${artwork!.title}" is now in My Inventory.`,
+        });
+        router.push(`/aggregator/collection/${holding.id}`);
+      },
+      onError: (error) => toast.error(error.message),
+    });
+  }
+
+  return (
+    <div className="mx-auto flex max-w-lg flex-col gap-6">
+      <Link
+        href="/aggregator/inventory"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-gold-bright"
+      >
+        <ArrowLeft className="size-3.5" strokeWidth={2} />
+        Back to inventory
+      </Link>
+
+      <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5">
+        <div className="flex items-center gap-3">
+          <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted">
+            <Image
+              src={artwork.thumbnailUrl}
+              alt={artwork.title}
+              fill
+              sizes="64px"
+              className="object-cover"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-base font-semibold text-foreground">
+              {artwork.title}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">
+              {artwork.artistName}
+            </p>
+          </div>
+          <PriceTag amount={offer.offerPrice} className="text-base" />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <CycleStepper currentMonth={offer.month} />
+          <p className="text-sm text-muted-foreground">
+            Month {offer.month} of {AGGREGATOR_CYCLE_MONTHS}. Confirming
+            holds the advance from your wallet and moves this artwork into
+            your Inventory for a 30-day display window. A piece that doesn&rsquo;t
+            sell rotates to a different aggregator each month, cheaper each
+            time, for up to five placements.
+          </p>
+        </div>
+
+        {offer.monthlyReduction > 0 && (
+          <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background px-3.5 py-3 text-sm">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              Why this month&rsquo;s price is lower
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Month 1 price</span>
+              <span className="font-mono tabular-nums text-muted-foreground line-through">
+                {formatINR(offer.standardPrice)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">
+                Month {offer.month} reduction
+              </span>
+              <span className="font-mono tabular-nums text-foreground">
+                &minus;{formatINR(offer.monthlyReduction)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-1.5">
+              <span className="font-medium text-foreground">
+                Your price today
+              </span>
+              <span className="font-mono font-semibold tabular-nums text-gold-bright">
+                {formatINR(offer.offerPrice)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 rounded-md border border-gold/25 bg-gold/5 px-3.5 py-3 text-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">
+                Advance ({Math.round(offer.advanceRate * 100)}%)
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                of the{" "}
+                {offer.advanceBasis === "display_price"
+                  ? "display price"
+                  : "artist price"}
+                , {formatINR(offer.advanceBase)}
+              </p>
+            </div>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(offer.advance)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Delivery</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Returned when the piece sells, not if it comes back
+              </p>
+            </div>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(offer.deliveryCharge)}
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center justify-between border-t border-gold/20 pt-2">
+            <div>
+              <p className="font-medium text-foreground">Held from your wallet</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {formatINR(Math.max(0, free))} free right now
+              </p>
+            </div>
+            <span className="font-display text-lg font-semibold tabular-nums text-gold-bright">
+              {formatINR(offer.payable)}
+            </span>
+          </div>
+        </div>
+
+        {shortfall > 0 && (
+          <DevPanel className="items-start">
+            <span className="flex flex-1 flex-col gap-0.5">
+              <span className="text-xs font-medium text-foreground">
+                {formatINR(shortfall)} short
+              </span>
+              <span className="text-[11px] leading-snug text-muted-foreground">
+                No gateway is connected, so this credits the wallet directly —
+                the same top-up as the Wallet page. Money is held, not spent:
+                it comes back when the piece sells.
+              </span>
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleTopUp}
+              disabled={addFunds.isPending}
+            >
+              {addFunds.isPending ? "Adding…" : `Add ${formatINR(shortfall)}`}
+            </Button>
+          </DevPanel>
+        )}
+
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/aggregator/inventory" />}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={reserveMutation.isPending || shortfall > 0}
+            title={
+              shortfall > 0
+                ? `Add ${formatINR(shortfall)} to your wallet first`
+                : undefined
+            }
+          >
+            {reserveMutation.isPending ? "Reserving…" : "Confirm reservation"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

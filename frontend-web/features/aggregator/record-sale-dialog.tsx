@@ -29,7 +29,10 @@ import {
   FieldError,
   FieldGroup,
 } from "@/components/ui/field";
+import { PriceTag } from "@/components/shared/price-tag";
 import { useRecordSaleMutation } from "@/hooks/useAggregatorCollection";
+import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
+import { formatINR } from "@/lib/utils";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
 
@@ -53,8 +56,7 @@ const recordSaleSchema = z.object({
 });
 type RecordSaleFormValues = z.infer<typeof recordSaleSchema>;
 
-const EMPTY_VALUES: RecordSaleFormValues = {
-  soldPrice: 0,
+const BLANK_BUYER_FIELDS = {
   buyerName: "",
   buyerEmail: "",
   buyerPhone: "",
@@ -64,7 +66,7 @@ const EMPTY_VALUES: RecordSaleFormValues = {
   pincode: "",
   paymentRoute: "direct_to_galleryzone",
   deliveryMode: "courier",
-};
+} as const;
 
 interface RecordSaleDialogProps {
   holding: (AggregatorHolding & { artwork: ArtworkSummary }) | null;
@@ -86,12 +88,18 @@ export function RecordSaleDialog({
 
   const { control, handleSubmit, reset } = useForm<RecordSaleFormValues>({
     resolver: zodResolver(recordSaleSchema),
-    defaultValues: EMPTY_VALUES,
+    defaultValues: { soldPrice: 0, ...BLANK_BUYER_FIELDS },
   });
 
   useEffect(() => {
-    if (open) reset(EMPTY_VALUES);
-  }, [open, reset]);
+    // Pre-filled with GalleryZone's set display price, since that's what the
+    // piece is meant to sell at -- still editable, for the rare sale that
+    // actually closed at a different number.
+    if (open && holding) {
+      reset({ soldPrice: holding.displayPrice, ...BLANK_BUYER_FIELDS });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, holding?.id, reset]);
 
   if (!holding) return null;
 
@@ -146,6 +154,35 @@ export function RecordSaleDialog({
             delivery details used to confirm this sale.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex flex-col gap-2 rounded-md border border-gold/25 bg-gold/5 px-3.5 py-3 text-sm">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-foreground">
+              Month {holding.cycleMonth ?? 1} of {AGGREGATOR_CYCLE_MONTHS}
+              &nbsp;display price
+            </p>
+            <PriceTag amount={holding.displayPrice} className="text-sm" />
+          </div>
+          <div className="flex items-center justify-between border-t border-gold/20 pt-2">
+            <div>
+              <p className="font-medium text-foreground">
+                Advance ({holding.advancePercent}%) + delivery
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Set off against this sale, not credited separately
+              </p>
+            </div>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(
+                holding.advanceAmount + (holding.deliveryDeposit ?? 0),
+              )}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Your 20% commission on the markup settles separately once
+            delivery is confirmed.
+          </p>
+        </div>
 
         <form
           id="record-sale-form"

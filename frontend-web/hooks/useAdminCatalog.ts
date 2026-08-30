@@ -90,6 +90,40 @@ export function useSetArtworkInsuranceStatusMutation() {
   });
 }
 
+// Whether this piece is currently placed with an aggregator, and the pull-back
+// action if it is. artwork.status stays "marketplace" the whole time it is
+// reserved — see aggregatorService.ts's own comment on why — so this is the
+// only way the admin side can see the placement at all.
+export function useActiveHolding(artworkId: string) {
+  return useQuery({
+    queryKey: ["admin-artwork-holding", artworkId],
+    queryFn: () => adminService.activeHoldingFor(artworkId),
+  });
+}
+
+export function usePullBackHoldingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      holdingId: string;
+      reason: string;
+      refundDelivery: boolean;
+    }) => adminService.pullBackHolding(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-artwork-holding"] });
+      // The aggregator side reads the same holdings collection, so their
+      // Inventory, Collection and Wallet all have to catch up too.
+      queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-wallet"] });
+      queryClient.invalidateQueries({
+        queryKey: ["aggregator-wallet-transactions"],
+      });
+    },
+  });
+}
+
 export function useAdminCategories() {
   return useQuery({
     queryKey: ["admin-categories"],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +15,7 @@ import {
   UserRoundCog,
   BellRing,
   Fingerprint,
+  Camera,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GSTIN_PATTERN } from "@/components/shared/gst-number-card";
@@ -154,6 +155,39 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
   );
   const [emailFocused, setEmailFocused] = useState(false);
   const [identitySubmitted, setIdentitySubmitted] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // No real backend to upload to (see NEXT_SESSION_PROMPT.md) — this reads
+  // the file locally and stores it as a data URL, same as every other field
+  // on this profile. Capped well under localStorage's per-origin quota so one
+  // large photo can't crowd out the rest of the mock DB.
+  const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Choose an image file");
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error("Image is too large", {
+        description: "Keep it under 2MB.",
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateProfileMutation.mutate(
+        { avatar: reader.result as string },
+        {
+          onSuccess: () => toast.success("Photo updated"),
+          onError: (error) => toast.error(error.message),
+        },
+      );
+    };
+    reader.readAsDataURL(file);
+  }
 
   const {
     register,
@@ -270,6 +304,26 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
               sizes="64px"
               className="object-cover"
             />
+            <button
+              type="button"
+              aria-label="Change photo"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={updateProfileMutation.isPending}
+              className="absolute inset-0 flex items-center justify-center bg-background/0 text-transparent transition-colors hover:bg-background/60 hover:text-foreground disabled:cursor-not-allowed"
+            >
+              {updateProfileMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin text-foreground" />
+              ) : (
+                <Camera className="size-4" />
+              )}
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">
@@ -342,7 +396,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
                 <SelectContent>
                   {COUNTRY_CODES.map((country) => (
                     <SelectItem key={country.iso} value={country.dial}>
-                      {country.dial} {country.iso}
+                      {country.dial} {country.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, PackageSearch, FileSignature } from "lucide-react";
@@ -14,7 +13,7 @@ import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import { formatINR } from "@/lib/utils";
 import type { ReservableArtwork } from "@/services/aggregatorService";
 import { useAggregatorProfile } from "@/hooks/useAggregatorProfile";
-import { ReserveArtworkDialog } from "./reserve-artwork-dialog";
+import { CycleStepper } from "./cycle-stepper";
 
 // Same lower-bound verification treatment ArtworkCard uses -- ArtworkSummary
 // only carries a boolean verifiedArtist, not the full tier count, so this is
@@ -32,13 +31,6 @@ export function ReservableInventoryGrid() {
   // profile fetch never blocks a signed aggregator mid-session.
   const mouSigned = profile ? Boolean(profile.mouAcceptance) : undefined;
   const { data, isPending, isError } = useReservableInventory();
-  const [selected, setSelected] = useState<ReservableArtwork | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  function openReserveDialog(artwork: ReservableArtwork) {
-    setSelected(artwork);
-    setDialogOpen(true);
-  }
 
   if (isPending) {
     return (
@@ -111,27 +103,18 @@ export function ReservableInventoryGrid() {
             key={artwork.id}
             artwork={artwork}
             disabled={mouSigned === false}
-            onReserve={() => openReserveDialog(artwork)}
           />
         ))}
       </div>
-
-      <ReserveArtworkDialog
-        artwork={selected}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
     </>
   );
 }
 
 function InventoryArtworkCard({
   artwork,
-  onReserve,
   disabled = false,
 }: {
   artwork: ReservableArtwork;
-  onReserve: () => void;
   disabled?: boolean;
 }) {
   const { offer } = artwork;
@@ -176,21 +159,22 @@ function InventoryArtworkCard({
             that has been round the cycle is offered cheaper each month. */}
         <div className="mt-1 flex flex-col gap-0.5">
           <PriceTag amount={offer.offerPrice} className="text-base" />
+          <CycleStepper currentMonth={offer.month} size="sm" className="mt-1.5" />
           <p className="text-[11px] text-muted-foreground">
-            Your price · month {offer.month} of {AGGREGATOR_CYCLE_MONTHS}
-            {offer.month > 1 && (
-              <>
-                {" · was "}
-                <span className="line-through">
-                  {formatINR(offer.marketplacePrice)}
-                </span>
-              </>
+            Month {offer.month} of {AGGREGATOR_CYCLE_MONTHS}
+            {offer.monthlyReduction > 0 && (
+              <> &middot; {formatINR(offer.monthlyReduction)} off since month 1</>
             )}
           </p>
         </div>
 
         <Button
-          onClick={onReserve}
+          nativeButton={disabled}
+          render={
+            disabled ? undefined : (
+              <Link href={`/aggregator/inventory/${artwork.id}/reserve`} />
+            )
+          }
           disabled={disabled}
           title={disabled ? "Sign your Aggregator MOU first" : undefined}
           className="mt-2.5 w-full"

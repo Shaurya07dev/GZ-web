@@ -8,6 +8,13 @@ export function useReservableInventory() {
   });
 }
 
+export function useReservableArtwork(artworkId: string) {
+  return useQuery({
+    queryKey: ["aggregator-inventory", artworkId],
+    queryFn: () => aggregatorService.getReservableArtwork(artworkId),
+  });
+}
+
 // Reserving moves an artwork out of Inventory and into Collection, and
 // changes the "active reservations" KPI on the Dashboard — all three
 // queries are invalidated together so every page reflects the new state on

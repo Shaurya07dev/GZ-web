@@ -5,20 +5,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { EyeOff, ExternalLink, Send, Check, X } from "lucide-react";
+import { EyeOff, ExternalLink, Send, Check, X, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
+  useActiveHolding,
   useDelistArtworkMutation,
+  usePullBackHoldingMutation,
   useSetArtworkInsuranceStatusMutation,
   useSetArtworkRarityMutation,
 } from "@/hooks/useAdminCatalog";
 import { RarityBadge } from "@/components/shared/rarity-badge";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
+import { PullBackHoldingDialog } from "./pull-back-holding-dialog";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
+import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import {
   ARTWORK_RARITY_LABEL,
   ARTWORK_RARITY_OPTIONS,
@@ -52,8 +56,11 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const delistMutation = useDelistArtworkMutation();
   const rarityMutation = useSetArtworkRarityMutation();
   const insuranceMutation = useSetArtworkInsuranceStatusMutation();
+  const { data: activeHolding } = useActiveHolding(artwork.id);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [pullBackOpen, setPullBackOpen] = useState(false);
+  const pullBackMutation = usePullBackHoldingMutation();
 
   const isLive = artwork.status === "marketplace";
   // A transfer is recorded as coming FROM whoever currently holds the piece,
@@ -380,6 +387,51 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
           </p>
         </section>
 
+        {activeHolding && (
+          <section className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-base font-semibold text-foreground">
+                Aggregator placement
+              </h2>
+              <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-400">
+                On display
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              artwork.status stays &ldquo;marketplace&rdquo; while a piece is
+              reserved &mdash; this comes from the holding record, which is
+              the only place the placement actually lives.
+            </p>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Advance held</dt>
+                <dd className="tabular-nums text-foreground">
+                  {formatINR(activeHolding.advanceAmount)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Cycle month</dt>
+                <dd className="text-foreground">
+                  {activeHolding.cycleMonth} of {AGGREGATOR_CYCLE_MONTHS}
+                </dd>
+              </div>
+            </dl>
+            <Button
+              variant="outline"
+              onClick={() => setPullBackOpen(true)}
+              disabled={pullBackMutation.isPending}
+              className="mt-3 w-full"
+            >
+              <Undo2 className="size-4" />
+              Pull back from aggregator
+            </Button>
+            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+              Ends the placement now. The aggregator&rsquo;s advance is
+              released; the delivery deposit is your call.
+            </p>
+          </section>
+        )}
+
         <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="font-display text-base font-semibold text-foreground">
             Admin actions
@@ -413,6 +465,13 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
           </p>
         </section>
       </div>
+
+      <PullBackHoldingDialog
+        holding={activeHolding ?? null}
+        artworkTitle={artwork.title}
+        open={pullBackOpen}
+        onOpenChange={setPullBackOpen}
+      />
 
       <TransferRightsDialog
         open={transferOpen}

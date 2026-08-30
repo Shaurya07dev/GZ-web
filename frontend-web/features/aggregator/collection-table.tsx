@@ -2,49 +2,28 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import {
-  BookmarkCheck,
-  CircleCheckBig,
-  Undo2,
-  GalleryVerticalEnd,
-} from "lucide-react";
+import Link from "next/link";
+import { GalleryVerticalEnd } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { ExpiryCountdown } from "./expiry-countdown";
 import { RecordSaleDialog } from "./record-sale-dialog";
-import {
-  useAggregatorCollection,
-  useReleaseHoldingMutation,
-} from "@/hooks/useAggregatorCollection";
-import { formatINR } from "@/lib/utils";
-import { toast } from "sonner";
+import { ReturnHoldingDialog } from "./return-holding-dialog";
+import { HOLDING_STATUS_CONFIG } from "./holding-status";
+import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
 
-type CollectionRow = AggregatorHolding & { artwork: ArtworkSummary };
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+}
 
-const STATUS_CONFIG: Record<
-  AggregatorHolding["status"],
-  { label: string; icon: typeof BookmarkCheck; className: string }
-> = {
-  reserved: {
-    label: "Reserved",
-    icon: BookmarkCheck,
-    className: "border-sky-500/30 bg-sky-500/10 text-sky-400",
-  },
-  sold_pending_settlement: {
-    label: "Sold, pending settlement",
-    icon: CircleCheckBig,
-    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
-  },
-  returned: {
-    label: "Returned",
-    icon: Undo2,
-    className: "border-border bg-muted/40 text-muted-foreground",
-  },
-};
+type CollectionRow = AggregatorHolding & { artwork: ArtworkSummary };
 
 type StatusFilter = "all" | AggregatorHolding["status"];
 
@@ -59,36 +38,9 @@ export function CollectionTable() {
   const { data, isPending, isError } = useAggregatorCollection();
   const [saleDialogHolding, setSaleDialogHolding] =
     useState<CollectionRow | null>(null);
+  const [returnDialogHolding, setReturnDialogHolding] =
+    useState<CollectionRow | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const releaseMutation = useReleaseHoldingMutation();
-
-  // Returning an unsold piece refunds the advance but NOT the delivery charge
-  // — the money-flow sheet settles delivery only on a sale. That costs real
-  // money, so it is spelled out before the click rather than after it.
-  function handleReturn(holding: CollectionRow) {
-    const deliveryLost = holding.deliveryDeposit ?? 0;
-    const confirmed = window.confirm(
-      `Return "${holding.artwork.title}" to GalleryZone?
-
-` +
-        `Your ${formatINR(holding.advanceAmount)} advance is released back to your wallet. ` +
-        (deliveryLost > 0
-          ? `The ${formatINR(deliveryLost)} delivery charge does not — it is only refunded when a piece sells.`
-          : ""),
-    );
-    if (!confirmed) return;
-    releaseMutation.mutate(holding.id, {
-      onSuccess: ({ refunded, deliveryLost }) =>
-        toast.success("Returned to GalleryZone", {
-          description:
-            `${formatINR(refunded)} advance released.` +
-            (deliveryLost > 0
-              ? ` ${formatINR(deliveryLost)} delivery was charged.`
-              : ""),
-        }),
-      onError: (error) => toast.error(error.message),
-    });
-  }
 
   if (isPending) {
     return (
@@ -166,7 +118,7 @@ export function CollectionTable() {
         />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[960px] border-collapse text-sm">
+          <table className="w-full min-w-[1120px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
                 <th className="px-4 py-3 font-medium">Artwork</th>
@@ -174,6 +126,12 @@ export function CollectionTable() {
                   Display price
                   <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
                     Incl. GST
+                  </span>
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  Advance
+                  <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                    Held from wallet
                   </span>
                 </th>
                 <th className="px-4 py-3 font-medium">
@@ -190,14 +148,18 @@ export function CollectionTable() {
             <tbody>
               {filtered.map((holding) => {
                 const isSold = holding.status === "sold_pending_settlement";
-                const status = STATUS_CONFIG[holding.status];
+                const isReserved = holding.status === "reserved";
+                const status = HOLDING_STATUS_CONFIG[holding.status];
                 return (
                   <tr
                     key={holding.id}
                     className="border-b border-border last:border-0"
                   >
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
+                      <Link
+                        href={`/aggregator/collection/${holding.id}`}
+                        className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
                         <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
                           <Image
                             src={holding.artwork.thumbnailUrl}
@@ -208,14 +170,14 @@ export function CollectionTable() {
                           />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground">
+                          <p className="truncate font-medium text-foreground hover:text-gold-bright">
                             {holding.artwork.title}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
                             {holding.artwork.artistName}
                           </p>
                         </div>
-                      </div>
+                      </Link>
                     </td>
 
                     <td className="px-4 py-3.5">
@@ -236,6 +198,20 @@ export function CollectionTable() {
 
                     <td className="px-4 py-3.5">
                       <PriceTag
+                        amount={holding.advanceAmount}
+                        className="text-sm"
+                      />
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {holding.advancePercent}% of the{" "}
+                        {(holding.cycleMonth ?? 1) <= 1
+                          ? "display"
+                          : "artist"}{" "}
+                        price
+                      </p>
+                    </td>
+
+                    <td className="px-4 py-3.5">
+                      <PriceTag
                         amount={holding.deliveryDeposit ?? 0}
                         className="text-sm"
                       />
@@ -245,15 +221,21 @@ export function CollectionTable() {
                     </td>
 
                     <td className="px-4 py-3.5">
-                      {isSold ? (
+                      {isReserved ? (
+                        <>
+                          <ExpiryCountdown
+                            expiresAt={holding.expiresAt}
+                            className="w-32"
+                          />
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            Reserved {formatDate(holding.assignedAt)} &middot;
+                            expires {formatDate(holding.expiresAt)}
+                          </p>
+                        </>
+                      ) : (
                         <span className="text-xs text-muted-foreground">
                           &mdash;
                         </span>
-                      ) : (
-                        <ExpiryCountdown
-                          expiresAt={holding.expiresAt}
-                          className="w-32"
-                        />
                       )}
                     </td>
 
@@ -267,26 +249,27 @@ export function CollectionTable() {
                     </td>
 
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant={isSold ? "outline" : "default"}
-                          disabled={isSold}
-                          onClick={() => setSaleDialogHolding(holding)}
-                        >
-                          {isSold ? "Sale recorded" : "Record sale"}
-                        </Button>
-                        {!isSold && (
+                      {isReserved ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => setSaleDialogHolding(holding)}
+                          >
+                            Record sale
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={releaseMutation.isPending}
-                            onClick={() => handleReturn(holding)}
+                            onClick={() => setReturnDialogHolding(holding)}
                           >
                             Return
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {isSold ? "Sale recorded" : "Went back to GalleryZone"}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -300,6 +283,12 @@ export function CollectionTable() {
         holding={saleDialogHolding}
         open={saleDialogHolding !== null}
         onOpenChange={(open) => !open && setSaleDialogHolding(null)}
+      />
+
+      <ReturnHoldingDialog
+        holding={returnDialogHolding}
+        open={returnDialogHolding !== null}
+        onOpenChange={(open) => !open && setReturnDialogHolding(null)}
       />
     </>
   );

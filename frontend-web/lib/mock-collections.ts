@@ -42,6 +42,7 @@ import {
   type WalletTransaction,
 } from "@/features/dashboard/dashboard-data";
 import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
+import { AGGREGATOR_MOU_VERSION } from "@/features/aggregator/aggregator-mou-data";
 import { getCollection, setCollection } from "./mock-db";
 import { displayPriceOf } from "./pricing";
 
@@ -251,8 +252,13 @@ export const aggregatorGallerySpacesCol = collection<GallerySpace[]>(
   ],
 );
 
+// Funded and MOU-signed out of the box: the demo aggregator should be able to
+// reserve artwork the moment they log in, not hit a wallet top-up or a "sign
+// your MOU first" wall before they've seen the feature. ₹3,00,000 covers the
+// advance + delivery on every reservable piece in the fixtures with room to
+// spare, while still leaving the top-up flow reachable if someone drains it.
 export const aggregatorWalletCol = collection("aggregatorWallet", () => ({
-  balance: 0,
+  balance: 300000,
   pendingBalance: 0,
   lockedBalance: 0,
 }));
@@ -364,7 +370,15 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
   coordinatorEmail: "meher@verandaharthouse.in",
   // Signed once from the aggregator's profile page — the partner agreement,
   // separate from the artist MOU (features/aggregator/aggregator-mou-data.ts).
-  mouAcceptance: null as {
+  // Pre-signed in the demo seed: reserve() hard-blocks on this being null, and
+  // there's no reason a demo login should have to walk through the signature
+  // flow before it can show the reservation feature at all.
+  mouAcceptance: {
+    acceptedAt: "2026-06-01T00:00:00.000Z",
+    signatureName: AGGREGATOR.contactPerson,
+    version: AGGREGATOR_MOU_VERSION,
+    signatureDataUrl: null,
+  } as {
     acceptedAt: string;
     signatureName: string;
     version: string;

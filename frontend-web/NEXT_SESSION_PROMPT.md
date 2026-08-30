@@ -309,7 +309,19 @@ node --import ./scripts/alias-loader.mjs --experimental-strip-types \
   services/aggregatorService.check.ts
 node --import ./scripts/alias-loader.mjs --experimental-strip-types \
   services/profileStatsService.check.ts
+node --import ./scripts/alias-loader.mjs --experimental-strip-types \
+  services/aggregatorWallet.check.ts
+node --import ./scripts/alias-loader.mjs --experimental-strip-types \
+  services/artworkRarity.check.ts
+node --import ./scripts/alias-loader.mjs --experimental-strip-types \
+  services/adminPullBack.check.ts
 ```
+
+Two of these (`aggregatorWallet.check.ts`, `artworkRarity.check.ts`) had their
+prose written up below the first time they were added, but the command block
+above was never updated to actually run them, so "run the checks before you
+push" silently skipped two of the five for a while. If a new check gets added,
+add its line here in the same commit, not just its paragraph below.
 
 `scripts/alias-loader.mjs` teaches bare node the `@/` alias and the
 extensionless imports TS allows. Without it a check script can only import
@@ -364,6 +376,20 @@ nearly shipped broken — `updateArtwork()` wrote `rarityType: patch.rarityType`
 from the artist's form payload, so the moment the field left that form, every
 edit would have silently blanked the rank with nothing erroring. Verified by
 reintroducing exactly that line and watching the check fail.
+
+`adminPullBack.check.ts` covers admin pull-back — GalleryZone reclaiming a piece
+from an aggregator mid-placement, asked for in the August meeting and never
+built until this session. Two money rules: the advance is **always** released
+(it was locked, never spent, and a pull-back is not the aggregator's fault by
+default), and the delivery deposit is the admin's per-case call via a
+`refundDelivery` flag, charged by default like an unsold return, refundable when
+the placement not finishing genuinely isn't on the aggregator. Both figures were
+verified by breaking the line that computes them and watching the check fail,
+not just by reading it passing once. It also checks the thing that makes the
+whole feature possible: `activeHoldingFor()`, since `artwork.status` stays
+`"marketplace"` the entire time a piece is reserved (see
+`aggregatorService.ts`'s own comment on why) — without that lookup the admin
+side cannot see a live placement exists at all.
 
 `artwork.check.ts` covers the 7-day edit window (including "bought on day 2"), the
 channel predicates, the 1% off-platform fee and custody derivation. It fails

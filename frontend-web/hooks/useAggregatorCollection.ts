@@ -9,6 +9,13 @@ export function useAggregatorCollection() {
   });
 }
 
+export function useAggregatorHolding(holdingId: string) {
+  return useQuery({
+    queryKey: ["aggregator-collection", holdingId],
+    queryFn: () => aggregatorService.getHolding(holdingId),
+  });
+}
+
 // Recording a sale changes a holding's status in place within Collection
 // and changes the "pending settlements" / "commission earned" KPIs on the
 // Dashboard.
@@ -27,6 +34,23 @@ export function useRecordSaleMutation() {
       queryClient.invalidateQueries({ queryKey: ["aggregator-sales"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-customers"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-shipments"] });
+    },
+  });
+}
+
+// Dev-only time travel (see aggregatorService.debugSkipAheadDays). Same
+// invalidation set as reserving/releasing: back-dating a holding can also
+// change whether its artwork is placeable again, so Inventory's eligibility
+// has to be re-read too, not just the collection row.
+export function useDebugSkipAheadMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ holdingId, days }: { holdingId: string; days?: number }) =>
+      aggregatorService.debugSkipAheadDays(holdingId, days),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-dashboard"] });
     },
   });
 }

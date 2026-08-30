@@ -23,6 +23,7 @@ import type {
   WithdrawalRequest,
 } from "@/types/admin";
 import type { Address } from "@/types/customer";
+import type { AggregatorHolding } from "@/types/aggregator";
 import { mockArtists } from "@/lib/mock-data/artists";
 import { getArtworksByArtist } from "@/lib/mock-data/helpers";
 import {
@@ -43,9 +44,12 @@ import { aggregatorService } from "@/services/aggregatorService";
 import {
   addressesCol,
   adminUsersCol,
+  aggregatorWalletCol,
+  aggregatorWalletTransactionsCol,
   artistPenaltiesCol,
   deactivationRequestsCol,
   artworksCol,
+  holdingsCol,
   ordersCol,
   pendingArtworksCol,
 } from "@/lib/mock-collections";
@@ -359,6 +363,104 @@ export const adminService = {
     const artwork = findArtwork(id);
     if (!artwork) return mockError(`Artwork "${id}" not found`);
     return mockDelay({ id, status: "returned" as const });
+  },
+
+  // The live placement for a piece, if it has one. Returned holdings are kept
+  // for the cycle counter, so "with an aggregator right now" is specifically
+  // the reserved one.
+  activeHoldingFor: (
+    artworkId: string,
+  ): Promise<AggregatorHolding | null> =>
+    mockDelay(
+      holdingsCol.get().find(
+        (h) => h.artworkId === artworkId && h.status === "reserved",
+      ) ?? null,
+    ),
+
+  // GalleryZone reclaiming a piece from an aggregator mid-placement. Distinct
+  // from the aggregator returning it themselves: same end state for the
+  // artwork, different question about the money.
+  //
+  // An unsold return costs the aggregator the delivery leg — the money-flow
+  // sheet settles that only on a sale. But that rule describes an aggregator
+  // who held the piece and did not sell it, not one whose piece was taken back
+  // by GalleryZone partway through. Rather than guess which way the client
+  // reads it, the admin decides per case, the same way they already decide an
+  // off-platform sale fee. `reason` is required: an aggregator whose stock
+  // disappears is owed an explanation.
+  pullBackHolding: (input: {
+    holdingId: string;
+    reason: string;
+    refundDelivery: boolean;
+  }): Promise<{ released: number; deliveryCharged: number }> => {
+    const holdings = holdingsCol.get();
+    const holding = holdings.find((h) => h.id === input.holdingId);
+    if (!holding) return mockError("That placement no longer exists");
+    if (holding.status !== "reserved")
+      return mockError(
+        holding.status === "returned"
+          ? "This piece has already come back"
+          : "This piece has sold — it cannot be pulled back",
+      );
+    if (!input.reason.trim())
+      return mockError("Say why the piece is being pulled back");
+
+    const artwork = findArtwork(holding.artworkId);
+    const title = artwork?.title ?? "Artwork";
+    const delivery = holding.deliveryDeposit ?? 0;
+    const deliveryCharged = input.refundDelivery ? 0 : delivery;
+    const held = holding.advanceAmount + delivery;
+    const now = new Date().toISOString();
+
+    // The advance and delivery were LOCKED from the aggregator's wallet, never
+    // taken, so the whole hold is released here and only the forfeited portion
+    // actually leaves the balance.
+    const wallet = aggregatorWalletCol.get();
+    aggregatorWalletCol.set({
+      ...wallet,
+      lockedBalance: Math.max(0, wallet.lockedBalance - held),
+      balance: wallet.balance - deliveryCharged,
+    });
+
+    aggregatorWalletTransactionsCol.set([
+      {
+        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+        type: "refund" as const,
+        label: `Advance released: "${title}" pulled back by GalleryZone`,
+        amount: holding.advanceAmount,
+        date: now.slice(0, 10),
+        status: "completed" as const,
+      },
+      ...(deliveryCharged > 0
+        ? [
+            {
+              id: `wt-${crypto.randomUUID().slice(0, 8)}`,
+              type: "adjustment" as const,
+              label: `Delivery charged — "${title}" pulled back`,
+              amount: -deliveryCharged,
+              date: now.slice(0, 10),
+              status: "completed" as const,
+            },
+          ]
+        : []),
+      ...aggregatorWalletTransactionsCol.get(),
+    ]);
+
+    // Kept rather than deleted, like every other return: the next aggregator's
+    // price and advance are counted off how many placements this piece has
+    // already been through, and a pull-back is one of them.
+    holdingsCol.set(
+      holdings.map((h) =>
+        h.id === input.holdingId
+          ? { ...h, status: "returned" as const, returnedAt: now }
+          : h,
+      ),
+    );
+
+    return mockDelay({
+      released: holding.advanceAmount + (delivery - deliveryCharged),
+      deliveryCharged,
+    });
   },
 
   // GalleryZone ranks the work, the artist does not. The rank is written back

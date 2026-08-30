@@ -3,10 +3,15 @@ import type {
   AggregatorSale,
   RecordSalePayload,
 } from "@/types/aggregator";
-import { isAggregatorListed, type ArtworkSummary } from "@/types/artwork";
+import {
+  isAggregatorListed,
+  type Artwork,
+  type ArtworkSummary,
+} from "@/types/artwork";
 import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
 import {
   AGGREGATOR_LISTING_DAYS,
+  AGGREGATOR_PLACEMENT_DAYS,
   aggregatorAdvanceForMonth,
   aggregatorAdvanceOf,
   aggregatorCommissionOf,
@@ -133,6 +138,10 @@ export interface AggregatorOffer {
   month: number;
   /** GalleryZone's price to the aggregator this month, before their uplift. */
   offerPrice: number;
+  /** Month 1's price, before any monthly reduction — the ladder's top rung. */
+  standardPrice: number;
+  /** How much month `month`'s reduction has cut off standardPrice. 0 in month 1. */
+  monthlyReduction: number;
   /** What the marketplace shows — unaffected by the cycle. */
   marketplacePrice: number;
   advance: number;
@@ -159,6 +168,8 @@ function buildOffer(artwork: {
   // and the customer's price have to be the same kind of number, or the
   // commission (which strips GST back out) is computed against the wrong base.
   const offerPrice = withGst(aggregatorOfferPriceOf(artistPrice, month));
+  // Same ladder, month 1: the top rung the reduction is measured against.
+  const standardPrice = withGst(aggregatorOfferPriceOf(artistPrice, 1));
   const past = pastHoldingsFor(artwork.id);
   const cycleStartedAt = cycleStartFor(artwork.id);
   const previousAggregatorChangedPrice = Boolean(
@@ -178,6 +189,8 @@ function buildOffer(artwork: {
     artworkId: artwork.id,
     month,
     offerPrice,
+    standardPrice,
+    monthlyReduction: standardPrice - offerPrice,
     marketplacePrice: artwork.customerPrice,
     advance: advance.advance,
     advanceRate: advance.rate,
@@ -404,14 +417,12 @@ export const aggregatorService = {
   listCollection(): Promise<
     Array<AggregatorHolding & { artwork: ArtworkSummary }>
   > {
-    // Returned pieces are history for the cycle counter, not part of anyone's
-    // current collection.
-    return mockDelay(
-      holdingsCol
-        .get()
-        .filter((h) => h.status !== "returned")
-        .map(withArtwork),
-    );
+    // Returned pieces stay listed (under the table's own "Returned" filter
+    // tab) rather than disappearing — they're still this aggregator's
+    // history of what passed through their hands, and the holding detail
+    // page's "your period has ended" state has to be reachable from
+    // somewhere.
+    return mockDelay(holdingsCol.get().map(withArtwork));
   },
 
   // Matches POST /aggregators/sale (SAD §3.5): moves the matching *active*
@@ -591,5 +602,62 @@ export const aggregatorService = {
       pendingSettlements,
       conversionRate,
     });
+  },
+
+  // The single-artwork read behind the Reserve page
+  // (/aggregator/inventory/[artworkId]/reserve). Reuses the same eligibility
+  // rules as the grid rather than re-deriving them, so a piece cannot be
+  // reservable on one screen and not the other.
+  async getReservableArtwork(
+    artworkId: string,
+  ): Promise<ReservableArtwork | null> {
+    const all = await aggregatorService.listReservableInventory();
+    return all.find((a) => a.id === artworkId) ?? null;
+  },
+
+  // The single-holding read behind the holding detail page
+  // (/aggregator/collection/[holdingId]). Carries the full Artwork, not just
+  // ArtworkSummary, because that page shows the COA/NFC passport — fields
+  // withArtwork()'s summary shape doesn't have.
+  getHolding(
+    holdingId: string,
+  ): Promise<(AggregatorHolding & { artwork: Artwork }) | null> {
+    const holding = holdingsCol.get().find((h) => h.id === holdingId);
+    if (!holding) return mockDelay(null);
+    const artwork = getArtworkById(holding.artworkId);
+    if (!artwork) return mockDelay(null);
+    return mockDelay({ ...holding, artwork });
+  },
+
+  // Dev-only time travel: there's no backend job that ever expires a
+  // placement on its own (the aggregator always acts — Return or Record
+  // sale), so the only way to see "period ended" without actually waiting
+  // thirty real days is to back-date the holding. Shifts BOTH assignedAt and
+  // expiresAt by the same amount so the 30-day gap between them survives and
+  // this artwork's real placement-eligibility math (isPlaceable,
+  // cycleStartFor) sees a holding that genuinely started that much earlier —
+  // not just a countdown that lies.
+  debugSkipAheadDays(
+    holdingId: string,
+    days: number = AGGREGATOR_PLACEMENT_DAYS,
+  ): Promise<AggregatorHolding> {
+    const holdings = holdingsCol.get();
+    const holding = holdings.find((h) => h.id === holdingId);
+    if (!holding) return mockError("Reservation not found");
+    if (holding.status !== "reserved") {
+      return mockError("Only an active reservation's clock can be skipped");
+    }
+    const shiftMs = days * 24 * 60 * 60 * 1000;
+    const updated: AggregatorHolding = {
+      ...holding,
+      assignedAt: new Date(
+        new Date(holding.assignedAt).getTime() - shiftMs,
+      ).toISOString(),
+      expiresAt: new Date(
+        new Date(holding.expiresAt).getTime() - shiftMs,
+      ).toISOString(),
+    };
+    holdingsCol.set(holdings.map((h) => (h.id === holdingId ? updated : h)));
+    return mockDelay(updated);
   },
 };
