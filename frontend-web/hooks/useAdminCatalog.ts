@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/adminService";
-import type { ArtworkRarity } from "@/types/artwork";
+import type { Artwork, ArtworkRarity } from "@/types/artwork";
 
 // ---------------------------------------------------------------------------
 // Catalog: the all-artworks table (public + admin-only sets combined), the
@@ -61,7 +61,31 @@ export function useSetArtworkRarityMutation() {
         queryKey: ["admin-artwork", variables.artworkId],
       });
       queryClient.invalidateQueries({ queryKey: ["artworks"] });
-      queryClient.invalidateQueries({ queryKey: ["artwork", variables.artworkId] });
+      queryClient.invalidateQueries({
+        queryKey: ["artwork", variables.artworkId],
+      });
+    },
+  });
+}
+
+// Insurance verification shows on the artwork's own admin detail page (it's
+// a per-piece fact, not a per-user queue like KYC/GST), so this just needs
+// the same cache invalidation setArtworkRarity uses — no separate queue key.
+export function useSetArtworkInsuranceStatusMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      artworkId,
+      insuranceStatus,
+    }: {
+      artworkId: string;
+      insuranceStatus: NonNullable<Artwork["insuranceStatus"]>;
+    }) => adminService.setArtworkInsuranceStatus(artworkId, insuranceStatus),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin-artwork", variables.artworkId],
+      });
     },
   });
 }

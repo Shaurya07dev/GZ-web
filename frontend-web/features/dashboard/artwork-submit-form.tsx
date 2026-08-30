@@ -19,6 +19,8 @@ import {
   TriangleAlert,
   Clock3,
   Circle,
+  ExternalLink,
+  Ruler,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,13 +37,17 @@ import {
 import {
   ARTWORK_CATEGORIES,
   ARTWORK_MEDIUMS,
+  ARTWORK_TYPES,
+  DIMENSION_UNITS,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
   INSURANCE_RECOMMENDED_THRESHOLD,
   INSURANCE_PARTNER,
+  INSURANCE_PARTNER_URL,
   ARTWORK_FORMATS,
   PLACEHOLDER_ARTWORK_IMAGES,
 } from "./artwork-submit-data";
+import { InsuranceFaqChat } from "./insurance-faq-chat";
 import {
   GST_RATE,
   basePriceOf,
@@ -53,9 +59,11 @@ import {
   useSubmitArtworkMutation,
   useUpdateArtworkMutation,
 } from "@/hooks/useArtistArtworks";
+import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
 import {
   AGGREGATOR_READY_FRAMING,
   FRAMING_LABEL,
+  insuranceStatusOf,
   isAggregatorListed,
   isPenaltyCollectable,
   penaltyStatus,
@@ -64,16 +72,44 @@ import {
   type ListingType,
 } from "@/types/artwork";
 
+const INSURANCE_STATUS_LABEL: Record<
+  "not_submitted" | "submitted" | "approved" | "rejected",
+  { label: string; className: string }
+> = {
+  not_submitted: {
+    label: "Not submitted",
+    className: "border-border text-muted-foreground",
+  },
+  submitted: {
+    label: "Pending review",
+    className: "border-gold/40 bg-gold/10 text-gold-bright",
+  },
+  approved: {
+    label: "Verified",
+    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
+  },
+  rejected: {
+    label: "Rejected — resubmit",
+    className: "border-destructive/40 bg-destructive/10 text-destructive",
+  },
+};
+
 type FormState = {
   title: string;
   description: string;
   category: string;
   medium: string;
-  dimensions: string;
+  artworkType: string;
+  artworkTypeOther: string;
+  dimensionHeight: string;
+  dimensionWidth: string;
+  dimensionDepth: string;
+  dimensionUnit: string;
   yearCreated: string;
   artistPrice: string;
   listingType: ListingType;
   insuranceOpted: boolean;
+  insuranceNumber: string;
   nfcTagId: string;
   weightKg: string;
   framing: FramingState | "";
@@ -88,11 +124,17 @@ const EMPTY_FORM: FormState = {
   description: "",
   category: "",
   medium: "",
-  dimensions: "",
+  artworkType: "",
+  artworkTypeOther: "",
+  dimensionHeight: "",
+  dimensionWidth: "",
+  dimensionDepth: "",
+  dimensionUnit: "in",
   yearCreated: "",
   artistPrice: "",
   listingType: "marketplace_and_aggregator",
   insuranceOpted: false,
+  insuranceNumber: "",
   nfcTagId: "",
   weightKg: "",
   framing: "",
@@ -101,6 +143,38 @@ const EMPTY_FORM: FormState = {
   packagingConfirmed: false,
   aggregatorTermsAccepted: false,
 };
+
+// Free-text `dimensions` is only ever machine-written by this form (as
+// "H x W [x D] unit"), so splitting on " x " round-trips it losslessly for
+// editing — anything that doesn't match this shape is older data the form
+// never produced, and is left as an untouched fallback instead of guessed at.
+function parseDimensions(raw: string | null): {
+  height: string;
+  width: string;
+  depth: string;
+  unit: string;
+} {
+  const empty = { height: "", width: "", depth: "", unit: "in" };
+  if (!raw) return empty;
+  const match = raw
+    .trim()
+    .match(/^([\d.]+)\s*x\s*([\d.]+)(?:\s*x\s*([\d.]+))?\s*(in|cm)$/i);
+  if (!match) return empty;
+  return {
+    height: match[1],
+    width: match[2],
+    depth: match[3] ?? "",
+    unit: match[4].toLowerCase(),
+  };
+}
+
+function composeDimensions(form: FormState): string {
+  if (!form.dimensionHeight || !form.dimensionWidth) return "";
+  const parts = [form.dimensionHeight, form.dimensionWidth, form.dimensionDepth]
+    .filter(Boolean)
+    .join(" x ");
+  return `${parts} ${form.dimensionUnit}`;
+}
 
 type ImagePreview = { id: string; url: string; name: string };
 
@@ -155,9 +229,7 @@ function PriceRow({
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span
-        className={
-          emphasized ? "text-foreground" : "text-muted-foreground"
-        }
+        className={emphasized ? "text-foreground" : "text-muted-foreground"}
       >
         {label}
       </span>
@@ -168,9 +240,7 @@ function PriceRow({
             : "font-mono tabular-nums text-muted-foreground"
         }
       >
-        {free && amount === 0
-          ? "Free"
-          : `₹${amount.toLocaleString("en-IN")}`}
+        {free && amount === 0 ? "Free" : `₹${amount.toLocaleString("en-IN")}`}
       </span>
     </div>
   );
@@ -183,18 +253,35 @@ export type EditableArtwork = Artwork & { artistPrice: number };
 // acknowledgements — those are re-confirmed on every edit rather than assumed,
 // since the physical facts they attest to may have changed.
 function formStateFor(artwork: EditableArtwork): FormState {
+  const dims = parseDimensions(artwork.dimensions);
+  const knownType = ARTWORK_TYPES.some(
+    (t) => t.value !== "other" && t.label === artwork.artworkType,
+  );
   return {
     title: artwork.title,
     description: artwork.description,
     category: artwork.category,
     medium: artwork.medium,
-    dimensions: artwork.dimensions ?? "",
+    artworkType: artwork.artworkType
+      ? knownType
+        ? ARTWORK_TYPES.find((t) => t.label === artwork.artworkType)!.value
+        : "other"
+      : "",
+    artworkTypeOther:
+      artwork.artworkType && !knownType ? artwork.artworkType : "",
+    dimensionHeight: dims.height,
+    dimensionWidth: dims.width,
+    dimensionDepth: dims.depth,
+    dimensionUnit: dims.unit,
     yearCreated: artwork.yearCreated ? String(artwork.yearCreated) : "",
     artistPrice: String(artwork.artistPrice || ""),
     listingType: artwork.listingType,
     insuranceOpted: artwork.insured,
+    insuranceNumber: artwork.insuranceNumber ?? "",
     nfcTagId: artwork.nfcTagId ?? "",
-    weightKg: artwork.physical?.weightKg ? String(artwork.physical.weightKg) : "",
+    weightKg: artwork.physical?.weightKg
+      ? String(artwork.physical.weightKg)
+      : "",
     framing: artwork.physical?.framing ?? "",
     format: artwork.physical?.format ?? "",
     hangingHardwareIncluded: artwork.physical?.hangingHardwareIncluded ?? false,
@@ -224,6 +311,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
     null,
   );
   const [saved, setSaved] = useState(false);
+
+  const { data: profile } = useArtistAccountProfile();
+  const gstApproved = profile?.gstStatus === "approved";
 
   const { data: penalties } = useArtistPenalties();
   // Two different things, and conflating them is what made the old banner lie:
@@ -306,31 +396,43 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
     e.preventDefault();
     // Drafts can be incomplete; a submission on the aggregator channel cannot.
     if (mode === "review" && !aggregatorReady) return;
+    // GST must be admin-approved before a new listing can go live. Drafts,
+    // and edits to an artwork that's already listed, are unaffected.
+    if (mode === "review" && !isEdit && !gstApproved) return;
+
+    const composedDimensions = composeDimensions(form);
+    const artworkType =
+      form.artworkType === "other"
+        ? form.artworkTypeOther.trim() || null
+        : (ARTWORK_TYPES.find((t) => t.value === form.artworkType)?.label ??
+          null);
 
     const payload = {
-        title: form.title || "Untitled artwork",
-        description: form.description,
-        category: form.category,
-        medium: form.medium,
-        dimensions: form.dimensions,
-        yearCreated: Number(form.yearCreated) || new Date().getFullYear(),
-        artistPrice: artistPriceNumber,
-        listingType: form.listingType,
-        insuranceOpted: insuranceRequired || form.insuranceOpted,
-        physical: {
-          weightKg: Number(form.weightKg) || null,
-          framing: form.framing || null,
-          format: form.format || null,
-          hangingHardwareIncluded: form.hangingHardwareIncluded,
-          packagingConfirmed: form.packagingConfirmed,
-        },
-        nfcTagId: form.nfcTagId || null,
-        images: images.map((img, i) => ({
-          url: img.url,
-          thumbnailUrl: img.url,
-          sortOrder: i,
-          altText: `${form.title || "Artwork"}, photo ${i + 1}`,
-        })),
+      title: form.title || "Untitled artwork",
+      description: form.description,
+      category: form.category,
+      medium: form.medium,
+      artworkType,
+      dimensions: composedDimensions || artwork?.dimensions || null,
+      yearCreated: Number(form.yearCreated) || new Date().getFullYear(),
+      artistPrice: artistPriceNumber,
+      listingType: form.listingType,
+      insuranceOpted: insuranceRequired || form.insuranceOpted,
+      insuranceNumber: form.insuranceNumber.trim() || null,
+      physical: {
+        weightKg: Number(form.weightKg) || null,
+        framing: form.framing || null,
+        format: form.format || null,
+        hangingHardwareIncluded: form.hangingHardwareIncluded,
+        packagingConfirmed: form.packagingConfirmed,
+      },
+      nfcTagId: form.nfcTagId || null,
+      images: images.map((img, i) => ({
+        url: img.url,
+        thumbnailUrl: img.url,
+        sortOrder: i,
+        altText: `${form.title || "Artwork"}, photo ${i + 1}`,
+      })),
     };
 
     if (artwork) {
@@ -427,6 +529,33 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start"
     >
       <div className="flex flex-col gap-6">
+        {!isEdit && !gstApproved && (
+          <div className="flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
+            <TriangleAlert
+              className="mt-0.5 size-4 shrink-0 text-gold-bright"
+              strokeWidth={1.75}
+            />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                GST approval required before this can go live
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {profile?.gstStatus === "submitted"
+                  ? "Your GST registration is with GalleryZone for approval. You can still save this as a draft."
+                  : profile?.gstStatus === "rejected"
+                    ? "Your GST submission was rejected. Update it on your Profile page and resubmit."
+                    : "Add and submit your GSTIN on your Profile page — you can still save this as a draft."}{" "}
+                <Link
+                  href="/dashboard/profile"
+                  className="text-gold-bright hover:underline"
+                >
+                  Go to Profile
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
+
         {!isEdit && approvedPenalty > 0 && (
           <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
             <TriangleAlert
@@ -470,7 +599,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
 
         {!isEdit && waivedNote && (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            An earlier off-platform sale fee was waived: {waivedNote.decisionNote}
+            An earlier off-platform sale fee was waived:{" "}
+            {waivedNote.decisionNote}
           </p>
         )}
 
@@ -613,14 +743,39 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="dimensions">Dimensions</Label>
-              <Input
-                id="dimensions"
-                placeholder="24 x 36 in"
-                value={form.dimensions}
-                onChange={(e) => updateField("dimensions", e.target.value)}
-                className="h-10"
-              />
+              <Label htmlFor="artworkType">Type of artwork</Label>
+              <Select
+                value={form.artworkType}
+                onValueChange={(value) =>
+                  updateField("artworkType", value ?? "")
+                }
+              >
+                <SelectTrigger id="artworkType" className="h-10 w-full">
+                  <SelectValue placeholder="Select type">
+                    {(value: string | null) =>
+                      ARTWORK_TYPES.find((t) => t.value === value)?.label ??
+                      "Select type"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {ARTWORK_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.artworkType === "other" && (
+                <Input
+                  placeholder="Describe the type"
+                  value={form.artworkTypeOther}
+                  onChange={(e) =>
+                    updateField("artworkTypeOther", e.target.value)
+                  }
+                  className="h-10"
+                />
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -636,6 +791,71 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 className="h-10"
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label
+              htmlFor="dimensionHeight"
+              className="flex items-center gap-1.5"
+            >
+              <Ruler className="size-3.5 text-muted-foreground" />
+              Dimensions
+            </Label>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Input
+                id="dimensionHeight"
+                type="number"
+                min={0}
+                step="0.1"
+                placeholder="Height"
+                value={form.dimensionHeight}
+                onChange={(e) => updateField("dimensionHeight", e.target.value)}
+                className="h-10"
+              />
+              <Input
+                type="number"
+                min={0}
+                step="0.1"
+                placeholder="Width"
+                value={form.dimensionWidth}
+                onChange={(e) => updateField("dimensionWidth", e.target.value)}
+                className="h-10"
+              />
+              <Input
+                type="number"
+                min={0}
+                step="0.1"
+                placeholder="Depth (optional)"
+                value={form.dimensionDepth}
+                onChange={(e) => updateField("dimensionDepth", e.target.value)}
+                className="h-10"
+              />
+              <Select
+                value={form.dimensionUnit}
+                onValueChange={(value) =>
+                  updateField("dimensionUnit", value ?? "in")
+                }
+              >
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue placeholder="Unit">
+                    {(value: string | null) =>
+                      DIMENSION_UNITS.find((u) => u.value === value)?.label ??
+                      "Unit"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DIMENSION_UNITS.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>
+                      {u.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Height and width, and depth if it&rsquo;s a 3D piece.
+            </p>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-3">
@@ -704,7 +924,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </Select>
             </div>
           </div>
-
         </section>
 
         <section className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6">
@@ -951,6 +1170,56 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             />
           </div>
 
+          {(insuranceRequired || form.insuranceOpted) && (
+            <div className="flex flex-col gap-3.5 rounded-md border border-gold/30 bg-gold/5 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-foreground">
+                  Insurance verification
+                </p>
+                {isEdit && (
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].className}`}
+                  >
+                    {INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].label}
+                  </span>
+                )}
+              </div>
+
+              {INSURANCE_PARTNER_URL && (
+                <a
+                  href={INSURANCE_PARTNER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
+                >
+                  <ExternalLink className="size-3.5" />
+                  Take out cover with {INSURANCE_PARTNER}
+                </a>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="insuranceNumber">
+                  Policy / certificate number
+                </Label>
+                <Input
+                  id="insuranceNumber"
+                  placeholder="Paste the number once your policy is issued"
+                  value={form.insuranceNumber}
+                  onChange={(e) =>
+                    updateField("insuranceNumber", e.target.value)
+                  }
+                  className="h-10 sm:max-w-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter it here once you have it — GalleryZone verifies it
+                  before the piece can be marked insured.
+                </p>
+              </div>
+
+              <InsuranceFaqChat />
+            </div>
+          )}
+
           <div className="flex items-start gap-3 rounded-md border border-border p-3.5">
             <ScrollText
               className="mt-0.5 size-4 shrink-0 text-gold-bright"
@@ -962,13 +1231,12 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 GalleryZone issues a numbered Certificate of Authenticity for
-                every accepted artwork. Nothing to fill in here: the
-                certificate number is generated on approval and stays linked to
-                this piece for its whole life, alongside its NFC/QR passport.
+                every accepted artwork. Nothing to fill in here: the certificate
+                number is generated on approval and stays linked to this piece
+                for its whole life, alongside its NFC/QR passport.
               </p>
             </div>
           </div>
-
         </section>
 
         {!aggregatorReady && (
@@ -984,7 +1252,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
         {(submitMutation.isError || updateMutation.isError) && (
           <p className="text-sm text-destructive">
             {(submitMutation.error ?? updateMutation.error) instanceof Error
-              ? ((submitMutation.error ?? updateMutation.error) as Error).message
+              ? ((submitMutation.error ?? updateMutation.error) as Error)
+                  .message
               : "Something went wrong."}
           </p>
         )}
@@ -995,7 +1264,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             disabled={
               submitMutation.isPending ||
               updateMutation.isPending ||
-              !aggregatorReady
+              !aggregatorReady ||
+              (!isEdit && !gstApproved)
             }
             className="group inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >
@@ -1013,7 +1283,10 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               type="button"
               disabled={submitMutation.isPending}
               onClick={(e) =>
-                handleSubmit(e as unknown as FormEvent<HTMLFormElement>, "draft")
+                handleSubmit(
+                  e as unknown as FormEvent<HTMLFormElement>,
+                  "draft",
+                )
               }
               className="inline-flex items-center gap-2 rounded-md border border-border px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:pointer-events-none disabled:opacity-60"
             >

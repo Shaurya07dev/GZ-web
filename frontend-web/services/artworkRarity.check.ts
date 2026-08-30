@@ -39,6 +39,8 @@ const submission = {
   artistPrice: 40_000,
   listingType: "marketplace_only" as const,
   insuranceOpted: false,
+  artworkType: null,
+  insuranceNumber: null,
   physical: {
     weightKg: 3,
     framing: "framed" as const,

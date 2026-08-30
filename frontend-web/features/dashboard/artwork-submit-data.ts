@@ -10,6 +10,23 @@ export const ARTWORK_CATEGORIES = [
   { value: "ceramics", label: "Ceramics" },
 ];
 
+// A different axis from category (painting/sculpture/...) — what kind of
+// piece this instance of the work is. "Other" reveals a free-text field
+// rather than forcing a guess into one of the fixed options.
+export const ARTWORK_TYPES = [
+  { value: "original", label: "Original" },
+  { value: "limited_edition_print", label: "Limited Edition Print" },
+  { value: "open_edition_print", label: "Open Edition Print" },
+  { value: "study_sketch", label: "Study / Sketch" },
+  { value: "commission_piece", label: "Commission Piece" },
+  { value: "other", label: "Other" },
+];
+
+export const DIMENSION_UNITS = [
+  { value: "in", label: "in" },
+  { value: "cm", label: "cm" },
+];
+
 export const ARTWORK_MEDIUMS = [
   { value: "oil-on-canvas", label: "Oil on Canvas" },
   { value: "acrylic-on-canvas", label: "Acrylic on Canvas" },
@@ -64,7 +81,7 @@ export const INSURANCE_RECOMMENDED_THRESHOLD = 20000;
 // when GalleryZone supplies the partner URL, set it here and the form turns
 // the partner name into a link automatically.
 export const INSURANCE_PARTNER = "HDFC ERGO";
-export const INSURANCE_PARTNER_URL: string | null = null;
+export const INSURANCE_PARTNER_URL: string | null = "https://www.hdfcergo.com/";
 
 // Stock photos pre-filling every image slot so the upload form is always
 // submittable with zero clicks (there's no backend to actually store a

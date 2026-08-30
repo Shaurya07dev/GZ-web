@@ -21,9 +21,7 @@ export type ArtworkStatus =
 // and display the physical work) are independent channels; "both" is the
 // union of the two, not a third channel.
 export type ListingType =
-  | "marketplace_only"
-  | "aggregator_only"
-  | "marketplace_and_aggregator";
+  "marketplace_only" | "aggregator_only" | "marketplace_and_aggregator";
 
 export const LISTING_TYPE_LABEL: Record<ListingType, string> = {
   marketplace_only: "Marketplace only",
@@ -86,6 +84,16 @@ export interface Artwork extends ArtworkSummary {
   coaIssueDate: string;
   socialProofLinks: SocialProofLink[];
   statusHistory: ArtworkStatusEvent[];
+  // Original / print / commission / etc — a different axis from `category`
+  // (medium of work) and `medium` (material). Optional so existing fixture
+  // records don't need a value. See ARTWORK_TYPES.
+  artworkType?: string | null;
+  // Policy/certificate number the artist pastes back in after buying cover
+  // through the HDFC ERGO link — see INSURANCE_PARTNER_URL. Only meaningful
+  // when `insured` is true.
+  insuranceNumber?: string | null;
+  /** Admin-reviewed, same shape as GstStatus — see admin-status-badge.tsx. */
+  insuranceStatus?: InsuranceStatus;
   // Physical NFC/QR tag linked to this artwork's digital passport (Onboarding
   // Guide Stage 5). Optional so the 30+ existing fixture records don't need
   // a value; undefined/null both mean "not yet tagged".
@@ -163,19 +171,71 @@ export interface ArtworkCustody {
 // are recorded as real events, `custody` is written on every transition and
 // this map stops being consulted.
 const DERIVED_CUSTODY: Record<ArtworkStatus, ArtworkCustody> = {
-  draft: { legalOwner: "artist", custodian: "artist", locationLabel: "Artist studio" },
-  pending_approval: { legalOwner: "artist", custodian: "artist", locationLabel: "Artist studio" },
-  marketplace: { legalOwner: "artist", custodian: "artist", locationLabel: "Artist studio" },
-  reserved: { legalOwner: "artist", custodian: "artist", locationLabel: "Artist studio" },
-  preparing_dispatch: { legalOwner: "artist", custodian: "artist", locationLabel: "Awaiting pickup" },
-  in_transit: { legalOwner: "artist", custodian: "galleryzone", locationLabel: "In transit" },
-  with_aggregator: { legalOwner: "artist", custodian: "aggregator", locationLabel: "Aggregator premises" },
-  sold: { legalOwner: "customer", custodian: "galleryzone", locationLabel: "Awaiting delivery" },
-  settlement_complete: { legalOwner: "customer", custodian: "galleryzone", locationLabel: "Awaiting delivery" },
-  delivered: { legalOwner: "customer", custodian: "customer", locationLabel: "With the collector" },
-  completed: { legalOwner: "customer", custodian: "customer", locationLabel: "With the collector" },
-  returned: { legalOwner: "artist", custodian: "artist", locationLabel: "Returned to artist" },
-  sold_externally: { legalOwner: "customer", custodian: "customer", locationLabel: "Sold outside GalleryZone" },
+  draft: {
+    legalOwner: "artist",
+    custodian: "artist",
+    locationLabel: "Artist studio",
+  },
+  pending_approval: {
+    legalOwner: "artist",
+    custodian: "artist",
+    locationLabel: "Artist studio",
+  },
+  marketplace: {
+    legalOwner: "artist",
+    custodian: "artist",
+    locationLabel: "Artist studio",
+  },
+  reserved: {
+    legalOwner: "artist",
+    custodian: "artist",
+    locationLabel: "Artist studio",
+  },
+  preparing_dispatch: {
+    legalOwner: "artist",
+    custodian: "artist",
+    locationLabel: "Awaiting pickup",
+  },
+  in_transit: {
+    legalOwner: "artist",
+    custodian: "galleryzone",
+    locationLabel: "In transit",
+  },
+  with_aggregator: {
+    legalOwner: "artist",
+    custodian: "aggregator",
+    locationLabel: "Aggregator premises",
+  },
+  sold: {
+    legalOwner: "customer",
+    custodian: "galleryzone",
+    locationLabel: "Awaiting delivery",
+  },
+  settlement_complete: {
+    legalOwner: "customer",
+    custodian: "galleryzone",
+    locationLabel: "Awaiting delivery",
+  },
+  delivered: {
+    legalOwner: "customer",
+    custodian: "customer",
+    locationLabel: "With the collector",
+  },
+  completed: {
+    legalOwner: "customer",
+    custodian: "customer",
+    locationLabel: "With the collector",
+  },
+  returned: {
+    legalOwner: "artist",
+    custodian: "artist",
+    locationLabel: "Returned to artist",
+  },
+  sold_externally: {
+    legalOwner: "customer",
+    custodian: "customer",
+    locationLabel: "Sold outside GalleryZone",
+  },
 };
 
 export function resolveCustody(artwork: Artwork): ArtworkCustody {
@@ -212,7 +272,11 @@ export function artworkEditState(
   now: number = Date.now(),
 ): ArtworkEditState {
   if (artwork.status === "draft") {
-    return { editable: true, reason: "draft", daysLeft: ARTWORK_EDIT_WINDOW_DAYS };
+    return {
+      editable: true,
+      reason: "draft",
+      daysLeft: ARTWORK_EDIT_WINDOW_DAYS,
+    };
   }
   if (PURCHASE_LOCKED_STATUSES.has(artwork.status)) {
     return { editable: false, reason: "purchased", daysLeft: 0 };
@@ -220,7 +284,11 @@ export function artworkEditState(
 
   const listedAt = artwork.statusHistory[0]?.changedAt;
   if (!listedAt) {
-    return { editable: true, reason: "within_window", daysLeft: ARTWORK_EDIT_WINDOW_DAYS };
+    return {
+      editable: true,
+      reason: "within_window",
+      daysLeft: ARTWORK_EDIT_WINDOW_DAYS,
+    };
   }
 
   const elapsedDays = (now - new Date(listedAt).getTime()) / DAY_MS;
@@ -253,6 +321,16 @@ export const WITHDRAWABLE_STATUSES = new Set<ArtworkStatus>([
 // its name behind, so an artist cannot self-declare their work Rare — the
 // admin sets it from /admin/artworks/<id>.
 export type ArtworkRarity = "R" | "U" | "O" | "N";
+
+// Same 4 states as GstStatus (types/admin.ts) — reused rather than imported
+// to keep this file's types self-contained from the admin domain; the
+// literal values are what admin-status-badge.tsx's STATUS_CONFIG keys on.
+export type InsuranceStatus =
+  "not_submitted" | "submitted" | "approved" | "rejected";
+
+export function insuranceStatusOf(artwork: Artwork): InsuranceStatus {
+  return artwork.insuranceStatus ?? "not_submitted";
+}
 
 export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {
   R: "Rare",
