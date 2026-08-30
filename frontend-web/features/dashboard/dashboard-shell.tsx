@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
+import { SidebarBrand } from "@/components/shared/sidebar-brand";
 import { useArtistMessages } from "@/hooks/useArtistMessages";
 import { ARTIST } from "./dashboard-data";
 
@@ -44,7 +45,11 @@ const NAV_ITEMS = [
   { label: "COA & NFC", href: "/dashboard/coa-nfc", icon: Fingerprint },
   { label: "Analytics", href: "/dashboard/analytics", icon: LineChart },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-  { label: "Aggregator Display", href: "/dashboard/gallery-spaces", icon: Building2 },
+  {
+    label: "Aggregator Display",
+    href: "/dashboard/gallery-spaces",
+    icon: Building2,
+  },
   { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
   { label: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
 ] as const;
@@ -96,19 +101,7 @@ function Sidebar({
         )}
       >
         <div className="flex h-16 items-center justify-between px-5">
-          <Link href="/" className="flex items-baseline gap-2">
-            <span className="font-display text-xl font-semibold italic text-gold-bright">
-              GZ
-            </span>
-            <span
-              className={cn(
-                "text-xs font-medium tracking-[0.18em] text-sidebar-foreground",
-                collapsed && "lg:hidden",
-              )}
-            >
-              GALLERYZONE
-            </span>
-          </Link>
+          <SidebarBrand collapsed={collapsed} />
           <button
             aria-label="Close menu"
             onClick={onClose}
@@ -157,10 +150,7 @@ function Sidebar({
                   strokeWidth={1.75}
                 />
                 <span
-                  className={cn(
-                    "flex-1 truncate",
-                    collapsed && "lg:hidden",
-                  )}
+                  className={cn("flex-1 truncate", collapsed && "lg:hidden")}
                 >
                   {item.label}
                 </span>

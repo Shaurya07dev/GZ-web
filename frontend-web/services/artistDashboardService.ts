@@ -131,15 +131,31 @@ export interface SubmitArtworkInput {
   description: string;
   category: string;
   medium: string;
-  dimensions: string;
+  artworkType: string | null;
+  dimensions: string | null;
   yearCreated: number;
   artistPrice: number;
   listingType: Artwork["listingType"];
   insuranceOpted: boolean;
+  insuranceNumber: string | null;
   physical: ArtworkPhysical;
   nfcTagId: string | null;
   images: ArtworkImage[];
   mode: "draft" | "review";
+}
+
+// A number is "submitted" the moment it's entered — GalleryZone verifies it
+// from there. Re-entering the same number after approval doesn't reset
+// review; entering a different one (or clearing it) does.
+function nextInsuranceStatus(
+  current: Artwork["insuranceStatus"],
+  previousNumber: string | null | undefined,
+  nextNumber: string | null,
+): NonNullable<Artwork["insuranceStatus"]> {
+  if (!nextNumber) return "not_submitted";
+  if (current === "approved" && nextNumber === previousNumber)
+    return "approved";
+  return "submitted";
 }
 
 export const artistDashboardService = {
@@ -201,9 +217,16 @@ export const artistDashboardService = {
       verifiedArtist: true,
       category: input.category,
       medium: input.medium,
+      artworkType: input.artworkType,
       customerPrice: displayPriceOf(input.artistPrice),
       thumbnailUrl: input.images[0]?.url ?? "",
       insured: input.insuranceOpted,
+      insuranceNumber: input.insuranceNumber,
+      insuranceStatus: nextInsuranceStatus(
+        "not_submitted",
+        null,
+        input.insuranceNumber,
+      ),
       status,
       listingType: input.listingType,
       description: input.description,
@@ -284,12 +307,19 @@ export const artistDashboardService = {
       description: patch.description,
       category: patch.category,
       medium: patch.medium,
+      artworkType: patch.artworkType,
       dimensions: patch.dimensions || null,
       yearCreated: patch.yearCreated || null,
       artistName: artwork.artistName,
       customerPrice: displayPriceOf(patch.artistPrice),
       listingType: patch.listingType,
       insured: patch.insuranceOpted,
+      insuranceNumber: patch.insuranceNumber,
+      insuranceStatus: nextInsuranceStatus(
+        artwork.insuranceStatus,
+        artwork.insuranceNumber,
+        patch.insuranceNumber,
+      ),
       physical: patch.physical,
       nfcTagId: patch.nfcTagId,
       images: patch.images.length > 0 ? patch.images : artwork.images,
@@ -442,7 +472,11 @@ export const artistDashboardService = {
   // Signing the MOU is its own method rather than a profile patch: it records
   // when and against which version, and must never be silently overwritten by
   // an ordinary profile save.
-  acceptMou: (input: { signatureName: string; version: string }) => {
+  acceptMou: (input: {
+    signatureName: string;
+    version: string;
+    signatureDataUrl?: string | null;
+  }) => {
     const profile = artistProfileCol.get();
     if (!input.signatureName.trim())
       return mockError("Type your full name to sign");
@@ -458,6 +492,7 @@ export const artistDashboardService = {
         acceptedAt: new Date().toISOString(),
         signatureName: input.signatureName.trim(),
         version: input.version,
+        signatureDataUrl: input.signatureDataUrl ?? null,
       },
     };
     artistProfileCol.set(updated);
@@ -469,10 +504,24 @@ export const artistDashboardService = {
     return mockDelay(updated);
   },
 
-  updateProfile: (
-    patch: Partial<ReturnType<typeof artistProfileCol.get>>,
-  ) => {
-    const updated = { ...artistProfileCol.get(), ...patch };
+  // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
+  // literal "Z", then a checksum character. Matches the pattern the profile
+  // form itself validates against.
+  updateProfile: (patch: Partial<ReturnType<typeof artistProfileCol.get>>) => {
+    const current = artistProfileCol.get();
+    let gstStatus = current.gstStatus;
+    // Saving a valid GSTIN for the first time starts the approval clock —
+    // only an admin (GST queue) can move it past "submitted" from here.
+    if (
+      patch.gstin !== undefined &&
+      gstStatus === "not_submitted" &&
+      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(
+        patch.gstin.trim(),
+      )
+    ) {
+      gstStatus = "submitted";
+    }
+    const updated = { ...current, ...patch, gstStatus };
     artistProfileCol.set(updated);
     return mockDelay(updated);
   },

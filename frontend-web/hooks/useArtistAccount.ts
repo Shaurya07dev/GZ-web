@@ -27,8 +27,9 @@ export function useSaveArtistProfileMutation() {
 export function useAcceptMouMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { signatureName: string; version: string }) =>
-      artistDashboardService.acceptMou(input),
+    mutationFn: (
+      input: Parameters<typeof artistDashboardService.acceptMou>[0],
+    ) => artistDashboardService.acceptMou(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist-account-profile"] });
       queryClient.invalidateQueries({ queryKey: ["artist-activity"] });

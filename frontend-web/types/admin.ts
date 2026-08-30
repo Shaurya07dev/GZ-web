@@ -6,6 +6,11 @@ export type UserStatus = "pending" | "active" | "suspended" | "blocked";
 export type KycStatus =
   "pending" | "submitted" | "under_review" | "approved" | "rejected";
 
+// Artist GST registration review — same shape as KycStatus (submitted ->
+// admin decides), reused rather than redeclared since the states mean the
+// same thing in both queues.
+export type GstStatus = "not_submitted" | "submitted" | "approved" | "rejected";
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -17,6 +22,14 @@ export interface AdminUser {
   lastLoginAt: string | null;
   kycStatus?: KycStatus; // artists and aggregators only
   companyName?: string; // aggregators only
+  // --- Artist compliance fields, admin-visible only ------------------------
+  pan?: string | null;
+  gstin?: string | null;
+  gstStatus?: GstStatus;
+  instagramHandle?: string | null;
+  /** Settled earnings have crossed the ₹5L TDS (194-O) threshold this FY.
+   *  Auto-set from revenue, but an admin can override it. */
+  earningsAbove5L?: boolean;
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";
@@ -85,6 +98,10 @@ export type AuditAction =
   | "artwork.rank_cleared"
   | "kyc.approved"
   | "kyc.rejected"
+  | "gst.approved"
+  | "gst.rejected"
+  | "insurance.approved"
+  | "insurance.rejected"
   | "withdrawal.approved"
   | "withdrawal.rejected"
   | "user.suspended"
@@ -131,6 +148,7 @@ export interface AdminKpis {
   totalUsers: number;
   pendingArtworkApprovals: number;
   pendingKyc: number;
+  pendingGst: number;
   pendingWithdrawals: number;
 }
 

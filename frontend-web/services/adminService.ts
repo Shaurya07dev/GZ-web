@@ -28,6 +28,7 @@ import { getArtworksByArtist } from "@/lib/mock-data/helpers";
 import {
   defaultPlatformSettings,
   isInKycQueue,
+  isInGstQueue,
   mockAdminActivity,
   mockAdminKpis,
   mockAuditLog,
@@ -220,6 +221,29 @@ export const adminService = {
     return mockDelay({ userId, kycStatus: "rejected" as const, reason });
   },
 
+  // GST is an artist-only requirement — see profile-kyc-form.tsx and
+  // lib/mock-data/admin.ts's isInGstQueue for the queue definition.
+  listGstQueue: (): Promise<AdminUser[]> =>
+    mockDelay(adminUsersCol.get().filter(isInGstQueue)),
+
+  approveGst: (
+    userId: string,
+  ): Promise<{ userId: string; gstStatus: "approved" }> => {
+    if (!adminUsersCol.get().some((u) => u.id === userId))
+      return mockError(`User "${userId}" not found`);
+    return mockDelay({ userId, gstStatus: "approved" as const });
+  },
+
+  rejectGst: (
+    userId: string,
+    reason: string,
+  ): Promise<{ userId: string; gstStatus: "rejected"; reason: string }> => {
+    if (!adminUsersCol.get().some((u) => u.id === userId))
+      return mockError(`User "${userId}" not found`);
+    if (!reason.trim()) return mockError("A rejection reason is required");
+    return mockDelay({ userId, gstStatus: "rejected" as const, reason });
+  },
+
   listWithdrawals: (): Promise<WithdrawalRequest[]> =>
     mockDelay(mockWithdrawals),
 
@@ -361,6 +385,28 @@ export const adminService = {
     return mockDelay(updated);
   },
 
+  // Same read/write shape as setArtworkRarity — an artist's submitted policy
+  // number sits with an admin until they mark it approved or rejected.
+  setArtworkInsuranceStatus: (
+    id: string,
+    insuranceStatus: NonNullable<Artwork["insuranceStatus"]>,
+  ): Promise<Artwork> => {
+    const artwork = findArtwork(id);
+    if (!artwork) return mockError(`Artwork "${id}" not found`);
+
+    const updated: Artwork = { ...artwork, insuranceStatus };
+    const replace = (list: Artwork[]) =>
+      list.map((a) => (a.id === id ? updated : a));
+
+    if (artworksCol.get().some((a) => a.id === id)) {
+      artworksCol.set(replace(artworksCol.get()));
+    }
+    if (pendingArtworksCol.get().some((a) => a.id === id)) {
+      pendingArtworksCol.set(replace(pendingArtworksCol.get()));
+    }
+    return mockDelay(updated);
+  },
+
   listCategories: (): Promise<Category[]> => mockDelay(mockCategories),
 
   createCategory: (name: string): Promise<Category> => {
@@ -422,13 +468,29 @@ export const adminService = {
     return mockDelay({ id, status });
   },
 
+  // Auto-set from settled revenue in the artist's own Analytics view, but the
+  // ₹5L TDS (194-O) flag is a finance call in the end — an admin can override
+  // it from the artist detail page.
+  setEarningsAbove5L: (
+    id: string,
+    earningsAbove5L: boolean,
+  ): Promise<{ id: string; earningsAbove5L: boolean }> => {
+    if (!adminUsersCol.get().some((u) => u.id === id))
+      return mockError(`User "${id}" not found`);
+    return mockDelay({ id, earningsAbove5L });
+  },
+
   // Person-detail pages need more than the bare AdminUser row. These three
   // bundle exactly what each detail page renders, through the service layer
   // instead of the page importing lib/mock-data/* fixtures directly.
   getArtistPortfolio: (
     userId: string,
   ): Promise<
-    | { user: AdminUser; profile: ArtistProfile | undefined; artworks: Artwork[] }
+    | {
+        user: AdminUser;
+        profile: ArtistProfile | undefined;
+        artworks: Artwork[];
+      }
     | undefined
   > => {
     const user = adminUsersCol
@@ -470,8 +532,7 @@ export const adminService = {
   getCustomerPortfolio: (
     userId: string,
   ): Promise<
-    | { user: AdminUser; orders: Order[]; addresses: Address[] }
-    | undefined
+    { user: AdminUser; orders: Order[]; addresses: Address[] } | undefined
   > => {
     const user = adminUsersCol
       .get()

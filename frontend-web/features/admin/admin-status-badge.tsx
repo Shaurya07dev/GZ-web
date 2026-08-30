@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type { ArtworkStatus } from "@/types/artwork";
 import type { OrderStatus } from "@/types/order";
 import type {
+  GstStatus,
   KycStatus,
   SettlementStatus,
   UserStatus,
@@ -37,7 +38,8 @@ export type AdminStatus =
   | UserStatus
   | WithdrawalStatus
   | SettlementStatus
-  | KycStatus;
+  | KycStatus
+  | GstStatus;
 
 // Four tones from the plan (positive / pending / negative / neutral) plus
 // "info" for in-flight states, because features/dashboard/artwork-status-pill.tsx
@@ -113,6 +115,9 @@ const STATUS_CONFIG: Record<
   rejected: { label: "Rejected", tone: "negative", icon: CircleX },
   failed: { label: "Failed", tone: "negative", icon: CircleX },
   processed: { label: "Processed", tone: "positive", icon: CircleCheckBig },
+
+  // --- GST ---
+  not_submitted: { label: "Not Submitted", tone: "neutral", icon: FileEdit },
 
   // --- KYC ---
   submitted: { label: "Submitted", tone: "pending", icon: ShieldQuestion },

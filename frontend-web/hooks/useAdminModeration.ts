@@ -95,6 +95,42 @@ export function useRejectKycMutation() {
   });
 }
 
+// --- GST -------------------------------------------------------------------
+
+export function useAdminGstQueue() {
+  return useQuery({
+    queryKey: ["admin-gst-queue"],
+    queryFn: () => adminService.listGstQueue(),
+  });
+}
+
+export function useApproveGstMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => adminService.approveGst(userId),
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-gst-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+export function useRejectGstMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      adminService.rejectGst(userId, reason),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-gst-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
 // --- withdrawals -----------------------------------------------------------
 
 export function useAdminWithdrawals() {

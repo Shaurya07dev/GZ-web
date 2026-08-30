@@ -8,11 +8,14 @@ import {
   Check,
   ChevronRight,
   ChevronDown,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SignaturePad } from "./signature-pad";
+import { downloadMouPdf } from "./mou-pdf";
 
 // One signing surface for both Memoranda of Understanding — the artist's and
 // the aggregator's. They are different documents with the same mechanics: read
@@ -43,6 +46,9 @@ export interface MouAcceptanceRecord {
   acceptedAt: string;
   signatureName: string;
   version: string;
+  /** PNG data URL of the drawn signature, mouse or touch. Null on records
+   *  signed before the signature pad existed. */
+  signatureDataUrl?: string | null;
 }
 
 export function MouAgreement({
@@ -58,7 +64,11 @@ export function MouAgreement({
   /** The name the signature has to match — profile name or business contact. */
   signerName: string;
   acceptance: MouAcceptanceRecord | null;
-  onSign: (input: { signatureName: string; version: string }) => void;
+  onSign: (input: {
+    signatureName: string;
+    version: string;
+    signatureDataUrl: string | null;
+  }) => void;
   isPending?: boolean;
   error?: unknown;
   isSuccess?: boolean;
@@ -67,6 +77,7 @@ export function MouAgreement({
   const [readToEnd, setReadToEnd] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [signature, setSignature] = useState("");
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   function handleScroll() {
     const el = scrollRef.current;
@@ -79,12 +90,17 @@ export function MouAgreement({
 
   const nameMatches =
     signature.trim().toLowerCase() === signerName.trim().toLowerCase();
-  const canSign = readToEnd && agreed && nameMatches;
+  const canSign =
+    readToEnd && agreed && nameMatches && signatureDataUrl !== null;
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canSign) return;
-    onSign({ signatureName: signature.trim(), version: document.version });
+    onSign({
+      signatureName: signature.trim(),
+      version: document.version,
+      signatureDataUrl,
+    });
   }
 
   if (acceptance) {
@@ -103,7 +119,7 @@ export function MouAgreement({
                 {document.title}
               </h2>
               <p className="text-sm text-muted-foreground">
-                Signed {formatDate(acceptance.acceptedAt)} · version{" "}
+                Signed {formatDateTime(acceptance.acceptedAt)} · version{" "}
                 {acceptance.version}
               </p>
             </div>
@@ -113,11 +129,29 @@ export function MouAgreement({
           </span>
         </div>
 
-        <div className="rounded-md border border-border bg-background/60 px-4 py-3">
-          <p className="text-xs text-muted-foreground">Signed by</p>
-          <p className="mt-0.5 font-display text-lg italic text-foreground">
-            {acceptance.signatureName}
-          </p>
+        <div className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-border bg-background/60 px-4 py-3">
+          <div>
+            <p className="text-xs text-muted-foreground">Signed by</p>
+            <p className="mt-0.5 font-display text-lg italic text-foreground">
+              {acceptance.signatureName}
+            </p>
+            {acceptance.signatureDataUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- a locally drawn data URL, not a next/image-optimizable remote asset
+              <img
+                src={acceptance.signatureDataUrl}
+                alt={`${acceptance.signatureName}'s signature`}
+                className="mt-2 h-14 w-auto text-foreground"
+              />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => downloadMouPdf(document, acceptance)}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-gold/50 hover:text-gold-bright"
+          >
+            <Download className="size-3.5" />
+            Download as PDF
+          </button>
         </div>
 
         {/* Once signed, the document itself is reference material rather than
@@ -162,7 +196,11 @@ export function MouAgreement({
         </div>
       </div>
 
-      <SigningSteps readDone={readToEnd} agreeDone={agreed} signDone={isSuccess} />
+      <SigningSteps
+        readDone={readToEnd}
+        agreeDone={agreed}
+        signDone={isSuccess}
+      />
 
       <div className="relative">
         <MouBody
@@ -173,7 +211,10 @@ export function MouAgreement({
         {!readToEnd && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-center rounded-b-md bg-gradient-to-t from-background/95 via-background/60 to-transparent pb-2 pt-8">
             <span className="flex items-center gap-1.5 rounded-full border border-gold/40 bg-card px-3 py-1 text-xs font-medium text-gold-bright shadow-sm">
-              <ChevronDown className="size-3.5 shrink-0 animate-bounce" strokeWidth={2} />
+              <ChevronDown
+                className="size-3.5 shrink-0 animate-bounce"
+                strokeWidth={2}
+              />
               Scroll to the end to continue
             </span>
           </div>
@@ -217,6 +258,15 @@ export function MouAgreement({
             profile first if your legal name is different.
           </p>
         )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Draw your signature</Label>
+        <SignaturePad disabled={!agreed} onChange={setSignatureDataUrl} />
+        <p className="text-xs text-muted-foreground">
+          Sign with a mouse or your finger/stylus on a touchscreen. This drawn
+          signature is stored alongside your typed name.
+        </p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -279,7 +329,11 @@ function SigningSteps({
                   : "border-border text-muted-foreground",
               )}
             >
-              {step.done ? <Check className="size-3" strokeWidth={3} /> : index + 1}
+              {step.done ? (
+                <Check className="size-3" strokeWidth={3} />
+              ) : (
+                index + 1
+              )}
             </span>
             <span
               className={cn(
@@ -367,10 +421,13 @@ function MouBody({
   );
 }
 
-function formatDate(iso: string): string {
+function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "long",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   }).format(new Date(iso));
 }

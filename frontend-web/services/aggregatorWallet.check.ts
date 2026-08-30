@@ -25,9 +25,8 @@ const store = new Map<string, string>();
 
 const { aggregatorService } = await import("./aggregatorService.ts");
 const { aggregatorSalesService } = await import("./aggregatorSalesService.ts");
-const { aggregatorProfileCol, aggregatorWalletCol } = await import(
-  "@/lib/mock-collections"
-);
+const { aggregatorProfileCol, aggregatorWalletCol } =
+  await import("@/lib/mock-collections");
 
 aggregatorProfileCol.set({
   ...aggregatorProfileCol.get(),
@@ -35,6 +34,7 @@ aggregatorProfileCol.set({
     version: "v1",
     acceptedAt: new Date().toISOString(),
     signatureName: "Check",
+    signatureDataUrl: null,
   },
 });
 
@@ -90,7 +90,10 @@ assert.equal(
 
 // Commission that has not been settled yet is not spendable either: it lives
 // in pendingBalance, which `free` never counts.
-aggregatorWalletCol.set({ ...aggregatorWalletCol.get(), pendingBalance: 50_000 });
+aggregatorWalletCol.set({
+  ...aggregatorWalletCol.get(),
+  pendingBalance: 50_000,
+});
 assert.ok(
   (await withdrawError(50_000)) !== null,
   "pending commission is not withdrawable until it settles",

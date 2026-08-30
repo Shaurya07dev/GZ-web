@@ -368,6 +368,7 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
     acceptedAt: string;
     signatureName: string;
     version: string;
+    signatureDataUrl: string | null;
   } | null,
 }));
 
@@ -479,6 +480,15 @@ export const artistActivityCol = collection("artistActivity", () => [
 ]);
 export const artistProfileCol = collection("artistProfile", () => ({
   ...PROFILE,
+  // PAN — admin-visible only, never shown on the public artist page.
+  pan: null as string | null,
+  // GST is mandatory for artists (unlike the aggregator/customer GST fields
+  // elsewhere, which stay optional by design). "not_submitted" blocks
+  // marketplace/aggregator listing — see gstStatus's use in
+  // artwork-submit-form.tsx. Bumped to "submitted" the moment a valid GSTIN
+  // is saved; only an admin can move it to "approved" or "rejected".
+  gstStatus: "not_submitted" as
+    "not_submitted" | "submitted" | "approved" | "rejected",
   socialProofVideoUrl: null as string | null,
   // Signed once, from the artist's profile page. Null until they read the
   // MOU and sign it — see features/dashboard/mou-agreement.tsx.
@@ -486,6 +496,7 @@ export const artistProfileCol = collection("artistProfile", () => ({
     acceptedAt: string;
     signatureName: string;
     version: string;
+    signatureDataUrl: string | null;
   } | null,
 }));
 

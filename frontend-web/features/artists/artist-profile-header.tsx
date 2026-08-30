@@ -82,23 +82,29 @@ export function ArtistProfileHeader({ artist }: ArtistProfileHeaderProps) {
           {verificationSummary(artist)}
         </p>
 
-        {artist.socialLinks.length > 0 && (
+        {/* Instagram is collected for GalleryZone verification/analytics
+            only — it never appears on the public profile, unlike the other
+            platforms here. */}
+        {artist.socialLinks.filter((link) => link.platform !== "instagram")
+          .length > 0 && (
           <div className="mt-1 flex items-center gap-2">
-            {artist.socialLinks.map((link) => {
-              const Icon = SOCIAL_ICON[link.platform];
-              return (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`${artist.name} on ${SOCIAL_LABEL[link.platform]}`}
-                  className="flex size-9 items-center justify-center rounded-md border border-border text-foreground/80 transition-colors hover:border-gold/50 hover:text-gold-bright"
-                >
-                  <Icon className="size-4" />
-                </a>
-              );
-            })}
+            {artist.socialLinks
+              .filter((link) => link.platform !== "instagram")
+              .map((link) => {
+                const Icon = SOCIAL_ICON[link.platform];
+                return (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${artist.name} on ${SOCIAL_LABEL[link.platform]}`}
+                    className="flex size-9 items-center justify-center rounded-md border border-border text-foreground/80 transition-colors hover:border-gold/50 hover:text-gold-bright"
+                  >
+                    <Icon className="size-4" />
+                  </a>
+                );
+              })}
           </div>
         )}
       </div>

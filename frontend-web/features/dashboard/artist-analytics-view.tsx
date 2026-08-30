@@ -1,10 +1,28 @@
 "use client";
 
-import { useMemo } from "react";
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Check, TrendingUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { InstagramGlyph } from "@/components/social-icons";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 import { useArtistOrders } from "@/hooks/useArtistOrders";
-import { ChartCard, ChartTooltipContent } from "@/features/admin/charts/chart-card";
+import {
+  useArtistAccountProfile,
+  useSaveArtistProfileMutation,
+} from "@/hooks/useArtistAccount";
+import {
+  ChartCard,
+  ChartTooltipContent,
+} from "@/features/admin/charts/chart-card";
 import {
   axisChrome,
   CHART_HEIGHT,
@@ -17,9 +35,17 @@ import {
 } from "@/features/admin/charts/chart-theme";
 import { CategoryBarChart } from "@/features/admin/charts/category-bar-chart";
 import { FunnelChart } from "@/features/admin/charts/funnel-chart";
-import type { CategoryPerformance, FunnelStage } from "@/lib/mock-data/admin-analytics";
+import type {
+  CategoryPerformance,
+  FunnelStage,
+} from "@/lib/mock-data/admin-analytics";
 import { REVENUE_SERIES } from "./dashboard-data";
 import { formatINR } from "@/lib/utils";
+
+// TDS u/s 194-O drops its exemption once a seller's earnings through the
+// platform cross this in a financial year — the flag is informational here;
+// GalleryZone finance confirms it against the admin record.
+const EARNINGS_TDS_THRESHOLD = 500_000;
 
 export function ArtistAnalyticsView() {
   const { data: artworks } = useArtistDashboardArtworks();
@@ -31,6 +57,7 @@ export function ArtistAnalyticsView() {
   const totalRevenue = soldRows.reduce((sum, o) => sum + o.artistPayout, 0);
   const salesCount = soldRows.length;
   const avgSale = salesCount > 0 ? Math.round(totalRevenue / salesCount) : 0;
+  const earningsAboveThreshold = totalRevenue >= EARNINGS_TDS_THRESHOLD;
 
   const categoryData = useMemo<CategoryPerformance[]>(() => {
     const byCategory = new Map<string, { revenue: number; orders: number }>();
@@ -39,7 +66,10 @@ export function ArtistAnalyticsView() {
         revenue: 0,
         orders: 0,
       };
-      if (artwork.status === "sold" || artwork.status === "settlement_complete") {
+      if (
+        artwork.status === "sold" ||
+        artwork.status === "settlement_complete"
+      ) {
         entry.revenue += artwork.customerPrice;
         entry.orders += 1;
       }
@@ -56,8 +86,12 @@ export function ArtistAnalyticsView() {
     const counts = { draft: 0, pending_approval: 0, live: 0, sold: 0 };
     for (const artwork of artworks ?? []) {
       if (artwork.status === "draft") counts.draft += 1;
-      else if (artwork.status === "pending_approval") counts.pending_approval += 1;
-      else if (artwork.status === "sold" || artwork.status === "settlement_complete")
+      else if (artwork.status === "pending_approval")
+        counts.pending_approval += 1;
+      else if (
+        artwork.status === "sold" ||
+        artwork.status === "settlement_complete"
+      )
         counts.sold += 1;
       else counts.live += 1;
     }
@@ -78,6 +112,22 @@ export function ArtistAnalyticsView() {
         <SummaryStat label="Avg. sale price" value={formatINR(avgSale)} />
       </div>
 
+      {earningsAboveThreshold && (
+        <div className="flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
+          <TrendingUp
+            className="mt-0.5 size-4 shrink-0 text-gold-bright"
+            strokeWidth={1.75}
+          />
+          <p className="text-sm leading-relaxed text-foreground">
+            Your settled earnings on GalleryZone have crossed{" "}
+            {formatINR(EARNINGS_TDS_THRESHOLD)} this financial year. This is
+            flagged on your GalleryZone record automatically.
+          </p>
+        </div>
+      )}
+
+      <InstagramConnectCard />
+
       <ArtistRevenueChart />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -96,7 +146,10 @@ export function ArtistAnalyticsView() {
 }
 
 function ArtistRevenueChart() {
-  const points = REVENUE_SERIES.map((p) => ({ label: p.month, amount: p.amount }));
+  const points = REVENUE_SERIES.map((p) => ({
+    label: p.month,
+    amount: p.amount,
+  }));
   const isEmpty = points.length === 0;
 
   return (
@@ -142,6 +195,104 @@ function ArtistRevenueChart() {
         />
       </AreaChart>
     </ChartCard>
+  );
+}
+
+// The handle itself is collected once, on the Profile page (it's a required,
+// admin-only field there — see profile-kyc-form.tsx). This card is where the
+// artist sees and manages that connection alongside their other performance
+// data, rather than analytics quietly reading a field it doesn't own.
+function InstagramConnectCard() {
+  const { data: profile } = useArtistAccountProfile();
+  const saveMutation = useSaveArtistProfileMutation();
+  const [editing, setEditing] = useState(false);
+  const [handle, setHandle] = useState("");
+
+  if (!profile) return null;
+
+  const connected = profile.instagram.trim().length > 0;
+
+  if (!editing) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+            <InstagramGlyph className="size-4 text-gold-bright" />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-foreground">Instagram</p>
+            <p className="text-xs text-muted-foreground">
+              {connected ? `@${profile.instagram}` : "Not connected"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {connected && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
+              <Check className="size-3.5" />
+              Connected
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setHandle(profile.instagram);
+              setEditing(true);
+            }}
+            className="text-xs font-medium text-gold-bright hover:underline"
+          >
+            {connected ? "Update" : "Connect"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (handle.trim().length === 0) return;
+        saveMutation.mutate(
+          { instagram: handle.trim() },
+          { onSuccess: () => setEditing(false) },
+        );
+      }}
+      className="flex flex-col gap-3 rounded-xl border border-gold/30 bg-card p-4 sm:flex-row sm:items-end"
+    >
+      <div className="flex flex-1 flex-col gap-1.5">
+        <Label htmlFor="analyticsInstagram">Instagram handle</Label>
+        <div className="relative">
+          <InstagramGlyph className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="analyticsInstagram"
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="yourhandle"
+            className="h-9 pl-9"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          This is the same handle saved on your Profile page.
+        </p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={saveMutation.isPending}
+          className="rounded-md bg-gradient-to-b from-gold-bright to-gold px-4 py-2 text-xs font-semibold text-[#171310] disabled:pointer-events-none disabled:opacity-60"
+        >
+          {saveMutation.isPending ? "Saving…" : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          className="rounded-md border border-border px-4 py-2 text-xs font-medium text-foreground hover:bg-secondary"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 

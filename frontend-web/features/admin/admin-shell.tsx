@@ -9,6 +9,7 @@ import {
   ChartNoAxesCombined,
   Images,
   IdCard,
+  FileCheck2,
   Banknote,
   UserMinus,
   ReceiptText,
@@ -28,6 +29,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { SidebarBrand } from "@/components/shared/sidebar-brand";
 import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
@@ -56,7 +58,7 @@ import { ADMIN } from "./admin-data";
 // `collapsed` state rather than lifting it into a shared component, same
 // reasoning as the rest of this file being a deliberate standalone copy.
 
-type BadgeKey = "artworks" | "kyc" | "withdrawals";
+type BadgeKey = "artworks" | "kyc" | "gst" | "withdrawals";
 
 interface AdminNavItem {
   label: string;
@@ -98,6 +100,12 @@ const NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/moderation/kyc",
         icon: IdCard,
         badge: "kyc",
+      },
+      {
+        label: "GST",
+        href: "/admin/moderation/gst",
+        icon: FileCheck2,
+        badge: "gst",
       },
       {
         label: "Withdrawals",
@@ -203,6 +211,7 @@ function Sidebar({
   const badgeCounts: Record<BadgeKey, number | undefined> = {
     artworks: kpis?.pendingArtworkApprovals,
     kyc: kpis?.pendingKyc,
+    gst: kpis?.pendingGst,
     withdrawals: kpis?.pendingWithdrawals,
   };
 
@@ -224,19 +233,7 @@ function Sidebar({
         )}
       >
         <div className="flex h-16 shrink-0 items-center justify-between px-5">
-          <Link href="/" className="flex items-baseline gap-2">
-            <span className="font-display text-xl font-semibold italic text-gold-bright">
-              GZ
-            </span>
-            <span
-              className={cn(
-                "text-xs font-medium tracking-[0.18em] text-sidebar-foreground",
-                collapsed && "lg:hidden",
-              )}
-            >
-              GALLERYZONE
-            </span>
-          </Link>
+          <SidebarBrand collapsed={collapsed} />
           <button
             aria-label="Close menu"
             onClick={onClose}

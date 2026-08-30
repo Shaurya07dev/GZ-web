@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SidebarBrand } from "@/components/shared/sidebar-brand";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import {
@@ -68,19 +69,43 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Main",
     items: [
       { label: "Dashboard", href: "/aggregator/dashboard", icon: LayoutGrid },
-      { label: "My Profile", href: "/aggregator/profile", icon: CircleUserRound },
-      { label: "Browse GalleryZone", href: "/aggregator/inventory", icon: PackageSearch },
-      { label: "My Inventory", href: "/aggregator/collection", icon: GalleryVerticalEnd },
+      {
+        label: "My Profile",
+        href: "/aggregator/profile",
+        icon: CircleUserRound,
+      },
+      {
+        label: "Browse GalleryZone",
+        href: "/aggregator/inventory",
+        icon: PackageSearch,
+      },
+      {
+        label: "My Inventory",
+        href: "/aggregator/collection",
+        icon: GalleryVerticalEnd,
+      },
     ],
   },
   {
     id: "operations",
     label: "Operations",
     items: [
-      { label: "Orders & Sales", href: "/aggregator/orders", icon: ShoppingBag },
+      {
+        label: "Orders & Sales",
+        href: "/aggregator/orders",
+        icon: ShoppingBag,
+      },
       { label: "Customers", href: "/aggregator/customers", icon: Users },
-      { label: "Display Spaces", href: "/aggregator/gallery-spaces", icon: Building2 },
-      { label: "Shipping & Logistics", href: "/aggregator/shipping", icon: Truck },
+      {
+        label: "Display Spaces",
+        href: "/aggregator/gallery-spaces",
+        icon: Building2,
+      },
+      {
+        label: "Shipping & Logistics",
+        href: "/aggregator/shipping",
+        icon: Truck,
+      },
     ],
   },
   {
@@ -221,19 +246,7 @@ function Sidebar({
         )}
       >
         <div className="flex h-16 items-center justify-between px-5">
-          <Link href="/" className="flex items-baseline gap-2">
-            <span className="font-display text-xl font-semibold italic text-gold-bright">
-              GZ
-            </span>
-            <span
-              className={cn(
-                "text-xs font-medium tracking-[0.18em] text-sidebar-foreground",
-                collapsed && "lg:hidden",
-              )}
-            >
-              GALLERYZONE
-            </span>
-          </Link>
+          <SidebarBrand collapsed={collapsed} />
           <button
             aria-label="Close menu"
             onClick={onClose}
@@ -348,22 +361,19 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
           <p className="truncate text-sm font-medium text-sidebar-foreground">
             {AGGREGATOR.companyName}
           </p>
-          <p className="truncate text-xs text-muted-foreground">
-            Aggregator
-          </p>
+          <p className="truncate text-xs text-muted-foreground">Aggregator</p>
         </div>
       </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="start"
-        className="w-56 p-1.5"
-      >
+      <PopoverContent side="top" align="start" className="w-56 p-1.5">
         <Link
           href="/aggregator/profile"
           onClick={() => setOpen(false)}
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
         >
-          <CircleUserRound className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          <CircleUserRound
+            className="size-4 text-muted-foreground"
+            strokeWidth={1.75}
+          />
           My Profile
         </Link>
         <Link
@@ -371,7 +381,10 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
           onClick={() => setOpen(false)}
           className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
         >
-          <SettingsIcon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+          <SettingsIcon
+            className="size-4 text-muted-foreground"
+            strokeWidth={1.75}
+          />
           Settings
         </Link>
         <div className="my-1 border-t border-border" />

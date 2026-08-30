@@ -8,7 +8,11 @@ export const aggregatorProfileService = {
 
   // Signing the partner MOU records when and against which version, and is
   // never overwritten by an ordinary profile save.
-  acceptMou: (input: { signatureName: string; version: string }) => {
+  acceptMou: (input: {
+    signatureName: string;
+    version: string;
+    signatureDataUrl?: string | null;
+  }) => {
     const profile = aggregatorProfileCol.get();
     if (!input.signatureName.trim())
       return mockError("Type your full name to sign");
@@ -26,6 +30,7 @@ export const aggregatorProfileService = {
         acceptedAt: new Date().toISOString(),
         signatureName: input.signatureName.trim(),
         version: input.version,
+        signatureDataUrl: input.signatureDataUrl ?? null,
       },
     };
     aggregatorProfileCol.set(updated);

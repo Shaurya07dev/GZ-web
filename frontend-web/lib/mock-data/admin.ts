@@ -13,6 +13,7 @@ import type {
   AuditLogEntry,
   Category,
   GeneratedReport,
+  GstStatus,
   KycStatus,
   PlatformSettings,
   Settlement,
@@ -564,6 +565,11 @@ interface ArtistAdminMeta {
   kycStatus: KycStatus;
   joinedDaysAgo: number;
   lastLoginDaysAgo: number;
+  gstStatus?: GstStatus;
+  gstin?: string;
+  pan?: string;
+  instagramHandle?: string;
+  earningsAbove5L?: boolean;
 }
 
 const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
@@ -572,12 +578,22 @@ const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
     kycStatus: "approved",
     joinedDaysAgo: 340,
     lastLoginDaysAgo: 1,
+    gstStatus: "approved",
+    gstin: "29MEERA1234N1Z8",
+    pan: "MEERA1234N",
+    instagramHandle: "meeranair.studio",
+    earningsAbove5L: true,
   },
   "arjun-mehta": {
     status: "active",
     kycStatus: "approved",
     joinedDaysAgo: 322,
     lastLoginDaysAgo: 2,
+    gstStatus: "approved",
+    gstin: "27ARJUN5678M1Z2",
+    pan: "ARJUN5678M",
+    instagramHandle: "arjunmehta.art",
+    earningsAbove5L: true,
   },
   // Tier-1 only and still mid-review — this is one of the KYC queue's rows.
   "kavya-iyer": {
@@ -585,12 +601,18 @@ const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
     kycStatus: "under_review",
     joinedDaysAgo: 58,
     lastLoginDaysAgo: 0,
+    gstStatus: "submitted",
+    gstin: "29KAVYA4321I1Z6",
+    instagramHandle: "kavyaiyer.art",
   },
   "rohan-bhattacharya": {
     status: "active",
     kycStatus: "approved",
     joinedDaysAgo: 128,
     lastLoginDaysAgo: 4,
+    gstStatus: "submitted",
+    gstin: "19ROHAN8765B1Z4",
+    instagramHandle: "rohan.bhatt.art",
   },
   // Zero tiers, joined this month — matches her public bio exactly.
   "ananya-deshmukh": {
@@ -598,28 +620,39 @@ const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
     kycStatus: "submitted",
     joinedDaysAgo: 26,
     lastLoginDaysAgo: 1,
+    gstStatus: "not_submitted",
   },
   "ishaan-kapoor": {
     status: "active",
     kycStatus: "approved",
     joinedDaysAgo: 190,
     lastLoginDaysAgo: 6,
+    gstStatus: "approved",
+    gstin: "24ISHAN2468K1Z1",
+    pan: "ISHAN2468K",
+    instagramHandle: "ishaankapoor.studio",
   },
   "priya-subramaniam": {
     status: "active",
     kycStatus: "approved",
     joinedDaysAgo: 214,
     lastLoginDaysAgo: 9,
+    gstStatus: "rejected",
+    gstin: "33PRIYA1357S1Z9",
+    instagramHandle: "priya.subramaniam",
   },
   // The artist the dashboard is signed in as. She used to be hand-written
   // below as "user-artist-devika-rao" because she was not in mockArtists; now
   // that she is, she derives like everyone else and the hand-written row would
-  // have made her two different people in the users table.
+  // have made her two different people in the users table. Kept "not
+  // submitted" here to match the dashboard demo's own starting state.
   "devika-rao": {
     status: "active",
     kycStatus: "approved",
     joinedDaysAgo: 168,
     lastLoginDaysAgo: 0,
+    gstStatus: "not_submitted",
+    instagramHandle: "devikarao.art",
   },
 };
 
@@ -639,6 +672,11 @@ const derivedArtistUsers: AdminUser[] = mockArtists.map((artist, i) => {
     createdAt: daysAgo(meta.joinedDaysAgo),
     lastLoginAt: daysAgo(meta.lastLoginDaysAgo),
     kycStatus: meta.kycStatus,
+    gstStatus: meta.gstStatus ?? "not_submitted",
+    gstin: meta.gstin ?? null,
+    pan: meta.pan ?? null,
+    instagramHandle: meta.instagramHandle ?? null,
+    earningsAbove5L: meta.earningsAbove5L ?? false,
   };
 });
 
@@ -832,6 +870,18 @@ export function isInKycQueue(user: AdminUser): boolean {
     (user.role === "artist" || user.role === "aggregator") &&
     !!user.kycStatus &&
     KYC_QUEUE_STATUSES.includes(user.kycStatus)
+  );
+}
+
+// GST is an artist-only requirement (see profile-kyc-form.tsx) — aggregators
+// and customers never enter this queue.
+export const GST_QUEUE_STATUSES: GstStatus[] = ["submitted"];
+
+export function isInGstQueue(user: AdminUser): boolean {
+  return (
+    user.role === "artist" &&
+    !!user.gstStatus &&
+    GST_QUEUE_STATUSES.includes(user.gstStatus)
   );
 }
 
@@ -1524,6 +1574,7 @@ export const mockAdminKpis: AdminKpis = {
     (a) => a.status === "pending_approval",
   ).length,
   pendingKyc: mockAdminUsers.filter(isInKycQueue).length,
+  pendingGst: mockAdminUsers.filter(isInGstQueue).length,
   pendingWithdrawals: mockWithdrawals.filter((w) => w.status === "pending")
     .length,
 };

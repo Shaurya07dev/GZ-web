@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SidebarBrand } from "@/components/shared/sidebar-brand";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
@@ -189,19 +190,7 @@ function Sidebar({
         )}
       >
         <div className="flex h-16 items-center justify-between px-5">
-          <Link href="/" className="flex items-baseline gap-2">
-            <span className="font-display text-xl font-semibold italic text-gold-bright">
-              GZ
-            </span>
-            <span
-              className={cn(
-                "text-xs font-medium tracking-[0.18em] text-sidebar-foreground",
-                collapsed && "lg:hidden",
-              )}
-            >
-              GALLERYZONE
-            </span>
-          </Link>
+          <SidebarBrand collapsed={collapsed} />
           <button
             aria-label="Close menu"
             onClick={onClose}
@@ -304,9 +293,10 @@ function Sidebar({
 }
 
 const PAGE_TITLES: Record<string, string> = Object.fromEntries(
-  ALL_ITEMS.filter((item) => item.href.startsWith("/account")).map(
-    (item) => [item.href, item.label],
-  ),
+  ALL_ITEMS.filter((item) => item.href.startsWith("/account")).map((item) => [
+    item.href,
+    item.label,
+  ]),
 );
 PAGE_TITLES["/account"] = "Dashboard";
 
@@ -314,7 +304,9 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const pathname = usePathname();
   const title =
     PAGE_TITLES[pathname] ??
-    (pathname.startsWith("/account/orders/") ? "Order details" : "Collector Portal");
+    (pathname.startsWith("/account/orders/")
+      ? "Order details"
+      : "Collector Portal");
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-5 backdrop-blur-md sm:px-8 lg:px-10">

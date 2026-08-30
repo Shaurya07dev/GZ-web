@@ -21,9 +21,8 @@ const store = new Map<string, string>();
 };
 
 const { aggregatorService } = await import("./aggregatorService.ts");
-const { aggregatorProfileCol, aggregatorWalletCol } = await import(
-  "@/lib/mock-collections"
-);
+const { aggregatorProfileCol, aggregatorWalletCol } =
+  await import("@/lib/mock-collections");
 
 function reset(): void {
   store.clear();
@@ -61,6 +60,7 @@ function sign(): void {
       acceptedAt: new Date().toISOString(),
       signatureName: "Meher Kapadia",
       version: "2026.1",
+      signatureDataUrl: null,
     },
   });
 }

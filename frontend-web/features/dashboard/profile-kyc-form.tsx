@@ -14,6 +14,11 @@ import {
   ChevronRight,
   Receipt,
   Truck,
+  CreditCard,
+  ExternalLink,
+  PlayCircle,
+  TriangleAlert,
+  Palette,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +47,29 @@ type ProfileFormState = {
   website: string;
   socialProofVideoUrl: string;
   gstin: string;
+  pan: string;
+};
+
+const GST_STATUS_LABEL: Record<
+  "not_submitted" | "submitted" | "approved" | "rejected",
+  { label: string; className: string }
+> = {
+  not_submitted: {
+    label: "Not started",
+    className: "border-border text-muted-foreground",
+  },
+  submitted: {
+    label: "Pending GalleryZone approval",
+    className: "border-gold/40 bg-gold/10 text-gold-bright",
+  },
+  approved: {
+    label: "Approved",
+    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
+  },
+  rejected: {
+    label: "Rejected — resubmit",
+    className: "border-destructive/40 bg-destructive/10 text-destructive",
+  },
 };
 
 type PickupFormState = {
@@ -90,6 +118,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     website: profile.website,
     socialProofVideoUrl: profile.socialProofVideoUrl ?? "",
     gstin: profile.gstin ?? "",
+    pan: profile.pan ?? "",
   });
   const [profileSaved, setProfileSaved] = useState(false);
 
@@ -141,17 +170,24 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     setProfileSaved(false);
   }
 
-  // GSTIN is optional. When one IS entered we check its shape locally (2-digit
-  // state code, PAN, entity digit, Z, checksum char) — no GST portal
-  // integration, which the business deliberately does not want.
+  // GST is mandatory for artists — its shape is checked locally (2-digit
+  // state code, PAN, entity digit, Z, checksum char). There is still no GST
+  // portal *integration* (the business doesn't want one); artists apply on
+  // the official portal themselves and paste the number in here.
+  const gstinTrimmed = profileForm.gstin.trim();
   const gstinInvalid =
-    profileForm.gstin.trim().length > 0 && !GSTIN_PATTERN.test(profileForm.gstin.trim());
+    gstinTrimmed.length === 0 || !GSTIN_PATTERN.test(gstinTrimmed);
+  const instagramInvalid = profileForm.instagram.trim().length === 0;
+  const gstStatus = profile.gstStatus;
 
   function handleProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (gstinInvalid) return;
+    if (gstinInvalid || instagramInvalid) return;
     saveProfileMutation.mutate(
-      { ...profileForm, socialProofVideoUrl: profileForm.socialProofVideoUrl || null },
+      {
+        ...profileForm,
+        socialProofVideoUrl: profileForm.socialProofVideoUrl || null,
+      },
       { onSuccess: () => setProfileSaved(true) },
     );
   }
@@ -263,19 +299,25 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             <Label htmlFor="instagram">
               Instagram handle{" "}
               <span className="font-normal text-muted-foreground">
-                (optional)
+                (required, private)
               </span>
             </Label>
             <div className="relative">
               <InstagramGlyph className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="instagram"
+                required
                 placeholder="yourhandle"
                 value={profileForm.instagram}
                 onChange={(e) => updateProfile("instagram", e.target.value)}
+                aria-invalid={instagramInvalid}
                 className="h-10 pl-9"
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Used by GalleryZone for verification and analytics only — never
+              shown on your public profile.
+            </p>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="website">
@@ -319,17 +361,51 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               practice.
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <Label htmlFor="gstin">
-              GSTIN{" "}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="pan">
+              PAN{" "}
               <span className="font-normal text-muted-foreground">
-                (optional)
+                (admin-only)
               </span>
             </Label>
+            <div className="relative sm:max-w-xs">
+              <CreditCard className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="pan"
+                maxLength={10}
+                placeholder="ABCDE1234F"
+                value={profileForm.pan}
+                onChange={(e) =>
+                  updateProfile("pan", e.target.value.toUpperCase())
+                }
+                className="h-10 pl-9 font-mono"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Seen only by GalleryZone admins — never shown on your public
+              profile.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="gstin">
+                GSTIN{" "}
+                <span className="font-normal text-muted-foreground">
+                  (required)
+                </span>
+              </Label>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${GST_STATUS_LABEL[gstStatus].className}`}
+              >
+                {GST_STATUS_LABEL[gstStatus].label}
+              </span>
+            </div>
             <div className="relative sm:max-w-xs">
               <Receipt className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="gstin"
+                required
                 maxLength={15}
                 placeholder="22AAAAA0000A1Z5"
                 value={profileForm.gstin}
@@ -342,23 +418,54 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </div>
             {gstinInvalid ? (
               <p className="text-xs text-destructive">
-                That does not look like a valid GSTIN. Leave it blank if you
-                do not have one.
+                {gstinTrimmed.length === 0
+                  ? "GST registration is required before you can list artwork."
+                  : "That does not look like a valid GSTIN."}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Only if you are GST-registered. Used by GalleryZone for
-                invoicing and settlement — never shown on your public profile
-                or to buyers.
+                Used by GalleryZone for invoicing and settlement — never shown
+                on your public profile or to buyers. GalleryZone must approve it
+                before your listings can go live.
               </p>
             )}
+
+            <a
+              href="https://www.gst.gov.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
+            >
+              <ExternalLink className="size-3.5" />
+              Don&rsquo;t have a GSTIN? Apply on the government GST portal
+            </a>
+
+            {/* Placeholder for the GST application walkthrough video — drop
+                the embed or a YouTube link in here when it's ready. */}
+            <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
+              <PlayCircle
+                className="size-5 shrink-0 text-gold-bright"
+                strokeWidth={1.5}
+              />
+              <div>
+                <p className="text-xs font-medium text-foreground">
+                  GST application guide
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  A short walkthrough of registering for GST goes here. Coming
+                  soon.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={saveProfileMutation.isPending || gstinInvalid}
+            disabled={
+              saveProfileMutation.isPending || gstinInvalid || instagramInvalid
+            }
             className="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >
             Save profile
@@ -500,6 +607,22 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
         </div>
       </form>
 
+      {gstStatus !== "approved" && (
+        <a
+          href="#gstin"
+          className="flex items-center gap-3 rounded-lg border border-gold/40 bg-gold/5 px-4 py-3.5 text-sm text-gold-bright transition-colors hover:bg-gold/10 lg:col-span-2"
+        >
+          <TriangleAlert className="size-4 shrink-0" strokeWidth={1.75} />
+          <span>
+            <span className="font-medium">Complete your GST application.</span>{" "}
+            <span className="text-muted-foreground">
+              GalleryZone must approve your GST registration before any artwork
+              can go live.
+            </span>
+          </span>
+        </a>
+      )}
+
       <div className="flex flex-col gap-6">
         <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
           <div className="flex items-center justify-between">
@@ -528,8 +651,8 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Submit an additional ID or address proof if support has requested
-              one for your account. PAN is preferred{" "}
-              <span className="text-muted-foreground/80">(optional)</span>.
+              one for your account.{" "}
+              <span className="text-muted-foreground/80">(optional)</span>
             </p>
           </div>
 
@@ -554,6 +677,26 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </motion.p>
           )}
         </div>
+
+        <div className="flex items-start gap-3 rounded-lg border border-dashed border-gold/40 bg-card p-5 sm:p-6">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+            <Palette className="size-4 text-gold-bright" strokeWidth={1.75} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-base font-semibold text-foreground">
+                Commissions
+              </h2>
+              <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-medium text-gold-bright">
+                Coming soon
+              </span>
+            </div>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Let collectors commission a custom piece directly from you, start
+              to finish, through GalleryZone.
+            </p>
+          </div>
+        </div>
       </div>
 
       <ArtistNetworkPanel />
@@ -566,4 +709,3 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     </div>
   );
 }
-

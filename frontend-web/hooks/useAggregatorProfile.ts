@@ -11,8 +11,9 @@ export function useAggregatorProfile() {
 export function useAcceptAggregatorMouMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { signatureName: string; version: string }) =>
-      aggregatorProfileService.acceptMou(input),
+    mutationFn: (
+      input: Parameters<typeof aggregatorProfileService.acceptMou>[0],
+    ) => aggregatorProfileService.acceptMou(input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["aggregator-profile"] }),
   });

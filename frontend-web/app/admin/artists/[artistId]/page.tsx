@@ -4,12 +4,19 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { UserDetailHeader } from "@/features/admin/people/user-detail-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
-import { useAdminArtistPortfolio } from "@/hooks/useAdminUsers";
+import { Checkbox } from "@/components/ui/checkbox";
+import { InstagramGlyph } from "@/components/social-icons";
+import {
+  useAdminArtistPortfolio,
+  useSetEarningsAbove5LMutation,
+} from "@/hooks/useAdminUsers";
 import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
+import type { AdminUser } from "@/types/admin";
 
 const TIER_LABELS = [
   { key: "tier1SocialMedia", label: "Tier 1 · Social media linked" },
@@ -99,6 +106,8 @@ export default function AdminArtistDetailPage(
             </p>
           </section>
 
+          <ComplianceSection user={user} />
+
           <section className="rounded-xl border border-border bg-card p-5">
             <h2 className="font-display text-base font-semibold text-foreground">
               Catalogue
@@ -169,5 +178,93 @@ export default function AdminArtistDetailPage(
         </section>
       </div>
     </div>
+  );
+}
+
+// PAN, GST and Instagram are admin-only — none of these ever appear on the
+// artist's public profile page. Shown together here since they're the same
+// kind of thing: compliance detail collected from the artist, reviewed by
+// GalleryZone rather than shown to buyers.
+type ArtistPortfolio = NonNullable<
+  ReturnType<typeof useAdminArtistPortfolio>["data"]
+>;
+
+function ComplianceSection({ user }: { user: AdminUser }) {
+  const queryClient = useQueryClient();
+  const mutation = useSetEarningsAbove5LMutation();
+
+  function toggleEarnings(checked: boolean) {
+    mutation.mutate(
+      { userId: user.id, earningsAbove5L: checked },
+      {
+        onSuccess: () => {
+          queryClient.setQueryData(
+            ["admin-artist-portfolio", user.id],
+            (prev: ArtistPortfolio | undefined) =>
+              prev
+                ? { ...prev, user: { ...prev.user, earningsAbove5L: checked } }
+                : prev,
+          );
+        },
+      },
+    );
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5">
+      <h2 className="font-display text-base font-semibold text-foreground">
+        Compliance
+      </h2>
+      <dl className="mt-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-sm text-muted-foreground">PAN</dt>
+          <dd className="font-mono text-sm text-foreground">
+            {user.pan ?? "Not on file"}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-sm text-muted-foreground">GSTIN</dt>
+          <dd className="font-mono text-sm text-foreground">
+            {user.gstin ?? "Not on file"}
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="text-sm text-muted-foreground">GST status</dt>
+          <dd>
+            <AdminStatusBadge
+              status={user.gstStatus ?? "not_submitted"}
+              size="sm"
+            />
+          </dd>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <dt className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <InstagramGlyph className="size-3.5" />
+            Instagram
+          </dt>
+          <dd className="text-sm text-foreground">
+            {user.instagramHandle
+              ? `@${user.instagramHandle}`
+              : "Not connected"}
+          </dd>
+        </div>
+      </dl>
+
+      <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-md border border-border bg-background/60 p-3">
+        <Checkbox
+          checked={user.earningsAbove5L ?? false}
+          disabled={mutation.isPending}
+          onCheckedChange={(checked) => toggleEarnings(checked === true)}
+          className="mt-0.5"
+        />
+        <span className="text-xs leading-relaxed text-foreground">
+          Earnings above ₹5,00,000 this financial year
+          <span className="mt-0.5 block text-muted-foreground">
+            Auto-flagged from settled revenue (194-O TDS threshold); override
+            here if the finance record differs.
+          </span>
+        </span>
+      </label>
+    </section>
   );
 }
