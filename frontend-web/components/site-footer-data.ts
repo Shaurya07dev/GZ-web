@@ -48,8 +48,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Paintings", href: "/marketplace" },
       { label: "Sculptures", href: "/marketplace" },
       { label: "Digital Art", href: "/marketplace" },
-      { label: "Handicrafts", comingSoon: true },
-      { label: "Canvas & Brushes", comingSoon: true },
+      { label: "Other Art Works", comingSoon: true },
+      { label: "Art Supplies", comingSoon: true },
     ],
   },
   {
