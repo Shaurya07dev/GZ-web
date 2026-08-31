@@ -943,7 +943,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 type="number"
                 min={0}
                 step="0.1"
-                placeholder="Height"
+                placeholder="Length"
                 value={form.dimensionHeight}
                 onChange={(e) => updateField("dimensionHeight", e.target.value)}
                 className="h-10"
@@ -961,7 +961,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 type="number"
                 min={0}
                 step="0.1"
-                placeholder="Depth (optional)"
+                placeholder="Height (optional)"
                 value={form.dimensionDepth}
                 onChange={(e) => updateField("dimensionDepth", e.target.value)}
                 className="h-10"
@@ -990,7 +990,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </Select>
             </div>
             <p className="text-xs text-muted-foreground">
-              Height and width, and depth if it&rsquo;s a 3D piece.
+              Length and width, and height if it&rsquo;s a 3D piece.
             </p>
           </div>
 
@@ -1027,11 +1027,19 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(FRAMING_LABEL) as FramingState[]).map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {FRAMING_LABEL[key]}
-                    </SelectItem>
-                  ))}
+                  {(Object.keys(FRAMING_LABEL) as FramingState[])
+                    // MOU §12: only these two ship to an aggregator's premises
+                    // — don't offer an option the artist would just have to
+                    // undo once the aggregator-readiness check rejects it.
+                    .filter(
+                      (key) =>
+                        !aggregatorSelected || AGGREGATOR_READY_FRAMING.has(key),
+                    )
+                    .map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {FRAMING_LABEL[key]}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
