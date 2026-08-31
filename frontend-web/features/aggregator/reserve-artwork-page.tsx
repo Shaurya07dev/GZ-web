@@ -10,7 +10,14 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { formatINR } from "@/lib/utils";
-import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
+import {
+  AGGREGATOR_CYCLE_MONTHS,
+  AGGREGATOR_COMMISSION_RATE,
+  aggregatorCommissionOf,
+  artistPriceFrom,
+  exGst,
+  gstIncludedIn,
+} from "@/lib/pricing";
 import { useReservableArtwork } from "@/hooks/useAggregatorInventory";
 import { useReserveArtworkMutation } from "@/hooks/useAggregatorInventory";
 import {
@@ -63,6 +70,20 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
   }
 
   const { offer } = artwork;
+  // MOU §8: the aggregator's commission is 20% of (this month's price − the
+  // artist's price), regardless of who set that price — GalleryZone keeps the
+  // rest of the markup. Both artistPrice and the split are derivable straight
+  // from the offer, since standardPrice is exactly the artist's price with the
+  // month-1 markup and zero reduction applied.
+  const artistPrice = artistPriceFrom(offer.standardPrice);
+  const markup = Math.max(0, exGst(offer.offerPrice) - artistPrice);
+  const aggregatorCommission = aggregatorCommissionOf(
+    offer.offerPrice,
+    artistPrice,
+  );
+  const galleryZoneShare = markup - aggregatorCommission;
+  const gst = gstIncludedIn(offer.offerPrice);
+  const commissionPercent = Math.round(AGGREGATOR_COMMISSION_RATE * 100);
   const free = wallet ? wallet.balance - wallet.lockedBalance : 0;
   const shortfall = Math.max(0, offer.payable - free);
 
@@ -128,6 +149,53 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
             your Inventory for a 30-day display window. A piece that doesn&rsquo;t
             sell rotates to a different aggregator each month, cheaper each
             time, for up to five placements.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background px-3.5 py-3 text-sm">
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Where this price goes
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Artist&rsquo;s price</span>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(artistPrice)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">
+              GalleryZone ({100 - commissionPercent}% of the markup)
+            </span>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(galleryZoneShare)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">
+              Your commission if it sells here ({commissionPercent}%)
+            </span>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(aggregatorCommission)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">GST (5%)</span>
+            <span className="font-mono tabular-nums text-foreground">
+              {formatINR(gst)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-t border-border pt-1.5">
+            <span className="font-medium text-foreground">
+              This month&rsquo;s price
+            </span>
+            <span className="font-mono font-semibold tabular-nums text-gold-bright">
+              {formatINR(offer.offerPrice)}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Raise the price once you hold it and your commission grows with
+            it — GalleryZone&rsquo;s and the artist&rsquo;s shares
+            don&rsquo;t change.
           </p>
         </div>
 
