@@ -250,6 +250,12 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
             />
             <Detail label="Medium" value={artwork.medium} />
             <Detail label="Type" value={artwork.artworkType ?? "Not set"} />
+            {artwork.category === "painting" && (
+              <Detail
+                label="Painting style"
+                value={artwork.paintingStyle ?? "Not set"}
+              />
+            )}
             <Detail
               label="Dimensions"
               value={artwork.dimensions ?? "Not set"}

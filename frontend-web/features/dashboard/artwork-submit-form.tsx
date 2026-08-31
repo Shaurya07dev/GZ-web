@@ -21,7 +21,9 @@ import {
   Circle,
   ExternalLink,
   Ruler,
+  ChevronsUpDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -35,6 +37,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   ARTWORK_CATEGORIES,
   ARTWORK_MEDIUMS,
   ARTWORK_TYPES,
@@ -47,6 +62,7 @@ import {
   ARTWORK_FORMATS,
   PLACEHOLDER_ARTWORK_IMAGES,
 } from "./artwork-submit-data";
+import { PAINTING_ART_FORMS } from "./painting-art-forms";
 import { InsuranceFaqChat } from "./insurance-faq-chat";
 import {
   GST_RATE,
@@ -101,6 +117,8 @@ type FormState = {
   medium: string;
   artworkType: string;
   artworkTypeOther: string;
+  paintingStyle: string;
+  paintingStyleOther: string;
   dimensionHeight: string;
   dimensionWidth: string;
   dimensionDepth: string;
@@ -126,6 +144,8 @@ const EMPTY_FORM: FormState = {
   medium: "",
   artworkType: "",
   artworkTypeOther: "",
+  paintingStyle: "",
+  paintingStyleOther: "",
   dimensionHeight: "",
   dimensionWidth: "",
   dimensionDepth: "",
@@ -257,6 +277,9 @@ function formStateFor(artwork: EditableArtwork): FormState {
   const knownType = ARTWORK_TYPES.some(
     (t) => t.value !== "other" && t.label === artwork.artworkType,
   );
+  const knownStyle = PAINTING_ART_FORMS.some(
+    (s) => s.name === artwork.paintingStyle,
+  );
   return {
     title: artwork.title,
     description: artwork.description,
@@ -269,6 +292,13 @@ function formStateFor(artwork: EditableArtwork): FormState {
       : "",
     artworkTypeOther:
       artwork.artworkType && !knownType ? artwork.artworkType : "",
+    paintingStyle: artwork.paintingStyle
+      ? knownStyle
+        ? artwork.paintingStyle
+        : "Other"
+      : "",
+    paintingStyleOther:
+      artwork.paintingStyle && !knownStyle ? artwork.paintingStyle : "",
     dimensionHeight: dims.height,
     dimensionWidth: dims.width,
     dimensionDepth: dims.depth,
@@ -311,6 +341,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
     null,
   );
   const [saved, setSaved] = useState(false);
+  const [openStyleCombo, setOpenStyleCombo] = useState(false);
 
   const { data: profile } = useArtistAccountProfile();
   const gstApproved = profile?.gstStatus === "approved";
@@ -406,6 +437,12 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
         ? form.artworkTypeOther.trim() || null
         : (ARTWORK_TYPES.find((t) => t.value === form.artworkType)?.label ??
           null);
+    const paintingStyle =
+      form.category !== "painting"
+        ? null
+        : form.paintingStyle === "Other"
+          ? form.paintingStyleOther.trim() || null
+          : form.paintingStyle || null;
 
     const payload = {
       title: form.title || "Untitled artwork",
@@ -413,6 +450,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       category: form.category,
       medium: form.medium,
       artworkType,
+      paintingStyle,
       dimensions: composedDimensions || artwork?.dimensions || null,
       yearCreated: Number(form.yearCreated) || new Date().getFullYear(),
       artistPrice: artistPriceNumber,
@@ -777,6 +815,104 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 />
               )}
             </div>
+
+            {form.category === "painting" && (
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="paintingStyle">Painting style</Label>
+                <Popover open={openStyleCombo} onOpenChange={setOpenStyleCombo}>
+                  <PopoverTrigger
+                    id="paintingStyle"
+                    aria-expanded={openStyleCombo}
+                    className="flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-3 text-sm whitespace-nowrap outline-none transition-colors select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:max-w-md"
+                  >
+                    <span
+                      className={cn(
+                        "truncate text-left",
+                        !form.paintingStyle && "text-muted-foreground",
+                      )}
+                    >
+                      {form.paintingStyle || "Select painting style"}
+                    </span>
+                    <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[320px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search name, region, or category..." />
+                      <CommandList>
+                        <CommandEmpty>No matching style.</CommandEmpty>
+                        <CommandGroup>
+                          {PAINTING_ART_FORMS.map((style) => (
+                            <CommandItem
+                              key={style.name}
+                              value={style.name}
+                              keywords={[style.region, style.category]}
+                              onSelect={() => {
+                                updateField(
+                                  "paintingStyle",
+                                  form.paintingStyle === style.name
+                                    ? ""
+                                    : style.name,
+                                );
+                                setOpenStyleCombo(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 size-4 shrink-0",
+                                  form.paintingStyle === style.name
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span className="flex min-w-0 flex-col">
+                                <span className="truncate">{style.name}</span>
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {style.region} &middot; {style.category}
+                                </span>
+                              </span>
+                            </CommandItem>
+                          ))}
+                          <CommandItem
+                            value="Other"
+                            onSelect={() => {
+                              updateField(
+                                "paintingStyle",
+                                form.paintingStyle === "Other" ? "" : "Other",
+                              );
+                              setOpenStyleCombo(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 size-4 shrink-0",
+                                form.paintingStyle === "Other"
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            Other
+                          </CommandItem>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  One of 97 world painting traditions &mdash; search by name,
+                  region, or category.
+                </p>
+                {form.paintingStyle === "Other" && (
+                  <Input
+                    placeholder="Name the painting style"
+                    value={form.paintingStyleOther}
+                    onChange={(e) =>
+                      updateField("paintingStyleOther", e.target.value)
+                    }
+                    className="h-10 sm:max-w-md"
+                  />
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="year">Year created</Label>

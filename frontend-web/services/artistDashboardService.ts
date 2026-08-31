@@ -132,6 +132,7 @@ export interface SubmitArtworkInput {
   category: string;
   medium: string;
   artworkType: string | null;
+  paintingStyle: string | null;
   dimensions: string | null;
   yearCreated: number;
   artistPrice: number;
@@ -218,6 +219,7 @@ export const artistDashboardService = {
       category: input.category,
       medium: input.medium,
       artworkType: input.artworkType,
+      paintingStyle: input.paintingStyle,
       customerPrice: displayPriceOf(input.artistPrice),
       thumbnailUrl: input.images[0]?.url ?? "",
       insured: input.insuranceOpted,
@@ -308,6 +310,7 @@ export const artistDashboardService = {
       category: patch.category,
       medium: patch.medium,
       artworkType: patch.artworkType,
+      paintingStyle: patch.paintingStyle,
       dimensions: patch.dimensions || null,
       yearCreated: patch.yearCreated || null,
       artistName: artwork.artistName,

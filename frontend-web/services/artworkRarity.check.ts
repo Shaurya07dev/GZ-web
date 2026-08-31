@@ -40,6 +40,7 @@ const submission = {
   listingType: "marketplace_only" as const,
   insuranceOpted: false,
   artworkType: null,
+  paintingStyle: null,
   insuranceNumber: null,
   physical: {
     weightKg: 3,

@@ -88,6 +88,10 @@ export interface Artwork extends ArtworkSummary {
   // (medium of work) and `medium` (material). Optional so existing fixture
   // records don't need a value. See ARTWORK_TYPES.
   artworkType?: string | null;
+  // Which of the 100+ world painting traditions this piece belongs to (see
+  // PAINTING_ART_FORMS) — only collected when category is "painting". Optional
+  // so non-painting categories and pre-existing fixture records need no value.
+  paintingStyle?: string | null;
   // Policy/certificate number the artist pastes back in after buying cover
   // through the HDFC ERGO link — see INSURANCE_PARTNER_URL. Only meaningful
   // when `insured` is true.
