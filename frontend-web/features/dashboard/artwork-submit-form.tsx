@@ -962,7 +962,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 type="number"
                 min={0}
                 step="0.1"
-                placeholder="Height (optional)"
+                placeholder="Height"
                 value={form.dimensionDepth}
                 onChange={(e) => updateField("dimensionDepth", e.target.value)}
                 className="h-10"
