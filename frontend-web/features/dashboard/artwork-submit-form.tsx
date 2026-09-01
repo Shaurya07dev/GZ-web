@@ -1076,6 +1076,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             Sales channel & pricing
           </h2>
 
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-2.5">
             <Label>Sales channel</Label>
             <p className="text-xs text-muted-foreground">
@@ -1299,7 +1301,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </div>
             </div>
           )}
+          </div>
 
+          <div className="flex flex-col gap-5">
           <div
             className={`flex items-start justify-between gap-4 rounded-md border p-3.5 ${
               insuranceRequired ? "border-gold/40 bg-gold/5" : "border-border"
@@ -1398,6 +1402,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 for its whole life, alongside its NFC/QR passport.
               </p>
             </div>
+          </div>
+          </div>
           </div>
         </section>
 

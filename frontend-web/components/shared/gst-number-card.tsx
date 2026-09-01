@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Receipt, Check } from "lucide-react";
+import { Receipt, Check, ExternalLink, PlayCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -84,17 +84,50 @@ export function GstNumberCard({
             {required && trimmed.length === 0
               ? "GST registration is required."
               : required
-                ? "That doesn&rsquo;t look like a valid GSTIN."
-                : "That doesn&rsquo;t look like a valid GSTIN. Leave it blank if you don&rsquo;t have one."}
+                ? "That doesn't look like a valid GSTIN."
+                : "That doesn't look like a valid GSTIN. Leave it blank if you don't have one."}
           </p>
         ) : (
           <p className="text-xs text-muted-foreground">
             {required
               ? "Never shown publicly."
-              : "Only if you&rsquo;re GST-registered. Never shown publicly."}
+              : "Only if you're GST-registered. Never shown publicly."}
           </p>
         )}
       </div>
+
+      {required && (
+        <>
+          <a
+            href="https://www.gst.gov.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
+          >
+            <ExternalLink className="size-3.5" />
+            Don&rsquo;t have a GSTIN? Apply on the government GST portal
+          </a>
+
+          {/* Placeholder for the GST application walkthrough video — same
+              one the Profile page's GSTIN field points to. Drop the embed or
+              a YouTube link in here when it's ready. */}
+          <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
+            <PlayCircle
+              className="size-5 shrink-0 text-gold-bright"
+              strokeWidth={1.5}
+            />
+            <div>
+              <p className="text-xs font-medium text-foreground">
+                GST application guide
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                A short walkthrough of registering for GST goes here. Coming
+                soon.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex items-center gap-3">
         <button
