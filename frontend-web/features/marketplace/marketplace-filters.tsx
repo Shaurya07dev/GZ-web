@@ -1,14 +1,25 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import {
   RotateCcw,
+  Filter,
   Shapes,
   Palette,
   Star,
   IndianRupee,
-  ArrowUpDown,
+  Ruler,
+  User,
+  MapPin,
+  CircleCheck,
 } from "lucide-react";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -17,13 +28,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { mockArtworks } from "@/lib/mock-data/artworks";
+import { mockArtists } from "@/lib/mock-data/artists";
 import {
   ARTWORK_RARITY_OPTIONS,
   type ArtworkFilters,
   type ArtworkRarity,
+  type ArtworkSizeBand,
 } from "@/types/artwork";
 
 // Sentinel for "no selection" in the Select primitives below, which need a
@@ -40,14 +52,56 @@ const MEDIUM_OPTIONS = Array.from(
   new Set(mockArtworks.map((artwork) => artwork.medium)),
 ).sort();
 
-const SORT_OPTIONS: {
-  value: NonNullable<ArtworkFilters["sortBy"]>;
+// Only artists who actually have a marketplace-eligible piece — an artist
+// filter full of dead ends would be worse than not having one.
+const ARTIST_OPTIONS = Array.from(
+  new Map(mockArtworks.map((a) => [a.artistId, a.artistName])).entries(),
+)
+  .map(([id, name]) => ({ id, name }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+// An artwork has no location of its own — only its artist does
+// (types/artist.ts ArtistProfile.location) — so this joins through
+// artistId exactly the way filterArtworks() does server-side.
+const LOCATION_OPTIONS = Array.from(
+  new Set(
+    mockArtworks
+      .map(
+        (a) => mockArtists.find((artist) => artist.id === a.artistId)?.location,
+      )
+      .filter((loc): loc is string => Boolean(loc)),
+  ),
+).sort();
+
+const SIZE_OPTIONS: { value: ArtworkSizeBand; label: string }[] = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
+];
+
+const AVAILABILITY_OPTIONS: {
+  value: NonNullable<ArtworkFilters["availability"]>;
   label: string;
 }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
+  { value: "available", label: "Available now" },
+  { value: "unavailable", label: "Reserved / sold" },
 ];
+
+// Upper bound for the price slider — comfortably above the highest
+// customerPrice in the current catalogue (lib/mock-data/artworks.ts tops out
+// around ₹1,49,000), rounded for a clean slider scale rather than tied to a
+// value that shifts every time a new fixture is added.
+const MAX_PRICE_BOUND = 200_000;
+
+// Same solid per-rank colors as the artwork card's corner stamp
+// (components/shared/rarity-badge.tsx "stamp" variant) — one rank language
+// across the whole marketplace, not a second palette invented for the filter.
+const RANK_TONE: Record<ArtworkRarity, string> = {
+  R: "bg-destructive text-white",
+  U: "bg-emerald-600 text-white",
+  O: "bg-gold-deep text-white",
+  N: "bg-muted-foreground text-background",
+};
 
 export const DEFAULT_MARKETPLACE_FILTERS: ArtworkFilters = { sortBy: "newest" };
 
@@ -56,16 +110,19 @@ function titleCase(value: string): string {
 }
 
 // Only checks the facets this component itself renders (not `query`, which
-// the search bar owns) - governs whether the inline "Reset" affordance
-// shows up.
+// the search bar owns, or `sortBy`, which now lives with the results row) -
+// governs whether "Clear All" shows up.
 function hasActiveStructuredFilters(filters: ArtworkFilters): boolean {
   return Boolean(
     filters.category ||
     filters.medium ||
     filters.rarity ||
+    filters.artistId ||
+    filters.location ||
+    filters.size ||
+    filters.availability ||
     typeof filters.minPrice === "number" ||
-    typeof filters.maxPrice === "number" ||
-    (filters.sortBy && filters.sortBy !== "newest"),
+    typeof filters.maxPrice === "number",
   );
 }
 
@@ -83,187 +140,388 @@ export function MarketplaceFilters({
   const minId = useId();
   const maxId = useId();
 
+  // Fixed totals per rank across the live catalogue — the reference board's
+  // own counts (6/7/5/4) are exactly this: how many of each rank exist, not
+  // how many match the other filters currently active. Recomputing a live
+  // per-combination count is a full facet-search engine this app doesn't
+  // have anywhere else yet.
+  const rankCounts = useMemo(() => {
+    const counts: Record<ArtworkRarity, number> = { R: 0, U: 0, O: 0, N: 0 };
+    for (const artwork of mockArtworks) {
+      if (artwork.status === "marketplace" && artwork.rarityType) {
+        counts[artwork.rarityType] += 1;
+      }
+    }
+    return counts;
+  }, []);
+
+  function update(patch: Partial<ArtworkFilters>) {
+    onChange({ ...filters, ...patch });
+  }
+
+  const minPrice = filters.minPrice ?? 0;
+  const maxPrice = filters.maxPrice ?? MAX_PRICE_BOUND;
+  const minPct = (minPrice / MAX_PRICE_BOUND) * 100;
+  const maxPct = (maxPrice / MAX_PRICE_BOUND) * 100;
+
   return (
-    <div
+    <aside
       className={cn(
-        "flex flex-wrap items-end gap-4 rounded-2xl border border-border bg-card/60 p-4 sm:p-5",
+        "flex h-fit flex-col gap-5 rounded-2xl border border-border bg-card/60 p-5",
         className,
       )}
     >
-      <div className="flex flex-col gap-1.5">
-        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Shapes className="size-3.5" strokeWidth={1.75} />
-          Category
-        </Label>
-        <Select
-          value={filters.category ?? ALL_VALUE}
-          onValueChange={(value) =>
-            onChange({
-              ...filters,
-              category: value && value !== ALL_VALUE ? value : undefined,
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+          <Filter className="size-4 text-gold-bright" strokeWidth={1.75} />
+          Filters
+        </h2>
+        {hasActiveStructuredFilters(filters) && (
+          <button
+            type="button"
+            onClick={() =>
+              onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
+            }
+            className="text-xs font-medium text-gold-bright hover:underline"
+          >
+            Clear All
+          </button>
+        )}
+      </div>
+
+      <Accordion defaultValue={["rank", "price"]} className="gap-0">
+        <SelectFilterGroup
+          value="type"
+          icon={Shapes}
+          label="Art Type"
+          allLabel="All Art Types"
+          current={filters.category ? titleCase(filters.category) : null}
+          selectValue={filters.category ?? ALL_VALUE}
+          onSelectChange={(value) =>
+            update({ category: value !== ALL_VALUE ? value : undefined })
+          }
+        >
+          {CATEGORY_OPTIONS.map((category) => (
+            <SelectItem key={category} value={category}>
+              {titleCase(category)}
+            </SelectItem>
+          ))}
+        </SelectFilterGroup>
+
+        <SelectFilterGroup
+          value="medium"
+          icon={Palette}
+          label="Medium"
+          allLabel="All Mediums"
+          current={filters.medium}
+          selectValue={filters.medium ?? ALL_VALUE}
+          onSelectChange={(value) =>
+            update({ medium: value !== ALL_VALUE ? value : undefined })
+          }
+        >
+          {MEDIUM_OPTIONS.map((medium) => (
+            <SelectItem key={medium} value={medium}>
+              {medium}
+            </SelectItem>
+          ))}
+        </SelectFilterGroup>
+
+        <AccordionItem value="rank">
+          <AccordionTrigger>
+            <span className="flex items-center gap-2">
+              <Star className="size-4 text-muted-foreground" strokeWidth={1.75} />
+              Rank
+            </span>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="flex flex-col gap-2.5">
+              {ARTWORK_RARITY_OPTIONS.map((option) => {
+                const checked = filters.rarity === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className="flex cursor-pointer items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() =>
+                          update({ rarity: checked ? undefined : option.value })
+                        }
+                      />
+                      <span
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                          RANK_TONE[option.value],
+                        )}
+                      >
+                        {option.value}
+                      </span>
+                      <span className="text-sm text-foreground">
+                        {option.label}
+                      </span>
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {rankCounts[option.value]}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="price">
+          <AccordionTrigger>
+            <span className="flex items-center gap-2">
+              <IndianRupee
+                className="size-4 text-muted-foreground"
+                strokeWidth={1.75}
+              />
+              Price Range (₹)
+            </span>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  id={minId}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  placeholder="Min"
+                  value={filters.minPrice ?? ""}
+                  onChange={(e) =>
+                    update({
+                      minPrice:
+                        e.target.value === ""
+                          ? undefined
+                          : Number(e.target.value),
+                    })
+                  }
+                  className="h-9"
+                />
+                <span className="text-sm text-muted-foreground" aria-hidden="true">
+                  to
+                </span>
+                <Input
+                  id={maxId}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  placeholder="Max"
+                  value={filters.maxPrice ?? ""}
+                  onChange={(e) =>
+                    update({
+                      maxPrice:
+                        e.target.value === ""
+                          ? undefined
+                          : Number(e.target.value),
+                    })
+                  }
+                  className="h-9"
+                />
+              </div>
+
+              <div className="relative h-1.5 rounded-full bg-secondary">
+                <div
+                  className="absolute h-full rounded-full bg-gold"
+                  style={{ left: `${minPct}%`, right: `${100 - maxPct}%` }}
+                  aria-hidden="true"
+                />
+                <input
+                  type="range"
+                  aria-label="Minimum price"
+                  min={0}
+                  max={MAX_PRICE_BOUND}
+                  step={1000}
+                  value={minPrice}
+                  onChange={(e) => {
+                    const next = Math.min(Number(e.target.value), maxPrice);
+                    update({ minPrice: next > 0 ? next : undefined });
+                  }}
+                  className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-gold-deep [&::-moz-range-thumb]:bg-background [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gold-deep [&::-webkit-slider-thumb]:bg-background pointer-events-none"
+                />
+                <input
+                  type="range"
+                  aria-label="Maximum price"
+                  min={0}
+                  max={MAX_PRICE_BOUND}
+                  step={1000}
+                  value={maxPrice}
+                  onChange={(e) => {
+                    const next = Math.max(Number(e.target.value), minPrice);
+                    update({
+                      maxPrice: next < MAX_PRICE_BOUND ? next : undefined,
+                    });
+                  }}
+                  className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-gold-deep [&::-moz-range-thumb]:bg-background [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gold-deep [&::-webkit-slider-thumb]:bg-background pointer-events-none"
+                />
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <SelectFilterGroup
+          value="size"
+          icon={Ruler}
+          label="Size"
+          allLabel="All Sizes"
+          current={
+            filters.size
+              ? SIZE_OPTIONS.find((o) => o.value === filters.size)?.label
+              : null
+          }
+          selectValue={filters.size ?? ALL_VALUE}
+          onSelectChange={(value) =>
+            update({
+              size:
+                value !== ALL_VALUE ? (value as ArtworkSizeBand) : undefined,
             })
           }
         >
-          <SelectTrigger className="h-10 w-[152px]">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>All categories</SelectItem>
-            {CATEGORY_OPTIONS.map((category) => (
-              <SelectItem key={category} value={category}>
-                {titleCase(category)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {SIZE_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectFilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Palette className="size-3.5" strokeWidth={1.75} />
-          Medium
-        </Label>
-        <Select
-          value={filters.medium ?? ALL_VALUE}
-          onValueChange={(value) =>
-            onChange({
-              ...filters,
-              medium: value && value !== ALL_VALUE ? value : undefined,
-            })
+        <SelectFilterGroup
+          value="artist"
+          icon={User}
+          label="Artist"
+          allLabel="All Artists"
+          current={
+            filters.artistId
+              ? ARTIST_OPTIONS.find((a) => a.id === filters.artistId)?.name
+              : null
+          }
+          selectValue={filters.artistId ?? ALL_VALUE}
+          onSelectChange={(value) =>
+            update({ artistId: value !== ALL_VALUE ? value : undefined })
           }
         >
-          <SelectTrigger className="h-10 w-[176px]">
-            <SelectValue placeholder="All mediums" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>All mediums</SelectItem>
-            {MEDIUM_OPTIONS.map((medium) => (
-              <SelectItem key={medium} value={medium}>
-                {medium}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {ARTIST_OPTIONS.map((artist) => (
+            <SelectItem key={artist.id} value={artist.id}>
+              {artist.name}
+            </SelectItem>
+          ))}
+        </SelectFilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Star className="size-3.5" strokeWidth={1.75} />
-          Rank
-        </Label>
-        <Select
-          value={filters.rarity ?? ALL_VALUE}
-          onValueChange={(value) =>
-            onChange({
-              ...filters,
-              rarity:
-                value && value !== ALL_VALUE
-                  ? (value as ArtworkRarity)
+        <SelectFilterGroup
+          value="location"
+          icon={MapPin}
+          label="Location"
+          allLabel="All Locations"
+          current={filters.location}
+          selectValue={filters.location ?? ALL_VALUE}
+          onSelectChange={(value) =>
+            update({ location: value !== ALL_VALUE ? value : undefined })
+          }
+        >
+          {LOCATION_OPTIONS.map((location) => (
+            <SelectItem key={location} value={location}>
+              {location}
+            </SelectItem>
+          ))}
+        </SelectFilterGroup>
+
+        <SelectFilterGroup
+          value="availability"
+          icon={CircleCheck}
+          label="Availability"
+          allLabel="All"
+          current={
+            filters.availability
+              ? AVAILABILITY_OPTIONS.find((o) => o.value === filters.availability)
+                  ?.label
+              : null
+          }
+          selectValue={filters.availability ?? ALL_VALUE}
+          onSelectChange={(value) =>
+            update({
+              availability:
+                value !== ALL_VALUE
+                  ? (value as ArtworkFilters["availability"])
                   : undefined,
             })
           }
+          isLast
         >
-          <SelectTrigger className="h-10 w-[152px]">
-            <SelectValue placeholder="Any rank" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_VALUE}>Any rank</SelectItem>
-            {ARTWORK_RARITY_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <span className="font-semibold">{option.value}</span>
-                <span className="ml-1.5">{option.label}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          {AVAILABILITY_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectFilterGroup>
+      </Accordion>
 
-      <div className="flex flex-col gap-1.5">
-        <Label
-          htmlFor={minId}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground"
-        >
-          <IndianRupee className="size-3.5" strokeWidth={1.75} />
-          Price range
-        </Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id={minId}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="Min"
-            value={filters.minPrice ?? ""}
-            onChange={(e) =>
-              onChange({
-                ...filters,
-                minPrice:
-                  e.target.value === "" ? undefined : Number(e.target.value),
-              })
-            }
-            className="h-10 w-[92px]"
-          />
-          <span className="text-sm text-muted-foreground" aria-hidden="true">
-            to
+      <button
+        type="button"
+        onClick={() =>
+          onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
+        }
+        className="mt-1 inline-flex items-center justify-center gap-2 rounded-full border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-gold/50 hover:text-gold-bright"
+      >
+        <RotateCcw className="size-3.5" strokeWidth={1.75} />
+        Reset Filters
+      </button>
+    </aside>
+  );
+}
+
+// The six filter groups that are "just a Select" (Art Type, Medium, Size,
+// Artist, Location, Availability) share one shape: an icon+label trigger
+// with the current selection shown as a subtitle even while collapsed
+// (matching the reference board), and a Select in the panel. Rank
+// (checkboxes) and Price Range (slider) don't fit this shape, so they stay
+// hand-written above instead of being forced through this component.
+function SelectFilterGroup({
+  value,
+  icon: Icon,
+  label,
+  allLabel,
+  current,
+  selectValue,
+  onSelectChange,
+  children,
+  isLast = false,
+}: {
+  value: string;
+  icon: typeof Shapes;
+  label: string;
+  allLabel: string;
+  current?: string | null;
+  selectValue: string;
+  onSelectChange: (value: string) => void;
+  children: React.ReactNode;
+  isLast?: boolean;
+}) {
+  return (
+    <AccordionItem value={value} className={isLast ? "border-b-0" : undefined}>
+      <AccordionTrigger>
+        <span className="flex flex-col items-start gap-0.5">
+          <span className="flex items-center gap-2">
+            <Icon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+            {label}
           </span>
-          <Input
-            id={maxId}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder="Max"
-            value={filters.maxPrice ?? ""}
-            onChange={(e) =>
-              onChange({
-                ...filters,
-                maxPrice:
-                  e.target.value === "" ? undefined : Number(e.target.value),
-              })
-            }
-            className="h-10 w-[92px]"
-          />
-        </div>
-      </div>
-
-      <div className="ml-auto flex flex-col gap-1.5">
-        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <ArrowUpDown className="size-3.5" strokeWidth={1.75} />
-          Sort by
-        </Label>
-        <Select
-          value={filters.sortBy ?? "newest"}
-          onValueChange={(value) =>
-            onChange({
-              ...filters,
-              sortBy: (value as ArtworkFilters["sortBy"]) ?? "newest",
-            })
-          }
-        >
-          <SelectTrigger className="h-10 w-[184px]">
-            <SelectValue />
+          <span className="pl-6 text-xs font-normal text-muted-foreground">
+            {current || allLabel}
+          </span>
+        </span>
+      </AccordionTrigger>
+      <AccordionContent>
+        <Select value={selectValue} onValueChange={(v) => onSelectChange(v ?? ALL_VALUE)}>
+          <SelectTrigger className="h-10 w-full">
+            <SelectValue placeholder={allLabel} />
           </SelectTrigger>
           <SelectContent>
-            {SORT_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
+            <SelectItem value={ALL_VALUE}>{allLabel}</SelectItem>
+            {children}
           </SelectContent>
         </Select>
-      </div>
-
-      {hasActiveStructuredFilters(filters) && (
-        <button
-          type="button"
-          onClick={() =>
-            onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
-          }
-          className="inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-muted-foreground transition-colors hover:text-gold-bright"
-        >
-          <RotateCcw className="size-3.5" strokeWidth={1.75} />
-          Reset
-        </button>
-      )}
-    </div>
+      </AccordionContent>
+    </AccordionItem>
   );
 }

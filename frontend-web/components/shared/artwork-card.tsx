@@ -162,3 +162,105 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
     </Link>
   );
 }
+
+// The list-view row: same fields as ArtworkCard, laid out horizontally
+// instead of as a tile — for the grid/list toggle on the marketplace page.
+export function ArtworkListRow({ artwork, className }: ArtworkCardProps) {
+  const isWishlisted = useWishlistStore((state) => state.has(artwork.id));
+  const toggleWishlist = useWishlistStore((state) => state.toggle);
+
+  const isAvailable = artwork.status === "marketplace";
+  const statusBadge = isAvailable
+    ? null
+    : (STATUS_BADGE[artwork.status] ?? { label: "Unavailable", icon: Lock });
+  const StatusIcon = statusBadge?.icon;
+
+  return (
+    <Link
+      href={`/marketplace/${artwork.id}`}
+      className={cn(
+        "group flex items-center gap-4 rounded-lg border border-border bg-card p-3 transition-colors duration-200 ease-out hover:border-gold/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        className,
+      )}
+    >
+      <div className="relative size-24 shrink-0 overflow-hidden rounded-md bg-muted sm:size-28">
+        <Image
+          src={artwork.thumbnailUrl}
+          alt={artwork.title}
+          fill
+          sizes="112px"
+          className={cn(
+            "object-cover",
+            !isAvailable && "opacity-75 grayscale-[55%]",
+          )}
+        />
+        <RarityBadge
+          rarity={artwork.rarityType}
+          variant="stamp"
+          className="absolute top-1.5 left-1.5"
+        />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="line-clamp-1 font-display text-sm font-semibold text-foreground sm:text-base">
+            {artwork.title}
+          </h3>
+          {statusBadge && StatusIcon && (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+              <StatusIcon className="size-3" strokeWidth={2} />
+              {statusBadge.label}
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-[10px] font-semibold text-gold-bright">
+            {artwork.artistName.charAt(0).toUpperCase()}
+          </span>
+          <span className="truncate">{artwork.artistName}</span>
+          {artwork.verifiedArtist && (
+            <VerifiedBadge verification={MINIMUM_VERIFICATION} size="sm" />
+          )}
+        </div>
+        <p className="truncate text-xs text-muted-foreground">
+          {titleCase(artwork.category)} &middot; {artwork.medium}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlist(artwork.id);
+          }}
+          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={isWishlisted}
+          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground/75 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <Heart
+            className={cn(
+              "size-4 transition-colors",
+              isWishlisted && "fill-gold-bright text-gold-bright",
+            )}
+            strokeWidth={1.75}
+          />
+        </button>
+        <div className="flex flex-col items-end gap-0.5">
+          <PriceTag amount={artwork.customerPrice} className="text-base" />
+          <span className="text-[10px] text-muted-foreground">Incl. GST</span>
+        </div>
+        {isAvailable && (
+          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+            <span
+              className="size-1.5 rounded-full bg-emerald-500"
+              aria-hidden="true"
+            />
+            Available
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+}

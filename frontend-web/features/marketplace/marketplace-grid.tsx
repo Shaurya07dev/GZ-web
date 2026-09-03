@@ -1,27 +1,48 @@
 "use client";
 
+import { useState } from "react";
 import "@/lib/motion-config";
 import { motion } from "framer-motion";
-import { SearchX, TriangleAlert } from "lucide-react";
-import { ArtworkCard } from "@/components/shared/artwork-card";
+import { LayoutGrid, List, SearchX, TriangleAlert } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArtworkCard, ArtworkListRow } from "@/components/shared/artwork-card";
 import { ArtworkCardSkeleton } from "@/components/shared/artwork-card-skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
+import { cn } from "@/lib/utils";
 import { useArtworks } from "@/hooks/useArtworks";
 import type { ArtworkFilters } from "@/types/artwork";
 
 const GRID_CLASS =
-  "grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4";
+  "grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 lg:gap-6";
+
+const SORT_OPTIONS: {
+  value: NonNullable<ArtworkFilters["sortBy"]>;
+  label: string;
+}[] = [
+  { value: "newest", label: "Newest First" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
+];
 
 interface MarketplaceGridProps {
   filters: ArtworkFilters;
+  onChange: (filters: ArtworkFilters) => void;
   onClearFilters: () => void;
 }
 
 export function MarketplaceGrid({
   filters,
+  onChange,
   onClearFilters,
 }: MarketplaceGridProps) {
   const { data: artworks, isPending, isError } = useArtworks(filters);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   if (isPending) {
     return (
@@ -30,7 +51,7 @@ export function MarketplaceGrid({
         aria-busy="true"
         aria-label="Loading artworks"
       >
-        {Array.from({ length: 8 }).map((_, index) => (
+        {Array.from({ length: 6 }).map((_, index) => (
           <ArtworkCardSkeleton key={index} />
         ))}
       </div>
@@ -68,10 +89,67 @@ export function MarketplaceGrid({
 
   return (
     <div>
-      <p className="mb-4 text-sm text-muted-foreground" role="status">
-        {artworks.length} {artworks.length === 1 ? "artwork" : "artworks"}
-      </p>
-      <div className={GRID_CLASS}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground" role="status">
+          {artworks.length} {artworks.length === 1 ? "artwork" : "artworks"}{" "}
+          found
+        </p>
+        <div className="flex items-center gap-2.5">
+          <Select
+            value={filters.sortBy ?? "newest"}
+            onValueChange={(value) =>
+              onChange({
+                ...filters,
+                sortBy: (value as ArtworkFilters["sortBy"]) ?? "newest",
+              })
+            }
+          >
+            <SelectTrigger className="h-9 w-[184px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center rounded-md border border-border p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
+              aria-pressed={viewMode === "grid"}
+              className={cn(
+                "flex size-8 items-center justify-center rounded transition-colors",
+                viewMode === "grid"
+                  ? "bg-gold-deep text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="size-4" strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-label="List view"
+              aria-pressed={viewMode === "list"}
+              className={cn(
+                "flex size-8 items-center justify-center rounded transition-colors",
+                viewMode === "list"
+                  ? "bg-gold-deep text-white"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <List className="size-4" strokeWidth={1.75} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className={viewMode === "grid" ? GRID_CLASS : "flex flex-col gap-3"}>
         {artworks.map((artwork, index) => (
           <motion.div
             key={artwork.id}
@@ -83,7 +161,11 @@ export function MarketplaceGrid({
               delay: Math.min(index, 10) * 0.03,
             }}
           >
-            <ArtworkCard artwork={artwork} />
+            {viewMode === "grid" ? (
+              <ArtworkCard artwork={artwork} />
+            ) : (
+              <ArtworkListRow artwork={artwork} />
+            )}
           </motion.div>
         ))}
       </div>

@@ -496,6 +496,9 @@ export interface PhysicalCoaRequest {
   courierRef: string | null;
 }
 
+/** Rough size band derived from an artwork's stored dimensions — see sizeBucketOf(). */
+export type ArtworkSizeBand = "small" | "medium" | "large";
+
 export interface ArtworkFilters {
   category?: string;
   minPrice?: number;
@@ -505,4 +508,12 @@ export interface ArtworkFilters {
   rarity?: ArtworkRarity;
   query?: string;
   sortBy?: "newest" | "price_asc" | "price_desc";
+  artistId?: string;
+  /** The artist's location (types/artist.ts ArtistProfile.location) — an
+   * artwork doesn't carry its own location, only its artist does. */
+  location?: string;
+  size?: ArtworkSizeBand;
+  /** "available" = currently marketplace-listed; "unavailable" = reserved,
+   * sold, or otherwise off the open market but still publicly visible. */
+  availability?: "available" | "unavailable";
 }

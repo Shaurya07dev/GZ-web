@@ -2,6 +2,7 @@ import {
   isMarketplaceListed,
   type Artwork,
   type ArtworkFilters,
+  type ArtworkSizeBand,
   type ArtworkSummary,
 } from "@/types/artwork";
 import type { ArtistProfile } from "@/types/artist";
@@ -79,6 +80,30 @@ export function toSummary(artwork: Artwork): ArtworkSummary {
   };
 }
 
+// Buckets a stored "24 x 36 in" / "60 x 90 cm" dimensions string by area, in
+// square inches, so Small/Medium/Large stays comparable across units. Only
+// the first two numbers count — depth (a sculpture's third figure) doesn't
+// change how big a piece reads on a wall. No dimensions on record means no
+// bucket, which the Size filter treats as "doesn't match any band" rather
+// than guessing.
+export function sizeBucketOf(
+  dimensions: string | null,
+): ArtworkSizeBand | null {
+  if (!dimensions) return null;
+  const match = dimensions
+    .trim()
+    .match(/^([\d.]+)\s*x\s*([\d.]+)(?:\s*x\s*[\d.]+)?\s*(in|cm)$/i);
+  if (!match) return null;
+
+  const [, rawWidth, rawHeight, unit] = match;
+  const toInches = unit!.toLowerCase() === "cm" ? 1 / 2.54 : 1;
+  const areaSqIn = Number(rawWidth) * toInches * (Number(rawHeight) * toInches);
+
+  if (areaSqIn <= 400) return "small";
+  if (areaSqIn <= 900) return "medium";
+  return "large";
+}
+
 export function filterArtworks(
   artworks: Artwork[],
   filters: ArtworkFilters,
@@ -90,6 +115,25 @@ export function filterArtworks(
     if (filters.category && artwork.category !== filters.category) return false;
     if (filters.medium && artwork.medium !== filters.medium) return false;
     if (filters.rarity && artwork.rarityType !== filters.rarity) return false;
+    if (filters.artistId && artwork.artistId !== filters.artistId)
+      return false;
+    if (
+      filters.location &&
+      getArtistById(artwork.artistId)?.location !== filters.location
+    )
+      return false;
+    if (filters.size && sizeBucketOf(artwork.dimensions) !== filters.size)
+      return false;
+    if (
+      filters.availability === "available" &&
+      artwork.status !== "marketplace"
+    )
+      return false;
+    if (
+      filters.availability === "unavailable" &&
+      artwork.status === "marketplace"
+    )
+      return false;
     if (
       typeof filters.minPrice === "number" &&
       artwork.customerPrice < filters.minPrice

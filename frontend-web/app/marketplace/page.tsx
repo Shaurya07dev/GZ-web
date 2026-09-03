@@ -53,55 +53,56 @@ function MarketplacePageContent() {
   return (
     <>
       <SiteHeader />
-      <main className="flex flex-1 flex-col">
-        <section className="relative overflow-hidden border-b border-border/60 bg-card/30 px-6 py-16 lg:px-10 lg:py-20">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[url('/backgrounds/marketplace-lotus.png')] bg-cover bg-right bg-no-repeat dark:hidden"
+      <main className="flex flex-1 flex-col px-6 py-8 lg:px-10">
+        <div className="mx-auto grid w-full max-w-[1500px] gap-8 lg:grid-cols-[280px_1fr] lg:items-start">
+          <MarketplaceFilters
+            filters={filters}
+            onChange={setFilters}
+            className="lg:sticky lg:top-24"
           />
-          <div className="hidden dark:block">
-            <DoodleBackdrop />
-          </div>
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/95 via-card/60 to-transparent"
-            aria-hidden="true"
-          />
-          <div className="relative mx-auto max-w-[1400px]">
-            <div className="flex items-center gap-2.5">
-              <span className="h-px w-8 bg-gold/50" aria-hidden="true" />
-              <p className="text-xs font-medium tracking-[0.2em] text-gold-bright uppercase">
-                Original artwork, verified artists
-              </p>
-            </div>
-            <h1 className="mt-4 text-balance font-display text-5xl leading-[1.1] font-semibold sm:text-6xl">
-              The Marketplace
-            </h1>
-            <p className="mt-4 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-              Original, verified artwork from independent artists across India.
-              Every piece ships with a signed certificate of authenticity.
-            </p>
-            <MarketplaceSearchBar
-              value={filters.query ?? ""}
-              onChange={(query) =>
-                setFilters((current) => ({
-                  ...current,
-                  query: query || undefined,
-                }))
-              }
-              className="mt-8 max-w-lg"
-            />
-          </div>
-        </section>
 
-        <section className="px-6 py-10 lg:px-10">
-          <div className="mx-auto flex max-w-[1400px] flex-col gap-6">
-            <MarketplaceFilters filters={filters} onChange={setFilters} />
+          <div className="flex flex-col gap-6">
+            <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/30 px-6 py-10 sm:px-8 sm:py-12">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-[url('/backgrounds/marketplace-lotus.png')] bg-cover bg-right bg-no-repeat dark:hidden"
+              />
+              <div className="hidden dark:block">
+                <DoodleBackdrop />
+              </div>
+              <div
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/95 via-card/60 to-transparent"
+                aria-hidden="true"
+              />
+              <div className="relative">
+                <h1 className="text-balance font-display text-4xl leading-[1.1] font-bold tracking-tight text-foreground uppercase sm:text-5xl">
+                  The Marketplace
+                </h1>
+                <p className="mt-4 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
+                  Discover original, verified artworks from independent
+                  artists across India. Every piece ships with a signed
+                  certificate of authenticity.
+                </p>
+                <MarketplaceSearchBar
+                  value={filters.query ?? ""}
+                  onChange={(query) =>
+                    setFilters((current) => ({
+                      ...current,
+                      query: query || undefined,
+                    }))
+                  }
+                  className="mt-8 max-w-lg"
+                />
+              </div>
+            </section>
+
             <MarketplaceGrid
               filters={filters}
+              onChange={setFilters}
               onClearFilters={() => setFilters(DEFAULT_MARKETPLACE_FILTERS)}
             />
           </div>
-        </section>
+        </div>
       </main>
       <SiteFooter />
     </>
