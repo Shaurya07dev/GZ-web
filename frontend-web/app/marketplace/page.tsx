@@ -55,7 +55,13 @@ function MarketplacePageContent() {
       <SiteHeader />
       <main className="flex flex-1 flex-col">
         <section className="relative overflow-hidden border-b border-border/60 bg-card/30 px-6 py-16 lg:px-10 lg:py-20">
-          <DoodleBackdrop />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[url('/backgrounds/marketplace-lotus.png')] bg-cover bg-right bg-no-repeat dark:hidden"
+          />
+          <div className="hidden dark:block">
+            <DoodleBackdrop />
+          </div>
           <div
             className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/95 via-card/60 to-transparent"
             aria-hidden="true"
