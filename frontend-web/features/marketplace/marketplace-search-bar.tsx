@@ -41,17 +41,25 @@ export function MarketplaceSearchBar({
   return (
     <div className={cn("relative", className)}>
       <Search
-        className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground"
         strokeWidth={1.75}
       />
       <Input
         type="text"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="Search artworks, artists, mediums..."
+        placeholder="Search artworks, artists, styles, mediums..."
         aria-label="Search artworks"
-        className="h-11 rounded-full border-border bg-card pr-4 pl-10 text-sm"
+        className="h-12 rounded-full border-border bg-card pr-12 pl-11 text-sm shadow-sm"
       />
+      <button
+        type="button"
+        onClick={() => onChange(draft)}
+        aria-label="Search"
+        className="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-gold-deep text-white transition-transform hover:scale-105 active:scale-95"
+      >
+        <Search className="size-4" strokeWidth={2} />
+      </button>
     </div>
   );
 }

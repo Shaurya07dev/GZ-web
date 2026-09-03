@@ -19,6 +19,10 @@ import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { RarityBadge } from "@/components/shared/rarity-badge";
 import type { ArtworkStatus, ArtworkSummary } from "@/types/artwork";
 
+function titleCase(value: string): string {
+  return value.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 interface ArtworkCardProps {
   artwork: ArtworkSummary;
   className?: string;
@@ -82,17 +86,15 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           )}
         />
 
-        {statusBadge && StatusIcon && (
-          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
-            <StatusIcon className="size-3" strokeWidth={2} />
-            {statusBadge.label}
-          </span>
-        )}
-
-        <RarityBadge
-          rarity={artwork.rarityType}
-          className="absolute top-2.5 right-12 z-10"
-        />
+        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1.5">
+          {statusBadge && StatusIcon && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
+              <StatusIcon className="size-3" strokeWidth={2} />
+              {statusBadge.label}
+            </span>
+          )}
+          <RarityBadge rarity={artwork.rarityType} variant="stamp" />
+        </div>
 
         <motion.button
           type="button"
@@ -129,12 +131,33 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           {artwork.title}
         </h3>
         <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-[10px] font-semibold text-gold-bright">
+            {artwork.artistName.charAt(0).toUpperCase()}
+          </span>
           <span className="truncate">{artwork.artistName}</span>
           {artwork.verifiedArtist && (
             <VerifiedBadge verification={MINIMUM_VERIFICATION} size="sm" />
           )}
         </div>
-        <PriceTag amount={artwork.customerPrice} className="mt-1 text-base" />
+        <p className="truncate text-xs text-muted-foreground">
+          {titleCase(artwork.category)} &middot; {artwork.medium}
+        </p>
+
+        <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border pt-2.5">
+          <div className="flex flex-col gap-0.5">
+            <PriceTag amount={artwork.customerPrice} className="text-base" />
+            <span className="text-[10px] text-muted-foreground">Incl. GST</span>
+          </div>
+          {isAvailable && (
+            <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              <span
+                className="size-1.5 rounded-full bg-emerald-500"
+                aria-hidden="true"
+              />
+              Available
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

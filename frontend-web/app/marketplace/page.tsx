@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { DoodleBackdrop } from "@/components/shared/doodle-backdrop";
 import {
   MarketplaceFilters,
   DEFAULT_MARKETPLACE_FILTERS,
@@ -53,12 +54,23 @@ function MarketplacePageContent() {
     <>
       <SiteHeader />
       <main className="flex flex-1 flex-col">
-        <section className="border-b border-border/60 bg-card/30 px-6 py-14 lg:px-10 lg:py-16">
-          <div className="mx-auto max-w-[1400px]">
-            <h1 className="text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
+        <section className="relative overflow-hidden border-b border-border/60 bg-card/30 px-6 py-16 lg:px-10 lg:py-20">
+          <DoodleBackdrop />
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/95 via-card/60 to-transparent"
+            aria-hidden="true"
+          />
+          <div className="relative mx-auto max-w-[1400px]">
+            <div className="flex items-center gap-2.5">
+              <span className="h-px w-8 bg-gold/50" aria-hidden="true" />
+              <p className="text-xs font-medium tracking-[0.2em] text-gold-bright uppercase">
+                Original artwork, verified artists
+              </p>
+            </div>
+            <h1 className="mt-4 text-balance font-display text-5xl leading-[1.1] font-semibold sm:text-6xl">
               The Marketplace
             </h1>
-            <p className="mt-3 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
               Original, verified artwork from independent artists across India.
               Every piece ships with a signed certificate of authenticity.
             </p>
@@ -70,7 +82,7 @@ function MarketplacePageContent() {
                   query: query || undefined,
                 }))
               }
-              className="mt-8 max-w-md"
+              className="mt-8 max-w-lg"
             />
           </div>
         </section>

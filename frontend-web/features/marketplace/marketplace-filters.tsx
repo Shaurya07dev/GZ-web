@@ -1,7 +1,14 @@
 "use client";
 
 import { useId } from "react";
-import { RotateCcw } from "lucide-react";
+import {
+  RotateCcw,
+  Shapes,
+  Palette,
+  Star,
+  IndianRupee,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -77,9 +84,17 @@ export function MarketplaceFilters({
   const maxId = useId();
 
   return (
-    <div className={cn("flex flex-wrap items-end gap-3", className)}>
+    <div
+      className={cn(
+        "flex flex-wrap items-end gap-4 rounded-2xl border border-border bg-card/60 p-4 sm:p-5",
+        className,
+      )}
+    >
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">Category</Label>
+        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Shapes className="size-3.5" strokeWidth={1.75} />
+          Category
+        </Label>
         <Select
           value={filters.category ?? ALL_VALUE}
           onValueChange={(value) =>
@@ -104,7 +119,10 @@ export function MarketplaceFilters({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">Medium</Label>
+        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Palette className="size-3.5" strokeWidth={1.75} />
+          Medium
+        </Label>
         <Select
           value={filters.medium ?? ALL_VALUE}
           onValueChange={(value) =>
@@ -129,7 +147,10 @@ export function MarketplaceFilters({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">Rank</Label>
+        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Star className="size-3.5" strokeWidth={1.75} />
+          Rank
+        </Label>
         <Select
           value={filters.rarity ?? ALL_VALUE}
           onValueChange={(value) =>
@@ -158,8 +179,12 @@ export function MarketplaceFilters({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor={minId} className="text-xs text-muted-foreground">
-          Price range (₹)
+        <Label
+          htmlFor={minId}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground"
+        >
+          <IndianRupee className="size-3.5" strokeWidth={1.75} />
+          Price range
         </Label>
         <div className="flex items-center gap-2">
           <Input
@@ -200,8 +225,11 @@ export function MarketplaceFilters({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">Sort by</Label>
+      <div className="ml-auto flex flex-col gap-1.5">
+        <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ArrowUpDown className="size-3.5" strokeWidth={1.75} />
+          Sort by
+        </Label>
         <Select
           value={filters.sortBy ?? "newest"}
           onValueChange={(value) =>
