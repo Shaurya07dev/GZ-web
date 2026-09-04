@@ -10,6 +10,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "declaration": true,
+    "composite": true,
+    "allowImportingTsExtensions": false,
+    "rewriteRelativeImportExtensions": true,
     "isolatedModules": true,
     "resolveJsonModule": true
   }

@@ -6,6 +6,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@galleryzone/domain": "*"
+    "@galleryzone/domain": "*",
+    "zod": "^3.24.1"
   }
 }

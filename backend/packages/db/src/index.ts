@@ -6,3 +6,4 @@ export * from "./schema/ledger.ts";
 export * from "./schema/aggregator.ts";
 export * from "./schema/audit.ts";
 export * from "./schema/community.ts";
+export * from "./in-memory/rate-config-store.ts";

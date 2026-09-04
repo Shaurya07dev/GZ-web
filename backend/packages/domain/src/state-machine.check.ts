@@ -26,11 +26,16 @@ import {
   type StateMachine,
 } from "./state-machine.ts";
 
-function checkMachine<S extends string>(machine: StateMachine<S>): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a heterogeneous
+// list of StateMachine<S> for different S can't share one generic parameter;
+// this function only ever touches the structural StateMachine shape, so
+// erasing S here (rather than at every call site) is the narrowest possible
+// escape hatch.
+function checkMachine<S extends string>(machine: StateMachine<S | any>): void {
   const states = Object.keys(machine.transitions) as S[];
   for (const from of states) {
     // Every listed transition must be assertable without throwing.
-    for (const to of machine.transitions[from]) {
+    for (const to of machine.transitions[from]!) {
       assert.doesNotThrow(() => machine.assertTransition(from, to), `${machine.entity}: ${from} -> ${to} should be legal`);
     }
     // Every unlisted transition (including self) must throw.

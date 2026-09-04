@@ -14,9 +14,15 @@
     "check:policies": "node --experimental-strip-types packages/domain/src/policies.check.ts",
     "check:aggregator-cycle": "node --experimental-strip-types packages/domain/src/aggregator-cycle.check.ts",
     "check:api-routes": "node --experimental-strip-types packages/contracts/src/api-routes.check.ts",
-    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak && npm run check:policies && npm run check:aggregator-cycle && npm run check:api-routes"
+    "check:rate-config-store": "node --experimental-strip-types packages/db/src/in-memory/rate-config-store.check.ts",
+    "check:types": "tsc -b tsconfig.build.json",
+    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak && npm run check:policies && npm run check:aggregator-cycle && npm run check:api-routes && npm run check:rate-config-store && npm run check:types"
   },
   "engines": {
     "node": ">=22.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
   }
 }
