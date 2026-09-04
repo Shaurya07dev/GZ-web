@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788558901681,
+      "tag": "0000_living_umar",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788558944441,
+      "tag": "0001_ledger-integrity-and-append-only",
+      "breakpoints": true
+    }
+  ]
+}

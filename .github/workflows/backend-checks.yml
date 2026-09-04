@@ -33,3 +33,34 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run check
+
+  migrations:
+    # Applies packages/db's generated SQL migrations against a real
+    # Postgres 16 and verifies the ledger-balance CONSTRAINT TRIGGER
+    # actually rejects an unbalanced transaction and accepts a balanced
+    # one — not just that the SQL parses. See
+    # packages/db/scripts/test-migrations.sh.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MANAGE_CONTAINER: "0"
+      PGHOST: localhost
+      PGPORT: "55432"
+      PGPASSWORD: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash packages/db/scripts/test-migrations.sh

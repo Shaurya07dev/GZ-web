@@ -17,7 +17,9 @@
     "check:rate-config-store": "node --experimental-strip-types packages/db/src/in-memory/rate-config-store.check.ts",
     "check:types": "tsc -b tsconfig.build.json",
     "check:api-build": "npm run build --workspace=@galleryzone/api",
-    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak && npm run check:policies && npm run check:aggregator-cycle && npm run check:api-routes && npm run check:rate-config-store && npm run check:types && npm run check:api-build"
+    "check:migrations": "bash packages/db/scripts/test-migrations.sh",
+    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak && npm run check:policies && npm run check:aggregator-cycle && npm run check:api-routes && npm run check:rate-config-store && npm run check:types && npm run check:api-build",
+    "check:all": "npm run check && npm run check:migrations"
   },
   "engines": {
     "node": ">=22.6"
