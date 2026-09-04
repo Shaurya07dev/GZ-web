@@ -34,7 +34,13 @@ export function summarizeRating(
   reviews: ArtistReview[],
 ): ArtistRating {
   const mine = reviews.filter((r) => r.artistId === artistId);
-  const breakdown: Record<StarRating, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const breakdown: Record<StarRating, number> = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  };
   for (const review of mine) breakdown[review.rating] += 1;
 
   if (mine.length === 0) {
@@ -56,4 +62,86 @@ export function summarizeRating(
 // resolve here rather than at each call site.
 export function artistIdFromUserId(userId: string): string {
   return userId.replace(/^user-/, "").replace(/^artist-/, "");
+}
+
+// --- Composite 0-10 score ---------------------------------------------------
+//
+// PLACEHOLDER pending client sign-off — see the "Ten-Point Score" note
+// (handwritten, "in Ratings", client meeting Aug 2026). The note settles that
+// the card moves to a 0-10 composite (customer ratings + profile completion +
+// artwork count, "like that way") and that Latest Reviews comes off the card,
+// but leaves five things open: a possible on-time-delivery factor, the exact
+// weight split, the artwork-count curve, a possible fourth factor, and where
+// the review text goes once it's off this card. Until the client answers,
+// this implements the doc's own *recommended* option on each fork:
+//   - On-time delivery: dropped (no ground-truth delivery dates stored yet).
+//   - Weight split: customer-dominant, re-weighted to 100% across the three
+//     factors that remain without delivery.
+//   - Artwork-count curve: linear to 10 (0 pieces = 0, 10+ = full marks).
+// Once the client answers, this is the one place that changes — the card,
+// the admin table and any future public badge all call scoreArtist(), the
+// same way summarizeRating() above is the one place star averages are
+// computed. Port to lib/core/ in the Flutter app the same way pricing is
+// ported, rather than duplicating the formula there.
+
+export interface RatingScoreFactors {
+  /** 0-10. From ArtistRating.average (out of 5), doubled. */
+  customerRating: number;
+  /** 0-10. Share of profile fields filled in — see profileCompletionScore(). */
+  profileCompletion: number;
+  /** 0-10. Linear to 10 listed artworks — see artworkCountScore(). */
+  artworkCount: number;
+}
+
+export const RATING_SCORE_WEIGHTS: Record<keyof RatingScoreFactors, number> = {
+  customerRating: 0.65,
+  profileCompletion: 0.25,
+  artworkCount: 0.1,
+};
+
+/** Linear to 10 — 0 artworks = 0, 10+ artworks = full marks. */
+export function artworkCountScore(artworkCount: number): number {
+  return Math.min(10, Math.max(0, artworkCount)) * 1;
+}
+
+/**
+ * Fraction of a fixed set of profile fields the artist has filled in,
+ * scaled to 0-10. Kept intentionally simple (equal weight per field) since
+ * the client hasn't specified which fields should count more.
+ */
+export function profileCompletionScore(fields: {
+  bio: string;
+  instagram: string;
+  website: string;
+  bankAccountMasked: string;
+  ifsc: string;
+  pan: string | null;
+  gstin: string;
+  aadhaarStatus: string;
+  pickupLine1: string;
+  pickupPincode: string;
+}): number {
+  const checks = [
+    fields.bio.trim().length > 0,
+    fields.instagram.trim().length > 0,
+    fields.website.trim().length > 0,
+    fields.bankAccountMasked.trim().length > 0,
+    fields.ifsc.trim().length > 0,
+    Boolean(fields.pan?.trim()),
+    fields.gstin.trim().length > 0,
+    fields.aadhaarStatus === "verified",
+    fields.pickupLine1.trim().length > 0,
+    fields.pickupPincode.trim().length > 0,
+  ];
+  const filled = checks.filter(Boolean).length;
+  return (filled / checks.length) * 10;
+}
+
+/** The one place that turns the composite factors into the card's single number. */
+export function scoreArtist(factors: RatingScoreFactors): number {
+  const raw =
+    factors.customerRating * RATING_SCORE_WEIGHTS.customerRating +
+    factors.profileCompletion * RATING_SCORE_WEIGHTS.profileCompletion +
+    factors.artworkCount * RATING_SCORE_WEIGHTS.artworkCount;
+  return Math.round(raw * 10) / 10;
 }
