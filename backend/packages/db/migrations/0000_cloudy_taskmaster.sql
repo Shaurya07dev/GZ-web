@@ -390,6 +390,18 @@ CREATE TABLE IF NOT EXISTS "support_tickets" (
 );
 --> statement-breakpoint
 DO $$ BEGIN
+ ALTER TABLE "rate_config_versions" ADD CONSTRAINT "rate_config_versions_proposed_by_users_id_fk" FOREIGN KEY ("proposed_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "rate_config_versions" ADD CONSTRAINT "rate_config_versions_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
  ALTER TABLE "addresses" ADD CONSTRAINT "addresses_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
@@ -677,6 +689,7 @@ EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "rate_config_versions_effective_from_idx" ON "rate_config_versions" USING btree ("effective_from");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "addresses_user_id_idx" ON "addresses" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "mou_acceptances_user_id_idx" ON "mou_acceptances" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "user_role_grants_user_id_idx" ON "user_role_grants" USING btree ("user_id");--> statement-breakpoint

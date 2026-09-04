@@ -9,7 +9,8 @@
 // buildable-once-installed source rather than a comment/pseudocode block,
 // so Phase 1 has an actual migration to generate from, not a blank page.
 
-import { boolean, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { users } from "./identity.ts";
 
 // One row per approved rate change. Never UPDATEd or DELETEd (see the
 // plan's Security posture section — no UPDATE/DELETE grant on this table
@@ -36,9 +37,9 @@ export const rateConfigVersions = pgTable("rate_config_versions", {
   // null until a second admin (narrower platform_admin/finance_admin role,
   // not general moderation admin) approves it. An unapproved row is never
   // read by loadActiveRates() regardless of its effectiveFrom.
-  proposedBy: uuid("proposed_by").notNull(),
+  proposedBy: uuid("proposed_by").notNull().references(() => users.id, { onDelete: "restrict" }),
   proposedAt: timestamp("proposed_at", { withTimezone: true }).notNull().defaultNow(),
-  approvedBy: uuid("approved_by"),
+  approvedBy: uuid("approved_by").references(() => users.id, { onDelete: "restrict" }),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 
   // Required — same pattern as the existing RejectReasonDialog convention
@@ -47,4 +48,8 @@ export const rateConfigVersions = pgTable("rate_config_versions", {
   reason: text("reason").notNull(),
 
   superseded: boolean("superseded").notNull().default(false),
-});
+}, (table) => [
+  // getActiveVersion(asOf) always queries "approved, effectiveFrom <= asOf,
+  // ordered by effectiveFrom desc" — this index is exactly that access path.
+  index("rate_config_versions_effective_from_idx").on(table.effectiveFrom),
+]);

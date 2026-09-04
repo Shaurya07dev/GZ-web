@@ -69,3 +69,14 @@ set -e
 echo "$UNBALANCED_OUTPUT" | grep -q "do not sum to zero" || { echo "FAIL: unbalanced transaction was NOT rejected"; echo "$UNBALANCED_OUTPUT"; exit 1; }
 
 echo "packages/db migrations: balanced transaction committed, unbalanced transaction rejected by the DB trigger — verified against a real Postgres 16"
+
+# Reset to a clean slate (this script's own SQL fixture above conflicts
+# with the store check's own user IDs otherwise) and run the
+# PostgresRateConfigStore integration check against the same container.
+psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null
+psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -f "$TABLES_MIGRATION" >/dev/null
+grep -v '^-- REVOKE' migrations/0001_ledger-integrity-and-append-only.sql \
+  | psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres >/dev/null
+
+PGURL="postgres://postgres:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres" \
+  node --experimental-strip-types src/postgres/rate-config-store.check.ts

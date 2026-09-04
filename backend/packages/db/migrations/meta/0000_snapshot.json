@@ -1,5 +1,5 @@
 {
-  "id": "12e00e21-e6dd-4eb6-b463-6235c0b65f4f",
+  "id": "66e7a2b6-8bc2-4ffa-9f23-c63d05ea73dc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -66,8 +66,51 @@
           "default": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "rate_config_versions_effective_from_idx": {
+          "name": "rate_config_versions_effective_from_idx",
+          "columns": [
+            {
+              "expression": "effective_from",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rate_config_versions_proposed_by_users_id_fk": {
+          "name": "rate_config_versions_proposed_by_users_id_fk",
+          "tableFrom": "rate_config_versions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "proposed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "rate_config_versions_approved_by_users_id_fk": {
+          "name": "rate_config_versions_approved_by_users_id_fk",
+          "tableFrom": "rate_config_versions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "approved_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
