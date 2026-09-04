@@ -1,0 +1,12 @@
+{
+  "name": "@galleryzone/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@galleryzone/config": "*",
+    "@galleryzone/contracts": "*",
+    "@galleryzone/db": "*",
+    "@galleryzone/domain": "*"
+  }
+}
