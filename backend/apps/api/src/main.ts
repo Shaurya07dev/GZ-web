@@ -1,28 +1,24 @@
-// NestJS bootstrap entry point. Deliberately left as a stub rather than a
-// fabricated "working" server: standing this up for real needs `@nestjs/*`
-// installed (network access, not available in this scaffolding pass) plus
-// the Firebase-token auth guard and role middleware from Phase 1 — starting
-// it before those exist would mean shipping an unauthenticated API surface,
-// which the plan's Security posture section rules out.
-//
-// What Phase 1 wires in here:
-//   - NestFactory.create(AppModule)
-//   - Firebase ID token verification guard (global, default-deny)
-//   - Zod validation pipe (packages/contracts schemas, reject-unknown-keys)
-//   - RFC 7807 exception filter with the `code` field (plan.md §18)
-//   - X-Request-Id middleware
-//   - health check route, wired to Cloud Run's readiness probe
-//
-// loadEnv() below is real and already enforces "fail fast on missing
-// config" — it's the one piece of this file safe to run today.
-
+import "reflect-metadata";
+import { NestFactory } from "@nestjs/core";
 import { loadEnv } from "@galleryzone/config";
+import { AppModule } from "./app.module.ts";
 
-function main(): void {
+// Real NestJS bootstrap — no longer the Phase 0 stub. Still missing before
+// this can be deployed reachable from the internet (plan's Security
+// posture section, all non-negotiable):
+//   - Firebase ID token verification guard (global, default-deny)
+//   - RBAC per-route enforcement (roles declared in packages/contracts'
+//     api-routes.ts aren't checked yet — every route here is currently
+//     reachable by anyone who can reach the process)
+//   - RFC 7807 global exception filter (ZodValidationPipe covers
+//     validation errors only, not every error path)
+//   - X-Request-Id middleware, CORS allowlist, rate limiting
+// Safe to run locally today for verifying the HTTP layer actually works.
+async function bootstrap() {
   const env = loadEnv();
-  console.log(
-    `[api] env loaded for ${env.nodeEnv} — NestJS bootstrap not yet implemented (Phase 1).`,
-  );
+  const app = await NestFactory.create(AppModule);
+  await app.listen(env.port);
+  console.log(`[api] listening on :${env.port} (${env.nodeEnv})`);
 }
 
-main();
+void bootstrap();
