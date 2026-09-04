@@ -9,7 +9,9 @@
   "scripts": {
     "check:pricing": "node --experimental-strip-types packages/domain/src/pricing.check.ts",
     "check:state-machine": "node --experimental-strip-types packages/domain/src/state-machine.check.ts",
-    "check": "npm run check:pricing && npm run check:state-machine"
+    "check:settlement": "node --experimental-strip-types packages/domain/src/settlement.check.ts",
+    "check:price-leak": "node --experimental-strip-types packages/contracts/src/artwork-dto.check.ts",
+    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak"
   },
   "engines": {
     "node": ">=20"
