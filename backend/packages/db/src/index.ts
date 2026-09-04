@@ -13,3 +13,4 @@ export * from "./ledger-repository.ts";
 export * from "./checkout.ts";
 export * from "./aggregator-flow.ts";
 export * from "./moderation.ts";
+export * from "./artist-artworks.ts";
