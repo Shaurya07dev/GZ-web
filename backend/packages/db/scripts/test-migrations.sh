@@ -80,3 +80,6 @@ grep -v '^-- REVOKE' migrations/0001_ledger-integrity-and-append-only.sql \
 
 PGURL="postgres://postgres:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres" \
   node --experimental-strip-types src/postgres/rate-config-store.check.ts
+
+PGURL="postgres://postgres:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres" \
+  node --experimental-strip-types src/ledger-repository.check.ts
