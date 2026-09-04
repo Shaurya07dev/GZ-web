@@ -53,6 +53,18 @@ export interface PricingRates {
   deliveryBaseSlabKg: number;
   /** Pincode 2-digit prefixes billed at the "remote" zone rate (J&K/HP/NE). */
   remotePincodePrefixes: readonly string[];
+  /** Days an artist may freely edit a listing after it first goes live. */
+  artistEditWindowDays: number;
+  /** External-sale penalty, as a fraction of artist price (1% per the mock). */
+  externalSalePenaltyRate: number;
+  /** Minimum a wallet withdrawal must reach (paise) — artist/aggregator. */
+  minWithdrawalPaise: number;
+  /** Minimum a customer wallet withdrawal must reach (paise) — separate from the above; the frontend's own customerWalletService uses a lower figure. */
+  minCustomerWithdrawalPaise: number;
+  /** Artwork price at/above which transit insurance is recommended. */
+  insuranceThresholdPaise: number;
+  /** Threshold (in paise, annual) at which TDS §194-O tracking flags an artist. */
+  earningsAbove5LThresholdPaise: number;
 }
 
 // Seed values for the `rate_config` table's first migration only. Not
@@ -83,6 +95,12 @@ export const DEFAULT_RATE_SEED: PricingRates = {
   },
   deliveryBaseSlabKg: 5,
   remotePincodePrefixes: ["18", "19", "78", "79"],
+  artistEditWindowDays: 7,
+  externalSalePenaltyRate: 0.01,
+  minWithdrawalPaise: 100_000, // ₹1,000, matches artistDashboardService/aggregatorSalesService
+  minCustomerWithdrawalPaise: 50_000, // ₹500, matches customerWalletService
+  insuranceThresholdPaise: 2_000_000, // ₹20,000, matches PlatformSettings.insuranceThreshold
+  earningsAbove5LThresholdPaise: 50_000_000, // ₹5,00,000
 };
 
 export const DELIVERY_ZONE_LABEL: Record<DeliveryZone, string> = {

@@ -11,7 +11,8 @@
     "check:state-machine": "node --experimental-strip-types packages/domain/src/state-machine.check.ts",
     "check:settlement": "node --experimental-strip-types packages/domain/src/settlement.check.ts",
     "check:price-leak": "node --experimental-strip-types packages/contracts/src/artwork-dto.check.ts",
-    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak"
+    "check:policies": "node --experimental-strip-types packages/domain/src/policies.check.ts",
+    "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak && npm run check:policies"
   },
   "engines": {
     "node": ">=20"

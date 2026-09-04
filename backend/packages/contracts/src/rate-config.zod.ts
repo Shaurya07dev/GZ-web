@@ -47,6 +47,12 @@ export const pricingRatesSchema = z
       .strict(),
     deliveryBaseSlabKg: z.number().min(0),
     remotePincodePrefixes: z.array(z.string().length(2)),
+    artistEditWindowDays: z.number().int().min(0).max(90),
+    externalSalePenaltyRate: percent(0.2),
+    minWithdrawalPaise: z.number().int().min(0),
+    minCustomerWithdrawalPaise: z.number().int().min(0),
+    insuranceThresholdPaise: z.number().int().min(0),
+    earningsAbove5LThresholdPaise: z.number().int().min(0),
   })
   .strict();
 
