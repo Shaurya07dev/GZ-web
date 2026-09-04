@@ -3,19 +3,18 @@
 // only implementation); swapping in a Postgres-backed store later changes
 // nothing here, since both implement the same RateConfigStore interface.
 //
-// SECURITY NOTE — not yet auth-gated. Every route here is the exact shape
-// the finished platform_admin/finance_admin RBAC guard (plan's Security
-// posture section) will wrap once Firebase auth exists (Phase 1). Running
-// this locally/unauthenticated is fine for verifying the wiring; it must
-// never be deployed reachable from the internet in this state — the plan
-// explicitly rules out standing up a real, internet-facing endpoint before
-// auth exists, and this module is not an exception to that.
+// SECURITY: gated by RolesGuard (auth/roles.guard.ts), which fails closed
+// with 501 for every @Roles() route until real Firebase-token auth exists
+// — these endpoints are NOT reachable unauthenticated. Verified locally:
+// GET/POST here now 501 instead of 200, since RolesGuard was wired in
+// globally.
 
 import { Body, Controller, Get, Post, UsePipes } from "@nestjs/common";
 import { loadActiveRates } from "@galleryzone/config";
 import { InMemoryRateConfigStore } from "@galleryzone/db";
 import { proposeRateChangeSchema, type ProposeRateChangeInput } from "@galleryzone/contracts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
+import { Roles } from "./auth/roles.decorator.ts";
 
 @Controller("v1/admin/rate-config")
 export class RateConfigController {
@@ -25,12 +24,14 @@ export class RateConfigController {
   // to behave like the real durable store it stands in for.
   private readonly store = new InMemoryRateConfigStore();
 
+  @Roles("admin", "platform_admin")
   @Get()
   async getActive() {
     const rates = await loadActiveRates(this.store);
     return { rates };
   }
 
+  @Roles("platform_admin")
   @Post("propose")
   @UsePipes(new ZodValidationPipe(proposeRateChangeSchema))
   propose(@Body() body: ProposeRateChangeInput) {
