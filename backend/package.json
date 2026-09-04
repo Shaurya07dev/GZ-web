@@ -17,6 +17,6 @@
     "check": "npm run check:pricing && npm run check:state-machine && npm run check:settlement && npm run check:price-leak && npm run check:policies && npm run check:aggregator-cycle && npm run check:api-routes"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.6"
   }
 }

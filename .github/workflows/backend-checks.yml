@@ -1,0 +1,39 @@
+name: backend checks
+
+# Runs the backend's own verification suite (packages/domain +
+# packages/contracts's pure, dependency-free checks — pricing replay,
+# state-machine illegal-transition, ledger-balance property test,
+# price-leak DTO contract test, policies, aggregator-cycle orchestration,
+# API route-table uniqueness) on every push/PR that touches backend/.
+#
+# Deliberately does NOT run `npm install` yet — every check script here is
+# plain Node + TypeScript type-stripping with zero runtime dependencies, by
+# design (see backend/README.md's "nothing hardcoded" section — the domain
+# layer is pure, zero I/O). Once packages/db and apps/api gain real
+# dependencies (drizzle-orm, zod, @nestjs/*), this workflow gains an
+# `npm ci` step and a real Postgres service container for migration tests —
+# that's Phase 1 work, not this scaffold's.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-checks.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-checks.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm run check
