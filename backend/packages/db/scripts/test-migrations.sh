@@ -99,3 +99,6 @@ PGURL="$PGURL" node --experimental-strip-types src/moderation.check.ts
 
 reset_and_migrate
 PGURL="$PGURL" node --experimental-strip-types src/artist-artworks.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/withdrawals.check.ts

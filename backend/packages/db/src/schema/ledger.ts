@@ -8,6 +8,7 @@
 // passing test.
 
 import { bigint, index, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import type { SettlementStatus, WithdrawalStatus } from "@galleryzone/domain";
 import { users } from "./identity.ts";
 import { orders } from "./order.ts";
 import { aggregatorHoldings } from "./aggregator.ts";
@@ -71,7 +72,7 @@ export const settlements = pgTable("settlements", {
   artistAmountPaise: bigint("artist_amount_paise", { mode: "number" }).notNull(),
   aggregatorCommissionPaise: bigint("aggregator_commission_paise", { mode: "number" }),
   platformRevenuePaise: bigint("platform_revenue_paise", { mode: "number" }).notNull(),
-  status: varchar("status", { length: 16 }).notNull().default("pending"),
+  status: varchar("status", { length: 16 }).notNull().default("pending").$type<SettlementStatus>(),
   releaseAfter: timestamp("release_after", { withTimezone: true }).notNull(), // payoutReleaseDate()
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   processedAt: timestamp("processed_at", { withTimezone: true }),
@@ -84,7 +85,7 @@ export const withdrawalRequests = pgTable("withdrawal_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
-  status: varchar("status", { length: 16 }).notNull().default("pending"),
+  status: varchar("status", { length: 16 }).notNull().default("pending").$type<WithdrawalStatus>(),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
   processedAt: timestamp("processed_at", { withTimezone: true }),
 }, (table) => [
