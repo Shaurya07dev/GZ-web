@@ -7,7 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "check:pricing": "node --experimental-strip-types packages/domain/src/pricing.check.ts"
+    "check:pricing": "node --experimental-strip-types packages/domain/src/pricing.check.ts",
+    "check:state-machine": "node --experimental-strip-types packages/domain/src/state-machine.check.ts",
+    "check": "npm run check:pricing && npm run check:state-machine"
   },
   "engines": {
     "node": ">=20"
