@@ -676,3 +676,45 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "addresses_user_id_idx" ON "addresses" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "mou_acceptances_user_id_idx" ON "mou_acceptances" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "user_role_grants_user_id_idx" ON "user_role_grants" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "users_role_idx" ON "users" USING btree ("role");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "users_status_idx" ON "users" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artwork_images_artwork_id_idx" ON "artwork_images" USING btree ("artwork_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artwork_status_events_artwork_id_changed_at_idx" ON "artwork_status_events" USING btree ("artwork_id","changed_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artworks_artist_id_idx" ON "artworks" USING btree ("artist_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artworks_category_idx" ON "artworks" USING btree ("category");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artworks_listing_type_idx" ON "artworks" USING btree ("listing_type");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "external_sale_penalties_artwork_id_idx" ON "external_sale_penalties" USING btree ("artwork_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ownership_events_artwork_id_idx" ON "ownership_events" USING btree ("artwork_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "physical_coa_requests_artwork_id_idx" ON "physical_coa_requests" USING btree ("artwork_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "order_status_events_order_id_idx" ON "order_status_events" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "orders_customer_id_idx" ON "orders" USING btree ("customer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "orders_artwork_id_idx" ON "orders" USING btree ("artwork_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "orders_status_idx" ON "orders" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "payments_order_id_idx" ON "payments" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ledger_accounts_owner_id_idx" ON "ledger_accounts" USING btree ("owner_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ledger_entries_transaction_id_idx" ON "ledger_entries" USING btree ("transaction_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ledger_entries_account_id_idx" ON "ledger_entries" USING btree ("account_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "settlements_artist_id_idx" ON "settlements" USING btree ("artist_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "settlements_status_idx" ON "settlements" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "withdrawal_requests_user_id_idx" ON "withdrawal_requests" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "withdrawal_requests_status_idx" ON "withdrawal_requests" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "aggregator_holdings_aggregator_id_idx" ON "aggregator_holdings" USING btree ("aggregator_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "aggregator_holdings_artwork_id_idx" ON "aggregator_holdings" USING btree ("artwork_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "aggregator_holdings_status_idx" ON "aggregator_holdings" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "aggregator_sales_holding_id_idx" ON "aggregator_sales" USING btree ("holding_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "aggregator_sales_shipment_status_idx" ON "aggregator_sales" USING btree ("shipment_status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "buyer_invites_email_idx" ON "buyer_invites" USING btree ("email");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "gallery_spaces_aggregator_id_idx" ON "gallery_spaces" USING btree ("aggregator_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "audit_log_entity_type_entity_id_idx" ON "audit_log" USING btree ("entity_type","entity_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "audit_log_admin_id_idx" ON "audit_log" USING btree ("admin_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "disputes_status_idx" ON "disputes" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artist_connections_requester_id_idx" ON "artist_connections" USING btree ("requester_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artist_connections_recipient_id_idx" ON "artist_connections" USING btree ("recipient_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "artist_reviews_artist_id_idx" ON "artist_reviews" USING btree ("artist_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "message_threads_user_id_idx" ON "message_threads" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "resale_listings_seller_id_idx" ON "resale_listings" USING btree ("seller_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "support_tickets_user_id_idx" ON "support_tickets" USING btree ("user_id");

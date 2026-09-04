@@ -3,7 +3,7 @@
 // frontend's own comment on this exact point) — status transitions only,
 // via packages/domain's holdingStateMachine.
 
-import { bigint, boolean, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { HoldingStatus, ShipmentStatus } from "@galleryzone/domain";
 import { users } from "./identity.ts";
 import { artworks } from "./artwork.ts";
@@ -18,7 +18,7 @@ export const gallerySpaces = pgTable("gallery_spaces", {
   pincode: text("pincode").notNull(),
   capacity: integer("capacity"),
   coordinatorName: text("coordinator_name"),
-});
+}, (table) => [index("gallery_spaces_aggregator_id_idx").on(table.aggregatorId)]);
 
 export const aggregatorHoldings = pgTable("aggregator_holdings", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -38,7 +38,11 @@ export const aggregatorHoldings = pgTable("aggregator_holdings", {
 
   status: varchar("status", { length: 32 }).notNull().default("reserved").$type<HoldingStatus>(),
   returnedAt: timestamp("returned_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("aggregator_holdings_aggregator_id_idx").on(table.aggregatorId),
+  index("aggregator_holdings_artwork_id_idx").on(table.artworkId),
+  index("aggregator_holdings_status_idx").on(table.status),
+]);
 
 export const aggregatorSales = pgTable("aggregator_sales", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -65,7 +69,10 @@ export const aggregatorSales = pgTable("aggregator_sales", {
   courierRef: text("courier_ref"),
 
   soldAt: timestamp("sold_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("aggregator_sales_holding_id_idx").on(table.holdingId),
+  index("aggregator_sales_shipment_status_idx").on(table.shipmentStatus),
+]);
 
 // Bridges a walk-in aggregator-sale buyer (no account yet) to a real
 // customer account by email, matching buyerInviteService.claimForEmail —
@@ -80,4 +87,4 @@ export const buyerInvites = pgTable("buyer_invites", {
   soldAt: timestamp("sold_at", { withTimezone: true }).notNull(),
   source: text("source").notNull().default("aggregator_sale"),
   claimedAt: timestamp("claimed_at", { withTimezone: true }),
-});
+}, (table) => [index("buyer_invites_email_idx").on(table.email)]);

@@ -3,7 +3,7 @@
 // exclusively through packages/domain's orderStateMachine; this table only
 // ever reflects a transition that already passed assertTransition().
 
-import { bigint, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, index, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { OrderStatus } from "@galleryzone/domain";
 import { users, addresses } from "./identity.ts";
 import { artworks } from "./artwork.ts";
@@ -31,7 +31,13 @@ export const orders = pgTable("orders", {
   rateConfigVersionId: uuid("rate_config_version_id").notNull().references(() => rateConfigVersions.id, { onDelete: "restrict" }),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // A customer's own order history ("My Orders") is the single highest-
+  // traffic query against this table.
+  index("orders_customer_id_idx").on(table.customerId),
+  index("orders_artwork_id_idx").on(table.artworkId),
+  index("orders_status_idx").on(table.status),
+]);
 
 // Append-only, mirrors artwork_status_events' shape for the same reason.
 export const orderStatusEvents = pgTable("order_status_events", {
@@ -39,7 +45,7 @@ export const orderStatusEvents = pgTable("order_status_events", {
   orderId: uuid("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
   status: varchar("status", { length: 16 }).notNull().$type<OrderStatus>(),
   changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("order_status_events_order_id_idx").on(table.orderId)]);
 
 // Razorpay Route payment record — one row per capture attempt. Real
 // gateway integration is Phase 2 (needs Razorpay onboarding, see the
@@ -59,4 +65,4 @@ export const payments = pgTable("payments", {
   status: text("status").notNull(),
   rawWebhookPayload: jsonb("raw_webhook_payload"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("payments_order_id_idx").on(table.orderId)]);

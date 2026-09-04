@@ -1,5 +1,5 @@
 {
-  "id": "bb5098f7-d20f-4e85-b7f3-ef748343d521",
+  "id": "12e00e21-e6dd-4eb6-b463-6235c0b65f4f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -129,7 +129,23 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "addresses_user_id_idx": {
+          "name": "addresses_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "addresses_user_id_users_id_fk": {
           "name": "addresses_user_id_users_id_fk",
@@ -194,7 +210,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "mou_acceptances_user_id_idx": {
+          "name": "mou_acceptances_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "mou_acceptances_user_id_users_id_fk": {
           "name": "mou_acceptances_user_id_users_id_fk",
@@ -437,7 +469,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "user_role_grants_user_id_idx": {
+          "name": "user_role_grants_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "user_role_grants_user_id_users_id_fk": {
           "name": "user_role_grants_user_id_users_id_fk",
@@ -547,7 +595,38 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "users_role_idx": {
+          "name": "users_role_idx",
+          "columns": [
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "users_status_idx": {
+          "name": "users_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -619,7 +698,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artwork_images_artwork_id_idx": {
+          "name": "artwork_images_artwork_id_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "artwork_images_artwork_id_artworks_id_fk": {
           "name": "artwork_images_artwork_id_artworks_id_fk",
@@ -684,7 +779,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artwork_status_events_artwork_id_changed_at_idx": {
+          "name": "artwork_status_events_artwork_id_changed_at_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "changed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "artwork_status_events_artwork_id_artworks_id_fk": {
           "name": "artwork_status_events_artwork_id_artworks_id_fk",
@@ -906,7 +1023,53 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artworks_artist_id_idx": {
+          "name": "artworks_artist_id_idx",
+          "columns": [
+            {
+              "expression": "artist_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artworks_category_idx": {
+          "name": "artworks_category_idx",
+          "columns": [
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artworks_listing_type_idx": {
+          "name": "artworks_listing_type_idx",
+          "columns": [
+            {
+              "expression": "listing_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "artworks_artist_id_users_id_fk": {
           "name": "artworks_artist_id_users_id_fk",
@@ -1032,7 +1195,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "external_sale_penalties_artwork_id_idx": {
+          "name": "external_sale_penalties_artwork_id_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "external_sale_penalties_artwork_id_artworks_id_fk": {
           "name": "external_sale_penalties_artwork_id_artworks_id_fk",
@@ -1127,7 +1306,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ownership_events_artwork_id_idx": {
+          "name": "ownership_events_artwork_id_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "ownership_events_artwork_id_artworks_id_fk": {
           "name": "ownership_events_artwork_id_artworks_id_fk",
@@ -1249,7 +1444,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "physical_coa_requests_artwork_id_idx": {
+          "name": "physical_coa_requests_artwork_id_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "physical_coa_requests_artwork_id_artworks_id_fk": {
           "name": "physical_coa_requests_artwork_id_artworks_id_fk",
@@ -1315,7 +1526,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "order_status_events_order_id_idx": {
+          "name": "order_status_events_order_id_idx",
+          "columns": [
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "order_status_events_order_id_orders_id_fk": {
           "name": "order_status_events_order_id_orders_id_fk",
@@ -1417,7 +1644,53 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "orders_customer_id_idx": {
+          "name": "orders_customer_id_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "orders_artwork_id_idx": {
+          "name": "orders_artwork_id_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "orders_status_idx": {
+          "name": "orders_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "orders_artwork_id_artworks_id_fk": {
           "name": "orders_artwork_id_artworks_id_fk",
@@ -1546,7 +1819,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "payments_order_id_idx": {
+          "name": "payments_order_id_idx",
+          "columns": [
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "payments_order_id_orders_id_fk": {
           "name": "payments_order_id_orders_id_fk",
@@ -1600,7 +1889,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ledger_accounts_owner_id_idx": {
+          "name": "ledger_accounts_owner_id_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "ledger_accounts_owner_id_users_id_fk": {
           "name": "ledger_accounts_owner_id_users_id_fk",
@@ -1683,7 +1988,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ledger_entries_transaction_id_idx": {
+          "name": "ledger_entries_transaction_id_idx",
+          "columns": [
+            {
+              "expression": "transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ledger_entries_account_id_idx": {
+          "name": "ledger_entries_account_id_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "ledger_entries_account_id_ledger_accounts_id_fk": {
           "name": "ledger_entries_account_id_ledger_accounts_id_fk",
@@ -1813,7 +2149,38 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "settlements_artist_id_idx": {
+          "name": "settlements_artist_id_idx",
+          "columns": [
+            {
+              "expression": "artist_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "settlements_status_idx": {
+          "name": "settlements_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "settlements_order_id_orders_id_fk": {
           "name": "settlements_order_id_orders_id_fk",
@@ -1905,7 +2272,38 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "withdrawal_requests_user_id_idx": {
+          "name": "withdrawal_requests_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "withdrawal_requests_status_idx": {
+          "name": "withdrawal_requests_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "withdrawal_requests_user_id_users_id_fk": {
           "name": "withdrawal_requests_user_id_users_id_fk",
@@ -2020,7 +2418,53 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "aggregator_holdings_aggregator_id_idx": {
+          "name": "aggregator_holdings_aggregator_id_idx",
+          "columns": [
+            {
+              "expression": "aggregator_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "aggregator_holdings_artwork_id_idx": {
+          "name": "aggregator_holdings_artwork_id_idx",
+          "columns": [
+            {
+              "expression": "artwork_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "aggregator_holdings_status_idx": {
+          "name": "aggregator_holdings_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "aggregator_holdings_artwork_id_artworks_id_fk": {
           "name": "aggregator_holdings_artwork_id_artworks_id_fk",
@@ -2159,7 +2603,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "aggregator_sales_holding_id_idx": {
+          "name": "aggregator_sales_holding_id_idx",
+          "columns": [
+            {
+              "expression": "holding_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "aggregator_sales_shipment_status_idx": {
+          "name": "aggregator_sales_shipment_status_idx",
+          "columns": [
+            {
+              "expression": "shipment_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "aggregator_sales_holding_id_aggregator_holdings_id_fk": {
           "name": "aggregator_sales_holding_id_aggregator_holdings_id_fk",
@@ -2249,7 +2724,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "buyer_invites_email_idx": {
+          "name": "buyer_invites_email_idx",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "buyer_invites_artwork_id_artworks_id_fk": {
           "name": "buyer_invites_artwork_id_artworks_id_fk",
@@ -2331,7 +2822,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "gallery_spaces_aggregator_id_idx": {
+          "name": "gallery_spaces_aggregator_id_idx",
+          "columns": [
+            {
+              "expression": "aggregator_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "gallery_spaces_aggregator_id_users_id_fk": {
           "name": "gallery_spaces_aggregator_id_users_id_fk",
@@ -2408,7 +2915,44 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "audit_log_entity_type_entity_id_idx": {
+          "name": "audit_log_entity_type_entity_id_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_log_admin_id_idx": {
+          "name": "audit_log_admin_id_idx",
+          "columns": [
+            {
+              "expression": "admin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "audit_log_admin_id_users_id_fk": {
           "name": "audit_log_admin_id_users_id_fk",
@@ -2492,7 +3036,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "disputes_status_idx": {
+          "name": "disputes_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "disputes_order_id_orders_id_fk": {
           "name": "disputes_order_id_orders_id_fk",
@@ -2590,7 +3150,38 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artist_connections_requester_id_idx": {
+          "name": "artist_connections_requester_id_idx",
+          "columns": [
+            {
+              "expression": "requester_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artist_connections_recipient_id_idx": {
+          "name": "artist_connections_recipient_id_idx",
+          "columns": [
+            {
+              "expression": "recipient_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "artist_connections_requester_id_users_id_fk": {
           "name": "artist_connections_requester_id_users_id_fk",
@@ -2674,7 +3265,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artist_reviews_artist_id_idx": {
+          "name": "artist_reviews_artist_id_idx",
+          "columns": [
+            {
+              "expression": "artist_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "artist_reviews_artist_id_users_id_fk": {
           "name": "artist_reviews_artist_id_users_id_fk",
@@ -2765,7 +3372,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "message_threads_user_id_idx": {
+          "name": "message_threads_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "message_threads_user_id_users_id_fk": {
           "name": "message_threads_user_id_users_id_fk",
@@ -2831,7 +3454,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "resale_listings_seller_id_idx": {
+          "name": "resale_listings_seller_id_idx",
+          "columns": [
+            {
+              "expression": "seller_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "resale_listings_seller_id_users_id_fk": {
           "name": "resale_listings_seller_id_users_id_fk",
@@ -2910,7 +3549,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "support_tickets_user_id_idx": {
+          "name": "support_tickets_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "support_tickets_user_id_users_id_fk": {
           "name": "support_tickets_user_id_users_id_fk",

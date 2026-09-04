@@ -4,7 +4,7 @@
 // authorization is actually derived from (never the token's custom claims —
 // see the plan's Security posture section).
 
-import { boolean, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
 // Matches frontend-web/types/admin.ts's UserRole. "admin" is intentionally
 // coarse here — the finer-grained platform_admin/finance_admin split for
@@ -29,7 +29,13 @@ export const users = pgTable("users", {
   phone: text("phone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
-});
+}, (table) => [
+  // adminService.listUsers(role?) — the admin People pages filter by role
+  // constantly; status is the second most common filter (pending/active/
+  // suspended/blocked queues).
+  index("users_role_idx").on(table.role),
+  index("users_status_idx").on(table.status),
+]);
 
 // Narrow, explicit grants layered on top of the coarse role — this is what
 // the admin rules console's RBAC check reads (see the plan's Admin rules
@@ -48,7 +54,7 @@ export const userRoleGrants = pgTable("user_role_grants", {
   grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
   revokedBy: uuid("revoked_by").references(() => users.id, { onDelete: "restrict" }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
-});
+}, (table) => [index("user_role_grants_user_id_idx").on(table.userId)]);
 
 // Superset profile record — bank details, GSTIN, PAN, Aadhaar status,
 // pickup address, MOU acceptance, Instagram, insurance/GST review status —
@@ -103,7 +109,7 @@ export const mouAcceptances = pgTable("mou_acceptances", {
   signatureName: text("signature_name").notNull(),
   signatureDataUrl: text("signature_data_url"), // canvas-drawn signature; consider moving to object storage once volume warrants it
   acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("mou_acceptances_user_id_idx").on(table.userId)]);
 
 export const addresses = pgTable("addresses", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -114,4 +120,4 @@ export const addresses = pgTable("addresses", {
   state: text("state").notNull(),
   pincode: text("pincode").notNull(),
   isDefault: boolean("is_default").notNull().default(false),
-});
+}, (table) => [index("addresses_user_id_idx").on(table.userId)]);

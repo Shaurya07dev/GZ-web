@@ -4,7 +4,7 @@
 // derived by reading the latest event, never stored as a mutable field that
 // could silently disagree with its own history.
 
-import { bigint, boolean, integer, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ArtworkStatus } from "@galleryzone/domain";
 import { users } from "./identity.ts";
 
@@ -67,7 +67,16 @@ export const artworks = pgTable("artworks", {
   editableUntil: timestamp("editable_until", { withTimezone: true }).notNull(),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // Artist's own dashboard listing ("My Artworks") and admin's per-artist
+  // catalogue view are both "WHERE artist_id = ?" — the plan's 10k-user
+  // scale target flags exactly this as an unindexed full-table-scan risk.
+  index("artworks_artist_id_idx").on(table.artistId),
+  // Marketplace filters (category, listing type) are the highest-traffic
+  // read path in the whole system.
+  index("artworks_category_idx").on(table.category),
+  index("artworks_listing_type_idx").on(table.listingType),
+]);
 
 export const artworkImages = pgTable("artwork_images", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -79,7 +88,7 @@ export const artworkImages = pgTable("artwork_images", {
   // GCS object path this was derived from — lets the image-derivative job
   // (plan.md §13) regenerate thumbnailUrl without re-deriving from url.
   storagePath: text("storage_path").notNull(),
-});
+}, (table) => [index("artwork_images_artwork_id_idx").on(table.artworkId)]);
 
 // Append-only. current status = the latest row for an artworkId, ordered by
 // changedAt. Every write goes through artworkStateMachine.assertTransition
@@ -92,7 +101,11 @@ export const artworkStatusEvents = pgTable("artwork_status_events", {
   changedBy: uuid("changed_by").references(() => users.id, { onDelete: "set null" }), // null for a system/job-driven transition
   reason: text("reason"), // required by convention for a rejection; optional otherwise
   changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // "Current status" is always read as the latest row for an artworkId —
+  // this composite index is exactly that query's access path.
+  index("artwork_status_events_artwork_id_changed_at_idx").on(table.artworkId, table.changedAt),
+]);
 
 // Append-only legal ownership chain — plan.md §3.2/§6.2. Distinct from
 // artwork_status_events: status is operational (where the piece is in the
@@ -111,7 +124,7 @@ export const ownershipEvents = pgTable("ownership_events", {
   cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   displayEndsAt: timestamp("display_ends_at", { withTimezone: true }),
   displayEndedAt: timestamp("display_ended_at", { withTimezone: true }),
-});
+}, (table) => [index("ownership_events_artwork_id_idx").on(table.artworkId)]);
 
 export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -128,7 +141,7 @@ export const externalSalePenalties = pgTable("external_sale_penalties", {
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   decisionNote: text("decision_note"),
   settledAt: timestamp("settled_at", { withTimezone: true }),
-});
+}, (table) => [index("external_sale_penalties_artwork_id_idx").on(table.artworkId)]);
 
 export const physicalCoaRequests = pgTable("physical_coa_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -142,4 +155,4 @@ export const physicalCoaRequests = pgTable("physical_coa_requests", {
   status: varchar("status", { length: 16 }).notNull().default("requested"),
   dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
   courierRef: text("courier_ref"),
-});
+}, (table) => [index("physical_coa_requests_artwork_id_idx").on(table.artworkId)]);

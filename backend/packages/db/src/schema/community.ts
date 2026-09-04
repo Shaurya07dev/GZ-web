@@ -6,7 +6,7 @@
 // tickets) — so nothing here forecloses the client's answer; expanding any
 // of these to full scope is additive columns/tables, not a rewrite.
 
-import { bigint, boolean, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { users } from "./identity.ts";
 import { artworks } from "./artwork.ts";
 
@@ -21,7 +21,7 @@ export const messageThreads = pgTable("message_threads", {
   body: text("body").notNull(),
   unread: boolean("unread").notNull().default(true),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("message_threads_user_id_idx").on(table.userId)]);
 
 // --- Ratings (parity: seed/system-created only — see the separately
 // tracked rating-card composite-score work on the frontend for the open
@@ -37,7 +37,7 @@ export const artistReviews = pgTable("artist_reviews", {
   comment: text("comment").notNull(),
   artworkId: uuid("artwork_id").references(() => artworks.id, { onDelete: "set null" }), // a rating is always earned on a sale — see types/artist-rating.ts's own comment
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("artist_reviews_artist_id_idx").on(table.artistId)]);
 
 // --- Resale (parity: seller-list-only; no buyer browse/purchase flow) ------
 
@@ -48,7 +48,7 @@ export const resaleListings = pgTable("resale_listings", {
   listedPricePaise: bigint("listed_price_paise", { mode: "number" }).notNull(),
   status: varchar("status", { length: 16 }).notNull().default("active"),
   listedAt: timestamp("listed_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("resale_listings_seller_id_idx").on(table.sellerId)]);
 
 // --- Support (parity: three near-duplicate list+submit surfaces, no admin
 // resolution view yet — kept as ONE table with a role column rather than
@@ -62,7 +62,7 @@ export const supportTickets = pgTable("support_tickets", {
   message: text("message").notNull(),
   status: varchar("status", { length: 16 }).notNull().default("open"), // open | answered | closed
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("support_tickets_user_id_idx").on(table.userId)]);
 
 // --- Artist network (peer connections, not customer-facing) -----------------
 
@@ -74,4 +74,7 @@ export const artistConnections = pgTable("artist_connections", {
   message: text("message"),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
   respondedAt: timestamp("responded_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("artist_connections_requester_id_idx").on(table.requesterId),
+  index("artist_connections_recipient_id_idx").on(table.recipientId),
+]);

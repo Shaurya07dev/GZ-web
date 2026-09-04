@@ -7,7 +7,7 @@
 // SQL) so it holds even against a bug in application code, not just a
 // passing test.
 
-import { bigint, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { bigint, index, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { users } from "./identity.ts";
 import { orders } from "./order.ts";
 import { aggregatorHoldings } from "./aggregator.ts";
@@ -32,7 +32,7 @@ export const ledgerAccounts = pgTable("ledger_accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: varchar("type", { length: 32 }).notNull().$type<LedgerAccountType>(),
   ownerId: uuid("owner_id").references(() => users.id, { onDelete: "restrict" }), // null for a system account
-});
+}, (table) => [index("ledger_accounts_owner_id_idx").on(table.ownerId)]);
 
 // Append-only. No UPDATE/DELETE grant for the app's DB role (Security
 // posture section) — a correction is a new, opposite-signed entry with the
@@ -52,7 +52,12 @@ export const ledgerEntries = pgTable("ledger_entries", {
   relatedHoldingId: uuid("related_holding_id").references(() => aggregatorHoldings.id, { onDelete: "restrict" }),
   idempotencyKey: text("idempotency_key").notNull().unique(), // UNIQUE at the migration level
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // The balance-sums-to-zero trigger's own query pattern, and every
+  // "show me this transaction's postings" read.
+  index("ledger_entries_transaction_id_idx").on(table.transactionId),
+  index("ledger_entries_account_id_idx").on(table.accountId),
+]);
 
 // Read model over ledger_entries for the admin settlements queue
 // (adminService.listSettlements/retrySettlement) and artist/aggregator
@@ -70,7 +75,10 @@ export const settlements = pgTable("settlements", {
   releaseAfter: timestamp("release_after", { withTimezone: true }).notNull(), // payoutReleaseDate()
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   processedAt: timestamp("processed_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("settlements_artist_id_idx").on(table.artistId),
+  index("settlements_status_idx").on(table.status),
+]);
 
 export const withdrawalRequests = pgTable("withdrawal_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -79,4 +87,7 @@ export const withdrawalRequests = pgTable("withdrawal_requests", {
   status: varchar("status", { length: 16 }).notNull().default("pending"),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
   processedAt: timestamp("processed_at", { withTimezone: true }),
-});
+}, (table) => [
+  index("withdrawal_requests_user_id_idx").on(table.userId),
+  index("withdrawal_requests_status_idx").on(table.status),
+]);

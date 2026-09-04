@@ -4,7 +4,7 @@
 // as the decision itself, never as a fire-and-forget afterthought — so an
 // audit gap can never exist for a real decision.
 
-import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { users } from "./identity.ts";
 import { orders } from "./order.ts";
 import { artworks } from "./artwork.ts";
@@ -21,7 +21,11 @@ export const auditLog = pgTable("audit_log", {
   entityLabel: text("entity_label"),
   detail: jsonb("detail"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // "Show me this entity's audit history" — the polymorphic pair together.
+  index("audit_log_entity_type_entity_id_idx").on(table.entityType, table.entityId),
+  index("audit_log_admin_id_idx").on(table.adminId),
+]);
 
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -33,4 +37,4 @@ export const disputes = pgTable("disputes", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
   resolutionNote: text("resolution_note"),
-});
+}, (table) => [index("disputes_status_idx").on(table.status)]);
