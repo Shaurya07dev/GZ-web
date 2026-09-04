@@ -1,0 +1,40 @@
+// Aggregator/consignment endpoints. @galleryzone/db's reserveHolding()/
+// recordAggregatorSale() do the real work — verified directly in
+// packages/db/aggregator-flow.check.ts against real Postgres, since
+// RolesGuard makes HTTP-level verification impossible before Phase 1
+// auth exists (same reasoning as orders.controller.ts).
+
+import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import { reserveHolding, recordAggregatorSale, type Db } from "@galleryzone/db";
+import { reserveHoldingInputSchema, recordAggregatorSaleInputSchema, type ReserveHoldingInput, type RecordAggregatorSaleInput } from "@galleryzone/contracts";
+import { Roles } from "./auth/roles.decorator.ts";
+import { DB } from "./db.module.ts";
+import { ZodValidationPipe } from "./zod-validation.pipe.ts";
+
+@Controller("v1/aggregator/holdings")
+export class AggregatorController {
+  constructor(@Inject(DB) private readonly db: Db) {}
+
+  @Roles("aggregator")
+  @Post()
+  async reserve(@Body(new ZodValidationPipe(reserveHoldingInputSchema)) body: ReserveHoldingInput) {
+    // TODO(Phase 1): aggregatorId comes from the authenticated request, never the body.
+    return reserveHolding({ db: this.db, aggregatorId: "TODO-authenticated-user-id", artworkId: body.artworkId });
+  }
+
+  @Roles("aggregator")
+  @Post(":id/sale")
+  async recordSale(@Param("id") id: string, @Body(new ZodValidationPipe(recordAggregatorSaleInputSchema)) body: RecordAggregatorSaleInput) {
+    return recordAggregatorSale({
+      db: this.db,
+      holdingId: id,
+      soldPricePaise: body.soldPricePaise,
+      buyerName: body.buyerName,
+      buyerEmail: body.buyerEmail,
+      buyerPhone: body.buyerPhone,
+      deliveryAddress: body.deliveryAddress,
+      deliveryMode: body.deliveryMode,
+      paymentRoute: body.paymentRoute,
+    });
+  }
+}

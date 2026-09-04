@@ -90,3 +90,6 @@ PGURL="$PGURL" node --experimental-strip-types src/ledger-repository.check.ts
 
 reset_and_migrate
 PGURL="$PGURL" node --experimental-strip-types src/checkout.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/aggregator-flow.check.ts

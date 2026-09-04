@@ -11,3 +11,4 @@ export * from "./client.ts";
 export * from "./postgres/rate-config-store.ts";
 export * from "./ledger-repository.ts";
 export * from "./checkout.ts";
+export * from "./aggregator-flow.ts";
