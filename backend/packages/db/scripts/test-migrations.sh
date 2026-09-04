@@ -37,9 +37,15 @@ fi
 # changes every time the schema is regenerated — glob for it rather than
 # hardcoding, so this script doesn't silently go stale.
 TABLES_MIGRATION=$(ls migrations/0000_*.sql | head -1)
-psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -f "$TABLES_MIGRATION" >/dev/null
-grep -v '^-- REVOKE' migrations/0001_ledger-integrity-and-append-only.sql \
-  | psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres >/dev/null
+
+reset_and_migrate() {
+  psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null
+  psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -f "$TABLES_MIGRATION" >/dev/null
+  grep -v '^-- REVOKE' migrations/0001_ledger-integrity-and-append-only.sql \
+    | psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres >/dev/null
+}
+
+reset_and_migrate
 
 RESULT=$(psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 BEGIN;
@@ -70,16 +76,17 @@ echo "$UNBALANCED_OUTPUT" | grep -q "do not sum to zero" || { echo "FAIL: unbala
 
 echo "packages/db migrations: balanced transaction committed, unbalanced transaction rejected by the DB trigger — verified against a real Postgres 16"
 
-# Reset to a clean slate (this script's own SQL fixture above conflicts
-# with the store check's own user IDs otherwise) and run the
-# PostgresRateConfigStore integration check against the same container.
-psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null
-psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -f "$TABLES_MIGRATION" >/dev/null
-grep -v '^-- REVOKE' migrations/0001_ledger-integrity-and-append-only.sql \
-  | psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres >/dev/null
+# Each integration check below gets its own clean database — several of
+# them (checkout.check.ts especially) depend on specific pre-conditions
+# like "no approved rate_config_versions row exists yet", which a prior
+# check's leftover rows would silently invalidate.
+PGURL="postgres://postgres:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres"
 
-PGURL="postgres://postgres:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres" \
-  node --experimental-strip-types src/postgres/rate-config-store.check.ts
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/postgres/rate-config-store.check.ts
 
-PGURL="postgres://postgres:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres" \
-  node --experimental-strip-types src/ledger-repository.check.ts
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/ledger-repository.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/checkout.check.ts
