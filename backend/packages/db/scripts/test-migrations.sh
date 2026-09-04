@@ -102,3 +102,6 @@ PGURL="$PGURL" node --experimental-strip-types src/artist-artworks.check.ts
 
 reset_and_migrate
 PGURL="$PGURL" node --experimental-strip-types src/withdrawals.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/admin.check.ts

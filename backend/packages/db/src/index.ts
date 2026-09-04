@@ -15,3 +15,5 @@ export * from "./aggregator-flow.ts";
 export * from "./moderation.ts";
 export * from "./artist-artworks.ts";
 export * from "./withdrawals.ts";
+export * from "./wallets.ts";
+export * from "./admin.ts";

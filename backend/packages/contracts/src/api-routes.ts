@@ -62,6 +62,7 @@ export const apiRoutes: readonly RouteSpec[] = [
 
   // --- Wallet / Settlement ---------------------------------------------------
   { method: "GET", path: "/v1/artist/wallet", authRole: "artist", summary: "Balance + pending settlements", replaces: "artistDashboardService.getWallet" },
+  { method: "GET", path: "/v1/artist/wallet/transactions", authRole: "artist", summary: "Wallet transaction history", replaces: "artistDashboardService.listWalletTransactions" },
   { method: "POST", path: "/v1/artist/withdrawals", authRole: "artist", summary: "Request a payout (min ₹1,000)", replaces: "artistDashboardService.requestWithdrawal" },
   { method: "GET", path: "/v1/aggregator/wallet", authRole: "aggregator", summary: "Read-only balance view (not a wallet — agent, not principal)", replaces: "aggregatorSalesService.listWallet" },
   { method: "GET", path: "/v1/customer/wallet", authRole: "customer", summary: "Customer wallet balance", replaces: "customerWalletService.getWallet" },
@@ -84,6 +85,10 @@ export const apiRoutes: readonly RouteSpec[] = [
 
   // --- Admin / Moderation (general) ---------------------------------------------------
   { method: "GET", path: "/v1/admin/kpis", authRole: "admin", summary: "Dashboard KPIs", replaces: "adminService.getKpis" },
+  { method: "GET", path: "/v1/admin/categories", authRole: "admin", summary: "List categories", replaces: "adminService.listCategories" },
+  { method: "POST", path: "/v1/admin/categories", authRole: "admin", summary: "Create a category", replaces: "adminService.createCategory" },
+  { method: "PATCH", path: "/v1/admin/categories/:id", authRole: "admin", summary: "Rename a category", replaces: "adminService.updateCategory" },
+  { method: "DELETE", path: "/v1/admin/categories/:id", authRole: "admin", summary: "Delete a category (rejects if in use)", replaces: "adminService.deleteCategory" },
   { method: "GET", path: "/v1/admin/artworks", authRole: "admin", summary: "All artworks, admin view", replaces: "adminService.listAllArtworks" },
   { method: "POST", path: "/v1/admin/artworks/:id/approve", authRole: "admin", summary: "Real moderation gate — pending_approval → marketplace", replaces: "adminService.approveArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/reject", authRole: "admin", summary: "Reject, reason required", replaces: "adminService.rejectArtwork" },

@@ -8,6 +8,8 @@ import { AggregatorController } from "./aggregator.controller.ts";
 import { ModerationController } from "./moderation.controller.ts";
 import { ArtistArtworksController } from "./artist-artworks.controller.ts";
 import { WithdrawalsController, AdminWithdrawalsController } from "./withdrawals.controller.ts";
+import { ArtistWalletController, AggregatorWalletController, CustomerWalletController } from "./wallets.controller.ts";
+import { AdminController } from "./admin.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -24,6 +26,10 @@ import { DbModule } from "./db.module.ts";
     ArtistArtworksController,
     WithdrawalsController,
     AdminWithdrawalsController,
+    ArtistWalletController,
+    AggregatorWalletController,
+    CustomerWalletController,
+    AdminController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })

@@ -35,7 +35,7 @@ async function currentBalance(db: Db, accountType: WithdrawableAccountType, owne
     .from(ledgerEntries)
     .innerJoin(ledgerAccounts, eq(ledgerEntries.accountId, ledgerAccounts.id))
     .where(and(eq(ledgerAccounts.ownerId, ownerId), eq(ledgerAccounts.type, accountType)));
-  return -Number(row?.total ?? 0);
+  return -Number(row?.total ?? 0) || 0; // normalize -0, see wallets.ts's identical comment
 }
 
 export async function requestWithdrawal({
