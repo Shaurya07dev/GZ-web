@@ -7,12 +7,14 @@
 // of these to full scope is additive columns/tables, not a rewrite.
 
 import { bigint, boolean, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { users } from "./identity.ts";
+import { artworks } from "./artwork.ts";
 
 // --- Messaging (parity: inbox read/markRead only, no compose/send) ---------
 
 export const messageThreads = pgTable("message_threads", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(), // recipient — artist or aggregator inbox
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // recipient — artist or aggregator inbox
   fromLabel: text("from_label").notNull(), // e.g. "GalleryZone Curation Team" — system-authored, not another user
   subject: text("subject").notNull(),
   preview: text("preview").notNull(),
@@ -29,11 +31,11 @@ export const messageThreads = pgTable("message_threads", {
 
 export const artistReviews = pgTable("artist_reviews", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artistId: uuid("artist_id").notNull(),
+  artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   reviewerName: text("reviewer_name").notNull(),
   rating: integer("rating").notNull(), // 1-5, enforced at the app layer (CHECK constraint added once db access exists)
   comment: text("comment").notNull(),
-  artworkId: uuid("artwork_id"), // a rating is always earned on a sale — see types/artist-rating.ts's own comment
+  artworkId: uuid("artwork_id").references(() => artworks.id, { onDelete: "set null" }), // a rating is always earned on a sale — see types/artist-rating.ts's own comment
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -41,8 +43,8 @@ export const artistReviews = pgTable("artist_reviews", {
 
 export const resaleListings = pgTable("resale_listings", {
   id: uuid("id").primaryKey().defaultRandom(),
-  sellerId: uuid("seller_id").notNull(), // the customer reselling
-  artworkId: uuid("artwork_id").notNull(),
+  sellerId: uuid("seller_id").notNull().references(() => users.id, { onDelete: "cascade" }), // the customer reselling
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
   listedPricePaise: bigint("listed_price_paise", { mode: "number" }).notNull(),
   status: varchar("status", { length: 16 }).notNull().default("active"),
   listedAt: timestamp("listed_at", { withTimezone: true }).notNull().defaultNow(),
@@ -55,7 +57,7 @@ export const resaleListings = pgTable("resale_listings", {
 
 export const supportTickets = pgTable("support_tickets", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   subject: text("subject").notNull(),
   message: text("message").notNull(),
   status: varchar("status", { length: 16 }).notNull().default("open"), // open | answered | closed
@@ -66,8 +68,8 @@ export const supportTickets = pgTable("support_tickets", {
 
 export const artistConnections = pgTable("artist_connections", {
   id: uuid("id").primaryKey().defaultRandom(),
-  requesterId: uuid("requester_id").notNull(),
-  recipientId: uuid("recipient_id").notNull(),
+  requesterId: uuid("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientId: uuid("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   status: varchar("status", { length: 16 }).notNull().default("pending"),
   message: text("message"),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),

@@ -8,6 +8,9 @@
 // passing test.
 
 import { bigint, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { users } from "./identity.ts";
+import { orders } from "./order.ts";
+import { aggregatorHoldings } from "./aggregator.ts";
 
 // A ledger account belongs to exactly one of: a user's payout-pending
 // balance, GalleryZone's own revenue account, an escrow/Razorpay Route
@@ -28,7 +31,7 @@ export type LedgerAccountType = (typeof ledgerAccountTypeValues)[number];
 export const ledgerAccounts = pgTable("ledger_accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   type: varchar("type", { length: 32 }).notNull().$type<LedgerAccountType>(),
-  ownerId: uuid("owner_id"), // null for a system account
+  ownerId: uuid("owner_id").references(() => users.id, { onDelete: "restrict" }), // null for a system account
 });
 
 // Append-only. No UPDATE/DELETE grant for the app's DB role (Security
@@ -41,13 +44,13 @@ export const ledgerEntries = pgTable("ledger_entries", {
   // checkout capture) — the set of entries sharing a transactionId is what
   // the balance-sums-to-zero trigger checks.
   transactionId: uuid("transaction_id").notNull(),
-  accountId: uuid("account_id").notNull(),
+  accountId: uuid("account_id").notNull().references(() => ledgerAccounts.id, { onDelete: "restrict" }),
   // Signed paise. Positive = credit to the account, negative = debit.
   amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
   reason: text("reason").notNull(), // e.g. "marketplace_settlement", "aggregator_advance", "refund"
-  relatedOrderId: uuid("related_order_id"),
-  relatedHoldingId: uuid("related_holding_id"),
-  idempotencyKey: text("idempotency_key").notNull(), // UNIQUE at the migration level
+  relatedOrderId: uuid("related_order_id").references(() => orders.id, { onDelete: "restrict" }),
+  relatedHoldingId: uuid("related_holding_id").references(() => aggregatorHoldings.id, { onDelete: "restrict" }),
+  idempotencyKey: text("idempotency_key").notNull().unique(), // UNIQUE at the migration level
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -57,9 +60,9 @@ export const ledgerEntries = pgTable("ledger_entries", {
 // entries, not a new source of truth.
 export const settlements = pgTable("settlements", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id"),
-  holdingId: uuid("holding_id"), // aggregator-channel sale
-  artistId: uuid("artist_id").notNull(),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "restrict" }),
+  holdingId: uuid("holding_id").references(() => aggregatorHoldings.id, { onDelete: "restrict" }), // aggregator-channel sale
+  artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   artistAmountPaise: bigint("artist_amount_paise", { mode: "number" }).notNull(),
   aggregatorCommissionPaise: bigint("aggregator_commission_paise", { mode: "number" }),
   platformRevenuePaise: bigint("platform_revenue_paise", { mode: "number" }).notNull(),
@@ -71,7 +74,7 @@ export const settlements = pgTable("settlements", {
 
 export const withdrawalRequests = pgTable("withdrawal_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
   status: varchar("status", { length: 16 }).notNull().default("pending"),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),

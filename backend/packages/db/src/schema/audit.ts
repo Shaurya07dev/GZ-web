@@ -5,12 +5,18 @@
 // audit gap can never exist for a real decision.
 
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { users } from "./identity.ts";
+import { orders } from "./order.ts";
+import { artworks } from "./artwork.ts";
 
 export const auditLog = pgTable("audit_log", {
   id: uuid("id").primaryKey().defaultRandom(),
-  adminId: uuid("admin_id").notNull(),
+  adminId: uuid("admin_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   action: text("action").notNull(), // matches frontend-web/types/admin.ts's AuditAction union
   entityType: text("entity_type").notNull(),
+  // Polymorphic (points at whichever table entityType names) — cannot be a
+  // real FK, and shouldn't be: an audit log entry must survive even if the
+  // entity it describes is later deleted.
   entityId: uuid("entity_id").notNull(),
   entityLabel: text("entity_label"),
   detail: jsonb("detail"),
@@ -19,9 +25,9 @@ export const auditLog = pgTable("audit_log", {
 
 export const disputes = pgTable("disputes", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id"),
-  artworkId: uuid("artwork_id"),
-  raisedByUserId: uuid("raised_by_user_id").notNull(),
+  orderId: uuid("order_id").references(() => orders.id, { onDelete: "restrict" }),
+  artworkId: uuid("artwork_id").references(() => artworks.id, { onDelete: "restrict" }),
+  raisedByUserId: uuid("raised_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   reason: text("reason").notNull(),
   status: text("status").notNull().default("open"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

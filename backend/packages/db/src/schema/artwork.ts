@@ -6,6 +6,7 @@
 
 import { bigint, boolean, integer, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ArtworkStatus } from "@galleryzone/domain";
+import { users } from "./identity.ts";
 
 export const listingTypeValues = ["marketplace_only", "aggregator_only", "marketplace_and_aggregator"] as const;
 export type ListingType = (typeof listingTypeValues)[number];
@@ -19,8 +20,8 @@ export type ArtworkRarity = (typeof artworkRarityValues)[number];
 // "AV" default).
 export const artworks = pgTable("artworks", {
   id: uuid("id").primaryKey().defaultRandom(),
-  productCode: varchar("product_code", { length: 16 }).notNull(), // GZ000001
-  artistId: uuid("artist_id").notNull(),
+  productCode: varchar("product_code", { length: 16 }).notNull().unique(), // GZ000001
+  artistId: uuid("artist_id").notNull().references(() => users.id, { onDelete: "restrict" }),
 
   title: text("title").notNull(),
   description: text("description").notNull(),
@@ -70,7 +71,7 @@ export const artworks = pgTable("artworks", {
 
 export const artworkImages = pgTable("artwork_images", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artworkId: uuid("artwork_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
   altText: text("alt_text"),
@@ -86,9 +87,9 @@ export const artworkImages = pgTable("artwork_images", {
 // produces, not a place transitions are decided.
 export const artworkStatusEvents = pgTable("artwork_status_events", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artworkId: uuid("artwork_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "cascade" }),
   status: varchar("status", { length: 32 }).notNull().$type<ArtworkStatus>(),
-  changedBy: uuid("changed_by"), // null for a system/job-driven transition
+  changedBy: uuid("changed_by").references(() => users.id, { onDelete: "set null" }), // null for a system/job-driven transition
   reason: text("reason"), // required by convention for a rejection; optional otherwise
   changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -100,10 +101,10 @@ export const artworkStatusEvents = pgTable("artwork_status_events", {
 // here too but with a displayEndsAt, and does NOT change legal custody.
 export const ownershipEvents = pgTable("ownership_events", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artworkId: uuid("artwork_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
   kind: varchar("kind", { length: 16 }).notNull(), // "ownership" | "display"
-  fromUserId: uuid("from_user_id"),
-  toUserId: uuid("to_user_id"),
+  fromUserId: uuid("from_user_id").references(() => users.id, { onDelete: "restrict" }),
+  toUserId: uuid("to_user_id").references(() => users.id, { onDelete: "restrict" }),
   toEmail: text("to_email"), // recipient may not have an account yet
   initiatedAt: timestamp("initiated_at", { withTimezone: true }).notNull().defaultNow(),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }),
@@ -115,12 +116,12 @@ export const ownershipEvents = pgTable("ownership_events", {
 export const categories = pgTable("categories", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
-  slug: text("slug").notNull(),
+  slug: text("slug").notNull().unique(),
 });
 
 export const externalSalePenalties = pgTable("external_sale_penalties", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artworkId: uuid("artwork_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
   amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
   status: varchar("status", { length: 16 }).notNull().default("pending_review"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -131,8 +132,8 @@ export const externalSalePenalties = pgTable("external_sale_penalties", {
 
 export const physicalCoaRequests = pgTable("physical_coa_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artworkId: uuid("artwork_id").notNull(),
-  requestedByUserId: uuid("requested_by_user_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
+  requestedByUserId: uuid("requested_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
   deliveryLine1: text("delivery_line1").notNull(),
   deliveryCity: text("delivery_city").notNull(),

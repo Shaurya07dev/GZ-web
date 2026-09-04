@@ -5,10 +5,12 @@
 
 import { bigint, boolean, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { HoldingStatus, ShipmentStatus } from "@galleryzone/domain";
+import { users } from "./identity.ts";
+import { artworks } from "./artwork.ts";
 
 export const gallerySpaces = pgTable("gallery_spaces", {
   id: uuid("id").primaryKey().defaultRandom(),
-  aggregatorId: uuid("aggregator_id").notNull(),
+  aggregatorId: uuid("aggregator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   addressLine1: text("address_line1").notNull(),
   city: text("city").notNull(),
@@ -20,8 +22,8 @@ export const gallerySpaces = pgTable("gallery_spaces", {
 
 export const aggregatorHoldings = pgTable("aggregator_holdings", {
   id: uuid("id").primaryKey().defaultRandom(),
-  artworkId: uuid("artwork_id").notNull(),
-  aggregatorId: uuid("aggregator_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
+  aggregatorId: uuid("aggregator_id").notNull().references(() => users.id, { onDelete: "restrict" }),
 
   cycleMonth: integer("cycle_month").notNull(), // 1..aggregatorCycleMonths
   advancePercent: integer("advance_percent").notNull(), // basis points would be more precise; kept as whole percent to match the frontend's own 5|3 union
@@ -40,8 +42,8 @@ export const aggregatorHoldings = pgTable("aggregator_holdings", {
 
 export const aggregatorSales = pgTable("aggregator_sales", {
   id: uuid("id").primaryKey().defaultRandom(),
-  holdingId: uuid("holding_id").notNull(),
-  artworkId: uuid("artwork_id").notNull(),
+  holdingId: uuid("holding_id").notNull().references(() => aggregatorHoldings.id, { onDelete: "restrict" }),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
 
   soldPricePaise: bigint("sold_price_paise", { mode: "number" }).notNull(),
   buyerName: text("buyer_name").notNull(),
@@ -73,7 +75,7 @@ export const buyerInvites = pgTable("buyer_invites", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull(),
   name: text("name").notNull(),
-  artworkId: uuid("artwork_id").notNull(),
+  artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
   soldPricePaise: bigint("sold_price_paise", { mode: "number" }).notNull(),
   soldAt: timestamp("sold_at", { withTimezone: true }).notNull(),
   source: text("source").notNull().default("aggregator_sale"),

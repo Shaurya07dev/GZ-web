@@ -21,11 +21,11 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Firebase UID — the join key between an ID token and this row. Unique,
   // never reused.
-  firebaseUid: varchar("firebase_uid", { length: 128 }).notNull(),
+  firebaseUid: varchar("firebase_uid", { length: 128 }).notNull().unique(),
   role: varchar("role", { length: 16 }).notNull().$type<UserRole>(),
   status: varchar("status", { length: 16 }).notNull().default("pending").$type<UserStatus>(),
   name: text("name").notNull(),
-  email: text("email").notNull(),
+  email: text("email").notNull().unique(),
   phone: text("phone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
@@ -42,11 +42,11 @@ export type RoleGrant = (typeof roleGrantValues)[number];
 
 export const userRoleGrants = pgTable("user_role_grants", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   grant: varchar("grant", { length: 32 }).notNull().$type<RoleGrant>(),
-  grantedBy: uuid("granted_by").notNull(),
+  grantedBy: uuid("granted_by").notNull().references(() => users.id, { onDelete: "restrict" }),
   grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
-  revokedBy: uuid("revoked_by"),
+  revokedBy: uuid("revoked_by").references(() => users.id, { onDelete: "restrict" }),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 });
 
@@ -59,7 +59,7 @@ export const userRoleGrants = pgTable("user_role_grants", {
 // artist-only and customer/aggregator profiles don't carry them — nullable
 // columns here, never populated for the wrong role.
 export const profiles = pgTable("profiles", {
-  userId: uuid("user_id").primaryKey(),
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
   bio: text("bio"),
   profileImageUrl: text("profile_image_url"),
   headline: text("headline"),
@@ -98,7 +98,7 @@ export const profiles = pgTable("profiles", {
 // overwrite, since "when and against which version" is provenance.
 export const mouAcceptances = pgTable("mou_acceptances", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   version: text("version").notNull(),
   signatureName: text("signature_name").notNull(),
   signatureDataUrl: text("signature_data_url"), // canvas-drawn signature; consider moving to object storage once volume warrants it
@@ -107,7 +107,7 @@ export const mouAcceptances = pgTable("mou_acceptances", {
 
 export const addresses = pgTable("addresses", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   line1: text("line1").notNull(),
   line2: text("line2"),
   city: text("city").notNull(),

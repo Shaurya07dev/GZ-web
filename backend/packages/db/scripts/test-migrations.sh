@@ -33,12 +33,18 @@ if [ "$MANAGE_CONTAINER" = "1" ]; then
   done
 fi
 
-psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -f migrations/0000_living_umar.sql >/dev/null
+# The 0000 migration's filename includes drizzle-kit's random slug and
+# changes every time the schema is regenerated — glob for it rather than
+# hardcoding, so this script doesn't silently go stale.
+TABLES_MIGRATION=$(ls migrations/0000_*.sql | head -1)
+psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -f "$TABLES_MIGRATION" >/dev/null
 grep -v '^-- REVOKE' migrations/0001_ledger-integrity-and-append-only.sql \
   | psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres >/dev/null
 
 RESULT=$(psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 BEGIN;
+INSERT INTO users (id, firebase_uid, role, name, email) VALUES
+  ('33333333-3333-3333-3333-333333333333', 'fb-test-artist', 'artist', 'Test Artist', 'test-artist@example.com');
 INSERT INTO ledger_accounts (id, type, owner_id) VALUES
   ('11111111-1111-1111-1111-111111111111', 'razorpay_escrow', NULL),
   ('22222222-2222-2222-2222-222222222222', 'artist_payable', '33333333-3333-3333-3333-333333333333');
