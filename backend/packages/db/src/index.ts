@@ -21,3 +21,4 @@ export * from "./public-profiles.ts";
 export * from "./admin-artworks.ts";
 export * from "./addresses.ts";
 export * from "./admin-settlements.ts";
+export * from "./aggregator-sales.ts";

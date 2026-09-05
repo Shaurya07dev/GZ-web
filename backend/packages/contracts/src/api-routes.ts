@@ -56,6 +56,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/aggregator/holdings/:id/release", authRole: "aggregator", summary: "Return unsold", replaces: "aggregatorService.releaseHolding" },
   { method: "POST", path: "/v1/aggregator/holdings/:id/sale", authRole: "aggregator", summary: "Record a sale", replaces: "aggregatorService.recordSale" },
   { method: "GET", path: "/v1/aggregator/collection", authRole: "aggregator", summary: "Active + past holdings", replaces: "aggregatorService.listCollection" },
+  { method: "GET", path: "/v1/aggregator/sales", authRole: "aggregator", summary: "This aggregator's sales", replaces: "aggregatorSalesService.listSales" },
+  { method: "GET", path: "/v1/aggregator/sales/remittances-due", authRole: "aggregator", summary: "Cash sales not yet remitted", replaces: "aggregatorSalesService.listRemittancesDue" },
   { method: "PATCH", path: "/v1/aggregator/sales/:id/shipment", authRole: "aggregator", summary: "Advance preparing→dispatched→delivered", replaces: "aggregatorSalesService.advanceShipment" },
   { method: "POST", path: "/v1/aggregator/sales/:id/remit", authRole: "aggregator", summary: "Confirm cash remittance to GalleryZone", replaces: "aggregatorSalesService.markRemitted" },
   { method: "POST", path: "/v1/admin/holdings/:id/pull-back", authRole: "admin", summary: "Force-recall a consigned piece", replaces: "adminService.pullBackHolding" },
