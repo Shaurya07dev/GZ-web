@@ -5,7 +5,7 @@
 // could silently disagree with its own history.
 
 import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import type { ArtworkStatus } from "@galleryzone/domain";
+import type { ArtworkStatus, PenaltyStatus, ReviewStatus } from "@galleryzone/domain";
 import { users } from "./identity.ts";
 
 export const listingTypeValues = ["marketplace_only", "aggregator_only", "marketplace_and_aggregator"] as const;
@@ -46,7 +46,7 @@ export const artworks = pgTable("artworks", {
   nfcTagId: text("nfc_tag_id"),
 
   insuranceNumber: text("insurance_number"),
-  insuranceStatus: varchar("insurance_status", { length: 16 }),
+  insuranceStatus: varchar("insurance_status", { length: 16 }).$type<ReviewStatus>(),
 
   weightKg: integer("weight_kg"),
   lengthCm: integer("length_cm"),
@@ -136,7 +136,7 @@ export const externalSalePenalties = pgTable("external_sale_penalties", {
   id: uuid("id").primaryKey().defaultRandom(),
   artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
   amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
-  status: varchar("status", { length: 16 }).notNull().default("pending_review"),
+  status: varchar("status", { length: 16 }).notNull().default("pending_review").$type<PenaltyStatus>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   decisionNote: text("decision_note"),

@@ -15,6 +15,7 @@ import { AdminArtworksController } from "./admin-artworks.controller.ts";
 import { AddressesController } from "./addresses.controller.ts";
 import { AdminSettlementsController } from "./admin-settlements.controller.ts";
 import { AggregatorSalesController } from "./aggregator-sales.controller.ts";
+import { DeactivationController } from "./deactivation.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -40,6 +41,7 @@ import { DbModule } from "./db.module.ts";
     AddressesController,
     AdminSettlementsController,
     AggregatorSalesController,
+    DeactivationController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })
