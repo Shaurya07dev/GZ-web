@@ -21,6 +21,7 @@ import { AdminOrdersController } from "./admin-orders.controller.ts";
 import { GallerySpacesController } from "./gallery-spaces.controller.ts";
 import { MessagingController } from "./messaging.controller.ts";
 import { ResaleController } from "./resale.controller.ts";
+import { ReportsController } from "./reports.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -52,6 +53,7 @@ import { DbModule } from "./db.module.ts";
     GallerySpacesController,
     MessagingController,
     ResaleController,
+    ReportsController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })

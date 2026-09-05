@@ -126,3 +126,6 @@ PGURL="$PGURL" node --experimental-strip-types src/order-listings.check.ts
 
 reset_and_migrate
 PGURL="$PGURL" node --experimental-strip-types src/resale.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/reports.check.ts
