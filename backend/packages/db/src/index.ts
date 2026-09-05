@@ -24,3 +24,7 @@ export * from "./admin-settlements.ts";
 export * from "./aggregator-sales.ts";
 export * from "./deactivation.ts";
 export * from "./order-listings.ts";
+export * from "./admin-orders.ts";
+export * from "./gallery-spaces.ts";
+export * from "./messaging.ts";
+export * from "./resale.ts";

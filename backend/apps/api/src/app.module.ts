@@ -17,6 +17,10 @@ import { AdminSettlementsController } from "./admin-settlements.controller.ts";
 import { AggregatorSalesController } from "./aggregator-sales.controller.ts";
 import { DeactivationController } from "./deactivation.controller.ts";
 import { OrderListingsController } from "./order-listings.controller.ts";
+import { AdminOrdersController } from "./admin-orders.controller.ts";
+import { GallerySpacesController } from "./gallery-spaces.controller.ts";
+import { MessagingController } from "./messaging.controller.ts";
+import { ResaleController } from "./resale.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -44,6 +48,10 @@ import { DbModule } from "./db.module.ts";
     AggregatorSalesController,
     DeactivationController,
     OrderListingsController,
+    AdminOrdersController,
+    GallerySpacesController,
+    MessagingController,
+    ResaleController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })

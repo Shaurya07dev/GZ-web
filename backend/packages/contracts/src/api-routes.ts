@@ -49,6 +49,9 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "GET", path: "/v1/orders/:id", authRole: "customer", summary: "One order", replaces: "orderService.get" },
   { method: "GET", path: "/v1/orders", authRole: "customer", summary: "This customer's orders", replaces: "orderService.list" },
   { method: "PATCH", path: "/v1/admin/orders/:id/status", authRole: "admin", summary: "Advance order fulfillment state", replaces: "n/a — new (fulfillment gap)" },
+  { method: "GET", path: "/v1/admin/orders", authRole: "admin", summary: "All orders, admin view", replaces: "adminService.listOrders" },
+  { method: "GET", path: "/v1/admin/orders/:id", authRole: "admin", summary: "One order, admin view", replaces: "adminService.getOrderAdmin" },
+  { method: "GET", path: "/v1/admin/addresses/:id", authRole: "admin", summary: "One address, admin view", replaces: "adminService.getAddressAdmin" },
 
   // --- Aggregator / Consignment ---------------------------------------------------
   { method: "GET", path: "/v1/aggregator/inventory", authRole: "aggregator", summary: "Reservable artwork this cycle", replaces: "aggregatorService.listReservableInventory" },
@@ -116,4 +119,20 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "GET", path: "/v1/admin/rate-config", authRole: "admin", summary: "Current + pending rate versions", replaces: "adminService.getSettings" },
   { method: "POST", path: "/v1/admin/rate-config/propose", authRole: "platform_admin", summary: "Propose a rate change (2-step: propose)", replaces: "adminService.updateSettings" },
   { method: "POST", path: "/v1/admin/rate-config/:versionId/approve", authRole: "platform_admin", summary: "Approve a proposed rate change (2-step: approve)", replaces: "n/a — new" },
+
+  // --- Gallery spaces (aggregator) ---------------------------------------------------
+  { method: "GET", path: "/v1/aggregator/gallery-spaces", authRole: "aggregator", summary: "This aggregator's display spaces", replaces: "aggregatorSalesService.listGallerySpaces" },
+  { method: "POST", path: "/v1/aggregator/gallery-spaces", authRole: "aggregator", summary: "Add a gallery space", replaces: "n/a — new" },
+
+  // --- Messaging / Support (parity scope) ---------------------------------------------------
+  { method: "GET", path: "/v1/messages", authRole: "artist", summary: "Inbox (parity: read+markRead only)", replaces: "messagesService.list" },
+  { method: "POST", path: "/v1/messages/:id/read", authRole: "artist", summary: "Mark a message read", replaces: "messagesService.markRead" },
+  { method: "GET", path: "/v1/support", authRole: "artist", summary: "This user's support tickets", replaces: "supportService.listTickets" },
+  { method: "POST", path: "/v1/support", authRole: "artist", summary: "Submit a support ticket", replaces: "supportService.submitTicket" },
+
+  // --- Resale (parity scope: seller-list-only) ---------------------------------------------------
+  { method: "GET", path: "/v1/account/resale", authRole: "customer", summary: "This customer's resale listings", replaces: "customerResaleService.listListings" },
+  { method: "POST", path: "/v1/account/resale", authRole: "customer", summary: "List an owned artwork for resale", replaces: "customerResaleService.createListing" },
+  { method: "POST", path: "/v1/account/resale/:id/withdraw", authRole: "customer", summary: "Withdraw a resale listing", replaces: "customerResaleService.withdrawListing" },
+  { method: "POST", path: "/v1/account/resale/:id/complete", authRole: "customer", summary: "Complete a resale sale, credit wallet", replaces: "customerResaleService.completeSale" },
 ] as const;

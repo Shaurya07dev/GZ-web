@@ -7,6 +7,7 @@
 // of these to full scope is additive columns/tables, not a rewrite.
 
 import { bigint, boolean, index, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import type { ResaleListingStatus } from "@galleryzone/domain";
 import { users } from "./identity.ts";
 import { artworks } from "./artwork.ts";
 
@@ -46,7 +47,7 @@ export const resaleListings = pgTable("resale_listings", {
   sellerId: uuid("seller_id").notNull().references(() => users.id, { onDelete: "cascade" }), // the customer reselling
   artworkId: uuid("artwork_id").notNull().references(() => artworks.id, { onDelete: "restrict" }),
   listedPricePaise: bigint("listed_price_paise", { mode: "number" }).notNull(),
-  status: varchar("status", { length: 16 }).notNull().default("active"),
+  status: varchar("status", { length: 16 }).notNull().default("active").$type<ResaleListingStatus>(),
   listedAt: timestamp("listed_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("resale_listings_seller_id_idx").on(table.sellerId)]);
 
