@@ -120,3 +120,6 @@ PGURL="$PGURL" node --experimental-strip-types src/aggregator-sales.check.ts
 
 reset_and_migrate
 PGURL="$PGURL" node --experimental-strip-types src/deactivation.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/order-listings.check.ts
