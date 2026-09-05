@@ -12,6 +12,8 @@ import { ArtistWalletController, AggregatorWalletController, CustomerWalletContr
 import { AdminController } from "./admin.controller.ts";
 import { PublicArtistsController } from "./public-profiles.controller.ts";
 import { AdminArtworksController } from "./admin-artworks.controller.ts";
+import { AddressesController } from "./addresses.controller.ts";
+import { AdminSettlementsController } from "./admin-settlements.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -34,6 +36,8 @@ import { DbModule } from "./db.module.ts";
     AdminController,
     PublicArtistsController,
     AdminArtworksController,
+    AddressesController,
+    AdminSettlementsController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })
