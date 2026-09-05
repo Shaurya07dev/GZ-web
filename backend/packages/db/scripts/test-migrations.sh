@@ -108,3 +108,6 @@ PGURL="$PGURL" node --experimental-strip-types src/admin.check.ts
 
 reset_and_migrate
 PGURL="$PGURL" node --experimental-strip-types src/public-profiles.check.ts
+
+reset_and_migrate
+PGURL="$PGURL" node --experimental-strip-types src/admin-artworks.check.ts
