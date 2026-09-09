@@ -11,6 +11,7 @@ import {
 } from "@/features/marketplace/marketplace-filters";
 import { MarketplaceSearchBar } from "@/features/marketplace/marketplace-search-bar";
 import { MarketplaceGrid } from "@/features/marketplace/marketplace-grid";
+import { cn } from "@/lib/utils";
 import type { ArtworkFilters } from "@/types/artwork";
 
 // Client component (not server-rendered per SAD §5.6's "listing = streaming
@@ -49,19 +50,22 @@ function MarketplacePageContent() {
     category: searchParams.get("category") ?? undefined,
     query: searchParams.get("q") ?? undefined,
   }));
+  const [showFilters, setShowFilters] = useState(true);
 
   return (
     <>
       <SiteHeader />
       <main className="flex flex-1 flex-col px-6 py-8 lg:px-10">
-        <div className="mx-auto grid w-full max-w-[1500px] gap-8 lg:grid-cols-[280px_1fr] lg:items-start">
-          <MarketplaceFilters
-            filters={filters}
-            onChange={setFilters}
-            className="lg:sticky lg:top-24"
-          />
+        <div className={cn("mx-auto grid w-full max-w-[1500px] gap-8 lg:items-start transition-all", showFilters ? "lg:grid-cols-[280px_1fr]" : "lg:grid-cols-1")}>
+          {showFilters && (
+            <MarketplaceFilters
+              filters={filters}
+              onChange={setFilters}
+              className="lg:sticky lg:top-24"
+            />
+          )}
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 min-w-0">
             <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/30 px-6 py-10 sm:px-8 sm:py-12">
               <div
                 aria-hidden="true"
@@ -71,14 +75,14 @@ function MarketplacePageContent() {
                 <DoodleBackdrop />
               </div>
               <div
-                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/95 via-card/60 to-transparent"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/90 via-card/40 to-transparent"
                 aria-hidden="true"
               />
-              <div className="relative">
-                <h1 className="text-balance font-display text-4xl leading-[1.1] font-bold tracking-tight text-foreground uppercase sm:text-5xl">
+              <div className="relative mx-auto max-w-4xl flex flex-col items-center text-center">
+                <h1 className="text-balance font-display text-3xl leading-[1.1] font-bold tracking-tight text-foreground uppercase sm:text-4xl">
                   The Marketplace
                 </h1>
-                <p className="mt-4 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
+                <p className="mt-4 max-w-2xl text-balance text-base leading-relaxed text-muted-foreground">
                   Discover original, verified artworks from independent
                   artists across India. Every piece ships with a signed
                   certificate of authenticity.
@@ -91,7 +95,7 @@ function MarketplacePageContent() {
                       query: query || undefined,
                     }))
                   }
-                  className="mt-8 max-w-lg"
+                  className="mt-8 w-full max-w-2xl"
                 />
               </div>
             </section>
@@ -100,6 +104,8 @@ function MarketplacePageContent() {
               filters={filters}
               onChange={setFilters}
               onClearFilters={() => setFilters(DEFAULT_MARKETPLACE_FILTERS)}
+              showFilters={showFilters}
+              onToggleFilters={() => setShowFilters(!showFilters)}
             />
           </div>
         </div>

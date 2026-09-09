@@ -142,26 +142,6 @@ function FooterGlow() {
       />
       <div className="absolute top-0 left-1/2 size-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/10 blur-[140px]" />
       <div className="absolute -right-24 -bottom-40 size-[560px] rounded-full bg-gold/20 blur-[100px]" />
-      <svg
-        viewBox="0 0 600 400"
-        className="absolute right-0 bottom-0 h-[400px] w-[600px]"
-      >
-        <path
-          d="M 600 400 A 300 300 0 0 0 300 100"
-          fill="none"
-          stroke="var(--gold)"
-          strokeOpacity="0.3"
-          strokeWidth="1"
-        />
-        <path
-          d="M 600 400 A 380 380 0 0 0 220 20"
-          fill="none"
-          stroke="var(--gold)"
-          strokeOpacity="0.18"
-          strokeWidth="1"
-        />
-        <circle cx="480" cy="45" r="3" fill="var(--gold-bright)" />
-      </svg>
     </div>
   );
 }

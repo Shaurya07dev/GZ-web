@@ -61,34 +61,34 @@
   Default is dark — see ThemeProvider's defaultTheme in app/layout.tsx.
 */
 :root {
-  --background: #f7f3e9;
-  --foreground: #201c13;
+  --background: #F3EFE9;
+  --foreground: #211E18;
 
-  --card: #fdfbf5;
-  --card-foreground: #201c13;
-  --popover: #fdfbf5;
-  --popover-foreground: #201c13;
+  --card: #EAE6DF;
+  --card-foreground: #211E18;
+  --popover: #EAE6DF;
+  --popover-foreground: #211E18;
 
   --gold: #a9782c;
   --gold-bright: #8a6423;
   --gold-deep: #6e4f1b;
 
   --primary: var(--gold);
-  --primary-foreground: #fdfbf5;
+  --primary-foreground: #F3EFE9;
 
-  --secondary: #efead9;
-  --secondary-foreground: #201c13;
+  --secondary: #E2DDD6;
+  --secondary-foreground: #211E18;
 
-  --muted: #f1ecde;
-  --muted-foreground: #6b6656;
+  --muted: #E5E0D9;
+  --muted-foreground: #867E74;
 
-  --accent: #efead9;
-  --accent-foreground: #201c13;
+  --accent: #E2DDD6;
+  --accent-foreground: #211E18;
 
   --destructive: oklch(0.577 0.245 27.325);
 
-  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
-  --input: color-mix(in oklab, var(--foreground) 14%, transparent);
+  --border: color-mix(in oklab, var(--foreground) 13%, transparent);
+  --input: color-mix(in oklab, var(--foreground) 15%, transparent);
   --ring: var(--gold);
 
   --chart-1: var(--gold);
@@ -99,13 +99,13 @@
 
   --radius: 0.75rem;
 
-  --sidebar: #f1ecde;
-  --sidebar-foreground: #201c13;
+  --sidebar: #E5E0D9;
+  --sidebar-foreground: #211E18;
   --sidebar-primary: var(--gold);
-  --sidebar-primary-foreground: #fdfbf5;
-  --sidebar-accent: #efead9;
-  --sidebar-accent-foreground: #201c13;
-  --sidebar-border: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --sidebar-primary-foreground: #F3EFE9;
+  --sidebar-accent: #E2DDD6;
+  --sidebar-accent-foreground: #211E18;
+  --sidebar-border: color-mix(in oklab, var(--foreground) 13%, transparent);
   --sidebar-ring: var(--gold);
 }
 

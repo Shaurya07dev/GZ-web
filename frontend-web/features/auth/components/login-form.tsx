@@ -15,7 +15,6 @@ import {
   Palette,
   Building2,
   Compass,
-  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,7 +67,6 @@ const ROLE_TOGGLE_OPTIONS: {
   { value: "artist", label: "Artist", icon: Palette },
   { value: "aggregator", label: "Aggregator", icon: Building2 },
   { value: "customer", label: "Customer", icon: Compass },
-  { value: "admin", label: "Admin", icon: ShieldCheck },
 ];
 
 const containerVariants: Variants = {

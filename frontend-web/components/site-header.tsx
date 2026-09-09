@@ -13,7 +13,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SwitchMode } from "./switch-mode";
-import { ArtistSurveyBanner } from "@/features/landing/artist-survey-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -133,22 +132,23 @@ export function SiteHeader() {
 
   return (
     <div className="sticky top-0 z-50 flex flex-col">
-      <ArtistSurveyBanner />
       <header className="w-full border-b border-border/60 bg-background/75 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between gap-4 px-6 lg:px-10">
-          <Link
-            href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
-            className="flex items-baseline gap-2.5"
-          >
+          <div className="flex flex-1 items-center">
+            <Link
+              href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
+              className="flex items-baseline gap-2.5"
+            >
             <span className="font-display text-2xl font-semibold italic text-gold-bright">
               GZ
             </span>
             <span className="text-sm font-medium tracking-[0.18em] text-foreground">
               GALLERYZONE
             </span>
-          </Link>
+            </Link>
+          </div>
 
-          <NavigationMenu className="hidden max-w-none flex-1 justify-center lg:flex">
+          <NavigationMenu className="hidden justify-center lg:flex">
             <NavigationMenuList>
               {SIMPLE_LINKS.map((link) => (
                 <NavigationMenuItem key={link.href}>
@@ -206,7 +206,7 @@ export function SiteHeader() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex flex-1 items-center justify-end gap-1.5 sm:gap-2.5">
             {!isLandingPage && (
               <>
                 <Popover open={searchOpen} onOpenChange={setSearchOpen}>
@@ -216,7 +216,7 @@ export function SiteHeader() {
                         variant="ghost"
                         size="icon"
                         aria-label="Search artworks"
-                        className="hidden sm:inline-flex"
+                        className="hidden size-10 sm:inline-flex"
                       />
                     }
                   >
@@ -252,6 +252,7 @@ export function SiteHeader() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="size-10"
                   nativeButton={false}
                   render={
                     <Link href="/account/wishlist" aria-label="Wishlist" />
@@ -263,17 +264,17 @@ export function SiteHeader() {
             )}
 
             {sessionRole ? (
-              <div className="hidden items-center gap-3 md:flex">
+              <div className="hidden items-center gap-4 md:flex">
                 <Link
                   href={ROLE_SECTION_HOME[sessionRole]}
-                  className="text-sm font-medium text-gold-bright transition-colors hover:text-gold"
+                  className="text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
                 >
                   {sessionRole === "customer" ? "My account" : "My dashboard"}
                 </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="text-sm text-foreground/70 transition-colors hover:text-foreground"
+                  className="text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
                 >
                   Sign out
                 </button>
@@ -293,7 +294,7 @@ export function SiteHeader() {
               variant="ghost"
               size="icon"
               aria-label="Open menu"
-              className="lg:hidden"
+              className="size-10 lg:hidden"
               onClick={() => setMobileOpen(true)}
             >
               <Menu className="size-5" strokeWidth={1.75} />

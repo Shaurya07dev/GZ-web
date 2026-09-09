@@ -70,23 +70,25 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
     <Link
       href={`/marketplace/${artwork.id}`}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-[border-color,transform] duration-200 ease-out hover:border-gold/50 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 ease-out hover:-translate-y-1 hover:border-gold/50 hover:shadow-lg active:scale-[0.99] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         className,
       )}
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-        <Image
-          src={artwork.thumbnailUrl}
-          alt={artwork.title}
-          fill
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-          className={cn(
-            "object-cover transition-transform duration-500 ease-out group-hover:scale-[1.05]",
-            !isAvailable && "opacity-75 grayscale-[55%]",
-          )}
-        />
+      <div className="relative flex aspect-[4/5] w-full items-center justify-center bg-muted/30 p-4 sm:p-5">
+        <div className="relative h-full w-full overflow-hidden rounded-md border border-border/50 bg-muted shadow-sm transition-transform duration-500 ease-out group-hover:scale-[1.02]">
+          <Image
+            src={artwork.thumbnailUrl}
+            alt={artwork.title}
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            className={cn(
+              "object-cover",
+              !isAvailable && "opacity-75 grayscale-[55%]",
+            )}
+          />
+        </div>
 
-        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col items-start gap-1.5">
+        <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
           {statusBadge && StatusIcon && (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
               <StatusIcon className="size-3" strokeWidth={2} />
@@ -107,11 +109,11 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           }}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={isWishlisted}
-          className="absolute top-2.5 right-2.5 z-10 flex size-8 items-center justify-center rounded-full border border-border bg-background/90 text-foreground/75 backdrop-blur-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="absolute top-2 right-2 z-10 flex size-10 items-center justify-center rounded-full border border-border/50 bg-background/90 text-foreground/75 backdrop-blur-sm transition-colors hover:text-foreground hover:border-border focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <Heart
             className={cn(
-              "size-4 transition-colors",
+              "size-4.5 transition-colors",
               isWishlisted && "fill-gold-bright text-gold-bright",
             )}
             strokeWidth={1.75}
@@ -119,14 +121,14 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
         </motion.button>
 
         {artwork.insured && (
-          <span className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-background/90 px-2 py-1 text-[11px] font-medium text-gold-bright backdrop-blur-sm">
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-background/90 px-2.5 py-1 text-[11px] font-medium text-gold-bright backdrop-blur-sm shadow-sm">
             <ShieldCheck className="size-3" strokeWidth={2} />
             Insured
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-3.5">
+      <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="line-clamp-2 font-display text-sm leading-snug font-semibold text-foreground">
           {artwork.title}
         </h3>
@@ -139,25 +141,29 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
             <VerifiedBadge verification={MINIMUM_VERIFICATION} size="sm" />
           )}
         </div>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="truncate text-xs text-muted-foreground/80">
           {titleCase(artwork.category)} &middot; {artwork.medium}
         </p>
 
-        <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border pt-2.5">
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/50 pt-3">
           <div className="flex flex-col gap-0.5">
-            <PriceTag amount={artwork.customerPrice} className="text-base" />
-            <span className="text-[10px] text-muted-foreground">Incl. GST</span>
+            <PriceTag amount={artwork.customerPrice} className="text-base font-semibold" />
           </div>
-          {isAvailable && (
-            <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+          {isAvailable ? (
+            <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
               <span
                 className="size-1.5 rounded-full bg-emerald-500"
                 aria-hidden="true"
               />
               Available
             </span>
+          ) : (
+            <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-muted-foreground">
+              Unavailable
+            </span>
           )}
         </div>
+        <div className="absolute inset-0 z-0 flex items-center justify-center bg-foreground/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none" />
       </div>
     </Link>
   );

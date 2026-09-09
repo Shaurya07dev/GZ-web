@@ -167,7 +167,7 @@ export function MarketplaceFilters({
   return (
     <aside
       className={cn(
-        "flex h-fit flex-col gap-5 rounded-2xl border border-border bg-card/60 p-5",
+        "flex h-fit max-h-[calc(100vh-6rem)] w-full flex-col gap-5 overflow-y-auto rounded-2xl border border-border bg-card/60 p-5",
         className,
       )}
     >
@@ -189,7 +189,7 @@ export function MarketplaceFilters({
         )}
       </div>
 
-      <Accordion defaultValue={["rank", "price"]} className="gap-0">
+      <Accordion type="multiple" className="gap-0">
         <SelectFilterGroup
           value="type"
           icon={Shapes}
@@ -240,28 +240,26 @@ export function MarketplaceFilters({
                 return (
                   <label
                     key={option.value}
-                    className="flex cursor-pointer items-center justify-between gap-2"
+                    className="grid cursor-pointer grid-cols-[auto_auto_1fr_auto] items-center gap-3 w-full"
                   >
-                    <span className="flex items-center gap-2.5">
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() =>
-                          update({ rarity: checked ? undefined : option.value })
-                        }
-                      />
-                      <span
-                        className={cn(
-                          "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                          RANK_TONE[option.value],
-                        )}
-                      >
-                        {option.value}
-                      </span>
-                      <span className="text-sm text-foreground">
-                        {option.label}
-                      </span>
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() =>
+                        update({ rarity: checked ? undefined : option.value })
+                      }
+                    />
+                    <span
+                      className={cn(
+                        "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                        RANK_TONE[option.value],
+                      )}
+                    >
+                      {option.value}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm text-foreground">
+                      {option.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground text-right">
                       {rankCounts[option.value]}
                     </span>
                   </label>
@@ -321,6 +319,15 @@ export function MarketplaceFilters({
                   }
                   className="h-9"
                 />
+              </div>
+
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-medium text-muted-foreground">
+                  ₹{minPrice.toLocaleString("en-IN")}
+                </span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  ₹{maxPrice.toLocaleString("en-IN")}
+                </span>
               </div>
 
               <div className="relative h-1.5 rounded-full bg-secondary">

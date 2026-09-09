@@ -542,7 +542,7 @@ export const mockArtworks: Artwork[] = [
     category: "textile art",
     medium: "Hand Embroidery on Cotton, Natural Dye",
     customerPrice: 13900,
-    thumbnailUrl: IMG.drape,
+    thumbnailUrl: IMG.eco2,
     insured: false,
     status: "marketplace",
     listingType: "marketplace_only",
