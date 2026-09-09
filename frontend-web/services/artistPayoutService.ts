@@ -3,6 +3,7 @@ import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 import {
   artistActivityCol,
   artistPricesCol,
+  artistProfileCol,
   artistSettlementsCol,
   artistWalletCol,
   artistWalletTransactionsCol,
@@ -62,7 +63,10 @@ export function creditArtistSettlement({
   if (artwork.artistId !== CURRENT_ARTIST_ID) return null;
 
   const artistPrice = artistPriceOf(artwork);
-  const settlement = artistSettlementOf(artistPrice, channel);
+  // TDS only applies once GalleryZone has an approved GST number on file for
+  // the artist — see lib/pricing.ts's artistSettlementOf.
+  const isGstRegistered = artistProfileCol.get().gstStatus === "approved";
+  const settlement = artistSettlementOf(artistPrice, channel, isGstRegistered);
   if (settlement.net <= 0) return null;
 
   const wallet = artistWalletCol.get();

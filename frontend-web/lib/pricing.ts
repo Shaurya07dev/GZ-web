@@ -41,10 +41,15 @@ export const GST_RATE = 0.05;
 /** GalleryZone's margin over the artist's price, before GST. */
 export const PLATFORM_MARKUP = 0.3;
 
-// Confirmed: free to list today, 1% of listing value (or a subscription)
-// later. Kept as a rate rather than a boolean so switching it on is a value
-// change, not a code change.
-export const ARTIST_LISTING_FEE_RATE = 0;
+// Live as of 9 Sep 2026 (per the Govt-guidelines sheet) — 1% of the artist's
+// price, charged at listing time, going forward only (artworks already listed
+// before this shipped are not retroactively charged). +18% GST on the fee
+// itself, same as every other service-type charge — see listingFeeGstOf().
+export const ARTIST_LISTING_FEE_RATE = 0.01;
+
+// Charged once, when an NFC tag is generated for a piece — not part of the
+// sale settlement above. +18% GST, same pattern as the listing fee.
+export const NFC_TAG_CHARGE = 100;
 
 /** Aggregator MOU §7 — security deposit paid before taking possession. */
 export const AGGREGATOR_ADVANCE_RATE = 0.05;
@@ -56,6 +61,24 @@ export const AGGREGATOR_COMMISSION_RATE = 0.2;
 // the client (25 Aug): "in the marketplace we pay 100% of the artist quoted
 // price" — marketplace sales take nothing off.
 export const ARTIST_CONVENIENCE_RATE = 0.02;
+
+// Source: "How pay out looks as per Govt guidelines.xlsx" (9 Sep 2026),
+// confirmed against the client on a call. Income-tax TDS on the artist's own
+// price — separate from the 5% GST on the artwork, and only ever deducted
+// once the artist is GST-registered. Not GST-registered → this stays 0 on
+// every channel, exactly as before this rule existed.
+export const ARTIST_TDS_RATE = 0.001;
+
+// GST on GalleryZone's own service-type charges (the convenience fee, and any
+// future "other charges" below) — separate from, and never combined with,
+// the 5% GST on the goods themselves or the TDS above. Marketplace has no
+// service charges, so this never applies there.
+export const SERVICE_GST_RATE = 0.18;
+
+// The sheet's aggregator example carries a ₹500 "other charges (if incurred)
+// — example tech" line with no defined trigger. Confirmed with the client:
+// default to 0 until a real trigger exists, rather than guess one.
+export const ARTIST_OTHER_CHARGE = 0;
 
 /** Charged to the customer at checkout. Zero during the launch period. */
 export const CUSTOMER_CONVENIENCE_FEE = 0;
@@ -112,9 +135,19 @@ export function artistPriceFrom(displayPrice: number): number {
   return Math.round(exGst(displayPrice) / (1 + PLATFORM_MARKUP));
 }
 
-/** The listing fee an artist owes for putting a piece up. ₹0 today. */
+/** The listing fee an artist owes for putting a piece up: 1% of their price. */
 export function listingFeeOf(artistPrice: number): number {
   return Math.round(artistPrice * ARTIST_LISTING_FEE_RATE);
+}
+
+/** 18% GST on the listing fee itself — a service charge, not the artwork. */
+export function listingFeeGstOf(artistPrice: number): number {
+  return Math.round(listingFeeOf(artistPrice) * SERVICE_GST_RATE);
+}
+
+/** 18% GST on the flat NFC tag charge. */
+export function nfcChargeGstOf(): number {
+  return Math.round(NFC_TAG_CHARGE * SERVICE_GST_RATE);
 }
 
 // --- Checkout ---------------------------------------------------------------
@@ -152,6 +185,9 @@ export interface ArtistSettlement {
   gross: number;
   deliveryDeduction: number;
   convenienceDeduction: number;
+  otherChargesDeduction: number;
+  serviceGstDeduction: number;
+  tdsDeduction: number;
   net: number;
 }
 
@@ -160,26 +196,56 @@ export interface ArtistSettlement {
 // deducts the artist-to-aggregator delivery leg and 2% convenience, which is
 // also what settles the contradiction between artist MOU §10 (artist pays the
 // placement leg) and aggregator MOU §7 (aggregator pays it) — the artist does.
+//
+// `isGstRegistered` is the one thing that changes with the 9 Sep 2026 rule:
+// TDS only ever applies once the artist is GST-registered, on both channels.
+// Everything else in this function is unaffected by that flag — GalleryZone's
+// own take (delivery, convenience, service GST) is identical either way,
+// because TDS and service GST are money owed to the government, not to
+// GalleryZone. See pricing.check.ts's whole-flow balance check.
 export function artistSettlementOf(
   artistPrice: number,
   channel: SaleChannel,
+  isGstRegistered: boolean,
 ): ArtistSettlement {
+  const tdsDeduction = isGstRegistered
+    ? Math.round(artistPrice * ARTIST_TDS_RATE)
+    : 0;
+
   if (channel === "marketplace") {
     return {
       gross: artistPrice,
       deliveryDeduction: 0,
       convenienceDeduction: 0,
-      net: artistPrice,
+      otherChargesDeduction: 0,
+      serviceGstDeduction: 0,
+      tdsDeduction,
+      net: artistPrice - tdsDeduction,
     };
   }
+
   const convenienceDeduction = Math.round(
     artistPrice * ARTIST_CONVENIENCE_RATE,
   );
+  const otherChargesDeduction = ARTIST_OTHER_CHARGE;
+  const serviceGstDeduction = Math.round(
+    (convenienceDeduction + otherChargesDeduction) * SERVICE_GST_RATE,
+  );
+
   return {
     gross: artistPrice,
     deliveryDeduction: DELIVERY_CHARGE,
     convenienceDeduction,
-    net: artistPrice - DELIVERY_CHARGE - convenienceDeduction,
+    otherChargesDeduction,
+    serviceGstDeduction,
+    tdsDeduction,
+    net:
+      artistPrice -
+      DELIVERY_CHARGE -
+      convenienceDeduction -
+      otherChargesDeduction -
+      serviceGstDeduction -
+      tdsDeduction,
   };
 }
 

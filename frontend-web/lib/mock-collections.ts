@@ -494,13 +494,18 @@ export const artistActivityCol = collection("artistActivity", () => [
 ]);
 export const artistProfileCol = collection("artistProfile", () => ({
   ...PROFILE,
-  // PAN — admin-visible only, never shown on the public artist page.
-  pan: null as string | null,
-  // GST is mandatory for artists (unlike the aggregator/customer GST fields
-  // elsewhere, which stay optional by design). "not_submitted" blocks
-  // marketplace/aggregator listing — see gstStatus's use in
-  // artwork-submit-form.tsx. Bumped to "submitted" the moment a valid GSTIN
-  // is saved; only an admin can move it to "approved" or "rejected".
+  // PAN — admin-visible only, never shown on the public artist page. As of
+  // 9 Sep 2026, PAN (not GST) is the one compulsory field: listing is blocked
+  // without it — see its use in artwork-submit-form.tsx. Seeded with a
+  // format-valid demo value so the fixture doesn't load in an already-blocked
+  // state; clear it in the UI to see that gate in action.
+  pan: "AXXPK7891L" as string | null,
+  // GST is NOT mandatory for artists — optional but preferred, with a UI hint
+  // to register once income crosses ₹20 lakh. Not submitting one no longer
+  // blocks listing; it only means no TDS is deducted on a sale (see
+  // artistSettlementOf in lib/pricing.ts). Bumped to "submitted" the moment a
+  // valid GSTIN is saved; only an admin can move it to "approved" or
+  // "rejected" — TDS applies once it reaches "approved".
   gstStatus: "not_submitted" as
     "not_submitted" | "submitted" | "approved" | "rejected",
   socialProofVideoUrl: null as string | null,

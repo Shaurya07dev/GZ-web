@@ -238,8 +238,9 @@ function SubscriptionCard() {
       </ul>
 
       <p className="mt-4 border-t border-gold/20 pt-3 text-xs text-muted-foreground">
-        Renews {formatPlanDate(SUBSCRIPTION.renewsOn)}. Nothing to pay until
-        then, and we will tell you well before anything changes.
+        Renews {formatPlanDate(SUBSCRIPTION.renewsOn)} at{" "}
+        {SUBSCRIPTION.renewalPriceLabel}. Nothing to pay until then, and we
+        will tell you well before anything changes.
       </p>
     </div>
   );

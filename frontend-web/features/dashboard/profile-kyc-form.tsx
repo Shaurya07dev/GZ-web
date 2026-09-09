@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FileUploader } from "@/components/ui/file-uploader";
+import { formatINR } from "@/lib/utils";
 import { InstagramGlyph } from "@/components/social-icons";
 import {
   useArtistAccountProfile,
@@ -37,6 +38,13 @@ import { MouAgreement } from "./mou-agreement";
 // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
 // literal "Z", then a checksum character.
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
+// Standard PAN shape: 5 letters, 4 digits, 1 letter.
+const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+// Income above which the GST field suggests registering — not enforced, just
+// shown as a hint next to the field. See the 9 Sep 2026 payout rules.
+const GST_SUGGESTED_INCOME_THRESHOLD = 2_000_000;
 
 type ProfileFormState = {
   fullName: string;
@@ -170,19 +178,24 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     setProfileSaved(false);
   }
 
-  // GST is mandatory for artists — its shape is checked locally (2-digit
-  // state code, PAN, entity digit, Z, checksum char). There is still no GST
-  // portal *integration* (the business doesn't want one); artists apply on
-  // the official portal themselves and paste the number in here.
+  // GST is optional for artists (preferred, not required) — leaving it blank
+  // is valid. When something IS entered, its shape is still checked locally
+  // (2-digit state code, PAN, entity digit, Z, checksum char). There is still
+  // no GST portal *integration* (the business doesn't want one); artists
+  // apply on the official portal themselves and paste the number in here.
   const gstinTrimmed = profileForm.gstin.trim();
   const gstinInvalid =
-    gstinTrimmed.length === 0 || !GSTIN_PATTERN.test(gstinTrimmed);
+    gstinTrimmed.length > 0 && !GSTIN_PATTERN.test(gstinTrimmed);
+  // PAN, unlike GST, is compulsory — this is what actually gates listing
+  // (see the gate in artwork-submit-form.tsx).
+  const panTrimmed = profileForm.pan.trim();
+  const panInvalid = panTrimmed.length === 0 || !PAN_PATTERN.test(panTrimmed);
   const instagramInvalid = profileForm.instagram.trim().length === 0;
   const gstStatus = profile.gstStatus;
 
   function handleProfileSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (gstinInvalid || instagramInvalid) return;
+    if (gstinInvalid || panInvalid || instagramInvalid) return;
     saveProfileMutation.mutate(
       {
         ...profileForm,
@@ -365,26 +378,36 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             <Label htmlFor="pan">
               PAN{" "}
               <span className="font-normal text-muted-foreground">
-                (admin-only)
+                (admin-only &middot; required)
               </span>
             </Label>
             <div className="relative sm:max-w-xs">
               <CreditCard className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="pan"
+                required
                 maxLength={10}
                 placeholder="ABCDE1234F"
                 value={profileForm.pan}
                 onChange={(e) =>
                   updateProfile("pan", e.target.value.toUpperCase())
                 }
+                aria-invalid={panInvalid}
                 className="h-10 pl-9 font-mono"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Seen only by GalleryZone admins — never shown on your public
-              profile.
-            </p>
+            {panInvalid ? (
+              <p className="text-xs text-destructive">
+                {panTrimmed.length === 0
+                  ? "PAN is required before you can list artwork."
+                  : "That doesn't look like a valid PAN."}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Seen only by GalleryZone admins — never shown on your public
+                profile.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 sm:col-span-2">
@@ -392,7 +415,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               <Label htmlFor="gstin">
                 GSTIN{" "}
                 <span className="font-normal text-muted-foreground">
-                  (required)
+                  (optional &middot; preferred)
                 </span>
               </Label>
               <span
@@ -405,7 +428,6 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               <Receipt className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="gstin"
-                required
                 maxLength={15}
                 placeholder="22AAAAA0000A1Z5"
                 value={profileForm.gstin}
@@ -418,15 +440,15 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </div>
             {gstinInvalid ? (
               <p className="text-xs text-destructive">
-                {gstinTrimmed.length === 0
-                  ? "GST registration is required before you can list artwork."
-                  : "That does not look like a valid GSTIN."}
+                That doesn&rsquo;t look like a valid GSTIN. Leave it blank if
+                you don&rsquo;t have one.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Used by GalleryZone for invoicing and settlement — never shown
-                on your public profile or to buyers. GalleryZone must approve it
-                before your listings can go live.
+                Not required to list or sell. If your yearly income is above{" "}
+                {formatINR(GST_SUGGESTED_INCOME_THRESHOLD)}, we recommend
+                adding one — used only for invoicing and settlement, never
+                shown on your public profile or to buyers.
               </p>
             )}
 
@@ -685,20 +707,32 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
         </div>
       </form>
 
-      {gstStatus !== "approved" && (
+      {panInvalid && (
         <a
-          href="#gstin"
+          href="#pan"
           className="flex items-center gap-3 rounded-lg border border-gold/40 bg-gold/5 px-4 py-3.5 text-sm text-gold-bright transition-colors hover:bg-gold/10 lg:col-span-2"
         >
           <TriangleAlert className="size-4 shrink-0" strokeWidth={1.75} />
           <span>
-            <span className="font-medium">Complete your GST application.</span>{" "}
+            <span className="font-medium">Add your PAN.</span>{" "}
             <span className="text-muted-foreground">
-              GalleryZone must approve your GST registration before any artwork
-              can go live.
+              Required before any artwork can go live — GST is optional.
             </span>
           </span>
         </a>
+      )}
+      {gstStatus === "submitted" && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3.5 text-sm lg:col-span-2">
+          <Receipt
+            className="size-4 shrink-0 text-muted-foreground"
+            strokeWidth={1.75}
+          />
+          <span className="text-muted-foreground">
+            Your GST registration is with GalleryZone for review — this
+            doesn&rsquo;t block listing, and we&rsquo;ll update the status
+            here once it&rsquo;s reviewed.
+          </span>
+        </div>
       )}
 
       <ArtistNetworkPanel />

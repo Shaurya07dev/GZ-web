@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Check, TrendingUp } from "lucide-react";
+import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InstagramGlyph } from "@/components/social-icons";
@@ -42,11 +42,6 @@ import type {
 import { REVENUE_SERIES } from "./dashboard-data";
 import { formatINR } from "@/lib/utils";
 
-// TDS u/s 194-O drops its exemption once a seller's earnings through the
-// platform cross this in a financial year — the flag is informational here;
-// GalleryZone finance confirms it against the admin record.
-const EARNINGS_TDS_THRESHOLD = 500_000;
-
 export function ArtistAnalyticsView() {
   const { data: artworks } = useArtistDashboardArtworks();
   const { data: orders } = useArtistOrders();
@@ -57,7 +52,6 @@ export function ArtistAnalyticsView() {
   const totalRevenue = soldRows.reduce((sum, o) => sum + o.artistPayout, 0);
   const salesCount = soldRows.length;
   const avgSale = salesCount > 0 ? Math.round(totalRevenue / salesCount) : 0;
-  const earningsAboveThreshold = totalRevenue >= EARNINGS_TDS_THRESHOLD;
 
   const categoryData = useMemo<CategoryPerformance[]>(() => {
     const byCategory = new Map<string, { revenue: number; orders: number }>();
@@ -111,20 +105,6 @@ export function ArtistAnalyticsView() {
         <SummaryStat label="Total revenue" value={formatINR(totalRevenue)} />
         <SummaryStat label="Avg. sale price" value={formatINR(avgSale)} />
       </div>
-
-      {earningsAboveThreshold && (
-        <div className="flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
-          <TrendingUp
-            className="mt-0.5 size-4 shrink-0 text-gold-bright"
-            strokeWidth={1.75}
-          />
-          <p className="text-sm leading-relaxed text-foreground">
-            Your settled earnings on GalleryZone have crossed{" "}
-            {formatINR(EARNINGS_TDS_THRESHOLD)} this financial year. This is
-            flagged on your GalleryZone record automatically.
-          </p>
-        </div>
-      )}
 
       <InstagramConnectCard />
 

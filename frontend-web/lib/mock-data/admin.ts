@@ -569,7 +569,6 @@ interface ArtistAdminMeta {
   gstin?: string;
   pan?: string;
   instagramHandle?: string;
-  earningsAbove5L?: boolean;
 }
 
 const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
@@ -582,7 +581,6 @@ const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
     gstin: "29MEERA1234N1Z8",
     pan: "MEERA1234N",
     instagramHandle: "meeranair.studio",
-    earningsAbove5L: true,
   },
   "arjun-mehta": {
     status: "active",
@@ -593,7 +591,6 @@ const ARTIST_ADMIN_META: Record<string, ArtistAdminMeta> = {
     gstin: "27ARJUN5678M1Z2",
     pan: "ARJUN5678M",
     instagramHandle: "arjunmehta.art",
-    earningsAbove5L: true,
   },
   // Tier-1 only and still mid-review — this is one of the KYC queue's rows.
   "kavya-iyer": {
@@ -676,7 +673,6 @@ const derivedArtistUsers: AdminUser[] = mockArtists.map((artist, i) => {
     gstin: meta.gstin ?? null,
     pan: meta.pan ?? null,
     instagramHandle: meta.instagramHandle ?? null,
-    earningsAbove5L: meta.earningsAbove5L ?? false,
   };
 });
 

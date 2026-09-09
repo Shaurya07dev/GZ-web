@@ -67,9 +67,13 @@ import { PAINTING_ART_FORMS } from "./painting-art-forms";
 import { InsuranceFaqChat } from "./insurance-faq-chat";
 import {
   GST_RATE,
+  SERVICE_GST_RATE,
+  NFC_TAG_CHARGE,
   basePriceOf,
   displayPriceOf,
   listingFeeOf,
+  listingFeeGstOf,
+  nfcChargeGstOf,
 } from "@/lib/pricing";
 import {
   useArtistPenalties,
@@ -345,7 +349,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   const [openStyleCombo, setOpenStyleCombo] = useState(false);
 
   const { data: profile } = useArtistAccountProfile();
-  const gstApproved = profile?.gstStatus === "approved";
+  // PAN, not GST, is what gates going live as of 9 Sep 2026 — GST is optional
+  // (see profile-kyc-form.tsx). GST-registration only affects TDS on payout.
+  const panProvided = Boolean(profile?.pan?.trim());
 
   const { data: penalties } = useArtistPenalties();
   // Two different things, and conflating them is what made the old banner lie:
@@ -396,7 +402,10 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   );
   const gstIncluded = customerPrice - basePrice;
   const listingFee = listingFeeOf(artistPriceNumber);
+  const listingFeeGst = listingFeeGstOf(artistPriceNumber);
   const gstPercent = GST_RATE * 100;
+  const serviceGstPercent = SERVICE_GST_RATE * 100;
+  const nfcChargeGst = nfcChargeGstOf();
 
   function updateField<K extends keyof FormState>(
     field: K,
@@ -430,7 +439,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
     if (mode === "review" && !aggregatorReady) return;
     // GST must be admin-approved before a new listing can go live. Drafts,
     // and edits to an artwork that's already listed, are unaffected.
-    if (mode === "review" && !isEdit && !gstApproved) return;
+    if (mode === "review" && !isEdit && !panProvided) return;
 
     const composedDimensions = composeDimensions(form);
     const artworkType =
@@ -568,7 +577,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start"
     >
       <div className="flex flex-col gap-6">
-        {!isEdit && !gstApproved && (
+        {!isEdit && !panProvided && (
           <div className="flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
             <TriangleAlert
               className="mt-0.5 size-4 shrink-0 text-gold-bright"
@@ -576,14 +585,12 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             />
             <div>
               <p className="text-sm font-medium text-foreground">
-                GST approval required before this can go live
+                PAN required before this can go live
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {profile?.gstStatus === "submitted"
-                  ? "Your GST registration is with GalleryZone for approval. You can still save this as a draft."
-                  : profile?.gstStatus === "rejected"
-                    ? "Your GST submission was rejected. Update it on your Profile page and resubmit."
-                    : "Add and submit your GSTIN on your Profile page — you can still save this as a draft."}{" "}
+                Add your PAN on your Profile page — you can still save this as
+                a draft. GST is optional and only affects TDS on your payout,
+                it won&rsquo;t block this listing.{" "}
                 <Link
                   href="/dashboard/profile"
                   className="text-gold-bright hover:underline"
@@ -1130,7 +1137,11 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             {artistPriceNumber > 0 && (
               <dl className="flex flex-col gap-1.5 rounded-md border border-gold/25 bg-gold/5 px-3 py-2.5 text-xs">
                 <PriceRow label="You receive" amount={artistPriceNumber} />
-                <PriceRow label="Listing fee" amount={listingFee} free />
+                <PriceRow label="Listing fee (1%)" amount={listingFee} free />
+                <PriceRow
+                  label={`GST on listing fee (${serviceGstPercent}%)`}
+                  amount={listingFeeGst}
+                />
                 <PriceRow
                   label="GalleryZone margin"
                   amount={basePrice - artistPriceNumber}
@@ -1170,7 +1181,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             </div>
             <p className="text-xs text-muted-foreground">
               Links this piece&rsquo;s physical tag to its digital passport.
-              Leave blank if you haven&rsquo;t attached one yet.
+              Leave blank if you haven&rsquo;t attached one yet. Generating a
+              tag costs ₹{NFC_TAG_CHARGE.toLocaleString("en-IN")} + ₹
+              {nfcChargeGst.toLocaleString("en-IN")} GST.
             </p>
           </div>
           {aggregatorSelected && (
@@ -1300,105 +1313,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             </div>
           )}
 
-          <div
-            className={`flex items-start justify-between gap-4 rounded-md border p-3.5 ${
-              insuranceRequired ? "border-gold/40 bg-gold/5" : "border-border"
-            }`}
-          >
-            <div>
-              <Label htmlFor="insurance">
-                Insure this artwork
-                {insuranceRequired && (
-                  <span className="ml-2 text-xs font-medium text-gold-bright">
-                    Required
-                  </span>
-                )}
-              </Label>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {insuranceRequired
-                  ? `Mandatory for aggregator listings — the piece leaves your studio and is held by a partner while on display. Cover is arranged with ${INSURANCE_PARTNER}; the premium is deducted from your settlement.`
-                  : artistPriceNumber > INSURANCE_RECOMMENDED_THRESHOLD
-                    ? `Strongly recommended for a piece at this price (${INSURANCE_PARTNER}). Decline it and theft, fire, transit damage and loss are yours alone.`
-                    : `Optional, arranged with ${INSURANCE_PARTNER}. Uninsured artworks carry no platform liability in transit.`}
-              </p>
-            </div>
-            <Switch
-              id="insurance"
-              checked={insuranceRequired || form.insuranceOpted}
-              disabled={insuranceRequired}
-              onCheckedChange={(checked) =>
-                updateField("insuranceOpted", checked)
-              }
-            />
-          </div>
-
-          {(insuranceRequired || form.insuranceOpted) && (
-            <div className="flex flex-col gap-3.5 rounded-md border border-gold/30 bg-gold/5 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium text-foreground">
-                  Insurance verification
-                </p>
-                {isEdit && (
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].className}`}
-                  >
-                    {INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].label}
-                  </span>
-                )}
-              </div>
-
-              {INSURANCE_PARTNER_URL && (
-                <a
-                  href={INSURANCE_PARTNER_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
-                >
-                  <ExternalLink className="size-3.5" />
-                  Take out cover with {INSURANCE_PARTNER}
-                </a>
-              )}
-
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="insuranceNumber">
-                  Policy / certificate number
-                </Label>
-                <Input
-                  id="insuranceNumber"
-                  placeholder="Paste the number once your policy is issued"
-                  value={form.insuranceNumber}
-                  onChange={(e) =>
-                    updateField("insuranceNumber", e.target.value)
-                  }
-                  className="h-10 sm:max-w-xs"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Enter it here once you have it — GalleryZone verifies it
-                  before the piece can be marked insured.
-                </p>
-              </div>
-
-              <InsuranceFaqChat />
-            </div>
-          )}
-
-          <div className="flex items-start gap-3 rounded-md border border-border p-3.5">
-            <ScrollText
-              className="mt-0.5 size-4 shrink-0 text-gold-bright"
-              strokeWidth={1.75}
-            />
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                Certificate of Authenticity — required
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                GalleryZone issues a numbered Certificate of Authenticity for
-                every accepted artwork. Nothing to fill in here: the certificate
-                number is generated on approval and stays linked to this piece
-                for its whole life, alongside its NFC/QR passport.
-              </p>
-            </div>
-          </div>
         </section>
 
         {!aggregatorReady && (
@@ -1427,7 +1341,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               submitMutation.isPending ||
               updateMutation.isPending ||
               !aggregatorReady ||
-              (!isEdit && !gstApproved)
+              (!isEdit && !panProvided)
             }
             className="group inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >
@@ -1458,7 +1372,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
         </div>
       </div>
 
-      <div className="lg:sticky lg:top-24">
+      <div className="flex flex-col gap-6 lg:sticky lg:top-24">
         <div className="overflow-hidden rounded-lg border border-gold/25 bg-card">
           <div className="relative aspect-[4/3] bg-secondary">
             {images[0] ? (
@@ -1523,6 +1437,106 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 Insured artwork
               </div>
             )}
+          </div>
+        </div>
+
+        <div
+          className={`flex items-start justify-between gap-4 rounded-md border bg-card p-3.5 ${
+            insuranceRequired ? "border-gold/40 bg-gold/5" : "border-border"
+          }`}
+        >
+          <div>
+            <Label htmlFor="insurance">
+              Insure this artwork
+              {insuranceRequired && (
+                <span className="ml-2 text-xs font-medium text-gold-bright">
+                  Required
+                </span>
+              )}
+            </Label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {insuranceRequired
+                ? `Mandatory for aggregator listings — the piece leaves your studio and is held by a partner while on display. Cover is arranged with ${INSURANCE_PARTNER}; the premium is deducted from your settlement.`
+                : artistPriceNumber > INSURANCE_RECOMMENDED_THRESHOLD
+                  ? `Strongly recommended for a piece at this price (${INSURANCE_PARTNER}). Decline it and theft, fire, transit damage and loss are yours alone.`
+                  : `Optional, arranged with ${INSURANCE_PARTNER}. Uninsured artworks carry no platform liability in transit.`}
+            </p>
+          </div>
+          <Switch
+            id="insurance"
+            checked={insuranceRequired || form.insuranceOpted}
+            disabled={insuranceRequired}
+            onCheckedChange={(checked) =>
+              updateField("insuranceOpted", checked)
+            }
+          />
+        </div>
+
+        {(insuranceRequired || form.insuranceOpted) && (
+          <div className="flex flex-col gap-3.5 rounded-md border border-gold/30 bg-gold/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-foreground">
+                Insurance verification
+              </p>
+              {isEdit && (
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].className}`}
+                >
+                  {INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].label}
+                </span>
+              )}
+            </div>
+
+            {INSURANCE_PARTNER_URL && (
+              <a
+                href={INSURANCE_PARTNER_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
+              >
+                <ExternalLink className="size-3.5" />
+                Take out cover with {INSURANCE_PARTNER}
+              </a>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="insuranceNumber">
+                Policy / certificate number
+              </Label>
+              <Input
+                id="insuranceNumber"
+                placeholder="Paste the number once your policy is issued"
+                value={form.insuranceNumber}
+                onChange={(e) =>
+                  updateField("insuranceNumber", e.target.value)
+                }
+                className="h-10 sm:max-w-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter it here once you have it — GalleryZone verifies it
+                before the piece can be marked insured.
+              </p>
+            </div>
+
+            <InsuranceFaqChat />
+          </div>
+        )}
+
+        <div className="flex items-start gap-3 rounded-md border border-border bg-card p-3.5">
+          <ScrollText
+            className="mt-0.5 size-4 shrink-0 text-gold-bright"
+            strokeWidth={1.75}
+          />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Certificate of Authenticity — required
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              GalleryZone issues a numbered Certificate of Authenticity for
+              every accepted artwork. Nothing to fill in here: the certificate
+              number is generated on approval and stays linked to this piece
+              for its whole life, alongside its NFC/QR passport.
+            </p>
           </div>
         </div>
       </div>

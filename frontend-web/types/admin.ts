@@ -27,9 +27,6 @@ export interface AdminUser {
   gstin?: string | null;
   gstStatus?: GstStatus;
   instagramHandle?: string | null;
-  /** Settled earnings have crossed the ₹5L TDS (194-O) threshold this FY.
-   *  Auto-set from revenue, but an admin can override it. */
-  earningsAbove5L?: boolean;
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";

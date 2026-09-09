@@ -18,8 +18,9 @@ interface RoleToggleProps<T extends string> {
 
 // Separate standalone buttons, not one connected segmented pill — each role
 // is its own discrete choice, not steps along a single track. Shared by
-// Register (3 roles) and Login (same 3 — this toggle IS how "sign in as"
-// works here, since there's no backend to know an account's role).
+// Register (3 self-service roles) and Login (those 3 plus Admin — this
+// toggle IS how "sign in as" works here, since there's no backend to know
+// an account's role).
 export function RoleToggle<T extends string>({
   options,
   value,

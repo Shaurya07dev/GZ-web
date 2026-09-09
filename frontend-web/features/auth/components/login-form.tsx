@@ -15,6 +15,7 @@ import {
   Palette,
   Building2,
   Compass,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,12 @@ import {
 // whether rememberMe is optional.
 type LoginFormValues = z.input<typeof loginSchema>;
 
+// Login-only: Register's `Role` is the three self-service account types
+// (admin is ops staff, not something anyone signs up for), but this toggle
+// doubles as "sign in as" for a phase with no real backend to carry a
+// stored role — so Admin is added here to make /admin reachable at all.
+type DemoRole = Role | "admin";
+
 // This toggle is the only signal this mock phase has for "which dashboard
 // should a successful login land on" — there is no real backend to carry
 // that information, so it's the actual "sign in as" control, not a hidden
@@ -54,13 +61,14 @@ type LoginFormValues = z.input<typeof loginSchema>;
 // the route guard so the two can't disagree.
 
 const ROLE_TOGGLE_OPTIONS: {
-  value: Role;
+  value: DemoRole;
   label: string;
   icon: LucideIcon;
 }[] = [
   { value: "artist", label: "Artist", icon: Palette },
   { value: "aggregator", label: "Aggregator", icon: Building2 },
   { value: "customer", label: "Customer", icon: Compass },
+  { value: "admin", label: "Admin", icon: ShieldCheck },
 ];
 
 const containerVariants: Variants = {
@@ -80,7 +88,7 @@ const itemVariants: Variants = {
 export function LoginForm() {
   const router = useRouter();
   const loginMutation = useLoginMutation();
-  const [demoRole, setDemoRole] = useState<Role>("artist");
+  const [demoRole, setDemoRole] = useState<DemoRole>("artist");
   const [simulateError, setSimulateError] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 

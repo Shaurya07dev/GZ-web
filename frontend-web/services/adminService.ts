@@ -570,18 +570,6 @@ export const adminService = {
     return mockDelay({ id, status });
   },
 
-  // Auto-set from settled revenue in the artist's own Analytics view, but the
-  // ₹5L TDS (194-O) flag is a finance call in the end — an admin can override
-  // it from the artist detail page.
-  setEarningsAbove5L: (
-    id: string,
-    earningsAbove5L: boolean,
-  ): Promise<{ id: string; earningsAbove5L: boolean }> => {
-    if (!adminUsersCol.get().some((u) => u.id === id))
-      return mockError(`User "${id}" not found`);
-    return mockDelay({ id, earningsAbove5L });
-  },
-
   // Person-detail pages need more than the bare AdminUser row. These three
   // bundle exactly what each detail page renders, through the service layer
   // instead of the page importing lib/mock-data/* fixtures directly.

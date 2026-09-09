@@ -62,17 +62,3 @@ export function useSetUserStatusMutation() {
   });
 }
 
-// The mock service doesn't persist this back into adminUsersCol (same shape
-// as every other admin decision here), so the call site patches its own
-// portfolio query cache with the result rather than refetching stale data.
-export function useSetEarningsAbove5LMutation() {
-  return useMutation({
-    mutationFn: ({
-      userId,
-      earningsAbove5L,
-    }: {
-      userId: string;
-      earningsAbove5L: boolean;
-    }) => adminService.setEarningsAbove5L(userId, earningsAbove5L),
-  });
-}

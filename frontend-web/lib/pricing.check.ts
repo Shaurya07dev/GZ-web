@@ -25,6 +25,7 @@ import {
   exGst,
   gstIncludedIn,
   listingFeeOf,
+  listingFeeGstOf,
   isPayoutDue,
   payoutReleaseDate,
   withGst,
@@ -53,13 +54,26 @@ assert.equal(
   "GST is never a line added to the total",
 );
 
-const artistOnMarketplace = artistSettlementOf(ARTIST_PRICE, "marketplace");
-assert.equal(artistOnMarketplace.net, 100_000, "marketplace artist keeps the full price");
+// --- 9 Sep 2026: TDS, per "How pay out looks as per Govt guidelines.xlsx" --
+//
+// 0.1% TDS on the artist's own price, but ONLY once the artist is
+// GST-registered — not GST-registered means the sale runs exactly as it did
+// before this rule existed.
+
+const artistOnMarketplace = artistSettlementOf(ARTIST_PRICE, "marketplace", false);
+assert.equal(artistOnMarketplace.net, 100_000, "not GST-registered: marketplace artist keeps the full price");
 assert.equal(artistOnMarketplace.deliveryDeduction, 0);
 assert.equal(artistOnMarketplace.convenienceDeduction, 0);
+assert.equal(artistOnMarketplace.tdsDeduction, 0, "no TDS without GST registration");
+
+const artistOnMarketplaceGstRegistered = artistSettlementOf(ARTIST_PRICE, "marketplace", true);
+assert.equal(artistOnMarketplaceGstRegistered.tdsDeduction, 100, "0.1% TDS once GST-registered");
+assert.equal(artistOnMarketplaceGstRegistered.net, 99_900, "GST-registered: 1,00,000 less 100 TDS");
 
 // GalleryZone's share: what the customer paid, less GST (goes to the
-// government), less delivery (goes to the carrier), less the artist.
+// government), less delivery (goes to the carrier), less the artist. Checked
+// against the not-GST-registered settlement, since GalleryZone's own share
+// is unaffected either way — TDS goes to the government, never to GalleryZone.
 assert.equal(
   marketplace.total - marketplace.gstIncluded - marketplace.deliveryCharge - artistOnMarketplace.net,
   30_000,
@@ -88,13 +102,24 @@ assert.equal(
 assert.equal(aggregatorCommissionOf(displayPriceOf(ARTIST_PRICE), ARTIST_PRICE), 6_000);
 assert.equal(aggregatorCommissionOf(withGst(90_000), ARTIST_PRICE), 0, "no negative commission");
 
-const artistOnAggregator = artistSettlementOf(ARTIST_PRICE, "aggregator");
+const artistOnAggregator = artistSettlementOf(ARTIST_PRICE, "aggregator", false);
 assert.equal(artistOnAggregator.deliveryDeduction, 2_500);
 assert.equal(artistOnAggregator.convenienceDeduction, 2_000, "2% convenience");
-assert.equal(artistOnAggregator.net, 95_500, "artist receives 95,500");
+assert.equal(artistOnAggregator.otherChargesDeduction, 0, "no trigger defined yet");
+assert.equal(artistOnAggregator.serviceGstDeduction, 360, "18% of the 2,000 convenience charge");
+assert.equal(artistOnAggregator.tdsDeduction, 0, "no TDS without GST registration");
+assert.equal(artistOnAggregator.net, 95_140, "not GST-registered artist receives 95,140");
+
+const artistOnAggregatorGstRegistered = artistSettlementOf(ARTIST_PRICE, "aggregator", true);
+assert.equal(artistOnAggregatorGstRegistered.tdsDeduction, 100, "0.1% TDS once GST-registered");
+assert.equal(artistOnAggregatorGstRegistered.serviceGstDeduction, 360, "service GST is unaffected by TDS");
+assert.equal(artistOnAggregatorGstRegistered.net, 95_040, "GST-registered artist receives 95,040");
 
 // Whole-flow balance: everything the customer and the aggregator put in has to
-// come back out as GST, delivery, and the three parties' shares.
+// come back out as GST, delivery, the three parties' shares, and now also
+// service GST + TDS — both of which are owed to the government, not
+// GalleryZone, so they must be added to moneyOut rather than left inside the
+// artist's net for GalleryZone's 42,000 margin to still balance.
 const aggregatorSettlement = 7_500 + DELIVERY_CHARGE + 10_000; // advance back + delivery back + commission
 const moneyIn = aggregatorCheckout.total + 7_500 + DELIVERY_CHARGE;
 const moneyOut =
@@ -102,8 +127,10 @@ const moneyOut =
   aggregatorCheckout.deliveryCharge +
   artistOnAggregator.deliveryDeduction +
   aggregatorSettlement +
-  artistOnAggregator.net;
-assert.equal(moneyIn - moneyOut, 42_000, "GalleryZone keeps 42,000 on an aggregator sale");
+  artistOnAggregator.net +
+  artistOnAggregator.serviceGstDeduction +
+  artistOnAggregator.tdsDeduction;
+assert.equal(moneyIn - moneyOut, 42_000, "GalleryZone keeps 42,000 on an aggregator sale — TDS and service GST are pass-through, not extra margin");
 
 // --- Working the ladder backwards -------------------------------------------
 
@@ -112,7 +139,8 @@ assert.equal(artistPriceFrom(displayPriceOf(23_400)), 23_400, "round trips");
 
 // --- Listing fee -------------------------------------------------------------
 
-assert.equal(listingFeeOf(ARTIST_PRICE), 0, "listing is free today");
+assert.equal(listingFeeOf(ARTIST_PRICE), 1_000, "1% listing fee, live 9 Sep 2026");
+assert.equal(listingFeeGstOf(ARTIST_PRICE), 180, "18% GST on the listing fee itself");
 
 // --- Payout timing -----------------------------------------------------------
 
@@ -158,11 +186,23 @@ assert.equal(
   "commission carries no GST of its own",
 );
 
-// And the artist's settlement is a plain deduction, never a tax calculation.
+// As of 9 Sep 2026 the artist's settlement DOES include tax calculations —
+// 18% GST on the convenience/other charges, and TDS once GST-registered —
+// but never on the artwork price itself, and never combined with each other.
 assert.equal(
   artistOnAggregator.net,
-  ARTIST_PRICE - artistOnAggregator.deliveryDeduction - artistOnAggregator.convenienceDeduction,
-  "no GST anywhere in the artist's settlement",
+  ARTIST_PRICE -
+    artistOnAggregator.deliveryDeduction -
+    artistOnAggregator.convenienceDeduction -
+    artistOnAggregator.otherChargesDeduction -
+    artistOnAggregator.serviceGstDeduction -
+    artistOnAggregator.tdsDeduction,
+  "the artist's settlement accounts for every deduction, nothing hidden",
+);
+assert.equal(
+  artistOnAggregatorGstRegistered.net,
+  artistOnAggregator.net - artistOnAggregatorGstRegistered.tdsDeduction,
+  "TDS is the only difference GST-registration makes to an aggregator sale",
 );
 
 // --- The five-month aggregator cycle ----------------------------------------
