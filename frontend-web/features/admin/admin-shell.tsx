@@ -428,7 +428,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
       <div className="flex items-center gap-2">
         <NotificationsPopover />
-        <SwitchMode width={44} height={24} />
+        <SwitchMode />
         <SignOutButton />
       </div>
     </header>

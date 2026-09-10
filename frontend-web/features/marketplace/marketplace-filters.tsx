@@ -189,7 +189,7 @@ export function MarketplaceFilters({
         )}
       </div>
 
-      <Accordion type="multiple" className="gap-0">
+      <Accordion className="gap-0">
         <SelectFilterGroup
           value="type"
           icon={Shapes}
