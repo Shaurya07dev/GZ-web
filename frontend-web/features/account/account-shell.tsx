@@ -59,7 +59,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/account", icon: LayoutGrid },
       { label: "Discover", href: "/marketplace", icon: Compass },
-      { label: "Wishlist", href: "/account/wishlist", icon: Heart },
+      { label: "Wishlist", href: "/wishlist", icon: Heart },
     ],
   },
   {
@@ -100,16 +100,19 @@ const NAV_GROUPS: NavGroup[] = [
 const ALL_GROUP_IDS = NAV_GROUPS.map((g) => g.id);
 const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
+// Mobile navigation for /account is the root-level MobileBottomNav
+// (components/shared/mobile-bottom-nav.tsx) — one bar, everywhere, rather
+// than a second account-only bottom nav that only matched this section and
+// had to be carefully hidden from/shown to avoid stacking with the global
+// one. Root layout's `pb-16` already reserves room for it.
 export function AccountShell({ children }: { children: React.ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   return (
     <div className="flex min-h-[100dvh] bg-background">
-      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onMenuClick={() => setMobileOpen(true)} />
-        <main className="relative flex-1 overflow-hidden px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <Topbar />
+        <main className="relative flex-1 overflow-x-hidden px-4 py-5 sm:px-8 sm:py-8 lg:px-10">
           {children}
         </main>
       </div>
@@ -157,13 +160,7 @@ function NavLink({
   );
 }
 
-function Sidebar({
-  mobileOpen,
-  onClose,
-}: {
-  mobileOpen: boolean;
-  onClose: () => void;
-}) {
+function Sidebar() {
   const pathname = usePathname();
   const { data: profile } = useCustomerProfile();
   const customer = profile ?? mockCustomer;
@@ -174,30 +171,15 @@ function Sidebar({
 
   return (
     <>
-      {mobileOpen && (
-        <button
-          aria-label="Close menu"
-          onClick={onClose}
-          className="fixed inset-0 z-40 bg-background backdrop-blur-sm lg:hidden"
-        />
-      )}
-
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[transform,width] lg:sticky lg:top-0 lg:h-[100dvh] lg:translate-x-0",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "hidden inset-y-0 left-0 z-50 lg:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] lg:sticky lg:top-0 lg:h-[100dvh]",
           collapsed ? "lg:w-20" : "lg:w-64",
         )}
       >
         <div className="flex h-16 items-center justify-between px-5">
           <SidebarBrand collapsed={collapsed} />
-          <button
-            aria-label="Close menu"
-            onClick={onClose}
-            className="rounded-md p-1 text-sidebar-foreground/70 hover:text-sidebar-foreground lg:hidden"
-          >
-            <X className="size-5" />
-          </button>
+
           <button
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={() => setCollapsed((c) => !c)}
@@ -220,7 +202,7 @@ function Sidebar({
           Collector Portal
         </span>
 
-        <div className="flex-1 overflow-y-auto px-3 py-1">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1">
           {collapsed ? (
             <nav className="flex flex-col gap-1">
               {ALL_ITEMS.map((item) => (
@@ -228,7 +210,7 @@ function Sidebar({
                   key={item.href}
                   item={item}
                   collapsed={collapsed}
-                  onClick={onClose}
+                  onClick={() => {}}
                   active={isItemActive(pathname, item.href)}
                 />
               ))}
@@ -255,7 +237,7 @@ function Sidebar({
                           key={item.href}
                           item={item}
                           collapsed={collapsed}
-                          onClick={onClose}
+                          onClick={() => {}}
                           active={isItemActive(pathname, item.href)}
                         />
                       ))}
@@ -269,7 +251,6 @@ function Sidebar({
 
         <Link
           href="/account/settings"
-          onClick={onClose}
           className={cn(
             "mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 transition-colors hover:bg-sidebar-accent",
             collapsed && "lg:justify-center lg:px-2",
@@ -300,7 +281,7 @@ const PAGE_TITLES: Record<string, string> = Object.fromEntries(
 );
 PAGE_TITLES["/account"] = "Dashboard";
 
-function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+function Topbar() {
   const pathname = usePathname();
   const title =
     PAGE_TITLES[pathname] ??
@@ -309,23 +290,24 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       : "Collector Portal");
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-5 backdrop-blur-md sm:px-8 lg:px-10">
+    <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center justify-between border-b border-border bg-background/90 px-4 sm:px-8 lg:px-10 backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <button
-          aria-label="Open menu"
-          onClick={onMenuClick}
-          className="rounded-md p-1.5 text-foreground/80 hover:text-foreground lg:hidden"
-        >
-          <Menu className="size-5" />
-        </button>
-        <h1 className="font-display text-lg font-semibold text-foreground">
+        {/* Mobile Logo replacing hamburger */}
+        <Link href="/account" className="flex items-center lg:hidden">
+          <span className="font-display text-xl font-bold tracking-tight text-foreground">
+            Gallery<span className="text-gold-bright">Zone</span>
+          </span>
+        </Link>
+        <h1 className="hidden lg:block font-display text-lg font-semibold text-foreground">
           {title}
         </h1>
       </div>
       <div className="flex items-center gap-2">
         <NotificationsPopover />
         <SwitchMode />
-        <SignOutButton />
+        <div className="hidden sm:block">
+          <SignOutButton />
+        </div>
       </div>
     </header>
   );

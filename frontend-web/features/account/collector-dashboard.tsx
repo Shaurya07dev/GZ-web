@@ -34,66 +34,20 @@ export function CollectorDashboard() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 3);
 
-  const stats = [
-    {
-      key: "orders",
-      label: "Orders placed",
-      value: orders?.length ?? 0,
-      icon: ShoppingBag,
-    },
-    {
-      key: "collection",
-      label: "Artworks owned",
-      value: collection?.length ?? 0,
-      icon: Frame,
-    },
-    {
-      key: "wishlist",
-      label: "Wishlist",
-      value: wishlistCount,
-      icon: Heart,
-    },
-    {
-      key: "wallet",
-      label: "Store credit",
-      value: `₹${(wallet?.balance ?? 0).toLocaleString("en-IN")}`,
-      icon: Wallet,
-    },
-  ];
-
   return (
-    <div className="flex flex-col gap-8">
-      {/* Who they are and what they own, before the activity feed. */}
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-2xl font-semibold text-foreground">
+            Welcome back, {customer.name.split(" ")[0]}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Here&rsquo;s a snapshot of your GalleryZone activity.
+          </p>
+        </div>
+      </div>
+
       <CollectorProfileCard name={customer.name} />
-
-      <div>
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          Welcome back, {customer.name.split(" ")[0]}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Here&rsquo;s a snapshot of your GalleryZone activity.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.key}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
-            className="rounded-lg border border-border bg-card p-5"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
-              <stat.icon className="size-4 text-gold-bright" strokeWidth={1.75} />
-            </div>
-            <p className="mt-3 font-display text-2xl font-semibold tabular-nums text-foreground">
-              {stat.value}
-            </p>
-          </motion.div>
-        ))}
-      </div>
 
       <Link
         href="/marketplace"

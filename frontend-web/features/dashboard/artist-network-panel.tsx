@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Check, UserPlus, Users, X } from "lucide-react";
+import { Check, ChevronRight, UserPlus, Users, X } from "lucide-react";
 import {
   useArtistConnections,
   useRespondToConnectionMutation,
@@ -70,19 +70,25 @@ function ConnectionsSection({
   const respond = useRespondToConnectionMutation();
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
+    // Collapsible like the signed MOU card and the profile summary above —
+    // open by default, shortenable on demand.
+    <details open className="group flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
+        <span className="flex items-center gap-2.5">
+          <ChevronRight
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+            strokeWidth={1.75}
+          />
           <Users className="size-4 text-gold-bright" strokeWidth={1.75} />
           <h2 className="font-display text-base font-semibold text-foreground">
             Connections
           </h2>
-        </div>
+        </span>
         <span className="text-xs text-muted-foreground">
           {accepted.length} connected
           {incoming.length > 0 && ` · ${incoming.length} waiting on you`}
         </span>
-      </div>
+      </summary>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         Connect with other GalleryZone artists from their public profile. Once
@@ -103,21 +109,30 @@ function ConnectionsSection({
             return (
               <div
                 key={connection.id}
-                className="flex flex-wrap items-start gap-3 rounded-md border border-gold/30 bg-gold/5 p-3.5"
+                // flex-col below sm: the name+avatar block and the two
+                // buttons used to be 3 siblings competing for one row, and
+                // since only the text block could shrink (min-w-0 flex-1)
+                // while the buttons couldn't (shrink-0), the buttons' width
+                // won and squeezed the message down to ~34px wide (measured
+                // on a 390px viewport) — wrapping to one word per line.
+                // Stacking on mobile gives the text the full row instead.
+                className="flex flex-col gap-3 rounded-md border border-gold/30 bg-gold/5 p-3.5 sm:flex-row sm:items-start"
               >
-                <PeerAvatar name={peer.name} avatar={peer.avatar} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {peer.name}
-                  </p>
-                  {connection.message && (
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                      &ldquo;{connection.message}&rdquo;
+                <div className="flex min-w-0 items-start gap-3 sm:flex-1">
+                  <PeerAvatar name={peer.name} avatar={peer.avatar} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {peer.name}
                     </p>
-                  )}
-                  <p className="mt-1 text-xs text-muted-foreground/80">
-                    Asked {formatDate(connection.requestedAt)}
-                  </p>
+                    {connection.message && (
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                        &ldquo;{connection.message}&rdquo;
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-muted-foreground/80">
+                      Asked {formatDate(connection.requestedAt)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
@@ -210,7 +225,7 @@ function ConnectionsSection({
           .
         </p>
       )}
-    </section>
+    </details>
   );
 }
 

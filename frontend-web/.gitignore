@@ -38,6 +38,11 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
 next-env.d.ts
 
 # stale duplicate dirs left over from a prior refactor

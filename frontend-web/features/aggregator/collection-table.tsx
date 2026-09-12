@@ -68,6 +68,11 @@ export function CollectionTable() {
         icon={GalleryVerticalEnd}
         title="No holdings yet"
         description="Reserve an artwork from Inventory to see it appear here."
+        action={
+          <Button render={<Link href="/aggregator/inventory" />} className="mt-2">
+            Browse Inventory
+          </Button>
+        }
       />
     );
   }
@@ -117,166 +122,197 @@ export function CollectionTable() {
           description="Try a different filter above."
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full min-w-[1120px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
-                <th className="px-4 py-3 font-medium">Artwork</th>
-                <th className="px-4 py-3 font-medium">
-                  Display price
-                  <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
-                    Incl. GST
-                  </span>
-                </th>
-                <th className="px-4 py-3 font-medium">
-                  Advance
-                  <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
-                    Held from wallet
-                  </span>
-                </th>
-                <th className="px-4 py-3 font-medium">
-                  Delivery
-                  <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
-                    Refunded on sale
-                  </span>
-                </th>
-                <th className="px-4 py-3 font-medium">Expiry</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((holding) => {
-                const isSold = holding.status === "sold_pending_settlement";
-                const isReserved = holding.status === "reserved";
-                const status = HOLDING_STATUS_CONFIG[holding.status];
-                return (
-                  <tr
-                    key={holding.id}
-                    className="border-b border-border last:border-0"
+        <>
+          {/* ── MOBILE CARD LIST ───────────────────────────────────── */}
+          <div className="flex flex-col gap-3 lg:hidden">
+            {filtered.map((holding) => {
+              const isSold = holding.status === "sold_pending_settlement";
+              const isReserved = holding.status === "reserved";
+              const status = HOLDING_STATUS_CONFIG[holding.status];
+              return (
+                <div key={holding.id} className="rounded-xl border border-border bg-card overflow-hidden">
+                  <Link
+                    href={`/aggregator/collection/${holding.id}`}
+                    className="flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-4 py-3.5">
-                      <Link
-                        href={`/aggregator/collection/${holding.id}`}
-                        className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                      >
-                        <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
-                          <Image
-                            src={holding.artwork.thumbnailUrl}
-                            alt={holding.artwork.title}
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-foreground hover:text-gold-bright">
-                            {holding.artwork.title}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {holding.artwork.artistName}
-                          </p>
-                        </div>
-                      </Link>
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      {/* Not editable, by anyone, in any month. GalleryZone
-                            calculates the selling price and the aggregator
-                            displays the piece at it — so this is plain text, not
-                            a disabled control that invites a click. */}
-                      <PriceTag
-                        amount={holding.displayPrice}
-                        className="text-sm"
+                    <div className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      <Image
+                        src={holding.artwork.thumbnailUrl}
+                        alt={holding.artwork.title}
+                        fill
+                        sizes="56px"
+                        className="object-cover"
                       />
-                      {!isSold && (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          Set by GalleryZone
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {holding.artwork.title}
                         </p>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      <PriceTag
-                        amount={holding.advanceAmount}
-                        className="text-sm"
-                      />
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        {holding.advancePercent}% of the{" "}
-                        {(holding.cycleMonth ?? 1) <= 1
-                          ? "display"
-                          : "artist"}{" "}
-                        price
-                      </p>
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      <PriceTag
-                        amount={holding.deliveryDeposit ?? 0}
-                        className="text-sm"
-                      />
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">
-                        Refunded only on sale
-                      </p>
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      {isReserved ? (
-                        <>
-                          <ExpiryCountdown
-                            expiresAt={holding.expiresAt}
-                            className="w-32"
-                          />
-                          <p className="mt-1 text-[11px] text-muted-foreground">
-                            Reserved {formatDate(holding.assignedAt)} &middot;
-                            expires {formatDate(holding.expiresAt)}
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          &mdash;
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium whitespace-nowrap ${status.className}`}
+                        >
+                          <status.icon className="size-2.5" strokeWidth={2} />
+                          {status.label}
                         </span>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${status.className}`}
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground mt-0.5">
+                        {holding.artwork.artistName}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <PriceTag amount={holding.displayPrice} className="text-sm font-semibold" />
+                        {isReserved && (
+                          <ExpiryCountdown expiresAt={holding.expiresAt} className="text-xs" />
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                  {isReserved && (
+                    <div className="flex gap-2 border-t border-border px-3 py-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs h-8"
+                        onClick={() => setSaleDialogHolding(holding)}
                       >
-                        <status.icon className="size-3" strokeWidth={2} />
-                        {status.label}
+                        Record sale
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-xs h-8"
+                        onClick={() => setReturnDialogHolding(holding)}
+                      >
+                        Return
+                      </Button>
+                    </div>
+                  )}
+                  {!isReserved && (
+                    <div className="border-t border-border px-3 py-2">
+                      <span className="text-xs text-muted-foreground">
+                        {isSold ? "Sale recorded" : "Went back to GalleryZone"}
                       </span>
-                    </td>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-                    <td className="px-4 py-3.5">
-                      {isReserved ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => setSaleDialogHolding(holding)}
-                          >
-                            Record sale
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setReturnDialogHolding(holding)}
-                          >
-                            Return
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {isSold ? "Sale recorded" : "Went back to GalleryZone"}
+          {/* ── DESKTOP TABLE ──────────────────────────────────────── */}
+          <div className="hidden lg:block overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[1120px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
+                  <th className="px-4 py-3 font-medium">Artwork</th>
+                  <th className="px-4 py-3 font-medium">
+                    Display price
+                    <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                      Incl. GST
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    Advance
+                    <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                      Held from wallet
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    Delivery
+                    <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
+                      Refunded on sale
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 font-medium">Expiry</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((holding) => {
+                  const isSold = holding.status === "sold_pending_settlement";
+                  const isReserved = holding.status === "reserved";
+                  const status = HOLDING_STATUS_CONFIG[holding.status];
+                  return (
+                    <tr key={holding.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-3.5">
+                        <Link
+                          href={`/aggregator/collection/${holding.id}`}
+                          className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        >
+                          <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                            <Image
+                              src={holding.artwork.thumbnailUrl}
+                              alt={holding.artwork.title}
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground hover:text-gold-bright">
+                              {holding.artwork.title}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {holding.artwork.artistName}
+                            </p>
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <PriceTag amount={holding.displayPrice} className="text-sm" />
+                        {!isSold && (
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">Set by GalleryZone</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <PriceTag amount={holding.advanceAmount} className="text-sm" />
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {holding.advancePercent}% of the{" "}
+                          {(holding.cycleMonth ?? 1) <= 1 ? "display" : "artist"}{" "}
+                          price
+                        </p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <PriceTag amount={holding.deliveryDeposit ?? 0} className="text-sm" />
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">Refunded only on sale</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {isReserved ? (
+                          <>
+                            <ExpiryCountdown expiresAt={holding.expiresAt} className="w-32" />
+                            <p className="mt-1 text-[11px] text-muted-foreground">
+                              Reserved {formatDate(holding.assignedAt)} &middot; expires {formatDate(holding.expiresAt)}
+                            </p>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">&mdash;</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${status.className}`}>
+                          <status.icon className="size-3" strokeWidth={2} />
+                          {status.label}
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {isReserved ? (
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" onClick={() => setSaleDialogHolding(holding)}>Record sale</Button>
+                            <Button size="sm" variant="outline" onClick={() => setReturnDialogHolding(holding)}>Return</Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {isSold ? "Sale recorded" : "Went back to GalleryZone"}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <RecordSaleDialog

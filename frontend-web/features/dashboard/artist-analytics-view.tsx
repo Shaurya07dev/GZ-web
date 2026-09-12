@@ -99,7 +99,7 @@ export function ArtistAnalyticsView() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <SummaryStat label="Total artworks" value={String(rows.length)} />
         <SummaryStat label="Total sales" value={String(salesCount)} />
         <SummaryStat label="Total revenue" value={formatINR(totalRevenue)} />

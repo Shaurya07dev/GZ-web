@@ -27,14 +27,14 @@ const ROTATE_INTERVAL_MS = 5000;
 
 export function AuthLayoutPanel() {
   return (
-    <aside className="relative flex shrink-0 flex-col overflow-hidden border-b border-sidebar-border bg-sidebar px-6 py-6 lg:sticky lg:top-0 lg:h-[100dvh] lg:w-[44%] lg:justify-between lg:border-r lg:border-b-0 lg:px-14 lg:py-12">
+    <aside className="relative hidden shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar px-14 py-12 lg:sticky lg:top-0 lg:flex lg:h-[100dvh] lg:w-[44%] lg:justify-between">
       <PanelGlow />
 
-      <div className="relative z-10 flex flex-col gap-3 lg:gap-4">
+      <div className="relative z-10 flex flex-col gap-4">
         <Wordmark />
         {/* Tagline — always visible right under the logo */}
         <div>
-          <p className="font-display text-lg font-medium italic text-sidebar-foreground/90 sm:text-xl lg:text-2xl">
+          <p className="font-display text-2xl font-medium italic text-sidebar-foreground/90">
             Art, that Connects.{" "}
             <span className="text-gold-bright not-italic">
               Culture that inspires.
@@ -44,7 +44,7 @@ export function AuthLayoutPanel() {
         </div>
       </div>
 
-      <div className="relative z-10 mt-6 hidden flex-1 lg:mt-8 lg:flex lg:min-h-0">
+      <div className="relative z-10 mt-8 flex flex-1 min-h-0">
         <RotatingShowcase />
       </div>
     </aside>

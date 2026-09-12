@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  ChevronRight,
   CircleCheckBig,
   Clock,
   FileEdit,
@@ -67,11 +68,24 @@ export function ArtistProfileSummary({ location }: { location?: string }) {
   ];
 
   return (
-    <section className="rounded-lg border border-border bg-card p-5 sm:p-6 lg:col-span-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          Your profile
-        </h2>
+    // Collapsible like the signed MOU card (features/mou/mou-agreement.tsx):
+    // a native <details> so the artist can shorten this on a small screen and
+    // see the cards below without scrolling past it — open by default since,
+    // unlike a signed legal doc, these stats are the point of the page.
+    <details
+      open
+      className="group rounded-lg border border-border bg-card p-5 sm:p-6 lg:col-span-2"
+    >
+      <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-2">
+        <span className="flex items-center gap-2">
+          <ChevronRight
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+            strokeWidth={1.75}
+          />
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            Your profile
+          </h2>
+        </span>
         <p className="flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground">
           {location && (
             <span className="flex items-center gap-1.5">
@@ -81,14 +95,19 @@ export function ArtistProfileSummary({ location }: { location?: string }) {
           )}
           <span>Since {joinedLabel(pub.joinedAt)}</span>
         </p>
-      </div>
+      </summary>
 
       <div className="mt-5 grid gap-6 sm:grid-cols-2">
         <div>
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             What collectors see
           </h3>
-          <dl className="mt-3 grid grid-cols-4 gap-3">
+          {/* 2 columns below lg, not 4 — at 4-wide, narrow labels like "At
+              galleries" wrap to a second line while their neighbors don't,
+              so the value underneath lands at a different height per column
+              (each cell is its own flex-col, so nothing re-aligns the dd's
+              across cells). Confirmed by measuring the rendered card. */}
+          <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {publicCells.map((cell) => (
               <div key={cell.key} className="flex flex-col gap-1">
                 <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -113,7 +132,7 @@ export function ArtistProfileSummary({ location }: { location?: string }) {
           <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Only you see this
           </h3>
-          <dl className="mt-3 grid grid-cols-4 gap-3">
+          <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {privateCells.map((cell) => (
               <div key={cell.key} className="flex flex-col gap-1">
                 <dt className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -131,6 +150,6 @@ export function ArtistProfileSummary({ location }: { location?: string }) {
           </p>
         </div>
       </div>
-    </section>
+    </details>
   );
 }

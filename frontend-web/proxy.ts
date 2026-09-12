@@ -32,14 +32,8 @@ export function proxy(request: NextRequest) {
   const cookieRole = request.cookies.get(SESSION_COOKIE)?.value;
   const role = isSessionRole(cookieRole) ? cookieRole : undefined;
 
-  // Signed in and asking for the site root: go straight to where this role
-  // belongs. This is what makes galleryzone.in open the artist's dashboard
-  // days later instead of the landing page.
-  if (pathname === ROOT_PATH) {
-    return role
-      ? NextResponse.redirect(new URL(ROLE_LANDING[role], request.url))
-      : NextResponse.next();
-  }
+  // We previously redirected authenticated users away from the home page.
+  // This has been removed so that users can freely access the Home (Discover) page.
 
   const prefix = guardedPrefix(pathname);
   if (!prefix) return NextResponse.next();

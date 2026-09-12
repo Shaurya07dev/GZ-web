@@ -50,12 +50,12 @@ export function ArtistStatStrip({
             <dt className="text-xs text-muted-foreground">{cell.label}</dt>
             <dd className="font-display text-lg font-semibold tabular-nums text-foreground">
               {cell.value}
+              {cell.hint && (
+                <p className="font-sans text-[11px] leading-snug font-normal text-muted-foreground">
+                  {cell.hint}
+                </p>
+              )}
             </dd>
-            {cell.hint && (
-              <p className="text-[11px] leading-snug text-muted-foreground">
-                {cell.hint}
-              </p>
-            )}
           </div>
         ))}
       </dl>

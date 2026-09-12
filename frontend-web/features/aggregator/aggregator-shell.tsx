@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { AggregatorMobileBottomNav } from "@/components/shared/aggregator-mobile-bottom-nav";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -146,10 +147,13 @@ export function AggregatorShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onMenuClick={() => setMobileOpen(true)} />
-        <main className="relative flex-1 overflow-hidden px-5 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <main className="relative flex-1 overflow-hidden px-5 py-6 sm:px-8 sm:py-8 lg:px-10 pb-20 lg:pb-6">
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom navigation — only shown on small screens */}
+      <AggregatorMobileBottomNav />
     </div>
   );
 }
@@ -276,7 +280,7 @@ function Sidebar({
           Aggregator Portal
         </span>
 
-        <div className="flex-1 overflow-y-auto px-3 py-1">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-1">
           {collapsed ? (
             // Rail-collapsed: grouping is a full-width-sidebar concept only
             // (a group header with no room for its label is meaningless) —
@@ -410,20 +414,33 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const title = PAGE_TITLES[pathname] ?? "Aggregator Portal";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-5 backdrop-blur-md sm:px-8 lg:px-10">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-8 lg:px-10">
+      {/* Mobile layout: hamburger + GZ logo centered + bell + avatar */}
+      <div className="flex flex-1 items-center gap-3 lg:hidden">
         <button
           aria-label="Open menu"
           onClick={onMenuClick}
-          className="rounded-md p-1.5 text-foreground/80 hover:text-foreground lg:hidden"
+          className="rounded-md p-1.5 text-foreground/80 hover:text-foreground"
         >
           <Menu className="size-5" />
         </button>
+        <div className="flex flex-1 flex-col">
+          <span className="font-display text-xs font-bold uppercase tracking-widest text-gold-bright leading-none">GZ GalleryZone</span>
+          <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Aggregator Portal</span>
+        </div>
+        <NotificationsPopover groups={AGGREGATOR_NOTIFICATION_GROUPS} />
+        <Link href="/aggregator/profile" className="relative size-8 overflow-hidden rounded-full border border-gold/40 shrink-0">
+          <Image src={AGGREGATOR.avatar} alt={AGGREGATOR.companyName} fill sizes="32px" className="object-cover" />
+        </Link>
+      </div>
+
+      {/* Desktop layout: page title + controls */}
+      <div className="hidden lg:flex lg:flex-1 lg:items-center lg:gap-3">
         <h1 className="font-display text-lg font-semibold text-foreground">
           {title}
         </h1>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="hidden lg:flex lg:items-center lg:gap-2">
         <NotificationsPopover groups={AGGREGATOR_NOTIFICATION_GROUPS} />
         <SwitchMode />
       </div>

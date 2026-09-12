@@ -163,7 +163,7 @@ export function HeroSection() {
 
   return (
     <section ref={driverRef} className="relative h-[300vh]">
-      <div className="sticky top-20 flex h-[calc(100vh-5rem)] w-full flex-col items-center justify-center overflow-hidden">
+      <div className="sticky top-20 flex h-[calc(100dvh-9rem)] w-full flex-col items-center justify-center overflow-hidden lg:h-[calc(100dvh-5rem)]">
         <div className="absolute inset-0 hidden lg:block">
           {ARTWORKS.map((artwork) => (
             <HeroArtwork

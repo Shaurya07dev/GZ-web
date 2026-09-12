@@ -252,7 +252,7 @@ export function SiteHeader() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-10"
+                  className="hidden size-10 sm:inline-flex"
                   nativeButton={false}
                   render={
                     <Link href="/account/wishlist" aria-label="Wishlist" />
@@ -282,7 +282,7 @@ export function SiteHeader() {
             ) : (
               <Link
                 href="/login"
-                className="hidden text-sm text-foreground/85 transition-colors hover:text-foreground md:inline-block"
+                className="text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
               >
                 Sign In
               </Link>
@@ -306,18 +306,65 @@ export function SiteHeader() {
           <DialogContent className="top-0 right-0 left-auto flex h-full max-h-none w-full max-w-xs translate-x-0 translate-y-0 flex-col overflow-y-auto rounded-none border-l border-border/60 p-6 sm:max-w-xs">
             <DialogTitle className="sr-only">Navigation menu</DialogTitle>
 
-            <Link
-              href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
-              onClick={() => setMobileOpen(false)}
-              className="flex items-baseline gap-2"
-            >
-              <span className="font-display text-xl font-semibold italic text-gold-bright">
-                GZ
-              </span>
-              <span className="text-xs font-medium tracking-[0.18em] text-foreground">
-                GALLERYZONE
-              </span>
-            </Link>
+            {/* Brand + account block — always at the top */}
+            <div className="flex items-start justify-between gap-3">
+              <Link
+                href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
+                onClick={() => setMobileOpen(false)}
+                className="flex items-baseline gap-2"
+              >
+                <span className="font-display text-xl font-semibold italic text-gold-bright">
+                  GZ
+                </span>
+                <span className="text-xs font-medium tracking-[0.18em] text-foreground">
+                  GALLERYZONE
+                </span>
+              </Link>
+
+              {sessionRole ? (
+                <div className="flex flex-col items-end gap-1">
+                  <Link
+                    href={ROLE_SECTION_HOME[sessionRole]}
+                    onClick={() => setMobileOpen(false)}
+                    className="text-sm font-medium text-gold-bright transition-colors hover:text-gold"
+                  >
+                    {sessionRole === "customer" ? "My account" : "My dashboard"}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      handleSignOut();
+                    }}
+                    className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
+
+            {/* Quick links: Wishlist */}
+            {!isLandingPage && (
+              <div className="mt-4 flex items-center gap-2 border-t border-border/60 pt-4">
+                <Link
+                  href="/account/wishlist"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
+                >
+                  <Heart className="size-4 text-gold-bright" strokeWidth={1.75} />
+                  Wishlist
+                </Link>
+              </div>
+            )}
 
             {!isLandingPage && (
               <form
@@ -325,7 +372,7 @@ export function SiteHeader() {
                   e.preventDefault();
                   handleSearchSubmit(mobileQuery);
                 }}
-                className="mt-6 flex items-center gap-2"
+                className="mt-4 flex items-center gap-2"
               >
                 <Input
                   value={mobileQuery}
@@ -400,47 +447,6 @@ export function SiteHeader() {
                   </Link>
                 ))}
               </nav>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-1 border-t border-border/60 pt-6">
-              {!isLandingPage && (
-                <Link
-                  href="/account/wishlist"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
-                >
-                  Wishlist
-                </Link>
-              )}
-              {sessionRole ? (
-                <>
-                  <Link
-                    href={ROLE_SECTION_HOME[sessionRole]}
-                    onClick={() => setMobileOpen(false)}
-                    className="rounded-lg px-3 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:bg-muted"
-                  >
-                    {sessionRole === "customer" ? "My account" : "My dashboard"}
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileOpen(false);
-                      handleSignOut();
-                    }}
-                    className="rounded-lg px-3 py-2.5 text-left text-sm text-foreground/90 transition-colors hover:bg-muted"
-                  >
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="rounded-lg px-3 py-2.5 text-sm text-foreground/90 transition-colors hover:bg-muted"
-                >
-                  Sign In
-                </Link>
-              )}
             </div>
 
             <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-6">

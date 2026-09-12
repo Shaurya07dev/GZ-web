@@ -149,17 +149,17 @@ function HistoryDialog({
 }) {
   return (
     <Dialog open={Boolean(artwork)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[85dvh] flex flex-col overflow-hidden sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>History</DialogTitle>
         </DialogHeader>
         {artwork ? (
-          <>
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2 flex flex-col gap-4">
             <p className="-mt-1 text-sm text-muted-foreground">
               {artwork.title}
             </p>
             <ArtworkHistory artwork={artwork} />
-          </>
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>
@@ -196,82 +196,84 @@ function CertificateDialog({
       open={Boolean(artwork)}
       onOpenChange={(open) => !open && onClose()}
     >
-      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[85dvh] flex flex-col overflow-hidden sm:max-w-3xl">
         {artwork ? (
           <>
             <DialogHeader>
               <DialogTitle>Certificate of Authenticity</DialogTitle>
             </DialogHeader>
 
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-gold/30 bg-gold/5 p-6 text-center">
-              <Fingerprint className="size-8 text-gold-bright" strokeWidth={1.5} />
-              <p className="font-display text-lg font-semibold text-foreground">
-                {artwork.title}
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2 flex flex-col gap-4 pb-2">
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-gold/30 bg-gold/5 p-6 text-center">
+                <Fingerprint className="size-8 text-gold-bright" strokeWidth={1.5} />
+                <p className="font-display text-lg font-semibold text-foreground">
+                  {artwork.title}
+                </p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {artwork.coaCertificateNumber}
+                </p>
+              </div>
+
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-4">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Issued</dt>
+                  <dd className="text-foreground">
+                    {new Date(artwork.coaIssueDate).toLocaleDateString(
+                      "en-IN",
+                      { day: "numeric", month: "short", year: "numeric" },
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">NFC tag</dt>
+                  <dd className="text-foreground">
+                    {artwork.nfcTagId ?? "Not yet attached"}
+                  </dd>
+                </div>
+                {/* Owner, custodian and location are tracked separately — a
+                    piece can be owned by one party while physically held by
+                    another somewhere else again. */}
+                <div>
+                  <dt className="text-xs text-muted-foreground">Legal owner</dt>
+                  <dd className="text-foreground">
+                    {resolveCustody(artwork).legalOwnerName ??
+                      CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner]}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    Physical custodian
+                  </dt>
+                  <dd className="text-foreground">
+                    {CUSTODY_PARTY_LABEL[resolveCustody(artwork).custodian]}
+                  </dd>
+                </div>
+                <div className="col-span-2 sm:col-span-4">
+                  <dt className="text-xs text-muted-foreground">Location</dt>
+                  <dd className="text-foreground">
+                    {resolveCustody(artwork).locationLabel}
+                  </dd>
+                </div>
+              </dl>
+
+              <p className="text-xs text-muted-foreground">
+                This is a preview — the platform isn&rsquo;t wired to generate a
+                downloadable PDF in this demo.
               </p>
-              <p className="font-mono text-xs text-muted-foreground">
-                {artwork.coaCertificateNumber}
-              </p>
+
+              <ArtworkHistory artwork={artwork} />
+
+              {/* First hand-over of the passport: artist to buyer. The buyer can
+                  pass it on again later from their own collection. */}
+              <button
+                type="button"
+                onClick={() => onTransfer(artwork)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 mt-2"
+              >
+                <UserRoundCheck className="size-3.5" />
+                Transfer rights
+              </button>
             </div>
-
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-4">
-              <div>
-                <dt className="text-xs text-muted-foreground">Issued</dt>
-                <dd className="text-foreground">
-                  {new Date(artwork.coaIssueDate).toLocaleDateString(
-                    "en-IN",
-                    { day: "numeric", month: "short", year: "numeric" },
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">NFC tag</dt>
-                <dd className="text-foreground">
-                  {artwork.nfcTagId ?? "Not yet attached"}
-                </dd>
-              </div>
-              {/* Owner, custodian and location are tracked separately — a
-                  piece can be owned by one party while physically held by
-                  another somewhere else again. */}
-              <div>
-                <dt className="text-xs text-muted-foreground">Legal owner</dt>
-                <dd className="text-foreground">
-                  {resolveCustody(artwork).legalOwnerName ??
-                    CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner]}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">
-                  Physical custodian
-                </dt>
-                <dd className="text-foreground">
-                  {CUSTODY_PARTY_LABEL[resolveCustody(artwork).custodian]}
-                </dd>
-              </div>
-              <div className="col-span-2 sm:col-span-4">
-                <dt className="text-xs text-muted-foreground">Location</dt>
-                <dd className="text-foreground">
-                  {resolveCustody(artwork).locationLabel}
-                </dd>
-              </div>
-            </dl>
-
-            <p className="text-xs text-muted-foreground">
-              This is a preview — the platform isn&rsquo;t wired to generate a
-              downloadable PDF in this demo.
-            </p>
-
-            <ArtworkHistory artwork={artwork} />
-
-            {/* First hand-over of the passport: artist to buyer. The buyer can
-                pass it on again later from their own collection. */}
-            <button
-              type="button"
-              onClick={() => onTransfer(artwork)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
-            >
-              <UserRoundCheck className="size-3.5" />
-              Transfer rights
-            </button>
           </>
         ) : null}
       </DialogContent>
