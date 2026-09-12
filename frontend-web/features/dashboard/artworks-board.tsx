@@ -94,7 +94,7 @@ export function ArtworksBoard() {
         value={filter}
         onValueChange={(v) => setFilter(v as ArtworkStatus | "all")}
       >
-        <TabsList className="h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
+        <TabsList className="h-auto group-data-horizontal/tabs:h-auto flex-wrap justify-start gap-x-1 gap-y-2 bg-transparent p-0">
           {FILTERS.map((f) => (
             <TabsTrigger
               key={f.value}

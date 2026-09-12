@@ -980,7 +980,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                   updateField("dimensionUnit", value ?? "in")
                 }
               >
-                <SelectTrigger className="h-10 w-full">
+                <SelectTrigger aria-label="Dimension unit" className="h-10 w-full">
                   <SelectValue placeholder="Unit">
                     {(value: string | null) =>
                       DIMENSION_UNITS.find((u) => u.value === value)?.label ??
@@ -1265,7 +1265,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                     from your settlement after a sale.{" "}
                     <Link
                       href="/terms"
-                      className="text-gold-bright hover:underline"
+                      className="text-gold-bright underline underline-offset-2 hover:no-underline"
                     >
                       Read the full terms
                     </Link>

@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { BookmarkCheck, Banknote } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { mockAggregatorHoldings } from "@/lib/mock-data/aggregator-holdings";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import { formatINR } from "@/lib/utils";
@@ -53,9 +55,14 @@ export function AggregatorActivityFeed() {
       </h2>
 
       {activityItems.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">
-          No activity yet. Reserve an artwork from Inventory to get started.
-        </p>
+        <div className="mt-4 flex flex-col items-start gap-4">
+          <p className="text-sm text-muted-foreground">
+            No activity yet. Reserve an artwork from Inventory to get started.
+          </p>
+          <Button render={<Link href="/aggregator/inventory" />} variant="outline" size="sm">
+            Browse Inventory
+          </Button>
+        </div>
       ) : (
         <ul className="mt-4 flex flex-col gap-4">
           {activityItems.map((item) => (

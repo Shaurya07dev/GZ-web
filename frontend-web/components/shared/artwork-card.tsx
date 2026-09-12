@@ -141,7 +141,7 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
             <VerifiedBadge verification={MINIMUM_VERIFICATION} size="sm" />
           )}
         </div>
-        <p className="truncate text-xs text-muted-foreground/80">
+        <p className="truncate text-xs text-muted-foreground">
           {titleCase(artwork.category)} &middot; {artwork.medium}
         </p>
 
@@ -185,16 +185,17 @@ export function ArtworkListRow({ artwork, className }: ArtworkCardProps) {
     <Link
       href={`/marketplace/${artwork.id}`}
       className={cn(
-        "group flex items-center gap-4 rounded-lg border border-border bg-card p-3 transition-colors duration-200 ease-out hover:border-gold/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "group relative flex items-stretch gap-4 rounded-xl border border-border bg-card p-3 transition-colors duration-200 ease-out hover:border-gold/50 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         className,
       )}
     >
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-md bg-muted sm:size-28">
+      {/* Left: Image */}
+      <div className="relative w-28 shrink-0 overflow-hidden rounded-lg bg-muted sm:w-32">
         <Image
           src={artwork.thumbnailUrl}
           alt={artwork.title}
           fill
-          sizes="112px"
+          sizes="128px"
           className={cn(
             "object-cover",
             !isAvailable && "opacity-75 grayscale-[55%]",
@@ -207,19 +208,34 @@ export function ArtworkListRow({ artwork, className }: ArtworkCardProps) {
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      {/* Right: Content */}
+      <div className="flex min-w-0 flex-1 flex-col py-0.5">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="line-clamp-1 font-display text-sm font-semibold text-foreground sm:text-base">
+          <h3 className="line-clamp-2 font-display text-sm font-semibold leading-snug text-foreground sm:text-base">
             {artwork.title}
           </h3>
-          {statusBadge && StatusIcon && (
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
-              <StatusIcon className="size-3" strokeWidth={2} />
-              {statusBadge.label}
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist(artwork.id);
+            }}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-pressed={isWishlisted}
+            className="flex shrink-0 items-center justify-center rounded-full text-foreground/75 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <Heart
+              className={cn(
+                "size-4.5 transition-colors",
+                isWishlisted && "fill-gold-bright text-gold-bright",
+              )}
+              strokeWidth={1.75}
+            />
+          </button>
         </div>
-        <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
           <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gold/15 text-[10px] font-semibold text-gold-bright">
             {artwork.artistName.charAt(0).toUpperCase()}
           </span>
@@ -228,44 +244,30 @@ export function ArtworkListRow({ artwork, className }: ArtworkCardProps) {
             <VerifiedBadge verification={MINIMUM_VERIFICATION} size="sm" />
           )}
         </div>
-        <p className="truncate text-xs text-muted-foreground">
+
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground/80">
           {titleCase(artwork.category)} &middot; {artwork.medium}
         </p>
-      </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleWishlist(artwork.id);
-          }}
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          aria-pressed={isWishlisted}
-          className="flex size-8 items-center justify-center rounded-full border border-border text-foreground/75 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <Heart
-            className={cn(
-              "size-4 transition-colors",
-              isWishlisted && "fill-gold-bright text-gold-bright",
-            )}
-            strokeWidth={1.75}
-          />
-        </button>
-        <div className="flex flex-col items-end gap-0.5">
-          <PriceTag amount={artwork.customerPrice} className="text-base" />
+        <div className="mt-3 flex items-center gap-2">
+          <PriceTag amount={artwork.customerPrice} className="text-sm font-semibold" />
           <span className="text-[10px] text-muted-foreground">Incl. GST</span>
         </div>
-        {isAvailable && (
-          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-            <span
-              className="size-1.5 rounded-full bg-emerald-500"
-              aria-hidden="true"
-            />
-            Available
-          </span>
-        )}
+
+        <div className="mt-2 flex items-center gap-2">
+          {isAvailable ? (
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              Available
+            </span>
+          ) : (
+            statusBadge && StatusIcon && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <StatusIcon className="size-3" strokeWidth={1.75} />
+                {statusBadge.label}
+              </span>
+            )
+          )}
+        </div>
       </div>
     </Link>
   );

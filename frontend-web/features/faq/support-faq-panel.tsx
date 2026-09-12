@@ -33,7 +33,11 @@ export function SupportFaqPanel({ audience }: { audience: FaqAudience }) {
       <div className="rounded-lg border border-border bg-card px-4 sm:px-5">
         <Accordion multiple>
           {items.map((item, index) => (
-            <AccordionItem key={item.question} value={`faq-${index}`}>
+            // Keyed by index, not item.question: general and artists FAQs
+            // can legitimately share a question ("What is GalleryZone?")
+            // with different answers, and this panel merges both audiences
+            // into one list — the value prop already had a unique string.
+            <AccordionItem key={`faq-${index}`} value={`faq-${index}`}>
               <AccordionTrigger className="py-4 text-sm font-medium text-foreground hover:text-gold-bright hover:no-underline">
                 {item.question}
               </AccordionTrigger>

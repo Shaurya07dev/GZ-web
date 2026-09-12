@@ -28,38 +28,38 @@ export function AggregatorKpiCards() {
   const { data, isPending, isError } = useAggregatorDashboard();
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-3 gap-3 sm:gap-4">
       {METRIC_META.map((metric, i) => (
         <motion.div
           key={metric.key}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: i * 0.06, ease: "easeOut" }}
-          className="rounded-lg border border-border bg-card p-5"
+          className="rounded-xl border border-border bg-card p-3 sm:p-5"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-[10px] sm:text-sm text-muted-foreground leading-tight">
               {metric.label}
             </span>
             <metric.icon
-              className="size-4 text-gold-bright"
+              className="size-3.5 sm:size-4 text-gold-bright shrink-0"
               strokeWidth={1.75}
             />
           </div>
 
           {isPending ? (
-            <Skeleton className="mt-3 h-9 w-24" />
+            <Skeleton className="mt-2 h-7 w-16 sm:mt-3 sm:h-9 sm:w-24" />
           ) : isError || !data ? (
-            <p className="mt-3 font-display text-2xl font-semibold text-muted-foreground">
+            <p className="mt-2 font-display text-xl sm:text-2xl font-semibold text-muted-foreground">
               &mdash;
             </p>
           ) : metric.key === "commissionEarned" ? (
             <PriceTag
               amount={data.commissionEarned}
-              className="mt-3 block font-display text-3xl font-semibold tabular-nums"
+              className="mt-2 block font-display text-lg sm:text-3xl font-semibold tabular-nums"
             />
           ) : (
-            <p className="mt-3 font-display text-3xl font-semibold tabular-nums text-foreground">
+            <p className="mt-2 font-display text-xl sm:text-3xl font-semibold tabular-nums text-foreground">
               {data[metric.key]}
             </p>
           )}

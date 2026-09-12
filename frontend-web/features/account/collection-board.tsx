@@ -56,7 +56,7 @@ export function CollectionBoard() {
 
   if (isPending) {
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="aspect-[4/5] w-full rounded-lg" />
         ))}
@@ -86,7 +86,7 @@ export function CollectionBoard() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <button
             key={item.artwork.id}

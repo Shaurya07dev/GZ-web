@@ -221,10 +221,11 @@ export function LoginForm() {
         </Button>
 
         <DevPanel>
-          <span className="text-xs text-muted-foreground">
+          <label htmlFor="simulateError" className="text-xs text-muted-foreground">
             Simulate invalid credentials
-          </span>
+          </label>
           <Checkbox
+            id="simulateError"
             checked={simulateError}
             onCheckedChange={(checked) => setSimulateError(checked === true)}
           />

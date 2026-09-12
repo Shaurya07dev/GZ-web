@@ -2,8 +2,17 @@
 
 import { useState, useMemo } from "react";
 import "@/lib/motion-config";
-import { motion } from "framer-motion";
-import { LayoutGrid, List, SearchX, TriangleAlert, X, Filter } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LayoutGrid,
+  List,
+  SearchX,
+  TriangleAlert,
+  X,
+  Filter,
+  ArrowUpDown,
+  Check,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,6 +23,7 @@ import {
 import { ArtworkCard, ArtworkListRow } from "@/components/shared/artwork-card";
 import { ArtworkCardSkeleton } from "@/components/shared/artwork-card-skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useArtworks } from "@/hooks/useArtworks";
 import type { ArtworkFilters } from "@/types/artwork";
@@ -43,6 +53,7 @@ interface MarketplaceGridProps {
   onClearFilters: () => void;
   showFilters?: boolean;
   onToggleFilters?: () => void;
+  onOpenMobileFilters?: () => void;
 }
 
 export function MarketplaceGrid({
@@ -51,9 +62,12 @@ export function MarketplaceGrid({
   onClearFilters,
   showFilters,
   onToggleFilters,
+  onOpenMobileFilters,
 }: MarketplaceGridProps) {
   const { data: artworks, isPending, isError } = useArtworks(filters);
+  // Default to list on mobile, grid on larger screens (controlled purely via class, not state)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sortOpen, setSortOpen] = useState(false);
 
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string; onRemove: () => void }[] = [];
@@ -75,10 +89,15 @@ export function MarketplaceGrid({
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
       const min = filters.minPrice ?? 0;
       const max = filters.maxPrice ?? 200000;
-      chips.push({ key: "price", label: `₹${Math.floor(min/1000)}k - ₹${Math.floor(max/1000)}k`, onRemove: () => onChange({ ...filters, minPrice: undefined, maxPrice: undefined }) });
+      chips.push({ key: "price", label: `₹${Math.floor(min / 1000)}k – ₹${Math.floor(max / 1000)}k`, onRemove: () => onChange({ ...filters, minPrice: undefined, maxPrice: undefined }) });
+    }
+    if (filters.query) {
+      chips.push({ key: "query", label: `"${filters.query}"`, onRemove: () => onChange({ ...filters, query: undefined }) });
     }
     return chips;
   }, [filters, onChange]);
+
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === (filters.sortBy ?? "newest"))?.label ?? "Newest";
 
   if (isPending) {
     return (
@@ -108,15 +127,15 @@ export function MarketplaceGrid({
     return (
       <EmptyState
         icon={SearchX}
-        title="No artworks match your filters"
-        description="Try widening your price range or clearing a filter to see more original work."
+        title="No artworks found"
+        description="Try adjusting your filters or search with different keywords."
         action={
           <button
             type="button"
             onClick={onClearFilters}
-            className="inline-flex items-center rounded-md border border-gold/50 px-4 py-2 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
+            className="inline-flex items-center rounded-xl border border-gold/50 bg-gold/5 px-5 py-2.5 text-sm font-semibold text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
           >
-            Clear filters
+            Clear all filters
           </button>
         }
       />
@@ -125,8 +144,9 @@ export function MarketplaceGrid({
 
   return (
     <div>
+      {/* Active filter chips */}
       {activeChips.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           {activeChips.map((chip) => (
             <button
               key={chip.key}
@@ -146,57 +166,94 @@ export function MarketplaceGrid({
         </div>
       )}
 
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-border bg-card/30 p-2 sm:px-4">
-        <div className="flex items-center gap-3">
+      {/* Toolbar */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        {/* Left: count + filter toggles */}
+        <div className="flex items-center gap-2">
+          {/* Desktop filter toggle */}
           {onToggleFilters && (
             <button
               onClick={onToggleFilters}
-              className="flex items-center gap-2 rounded text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:border-r sm:border-border sm:pr-3"
+              className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground lg:flex"
             >
               <Filter className="size-4" strokeWidth={1.75} />
-              <span className="hidden sm:inline">{showFilters ? "Hide Filters" : "Show Filters"}</span>
-              <span className="sm:hidden">Filters</span>
+              {showFilters ? "Hide Filters" : "Filters"}
             </button>
           )}
-          <p className="text-sm text-muted-foreground px-2 sm:px-0" role="status">
-            <strong className="font-semibold text-foreground">{artworks.length}</strong> {artworks.length === 1 ? "artwork" : "artworks"} found
+          {/* Mobile filter button */}
+          {onOpenMobileFilters && (
+            <button
+              onClick={onOpenMobileFilters}
+              className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground lg:hidden"
+            >
+              <Filter className="size-4" strokeWidth={1.75} />
+              Filters
+              {activeChips.length > 0 && (
+                <span className="flex size-5 items-center justify-center rounded-full bg-gold-bright text-[10px] font-bold text-[#171310]">
+                  {activeChips.length}
+                </span>
+              )}
+            </button>
+          )}
+          <p className="text-sm text-muted-foreground" role="status">
+            <strong className="font-semibold text-foreground">{artworks.length}</strong>{" "}
+            {artworks.length === 1 ? "artwork" : "artworks"} found
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={filters.sortBy ?? "newest"}
-            onValueChange={(value) =>
-              onChange({
-                ...filters,
-                sortBy: (value as ArtworkFilters["sortBy"]) ?? "newest",
-              })
-            }
-          >
-            <SelectTrigger className="h-9 w-auto min-w-[140px] gap-2 border-0 bg-transparent px-3 font-medium shadow-none hover:bg-muted focus:ring-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground font-normal hidden sm:inline">Sort:</span>
-                <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {SORT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
 
-          <div className="flex items-center rounded-md border border-border bg-background p-0.5">
+        {/* Right: sort + view toggle */}
+        <div className="flex items-center gap-2">
+          {/* Mobile sort button */}
+          <button
+            type="button"
+            onClick={() => setSortOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground lg:hidden"
+          >
+            <ArrowUpDown className="size-3.5" strokeWidth={1.75} />
+            Sort
+          </button>
+
+          {/* Desktop sort select */}
+          <div className="hidden lg:block">
+            <Select
+              value={filters.sortBy ?? "newest"}
+              onValueChange={(value) =>
+                onChange({
+                  ...filters,
+                  sortBy: (value as ArtworkFilters["sortBy"]) ?? "newest",
+                })
+              }
+            >
+              <SelectTrigger
+                aria-label="Sort artworks"
+                className="h-9 w-auto min-w-[160px] gap-2 border-border bg-card px-3 font-medium shadow-none hover:bg-muted focus:ring-0"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="font-normal text-muted-foreground">Sort:</span>
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* View toggle */}
+          <div className="flex items-center rounded-lg border border-border bg-card p-0.5">
             <button
               type="button"
               onClick={() => setViewMode("grid")}
               aria-label="Grid view"
               aria-pressed={viewMode === "grid"}
               className={cn(
-                "flex size-8 items-center justify-center rounded transition-colors",
+                "flex size-8 items-center justify-center rounded-md transition-colors",
                 viewMode === "grid"
-                  ? "bg-muted text-foreground font-medium"
+                  ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -208,9 +265,9 @@ export function MarketplaceGrid({
               aria-label="List view"
               aria-pressed={viewMode === "list"}
               className={cn(
-                "flex size-8 items-center justify-center rounded transition-colors",
+                "flex size-8 items-center justify-center rounded-md transition-colors",
                 viewMode === "list"
-                  ? "bg-muted text-foreground font-medium"
+                  ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -220,7 +277,16 @@ export function MarketplaceGrid({
         </div>
       </div>
 
-      <div className={viewMode === "grid" ? (showFilters ? GRID_CLASS : GRID_CLASS_COMPACT) : "flex flex-col gap-3"}>
+      {/* Results */}
+      <div
+        className={
+          viewMode === "grid"
+            ? showFilters
+              ? GRID_CLASS
+              : GRID_CLASS_COMPACT
+            : "flex flex-col gap-3"
+        }
+      >
         {artworks.map((artwork, index) => (
           <motion.div
             key={artwork.id}
@@ -240,6 +306,75 @@ export function MarketplaceGrid({
           </motion.div>
         ))}
       </div>
+
+      {/* Mobile sort bottom sheet */}
+      <MobileSortSheet
+        open={sortOpen}
+        onClose={() => setSortOpen(false)}
+        value={filters.sortBy ?? "newest"}
+        onChange={(v) => {
+          onChange({ ...filters, sortBy: v });
+          setSortOpen(false);
+        }}
+      />
     </div>
+  );
+}
+
+function MobileSortSheet({
+  open,
+  onClose,
+  value,
+  onChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  value: string;
+  onChange: (v: NonNullable<ArtworkFilters["sortBy"]>) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        className="bottom-0 top-auto left-0 right-0 max-h-[50dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-t-2xl rounded-b-none p-0 data-open:slide-in-from-bottom data-closed:slide-out-to-bottom"
+      >
+        <DialogTitle className="sr-only">Sort artworks</DialogTitle>
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-border" />
+        </div>
+        <div className="px-5 py-3 border-b border-border">
+          <h2 className="font-display text-base font-semibold">Sort By</h2>
+        </div>
+        <nav className="flex flex-col gap-1 px-4 py-3">
+          {SORT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onChange(option.value)}
+              className={cn(
+                "flex items-center justify-between rounded-xl px-4 py-3.5 text-sm font-medium transition-colors",
+                value === option.value
+                  ? "bg-gold/10 text-gold-bright"
+                  : "text-foreground hover:bg-muted",
+              )}
+            >
+              {option.label}
+              {value === option.value && (
+                <Check className="size-4 text-gold-bright" strokeWidth={2} />
+              )}
+            </button>
+          ))}
+        </nav>
+        <div className="px-5 pb-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl bg-gold-bright py-3 text-sm font-semibold text-[#171310]"
+          >
+            Apply
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
