@@ -2,43 +2,76 @@
 // createOrder()/confirmSimulatedPayment() do the real work (see that
 // file's own header for why confirmSimulatedPayment is explicitly a
 // pre-Razorpay placeholder); this controller is deliberately thin.
-//
-// Gated by RolesGuard like every other non-public route — reachable only
-// once Firebase auth exists (Phase 1). Verified directly against
-// packages/db/checkout.check.ts in the meantime (see that file), since the
-// guard makes HTTP-level verification impossible before then by design.
 
-import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
-import { createOrder, confirmSimulatedPayment, type Db } from "@galleryzone/db";
+import { Body, ConflictException, Controller, ForbiddenException, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
+import { createOrder, confirmSimulatedPayment, getOrder, CheckoutError, type Db } from "@galleryzone/db";
 import { createOrderInputSchema, type CreateOrderInput } from "@galleryzone/contracts";
+import type { AppEnv } from "@galleryzone/config";
+import { IllegalTransitionError } from "@galleryzone/domain";
 import { Roles } from "./auth/roles.decorator.ts";
-import { DB } from "./db.module.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
+import { DB, ENV } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 @Controller("v1/orders")
 export class OrdersController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    @Inject(ENV) private readonly env: AppEnv,
+  ) {}
 
   @Roles("customer")
   @Post()
-  async create(@Body(new ZodValidationPipe(createOrderInputSchema)) body: CreateOrderInput) {
-    // TODO(Phase 1): customerId comes from the authenticated request, never the body.
-    const result = await createOrder({
-      db: this.db,
-      customerId: "TODO-authenticated-user-id",
-      artworkId: body.artworkId,
-      addressId: body.addressId,
-      idempotencyKey: body.idempotencyKey,
-    });
-    return result;
+  async create(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(createOrderInputSchema)) body: CreateOrderInput) {
+    // customerId comes from the verified token, never the body.
+    try {
+      return await createOrder({
+        db: this.db,
+        customerId: req.authUser.uid,
+        artworkId: body.artworkId,
+        addressId: body.addressId,
+        idempotencyKey: body.idempotencyKey,
+      });
+    } catch (error) {
+      if (error instanceof CheckoutError) {
+        // "No artwork" / "no approved rate config" — the caller can't fix the
+        // latter, but a 409 with the message beats an opaque 500 either way.
+        throw new ConflictException({ type: "about:blank", title: error.message, status: 409, code: "checkout_rejected" });
+      }
+      throw error;
+    }
   }
 
-  // Pre-Razorpay only — see checkout.ts's own warning. Narrower role than
-  // a customer completing their own checkout would eventually need,
-  // because this is a stand-in for a webhook, not a customer action.
-  @Roles("platform_admin")
+  // Pre-Razorpay only — see checkout.ts's own warning. This is a stand-in
+  // for the payment webhook, so it's normally an operator action
+  // (platform_admin). While PAYMENTS_MODE=simulated the order's OWN
+  // customer may call it too, so the web checkout works end to end before
+  // Razorpay lands; flipping the env to "razorpay" closes that door
+  // without a code change.
+  @Roles("customer", "platform_admin")
   @Post(":id/simulate-payment")
-  async simulatePayment(@Param("id") id: string) {
-    return confirmSimulatedPayment(this.db, id);
+  async simulatePayment(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    const isOperator = req.authUser.grants.includes("platform_admin");
+    if (!isOperator) {
+      if (this.env.paymentsMode !== "simulated") {
+        throw new ForbiddenException({ type: "about:blank", title: "Simulated payment is disabled", status: 403, code: "payments_not_simulated" });
+      }
+      const order = await getOrder(this.db, id);
+      if (!order || order.customerId !== req.authUser.uid) {
+        // 404, not 403: don't confirm to a stranger that the order id exists.
+        throw new NotFoundException({ type: "about:blank", title: "Order not found", status: 404, code: "not_found" });
+      }
+    }
+    try {
+      return await confirmSimulatedPayment(this.db, id);
+    } catch (error) {
+      if (error instanceof CheckoutError) {
+        throw new NotFoundException({ type: "about:blank", title: error.message, status: 404, code: "not_found" });
+      }
+      if (error instanceof IllegalTransitionError) {
+        throw new ConflictException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
+      }
+      throw error;
+    }
   }
 }

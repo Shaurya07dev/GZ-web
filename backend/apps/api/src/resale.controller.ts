@@ -1,12 +1,13 @@
 import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { listMyResaleListings, createResaleListing, withdrawResaleListing, completeResaleSale, type Db } from "@galleryzone/db";
+import { firestoreId } from "@galleryzone/contracts";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
-const createSchema = z.object({ artworkId: z.string().uuid(), listedPricePaise: z.number().int().positive() }).strict();
+const createSchema = z.object({ artworkId: firestoreId, listedPricePaise: z.number().int().positive() }).strict();
 type CreateBody = z.infer<typeof createSchema>;
 
 @Controller("v1/account/resale")

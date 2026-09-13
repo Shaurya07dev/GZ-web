@@ -1,11 +1,12 @@
 // Aggregator/consignment request contracts — reserve, recordSale, release.
 
 import { z } from "zod";
+import { firestoreId } from "./ids.ts";
 
 export const reserveHoldingInputSchema = z
   .object({
-    artworkId: z.string().uuid(),
-    gallerySpaceId: z.string().uuid().optional(),
+    artworkId: firestoreId,
+    gallerySpaceId: firestoreId.optional(),
   })
   .strict();
 
@@ -13,7 +14,7 @@ export type ReserveHoldingInput = z.infer<typeof reserveHoldingInputSchema>;
 
 export const recordAggregatorSaleInputSchema = z
   .object({
-    holdingId: z.string().uuid(),
+    holdingId: firestoreId,
     soldPricePaise: z.number().int().positive(),
     buyerName: z.string().min(1),
     buyerEmail: z.string().email(),
@@ -28,7 +29,7 @@ export type RecordAggregatorSaleInput = z.infer<typeof recordAggregatorSaleInput
 
 export const advanceShipmentInputSchema = z
   .object({
-    saleId: z.string().uuid(),
+    saleId: firestoreId,
     to: z.enum(["dispatched", "delivered"]),
     courierRef: z.string().optional(),
   })
@@ -36,7 +37,7 @@ export const advanceShipmentInputSchema = z
 
 export const markRemittedInputSchema = z
   .object({
-    saleId: z.string().uuid(),
+    saleId: firestoreId,
   })
   .strict();
 

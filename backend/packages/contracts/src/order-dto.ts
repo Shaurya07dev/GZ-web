@@ -3,11 +3,12 @@
 // pricing/settlement engine.
 
 import { z } from "zod";
+import { firestoreId } from "./ids.ts";
 
 export const createOrderInputSchema = z
   .object({
-    artworkId: z.string().uuid(),
-    addressId: z.string().uuid(),
+    artworkId: firestoreId,
+    addressId: firestoreId,
     // Idempotency key the client generates once per checkout attempt —
     // required so a double-tapped "Pay now" button (or a retried request
     // after a flaky connection) never creates two orders. Enforced again
@@ -42,7 +43,7 @@ export interface OrderDto {
 
 export const advanceOrderStatusInputSchema = z
   .object({
-    orderId: z.string().uuid(),
+    orderId: firestoreId,
     to: z.enum(orderStatusValues),
     // Required for "cancelled"; optional otherwise — validated at the
     // handler level against the specific transition, not here, since the

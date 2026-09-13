@@ -12,6 +12,7 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from "@nestjs/common";
 import type { Response } from "express";
 
@@ -45,6 +46,8 @@ function codeFor(status: number): string {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -70,7 +73,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Anything that wasn't deliberately thrown as an HttpException is a
-    // bug, not a client error — never leak its message to the caller.
+    // bug, not a client error — never leak its message to the caller,
+    // but DO log it server-side or the 500 is undebuggable.
+    const req = ctx.getRequest<{ method?: string; originalUrl?: string }>();
+    this.logger.error(`${req.method ?? "?"} ${req.originalUrl ?? "?"} -> unhandled`, exception instanceof Error ? exception.stack : String(exception));
     const problem: ProblemDetails = {
       type: "about:blank",
       title: "Internal server error",

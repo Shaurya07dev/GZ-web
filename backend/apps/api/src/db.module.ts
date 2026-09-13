@@ -4,13 +4,16 @@
 
 import { Global, Module } from "@nestjs/common";
 import { createDb, type Db } from "@galleryzone/db";
-import { loadEnv } from "@galleryzone/config";
+import { loadEnv, type AppEnv } from "@galleryzone/config";
 
 export const DB = Symbol("DB");
+/** The typed env, for the few controllers whose behaviour is env-gated (e.g. PAYMENTS_MODE). */
+export const ENV = Symbol("ENV");
 
 @Global()
 @Module({
   providers: [
+    { provide: ENV, useFactory: (): AppEnv => loadEnv() },
     {
       provide: DB,
       useFactory: (): Db => {
@@ -20,6 +23,6 @@ export const DB = Symbol("DB");
       },
     },
   ],
-  exports: [DB],
+  exports: [DB, ENV],
 })
 export class DbModule {}
