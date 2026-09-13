@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { HealthController } from "./health.controller.ts";
+import { AuthController } from "./auth/auth.controller.ts";
 import { RateConfigController } from "./rate-config.controller.ts";
 import { ArtworksController } from "./artworks.controller.ts";
 import { OrdersController } from "./orders.controller.ts";
@@ -30,6 +31,7 @@ import { DbModule } from "./db.module.ts";
   imports: [DbModule],
   controllers: [
     HealthController,
+    AuthController,
     RateConfigController,
     ArtworksController,
     OrdersController,

@@ -28,9 +28,10 @@ export interface RouteSpec {
 export const apiRoutes: readonly RouteSpec[] = [
   // --- Identity & Auth ---------------------------------------------------
   { method: "POST", path: "/v1/auth/register", authRole: "public", summary: "Create an account", replaces: "authService.register" },
-  { method: "POST", path: "/v1/auth/verify-email", authRole: "public", summary: "Verify email via Firebase token", replaces: "authService.verifyEmail" },
-  { method: "POST", path: "/v1/auth/forgot-password", authRole: "public", summary: "Send password reset", replaces: "authService.forgotPassword" },
-  { method: "GET", path: "/v1/me", authRole: "customer", summary: "Current user's own profile", replaces: "n/a — new" },
+  // Sign-in, password reset and email verification are Firebase client SDK
+  // flows (authService.login/forgotPassword/verifyEmail) — no backend route.
+  { method: "POST", path: "/v1/auth/bootstrap", authRole: "public", summary: "Create the Firestore profile for an OAuth-created Firebase user (token-verified)", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/auth/me", authRole: "customer", summary: "Current user's own profile, from Firestore", replaces: "n/a — new" },
 
   // --- Catalog / Artwork ---------------------------------------------------
   { method: "GET", path: "/v1/artworks", authRole: "public", summary: "Marketplace listing, filtered", replaces: "artworkService.list" },

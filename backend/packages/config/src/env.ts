@@ -19,6 +19,14 @@ export interface AppEnv {
   razorpayWebhookSecret: string | null;
   sentryDsn: string | null;
   gcpProjectId: string;
+  /** Browser origins allowed by CORS. Comma-separated in env; defaults to the local Next dev server. */
+  corsOrigins: string[];
+  /**
+   * "simulated" lets the order's own customer call POST /v1/orders/:id/simulate-payment
+   * (stand-in for the Razorpay webhook while Razorpay is deferred). Anything else
+   * refuses that route for customers, so a deploy can't accidentally ship free checkout.
+   */
+  paymentsMode: "simulated" | "razorpay";
 }
 
 function required(name: string, value: string | undefined): string {
@@ -56,5 +64,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     razorpayWebhookSecret: optional(source.RAZORPAY_WEBHOOK_SECRET),
     sentryDsn: optional(source.SENTRY_DSN),
     gcpProjectId: required("GCP_PROJECT_ID", source.GCP_PROJECT_ID),
+    corsOrigins: (source.CORS_ORIGINS ?? "http://localhost:3000").split(",").map((o) => o.trim()).filter(Boolean),
+    paymentsMode: source.PAYMENTS_MODE === "razorpay" ? "razorpay" : "simulated",
   };
 }
