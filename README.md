@@ -31,10 +31,9 @@ cd mobile_flutter && flutter pub get && flutter run
 
 ## State of the build
 
-Both clients are complete as interfaces and run entirely on mock data — there is
-no backend yet, and no payment gateway is connected. Everything persists to local
-storage, which is enough to walk the whole flow end to end: submit a piece, get it
-approved, buy it, watch it ship, settle the artist, resell it.
+The web frontend (`frontend-web`) is now connected to a real NestJS backend API and uses Firebase for authentication and database. Previously, it ran entirely on mock data, but it is now hitting real endpoints for artwork listings, artist profiles, orders, and addresses.
+
+The mobile client is also actively evolving to integrate with these backend services. While some flows may still simulate external gateways (like payments), the core data model and authentication are now live and centralized.
 
 Per-app notes live in `frontend-web/CLAUDE.md` and
 `mobile_flutter/NEXT_SESSION_PROMPT.md`.
