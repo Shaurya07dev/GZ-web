@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
-import { signOut } from "@/lib/session";
+import { authService } from "@/services/authService";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
 
 const PRIMARY_TABS = [
@@ -213,7 +213,7 @@ export function AggregatorMobileBottomNav() {
           <div className="border-t border-border pt-3">
             <button
               type="button"
-              onClick={() => { signOut(); window.location.href = "/login"; }}
+              onClick={() => { void authService.logout(); window.location.href = "/login"; }}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
             >
               <LogOut className="size-[18px] shrink-0" strokeWidth={1.75} />

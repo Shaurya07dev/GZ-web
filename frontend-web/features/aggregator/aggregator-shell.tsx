@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/popover";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
 import { AGGREGATOR, AGGREGATOR_NOTIFICATION_GROUPS } from "./aggregator-data";
-import { signOut } from "@/lib/session";
+import { authService } from "@/services/authService";
 
 // Deliberately a parallel sibling to features/dashboard/dashboard-shell.tsx,
 // not a shared/generalized abstraction over it — same reasoning as before:
@@ -340,7 +340,7 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
 
   function handleSignOut() {
-    signOut();
+    void authService.logout();
     window.location.href = "/login";
   }
 

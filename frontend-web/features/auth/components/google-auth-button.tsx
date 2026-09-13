@@ -1,6 +1,11 @@
 "use client";
 
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { authService } from "@/services/authService";
+import type { SessionRole } from "@/lib/session";
+import type { Role } from "@/features/auth/schemas/auth-schemas";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -25,20 +30,50 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-// Every auth screen is mock-data-driven (see useAuth hooks) with no real
-// backend to hand off to, so this stays a styled, honest dead end rather
-// than faking an OAuth redirect.
-export function GoogleAuthButton() {
+// Real Google sign-in through the Firebase client SDK (authService).
+// Without `role` (login page) the Google account must already have a
+// GalleryZone profile; with it (register page) a first-time Google account
+// gets its profile created with that role.
+export function GoogleAuthButton({
+  role,
+  name,
+  onSignedIn,
+  label = "Google",
+}: {
+  role?: Role;
+  name?: string;
+  onSignedIn: (role: SessionRole) => void;
+  label?: string;
+}) {
+  const [pending, setPending] = useState(false);
+
+  async function handleClick() {
+    setPending(true);
+    try {
+      const ack = await authService.loginWithGoogle({ role, name });
+      if (ack) onSignedIn(ack.role);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Google sign-in failed.",
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={() =>
-        toast.info("Google sign-in isn't wired up in this demo yet.")
-      }
-      className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted active:scale-[0.98]"
+      onClick={handleClick}
+      disabled={pending}
+      className="flex w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted active:scale-[0.98] disabled:opacity-60"
     >
-      <GoogleIcon className="text-base" />
-      Google
+      {pending ? (
+        <Loader2 className="size-4 animate-spin" />
+      ) : (
+        <GoogleIcon className="text-base" />
+      )}
+      {label}
     </button>
   );
 }

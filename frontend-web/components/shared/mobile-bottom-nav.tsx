@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/sheet";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { initials, mockCustomer } from "@/features/account/account-data";
-import { readSessionRole, signOut, subscribeToSession } from "@/lib/session";
+import { readSessionRole, subscribeToSession } from "@/lib/session";
+import { authService } from "@/services/authService";
 
 interface NavItem {
   href: string;
@@ -216,7 +217,7 @@ export function MobileBottomNav() {
               <button
                 type="button"
                 onClick={() => {
-                  signOut();
+                  void authService.logout();
                   router.push("/login");
                 }}
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"

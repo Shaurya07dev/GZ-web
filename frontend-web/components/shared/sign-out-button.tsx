@@ -2,15 +2,15 @@
 
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signOut } from "@/lib/session";
+import { authService } from "@/services/authService";
 
-// Clears the fake session cookie login-form.tsx writes and sends proxy.ts
-// back to treating every guarded route as signed-out.
+// Clears the role cookie proxy.ts guards on AND signs out of Firebase, so
+// the next API call carries no token.
 export function SignOutButton() {
   const router = useRouter();
 
-  function handleSignOut() {
-    signOut();
+  async function handleSignOut() {
+    await authService.logout();
     router.push("/login");
   }
 

@@ -6,20 +6,9 @@ import { useRouter } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  AlertCircle,
-  Loader2,
-  LogIn,
-  Mail,
-  Lock,
-  Palette,
-  Building2,
-  Compass,
-  type LucideIcon,
-} from "lucide-react";
+import { AlertCircle, Loader2, LogIn, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import type { z } from "zod";
@@ -28,15 +17,10 @@ import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
 import { AppleAuthButton } from "./apple-auth-button";
-import { RoleToggle } from "./role-toggle";
 import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
-import { ROLE_SECTION_HOME, SESSION_COOKIE, signIn } from "@/lib/session";
-import {
-  loginSchema,
-  type LoginInput,
-  type Role,
-} from "@/features/auth/schemas/auth-schemas";
+import { ROLE_SECTION_HOME } from "@/lib/session";
+import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth-schemas";
 
 // `rememberMe`'s `.default(false)` in the schema makes it optional on the
 // Zod *input* type but required on the parsed *output* type (LoginInput).
@@ -47,27 +31,10 @@ import {
 // whether rememberMe is optional.
 type LoginFormValues = z.input<typeof loginSchema>;
 
-// Login-only: Register's `Role` is the three self-service account types
-// (admin is ops staff, not something anyone signs up for), but this toggle
-// doubles as "sign in as" for a phase with no real backend to carry a
-// stored role — so Admin is added here to make /admin reachable at all.
-type DemoRole = Role | "admin";
-
-// This toggle is the only signal this mock phase has for "which dashboard
-// should a successful login land on" — there is no real backend to carry
-// that information, so it's the actual "sign in as" control, not a hidden
-// dev affordance. Where each role lands lives in lib/session.ts, shared with
-// the route guard so the two can't disagree.
-
-const ROLE_TOGGLE_OPTIONS: {
-  value: DemoRole;
-  label: string;
-  icon: LucideIcon;
-}[] = [
-  { value: "artist", label: "Artist", icon: Palette },
-  { value: "aggregator", label: "Aggregator", icon: Building2 },
-  { value: "customer", label: "Customer", icon: Compass },
-];
+// Which portal a successful sign-in lands on is decided by the ROLE the
+// backend reports (authService.login -> GET /v1/auth/me), never by anything
+// chosen on this form. Where each role lands lives in lib/session.ts,
+// shared with the route guard so the two can't disagree.
 
 const containerVariants: Variants = {
   hidden: {},
@@ -86,7 +53,6 @@ const itemVariants: Variants = {
 export function LoginForm() {
   const router = useRouter();
   const loginMutation = useLoginMutation();
-  const [demoRole, setDemoRole] = useState<DemoRole>("artist");
   const [simulateError, setSimulateError] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -102,17 +68,10 @@ export function LoginForm() {
     loginMutation.mutate(
       { ...values, simulateError },
       {
-        onSuccess: () => {
-          // Fake session (see lib/session.ts): no backend to issue a real
-          // token, so signing in writes the chosen role to a cookie that
-          // proxy.ts reads on every request. Unticking "Keep me signed in"
-          // downgrades it to a browser-session cookie that dies on close.
-          if (values.rememberMe) {
-            signIn(demoRole);
-          } else {
-            document.cookie = `${SESSION_COOKIE}=${demoRole}; path=/; samesite=lax`;
-          }
-          router.push(ROLE_SECTION_HOME[demoRole]);
+        onSuccess: ({ role }) => {
+          // authService already wrote the role cookie proxy.ts guards on
+          // (session-only when "Keep me signed in" is unticked).
+          router.push(ROLE_SECTION_HOME[role]);
         },
         onError: (error) => {
           setFormError(
@@ -135,17 +94,9 @@ export function LoginForm() {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <RoleToggle
-          options={ROLE_TOGGLE_OPTIONS}
-          value={demoRole}
-          onChange={setDemoRole}
-        />
-      </motion.div>
-
-      <motion.div variants={itemVariants}>
         <AuthFormHeader
           title="Welcome back"
-          description="Pick your role above, then sign in to continue."
+          description="Sign in to continue to your portal."
           icon={LogIn}
         />
       </motion.div>
@@ -241,7 +192,9 @@ export function LoginForm() {
           <div className="grow border-t border-border" />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <GoogleAuthButton />
+          <GoogleAuthButton
+            onSignedIn={(role) => router.push(ROLE_SECTION_HOME[role])}
+          />
           <AppleAuthButton />
         </div>
       </motion.div>

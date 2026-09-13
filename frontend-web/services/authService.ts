@@ -1,75 +1,264 @@
-import { mockDelay, mockError } from "@/lib/mock-utils";
+import {
+  applyActionCode,
+  confirmPasswordReset,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
+import { firebaseAuth, googleProvider } from "@/lib/firebase";
+import { http, isApiError } from "@/lib/api";
+import { signIn, signOut, type SessionRole } from "@/lib/session";
 import type {
   ForgotPasswordInput,
   LoginInput,
   RegisterInput,
   ResetPasswordInput,
+  Role,
 } from "@/features/auth/schemas/auth-schemas";
 
-// Mock auth phase (see plan Global Constraints): there is no real backend,
-// so every method here resolves a fixture-shaped acknowledgement after a
-// fake delay instead of calling axios. Every method accepts a
-// `simulateError?: boolean` dev toggle so each error path is demoable on
-// demand from the UI (small dashed-border "DEV" controls in the forms that
-// call these) without relying on magic strings for credential-style errors.
-// verifyEmail is the one exception — its failure path is driven by the
-// `token` itself ("invalid"), because that mirrors how a real bad/expired
-// verification link would actually arrive: as a URL, not a form submission.
+// Real auth. Sign-in is a Firebase client SDK flow (email/password or
+// Google); the backend never sees a password. What the backend owns is the
+// Firestore profile behind users/{uid} — the ONLY authoritative source of
+// role/status — reached via:
+//   POST /v1/auth/register   email+password sign-up
+//   POST /v1/auth/bootstrap  OAuth first login (Auth user exists, profile doesn't)
+//   GET  /v1/auth/me         the caller's profile
+// After any successful sign-in the role from /me is written to the
+// gz_session cookie that proxy.ts guards routes with (lib/session.ts), so
+// the route guard and the header keep working exactly as before — just
+// fed by the backend instead of a "sign in as" toggle.
+//
+// `simulateError` is kept on the signatures so the forms' DEV panels still
+// demo the error path; it short-circuits before any network call.
+
+export interface CurrentUser {
+  uid: string;
+  role: SessionRole;
+  status: "pending" | "active" | "suspended" | "blocked";
+  name: string;
+  email: string;
+  phone: string | null;
+  roleGrants: string[];
+}
 
 export interface AuthAck {
   email: string;
+  role: SessionRole;
 }
 
 export interface AuthResult {
   success: true;
 }
 
+const CANCELLED_POPUP_CODES = new Set([
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+]);
+
+function firebaseCode(error: unknown): string | null {
+  return typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+    ? error.code
+    : null;
+}
+
+// The SDK's messages ("Firebase: Error (auth/invalid-credential).") are
+// not for end users. Map the ones a person can actually hit.
+function friendlyAuthError(error: unknown): Error {
+  switch (firebaseCode(error)) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return new Error("Invalid email or password");
+    case "auth/too-many-requests":
+      return new Error(
+        "Too many attempts. Please wait a moment and try again.",
+      );
+    case "auth/user-disabled":
+      return new Error("This account has been disabled.");
+    case "auth/invalid-action-code":
+    case "auth/expired-action-code":
+      return new Error("This link is invalid or has expired. Request a new one.");
+    case "auth/popup-blocked":
+      return new Error(
+        "Your browser blocked the sign-in window. Allow pop-ups and try again.",
+      );
+    case "auth/network-request-failed":
+      return new Error("Network error. Check your connection and try again.");
+    default:
+      return error instanceof Error ? error : new Error("Something went wrong.");
+  }
+}
+
+/** Reads /me and mirrors the role into the session cookie. */
+async function establishSession(rememberMe = true): Promise<CurrentUser> {
+  const me = await http.get<CurrentUser>("/v1/auth/me");
+  signIn(me.role, { persistent: rememberMe });
+  return me;
+}
+
 export const authService = {
-  login: (input: LoginInput & { simulateError?: boolean }) => {
-    if (input.simulateError) {
-      return mockError("Invalid email or password");
+  login: async (
+    input: LoginInput & { simulateError?: boolean },
+  ): Promise<AuthAck> => {
+    if (input.simulateError) throw new Error("Invalid email or password");
+    try {
+      await signInWithEmailAndPassword(
+        firebaseAuth(),
+        input.email,
+        input.password,
+      );
+    } catch (error) {
+      throw friendlyAuthError(error);
     }
-    return mockDelay<AuthAck>({ email: input.email });
+    try {
+      const me = await establishSession(input.rememberMe);
+      return { email: me.email, role: me.role };
+    } catch (error) {
+      // Signed in to Firebase but no profile: can't be routed anywhere useful.
+      await firebaseSignOut(firebaseAuth()).catch(() => {});
+      if (isApiError(error, 401)) {
+        throw new Error(
+          "No GalleryZone account exists for this sign-in yet. Create one first.",
+        );
+      }
+      throw error;
+    }
   },
 
-  register: (input: RegisterInput & { simulateError?: boolean }) => {
-    if (input.simulateError) {
-      return mockError("That email is already registered");
+  /**
+   * Google sign-in. On the login page (no `role`) an account must already
+   * exist; on the register page the form's chosen role is used to create
+   * the profile the first time. Resolves null when the person closed the
+   * popup — not an error, just nothing happened.
+   */
+  loginWithGoogle: async (
+    options: { role?: Role; name?: string } = {},
+  ): Promise<AuthAck | null> => {
+    let credential;
+    try {
+      credential = await signInWithPopup(firebaseAuth(), googleProvider);
+    } catch (error) {
+      const code = firebaseCode(error);
+      if (code && CANCELLED_POPUP_CODES.has(code)) return null;
+      throw friendlyAuthError(error);
     }
-    return mockDelay<AuthAck>({ email: input.email });
+    try {
+      const me = await establishSession();
+      return { email: me.email, role: me.role };
+    } catch (error) {
+      if (!isApiError(error, 401)) throw error;
+      if (!options.role) {
+        await firebaseSignOut(firebaseAuth()).catch(() => {});
+        throw new Error(
+          "No GalleryZone account exists for this Google account yet. Create one first.",
+        );
+      }
+      const me = await http.post<CurrentUser>("/v1/auth/bootstrap", {
+        role: options.role,
+        name: options.name ?? credential.user.displayName ?? undefined,
+      });
+      signIn(me.role);
+      return { email: me.email, role: me.role };
+    }
   },
 
-  // Deliberately non-committal even in its own service contract: the
-  // resolved payload never signals whether the email actually belongs to an
-  // account, and the simulated-error path (unused by the UI in this phase,
-  // see ForgotPasswordForm) is a generic transient failure, never an
-  // "account not found" message — real security practice, not a shortcut.
-  forgotPassword: (
+  register: async (
+    input: RegisterInput & { simulateError?: boolean },
+  ): Promise<AuthAck> => {
+    if (input.simulateError) throw new Error("That email is already registered");
+    // companyName/contactPerson (aggregator) have no backend field yet —
+    // the aggregator profile flow captures them later.
+    await http.post<{ uid: string }>("/v1/auth/register", {
+      email: input.email,
+      password: input.password,
+      name: input.name,
+      role: input.role,
+      phone: input.phone,
+    });
+    try {
+      await signInWithEmailAndPassword(
+        firebaseAuth(),
+        input.email,
+        input.password,
+      );
+    } catch (error) {
+      throw friendlyAuthError(error);
+    }
+    const me = await establishSession();
+    return { email: me.email, role: me.role };
+  },
+
+  // Non-committal by design: Firebase itself reveals nothing about whether
+  // the address belongs to an account (Email Enumeration Protection), and
+  // neither does this — the resolved payload is the same either way.
+  forgotPassword: async (
     input: ForgotPasswordInput & { simulateError?: boolean },
-  ) => {
+  ): Promise<{ email: string }> => {
     if (input.simulateError) {
-      return mockError("Something went wrong. Please try again.");
+      throw new Error("Something went wrong. Please try again.");
     }
-    return mockDelay<AuthAck>({ email: input.email });
+    try {
+      await sendPasswordResetEmail(firebaseAuth(), input.email);
+    } catch (error) {
+      if (firebaseCode(error) !== "auth/user-not-found") {
+        throw friendlyAuthError(error);
+      }
+    }
+    return { email: input.email };
   },
 
-  resetPassword: (
+  // `token` is Firebase's oobCode from the emailed link (?oobCode=…).
+  resetPassword: async (
     input: ResetPasswordInput & { token?: string; simulateError?: boolean },
-  ) => {
+  ): Promise<AuthResult> => {
     if (input.simulateError) {
-      return mockError("This reset link has expired. Request a new one.");
+      throw new Error("This reset link has expired. Request a new one.");
     }
-    return mockDelay<AuthResult>({ success: true });
+    if (!input.token) {
+      throw new Error("This reset link is missing its code. Request a new one.");
+    }
+    try {
+      await confirmPasswordReset(firebaseAuth(), input.token, input.password);
+    } catch (error) {
+      throw friendlyAuthError(error);
+    }
+    return { success: true };
   },
 
-  // No Zod schema backs this one (see Task 5 schema list) — there is no
-  // user-entered form on this screen, just a token read from the URL.
-  verifyEmail: (input: { token?: string; simulateError?: boolean }) => {
+  verifyEmail: async (input: {
+    token?: string;
+    simulateError?: boolean;
+  }): Promise<AuthResult> => {
     if (input.simulateError || input.token === "invalid") {
-      return mockError("This verification link is invalid or has expired.");
+      throw new Error("This verification link is invalid or has expired.");
     }
-    // Slightly longer than the default 600ms mockDelay so the "Verifying…"
-    // spinner reads as genuine work rather than a flash (spec: ~1.2s).
-    return mockDelay<AuthResult>({ success: true }, 1200);
+    if (!input.token) {
+      throw new Error("This verification link is missing its code.");
+    }
+    try {
+      await applyActionCode(firebaseAuth(), input.token);
+    } catch (error) {
+      throw friendlyAuthError(error);
+    }
+    return { success: true };
+  },
+
+  logout: async (): Promise<void> => {
+    signOut();
+    await firebaseSignOut(firebaseAuth()).catch(() => {});
+  },
+
+  /** Current profile, or null when signed out / no profile. */
+  me: async (): Promise<CurrentUser | null> => {
+    try {
+      return await http.get<CurrentUser>("/v1/auth/me");
+    } catch (error) {
+      if (isApiError(error, 401)) return null;
+      throw error;
+    }
   },
 };

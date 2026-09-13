@@ -1,8 +1,10 @@
-// The fake session, in one place. There is no backend to issue a real token,
-// so signing in writes the chosen role to a cookie that proxy.ts reads on
-// every request. Login, the register page's demo buttons, both sign-out
-// buttons and the route guard all go through here, so the cookie name,
-// lifetime and landing routes can't drift apart across five files.
+// The role cookie, in one place. The real credential is the Firebase ID
+// token (lib/firebase.ts) which the API verifies on every call; this cookie
+// only carries the ROLE the backend reported from GET /v1/auth/me, so that
+// proxy.ts can route-guard on the server and the header can show the right
+// controls without a round trip. Login, the register page's demo buttons,
+// both sign-out buttons and the route guard all go through here, so the
+// cookie name, lifetime and landing routes can't drift apart across files.
 
 export type SessionRole = "artist" | "aggregator" | "customer" | "admin";
 
@@ -74,8 +76,14 @@ function announceSessionChange(): void {
   window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
 }
 
-export function signIn(role: SessionRole): void {
-  document.cookie = `${SESSION_COOKIE}=${role}; path=/; max-age=${SESSION_MAX_AGE_SECONDS}; samesite=lax`;
+// `persistent: false` makes it a browser-session cookie (dies on close) —
+// the "Keep me signed in" unticked case.
+export function signIn(
+  role: SessionRole,
+  { persistent = true }: { persistent?: boolean } = {},
+): void {
+  const maxAge = persistent ? `; max-age=${SESSION_MAX_AGE_SECONDS}` : "";
+  document.cookie = `${SESSION_COOKIE}=${role}; path=/${maxAge}; samesite=lax`;
   announceSessionChange();
 }
 

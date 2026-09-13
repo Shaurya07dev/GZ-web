@@ -34,9 +34,9 @@ import { mockArtworks } from "@/lib/mock-data/artworks";
 import {
   ROLE_SECTION_HOME,
   readSessionRole,
-  signOut,
   subscribeToSession,
 } from "@/lib/session";
+import { authService } from "@/services/authService";
 
 function titleCase(value: string): string {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -111,7 +111,7 @@ export function SiteHeader() {
   );
 
   function handleSignOut() {
-    signOut();
+    void authService.logout();
     router.push("/");
     router.refresh();
   }

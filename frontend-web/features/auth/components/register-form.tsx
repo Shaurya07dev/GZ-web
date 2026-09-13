@@ -8,7 +8,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
   Loader2,
-  MailCheck,
   UserPlus,
   User,
   Mail,
@@ -31,7 +30,6 @@ import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
 import { AppleAuthButton } from "./apple-auth-button";
 import { RoleToggle } from "./role-toggle";
-import { DevPanel } from "./dev-panel";
 import { useRegisterMutation } from "@/hooks/useAuth";
 import {
   registerBaseSchema,
@@ -39,7 +37,7 @@ import {
   type Role,
 } from "@/features/auth/schemas/auth-schemas";
 import { ROLE_OPTIONS } from "@/features/auth/data/role-options";
-import { signIn } from "@/lib/session";
+import { ROLE_SECTION_HOME } from "@/lib/session";
 import { buyerInviteService } from "@/services/buyerInviteService";
 
 interface RegisterFormProps {
@@ -80,10 +78,11 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
   });
 
   const role = useWatch({ control: form.control, name: "role" });
+  const name = useWatch({ control: form.control, name: "name" });
 
   function onSubmit(values: RegisterInput) {
     registerMutation.mutate(values, {
-      onSuccess: () => {
+      onSuccess: ({ role: grantedRole }) => {
         // A buyer who bought in person from an aggregator exists only as a
         // name and email on that sale. Registering with the same address
         // claims those purchases into this account, with their certificates
@@ -101,6 +100,9 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             );
           }
         }
+        // authService.register signs the new account in and writes the
+        // role cookie, so land straight in the portal.
+        router.push(ROLE_SECTION_HOME[grantedRole]);
       },
       onError: (error) => {
         toast.error(
@@ -108,18 +110,6 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
         );
       },
     });
-  }
-
-  if (registerMutation.isSuccess) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={STEP_TRANSITION}
-      >
-        <RegisterSuccessPanel email={form.getValues("email")} />
-      </motion.div>
-    );
   }
 
   return (
@@ -254,26 +244,6 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             )}
           />
 
-          <div className="grid grid-cols-3 gap-2">
-            {ROLE_OPTIONS.map((option) => (
-              <button
-                key={option.role}
-                type="button"
-                onClick={() => {
-                  // No backend, so "demo login" is the same fake-session
-                  // write login-form.tsx does on success — skip the form
-                  // and drop straight into the (mock-data-driven) dashboard.
-                  signIn(option.role);
-                  router.push(option.redirectPath);
-                }}
-                className="flex flex-col items-center gap-1 rounded-lg border border-gold/30 bg-card px-2 py-2.5 text-xs font-medium text-foreground transition-colors hover:border-gold hover:bg-gold/10 active:scale-[0.98]"
-              >
-                <option.icon className="size-4 text-gold-bright" />
-                Demo {option.label}
-              </button>
-            ))}
-          </div>
-
           <Button
             type="submit"
             disabled={registerMutation.isPending}
@@ -296,7 +266,13 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
           <div className="grow border-t border-border" />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <GoogleAuthButton />
+          <GoogleAuthButton
+            role={role}
+            name={name || undefined}
+            onSignedIn={(grantedRole) =>
+              router.push(ROLE_SECTION_HOME[grantedRole])
+            }
+          />
           <AppleAuthButton />
         </div>
       </div>
@@ -311,42 +287,5 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
         </Link>
       </p>
     </motion.div>
-  );
-}
-
-function RegisterSuccessPanel({ email }: { email: string }) {
-  return (
-    <div className="flex flex-col items-center gap-5 text-center">
-      <span className="flex size-14 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-        <MailCheck className="size-6 text-gold-bright" strokeWidth={1.5} />
-      </span>
-      <div className="flex flex-col gap-2">
-        <h1 className="font-display text-2xl font-semibold text-foreground">
-          Check your email
-        </h1>
-        <p className="text-balance text-sm leading-relaxed text-muted-foreground">
-          We&rsquo;ve sent a verification link to{" "}
-          <span className="font-medium text-foreground">{email}</span>. Follow
-          it to activate your account.
-        </p>
-      </div>
-      <Link
-        href="/login"
-        className="text-sm font-medium text-gold-bright hover:underline"
-      >
-        Back to sign in
-      </Link>
-      <DevPanel className="mt-1">
-        <span className="text-xs text-muted-foreground">
-          Skip the real email
-        </span>
-        <Link
-          href="/verify-email?token=mock"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gold/50 px-3 py-1.5 text-xs font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
-        >
-          Dev: skip to email verification
-        </Link>
-      </DevPanel>
-    </div>
   );
 }
