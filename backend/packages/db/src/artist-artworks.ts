@@ -7,6 +7,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { artworkStateMachine, editWindowExpiresAt, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
 import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ListingType } from "./collections.ts";
+import { latestArtworkStatus } from "./public-artworks.ts";
 
 export class ArtistArtworkError extends Error {}
 
@@ -63,6 +64,7 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
     listingType: input.listingType,
     rarityType: null,
     coaCertificateNumber: null,
+    coaIssuedAt: null,
     nfcTagId: null,
     insuranceNumber: null,
     insuranceStatus: null,
@@ -83,11 +85,6 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
   await input.db.collection(artworkStatusEventsCol(artworkRef.id)).add(statusEvent);
 
   return { artworkId: artworkRef.id, productCode };
-}
-
-async function latestArtworkStatus(db: Firestore, artworkId: string): Promise<ArtworkStatus> {
-  const snap = await db.collection(artworkStatusEventsCol(artworkId)).orderBy("changedAt", "desc").limit(1).get();
-  return (snap.docs[0]?.data() as ArtworkStatusEventDoc | undefined)?.status ?? "draft";
 }
 
 export async function approveArtwork(db: Firestore, artworkId: string): Promise<void> {

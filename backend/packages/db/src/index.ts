@@ -12,6 +12,7 @@ export * from "./withdrawals.ts";
 export * from "./wallets.ts";
 export * from "./admin.ts";
 export * from "./public-profiles.ts";
+export * from "./public-artworks.ts";
 export * from "./admin-artworks.ts";
 export * from "./addresses.ts";
 export * from "./admin-settlements.ts";

@@ -23,6 +23,8 @@ export interface CustomerArtworkDto {
   listingType: string;
   rarityType: string | null;
   coaCertificateNumber: string | null;
+  coaIssuedAt: string | null;
+  createdAt: string;
 }
 
 // Everything a customer sees, plus the artist's own price — visible only to

@@ -160,6 +160,8 @@ export interface ArtworkDoc {
   listingType: ListingType;
   rarityType: ArtworkRarity | null;
   coaCertificateNumber: string | null;
+  /** When the certificate number was issued (coa.ts). Null until then. */
+  coaIssuedAt: FirebaseFirestore.Timestamp | null;
   nfcTagId: string | null;
   insuranceNumber: string | null;
   insuranceStatus: ReviewStatus | null;
