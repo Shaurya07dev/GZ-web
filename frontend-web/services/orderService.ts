@@ -1,88 +1,51 @@
 import type { Order } from "@/types/order";
-import { mockDelay, mockError } from "@/lib/mock-utils";
-import { getArtworkById } from "@/lib/mock-data/helpers";
-import { artworksCol, ordersCol } from "@/lib/mock-collections";
-import { checkoutTotal } from "@/lib/pricing";
-import { creditArtistSettlement } from "./artistPayoutService";
+import { http, isApiError } from "@/lib/api";
+import { toOrder, type OrderDto } from "@/lib/api-mappers";
 
-// Every rupee figure lives in lib/pricing.ts. Nothing in this file invents a
-// rate of its own — the checkout preview, the order record and the receipt all
-// read the same checkoutTotal().
-
+// Real checkout against the API. Money is computed server-side from the
+// artwork's pricing doc and the active rate config (packages/domain) — the
+// order record the customer sees is exactly what the ledger was posted
+// from, so the review-step preview (lib/pricing.ts) and the receipt agree
+// by construction as long as the two engines share their constants.
 
 export interface CreateOrderPayload {
   artworkId: string;
   addressId: string;
-  /** Gateway result, collected before the order is created. */
+  /** Gateway result. Simulated for now; ignored by the API until Razorpay lands. */
   payment?: Order["payment"];
 }
 
-// A marketplace sale credits the artist's PENDING balance. It becomes
-// withdrawable 7 days after the piece is delivered — see
-// services/artistPayoutService.ts, which owns that whole rule.
 export const orderService = {
-  list: (): Promise<Order[]> => mockDelay(ordersCol.get()),
+  list: async (): Promise<Order[]> => {
+    const orders = await http.get<OrderDto[]>("/v1/orders");
+    return orders.map(toOrder).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
 
-  get: (id: string): Promise<Order | undefined> =>
-    mockDelay(ordersCol.get().find((o) => o.id === id)),
-
-  create: (payload: CreateOrderPayload): Promise<Order> => {
-    const artwork = getArtworkById(payload.artworkId);
-    if (!artwork) return mockError("Artwork not found");
-    if (artwork.status !== "marketplace") {
-      return mockError("This artwork is no longer available for purchase");
+  get: async (id: string): Promise<Order | undefined> => {
+    try {
+      return toOrder(await http.get<OrderDto>(`/v1/orders/${encodeURIComponent(id)}`));
+    } catch (error) {
+      if (isApiError(error, 404)) return undefined;
+      throw error;
     }
+  },
 
-    // GST is already inside customerPrice, so this is the portion of the price
-    // that IS tax — not an extra charge on top of it.
-    const totals = checkoutTotal(artwork.customerPrice);
-    const now = new Date().toISOString();
-    const order: Order = {
-      id: `order-${crypto.randomUUID()}`,
+  // Two calls: create (pending) then confirm. While Razorpay is deferred the
+  // confirmation is the backend's simulated capture, which the order's own
+  // customer may trigger (PAYMENTS_MODE=simulated). When the real gateway
+  // lands, the second call becomes the gateway checkout + webhook and this
+  // function's shape doesn't change.
+  create: async (payload: CreateOrderPayload): Promise<Order> => {
+    const { orderId } = await http.post<{ orderId: string; totalPaise: number }>("/v1/orders", {
       artworkId: payload.artworkId,
       addressId: payload.addressId,
-      amount: artwork.customerPrice,
-      gstAmount: totals.gstIncluded,
-      deliveryCharge: totals.deliveryCharge,
-      // A paid order, because payment is collected before this is called.
-      status: payload.payment ? "paid" : "pending",
-      createdAt: now,
-      statusHistory: [
-        { status: "pending", changedAt: now },
-        ...(payload.payment
-          ? [{ status: "paid" as const, changedAt: now }]
-          : []),
-      ],
-      payment: payload.payment ?? null,
-    };
-    ordersCol.set([order, ...ordersCol.get()]);
-
-    // Sold artworks come off the open marketplace — matches the pipeline's
-    // Stage 9 ("Sale & Ownership Transfer"): a sold one-of-a-kind original
-    // can't be bought twice.
-    const artworks = artworksCol.get();
-    artworksCol.set(
-      artworks.map((a) =>
-        a.id === artwork.id
-          ? {
-              ...a,
-              status: "sold" as const,
-              statusHistory: [
-                ...a.statusHistory,
-                { status: "sold" as const, changedAt: now },
-              ],
-            }
-          : a,
-      ),
-    );
-
-    // Marketplace channel: the artist is paid their asking price in full.
-    creditArtistSettlement({
-      artwork,
-      orderId: order.id,
-      channel: "marketplace",
+      // One key per checkout attempt: a double-tap or retried request can't
+      // create two orders (the API enforces uniqueness).
+      idempotencyKey: crypto.randomUUID(),
     });
-
-    return mockDelay(order);
+    await http.post(`/v1/orders/${encodeURIComponent(orderId)}/simulate-payment`);
+    const order = await orderService.get(orderId);
+    if (!order) throw new Error("Order was created but could not be read back");
+    return order;
   },
 };

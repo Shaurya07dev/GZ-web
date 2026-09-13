@@ -1,0 +1,195 @@
+// Backend DTO -> frontend type mappers. The backend speaks paise and
+// nullable-by-default; the UI types (types/*.ts) were written against the
+// fixtures in rupees. Mapping lives here, in one place, so services stay
+// thin and nothing in features/ learns the wire shape.
+
+import type { Artwork, ArtworkStatus, ArtworkSummary, ListingType, ArtworkRarity } from "@/types/artwork";
+import type { ArtistProfile } from "@/types/artist";
+import type { Order, OrderStatus } from "@/types/order";
+import type { Address } from "@/types/customer";
+
+/** Mirrors backend/packages/contracts CustomerArtworkDto. */
+export interface ArtworkDto {
+  id: string;
+  productCode: string;
+  artistId: string;
+  artistName: string;
+  title: string;
+  description: string;
+  category: string;
+  medium: string;
+  dimensions: string | null;
+  yearCreated: number | null;
+  images: { url: string; thumbnailUrl: string | null; altText: string | null; sortOrder: number }[];
+  displayPricePaise: number;
+  insured: boolean;
+  status: ArtworkStatus;
+  listingType: ListingType;
+  rarityType: ArtworkRarity | null;
+  coaCertificateNumber: string | null;
+  coaIssuedAt: string | null;
+  createdAt: string;
+}
+
+// Until the image upload pipeline exists every backend artwork has
+// images: [] — show a neutral placeholder rather than a broken <img>.
+export const ARTWORK_PLACEHOLDER_IMAGE = "/artworks/framed-painting.png";
+
+export function paiseToRupees(paise: number): number {
+  return Math.round(paise) / 100;
+}
+
+export function toArtwork(dto: ArtworkDto): Artwork {
+  const images = [...dto.images]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((img) => ({
+      url: img.url,
+      thumbnailUrl: img.thumbnailUrl ?? img.url,
+      sortOrder: img.sortOrder,
+      altText: img.altText ?? dto.title,
+    }));
+  const cover = images[0];
+  return {
+    id: dto.id,
+    title: dto.title,
+    artistId: dto.artistId,
+    artistName: dto.artistName,
+    // Verification tiers aren't on the public DTO yet.
+    verifiedArtist: false,
+    category: dto.category,
+    medium: dto.medium,
+    customerPrice: paiseToRupees(dto.displayPricePaise),
+    thumbnailUrl: cover?.thumbnailUrl ?? ARTWORK_PLACEHOLDER_IMAGE,
+    insured: dto.insured,
+    status: dto.status,
+    listingType: dto.listingType,
+    rarityType: dto.rarityType,
+    description: dto.description,
+    dimensions: dto.dimensions,
+    yearCreated: dto.yearCreated,
+    images: images.length
+      ? images
+      : [{ url: ARTWORK_PLACEHOLDER_IMAGE, thumbnailUrl: ARTWORK_PLACEHOLDER_IMAGE, sortOrder: 0, altText: dto.title }],
+    // Empty until the certificate is issued on approval (backend coa.ts).
+    coaCertificateNumber: dto.coaCertificateNumber ?? "",
+    coaIssueDate: dto.coaIssuedAt ?? "",
+    socialProofLinks: [],
+    // The public DTO carries only the current status; the full event log
+    // comes with the verify passport. One synthetic entry keeps "newest"
+    // sorting and timelines working.
+    statusHistory: [{ status: dto.status, changedAt: dto.createdAt }],
+  };
+}
+
+export function toArtworkSummary(dto: ArtworkDto): ArtworkSummary {
+  const a = toArtwork(dto);
+  return {
+    id: a.id,
+    title: a.title,
+    artistId: a.artistId,
+    artistName: a.artistName,
+    verifiedArtist: a.verifiedArtist,
+    category: a.category,
+    medium: a.medium,
+    customerPrice: a.customerPrice,
+    thumbnailUrl: a.thumbnailUrl,
+    insured: a.insured,
+    status: a.status,
+    listingType: a.listingType,
+    rarityType: a.rarityType ?? null,
+  };
+}
+
+/** Mirrors backend PublicArtistProfile. */
+export interface ArtistDto {
+  id: string;
+  name: string;
+  headline: string | null;
+  bio: string | null;
+  location: string | null;
+  profileImageUrl: string | null;
+  artworkCount: number;
+}
+
+export const ARTIST_PLACEHOLDER_IMAGE = "/artworks/portrait-woman.png";
+
+export function toArtistProfile(dto: ArtistDto): ArtistProfile {
+  return {
+    id: dto.id,
+    name: dto.name,
+    bio: dto.bio ?? "",
+    profileImageUrl: dto.profileImageUrl ?? ARTIST_PLACEHOLDER_IMAGE,
+    verification: { tier1SocialMedia: false, tier2ActivePlan: false, tier3FirstSale: false },
+    socialLinks: [],
+    headline: dto.headline ?? "",
+    location: dto.location ?? "",
+    joinedAt: "",
+  };
+}
+
+/** Mirrors backend OrderDoc & { id } (order-listings.ts). Timestamps arrive as Firestore {_seconds,_nanoseconds} or ISO. */
+export interface OrderDto {
+  id: string;
+  artworkId: string;
+  customerId: string;
+  addressId: string;
+  displayPricePaise: number;
+  gstPaise: number;
+  deliveryChargePaise: number;
+  convenienceFeePaise: number;
+  totalPaise: number;
+  status: OrderStatus;
+  rateConfigVersionId: string;
+  createdAt: FirestoreTimestampLike | string;
+}
+
+export interface FirestoreTimestampLike {
+  _seconds: number;
+  _nanoseconds: number;
+}
+
+export function timestampToIso(value: FirestoreTimestampLike | string | null | undefined): string {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return new Date(value._seconds * 1000 + Math.floor(value._nanoseconds / 1e6)).toISOString();
+}
+
+export function toOrder(dto: OrderDto): Order {
+  const createdAt = timestampToIso(dto.createdAt);
+  return {
+    id: dto.id,
+    artworkId: dto.artworkId,
+    addressId: dto.addressId,
+    amount: paiseToRupees(dto.displayPricePaise),
+    gstAmount: paiseToRupees(dto.gstPaise),
+    deliveryCharge: paiseToRupees(dto.deliveryChargePaise),
+    status: dto.status,
+    createdAt,
+    // Status events live in a subcollection the listing doesn't join yet.
+    statusHistory: [{ status: dto.status, changedAt: createdAt }],
+    payment: dto.status === "pending" ? null : { provider: "razorpay", paymentId: "", method: "simulated", simulated: true },
+  };
+}
+
+/** Mirrors backend AddressDoc & { id }. */
+export interface AddressDto {
+  id: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  isDefault: boolean;
+}
+
+export function toAddress(dto: AddressDto): Address {
+  return {
+    id: dto.id,
+    line1: dto.line1,
+    line2: dto.line2 ?? undefined,
+    city: dto.city,
+    state: dto.state,
+    pincode: dto.pincode,
+    isDefault: dto.isDefault,
+  };
+}

@@ -166,13 +166,13 @@ export function ArtworkInfoPanel({
           <div className="flex items-center justify-between gap-4">
             <dt className="text-muted-foreground">Certificate number</dt>
             <dd className="font-medium tabular-nums text-foreground">
-              {artwork.coaCertificateNumber}
+              {artwork.coaCertificateNumber || "Issued on approval"}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-muted-foreground">Issued</dt>
             <dd className="font-medium text-foreground">
-              {formatDate(artwork.coaIssueDate)}
+              {artwork.coaIssueDate ? formatDate(artwork.coaIssueDate) : "—"}
             </dd>
           </div>
         </dl>
