@@ -1,0 +1,206 @@
+rules_version = '2';
+
+// GalleryZone Firestore security rules.
+//
+// CORE MODEL: apps/api (Nest, using firebase-admin) is the ONLY writer.
+// Admin SDK requests are NOT subject to these rules at all — every rule
+// below governs a CLIENT (frontend-web/mobile_flutter talking to Firestore
+// directly, e.g. a real-time listener on the marketplace grid or a
+// customer's own order status) reading data the backend already wrote.
+// Every collection defaults to `allow write: if false` — a client can
+// never write Firestore directly, only through the API, which is what
+// keeps state-machine transitions, ledger balance, and audit logging
+// enforceable at all (Firestore itself has no triggers/constraints on the
+// Spark plan this project is on).
+//
+// PRICE-LEAK PROTECTION (plan.md §8's price-visibility rule, applied to
+// Firestore's document model): artistPricePaise never lives on the public
+// artworks/{id} document. It lives in artworks/{id}/pricing/data, a
+// subcollection doc these rules only let the owning artist or an admin
+// read — mirroring the role-scoped-DTO approach the Postgres version used,
+// adapted to Firestore's lack of field-level read rules.
+
+function isSignedIn() {
+  return request.auth != null;
+}
+
+function role() {
+  return isSignedIn() ? request.auth.token.role : null;
+}
+
+function isAdmin() {
+  return role() == 'admin';
+}
+
+function isOwner(ownerId) {
+  return isSignedIn() && request.auth.uid == ownerId;
+}
+
+function hasGrant(grant) {
+  return isSignedIn() && (grant in request.auth.token.grants);
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
+
+      match /profile/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+      match /financial/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    match /publicProfiles/{userId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /addresses/{addressId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /artworks/{artworkId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /pricing/{docId} {
+        allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.artistId);
+        allow write: if false;
+      }
+      match /images/{imageId} {
+        allow read: if true;
+        allow write: if false;
+      }
+      match /statusEvents/{eventId} {
+        allow read: if true;
+        allow write: if false;
+      }
+      match /ownershipEvents/{eventId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /externalSalePenalties/{penaltyId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /physicalCoaRequests/{requestId} {
+      allow read: if isOwner(resource.data.requestedByUserId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /orders/{orderId} {
+      allow read: if isOwner(resource.data.customerId) || isAdmin();
+      allow write: if false;
+
+      match /statusEvents/{eventId} {
+        allow read: if isOwner(get(/databases/$(database)/documents/orders/$(orderId)).data.customerId) || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /ledgerAccounts/{accountId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+      allow write: if false;
+    }
+
+    match /ledgerEntries/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /settlements/{settlementId} {
+      allow read: if isOwner(resource.data.artistId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /withdrawalRequests/{requestId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /aggregatorHoldings/{holdingId} {
+      allow read: if isAdmin() || (isSignedIn() && (request.auth.uid == resource.data.aggregatorId));
+      allow write: if false;
+    }
+
+    match /aggregatorSales/{saleId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /gallerySpaces/{spaceId} {
+      allow read: if isOwner(resource.data.aggregatorId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /buyerInvites/{inviteId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /auditLog/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /disputes/{disputeId} {
+      allow read: if isOwner(resource.data.raisedByUserId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /rateConfigVersions/{versionId} {
+      allow read: if isAdmin() || hasGrant('platform_admin') || hasGrant('finance_admin');
+      allow write: if false;
+    }
+
+    match /messageThreads/{threadId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /artistReviews/{reviewId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /resaleListings/{listingId} {
+      allow read: if isOwner(resource.data.sellerId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /supportTickets/{ticketId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /artistConnections/{connectionId} {
+      allow read: if isOwner(resource.data.requesterId) || isOwner(resource.data.recipientId) || isAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
