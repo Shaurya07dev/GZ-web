@@ -3,11 +3,12 @@
 // @galleryzone/db/artist-artworks.ts, verified against real Postgres in
 // artist-artworks.check.ts.
 
-import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
-import { submitArtwork, approveArtwork, rejectArtwork, PostgresRateConfigStore, type Db } from "@galleryzone/db";
+import { submitArtwork, approveArtwork, rejectArtwork, FirestoreRateConfigStore, type Db } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -34,10 +35,9 @@ export class ArtistArtworksController {
 
   @Roles("artist")
   @Post("artist/artworks")
-  async submit(@Body(new ZodValidationPipe(submitArtworkSchema)) body: SubmitArtworkBody) {
-    const rates = await loadActiveRates(new PostgresRateConfigStore(this.db));
-    // TODO(Phase 1): artistId from the authenticated request.
-    return submitArtwork({ db: this.db, artistId: "TODO-authenticated-user-id", ...body, rates });
+  async submit(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(submitArtworkSchema)) body: SubmitArtworkBody) {
+    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+    return submitArtwork({ db: this.db, artistId: req.authUser.uid, ...body, rates });
   }
 
   @Roles("admin")

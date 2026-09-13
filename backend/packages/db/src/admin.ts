@@ -1,12 +1,7 @@
-// Admin dashboard reads + category CRUD. Straightforward queries — the
-// interesting logic (state machines, ledger, pricing) lives in the more
-// specific modules this file doesn't duplicate.
+// Admin dashboard reads + category CRUD — Firestore version.
 
-import { count, eq, sql } from "drizzle-orm";
-import type { Db } from "./client.ts";
-import { users } from "./schema/identity.ts";
-import { artworks, artworkStatusEvents, categories } from "./schema/artwork.ts";
-import { withdrawalRequests } from "./schema/ledger.ts";
+import type { Firestore } from "firebase-admin/firestore";
+import { Collections, artworkStatusEventsCol, type ArtworkStatusEventDoc, type CategoryDoc } from "./collections.ts";
 
 export class AdminError extends Error {}
 
@@ -17,59 +12,61 @@ export interface AdminKpis {
   pendingWithdrawals: number;
 }
 
-export async function getAdminKpis(db: Db): Promise<AdminKpis> {
-  const [[userTotal], [artworkTotal], [pendingWithdrawalTotal]] = await Promise.all([
-    db.select({ total: count() }).from(users),
-    db.select({ total: count() }).from(artworks),
-    db.select({ total: count() }).from(withdrawalRequests).where(eq(withdrawalRequests.status, "pending")),
+export async function getAdminKpis(db: Firestore): Promise<AdminKpis> {
+  const [userCount, artworkSnap, pendingWithdrawalCount] = await Promise.all([
+    db.collection(Collections.users).count().get(),
+    db.collection(Collections.artworks).get(),
+    db.collection(Collections.withdrawalRequests).where("status", "==", "pending").count().get(),
   ]);
 
-  // "Pending approval" = the latest status event per artwork is
-  // pending_approval — a small correlated-subquery since status isn't a
-  // stored column on artworks itself (append-only event log is the source
-  // of truth, per the schema's own comment).
-  const [pendingApproval] = await db.execute<{ total: string }>(sql`
-    select count(*)::text as total
-    from ${artworks} a
-    where (
-      select ase.status
-      from ${artworkStatusEvents} ase
-      where ase.artwork_id = a.id
-      order by ase.changed_at desc
-      limit 1
-    ) = 'pending_approval'
-  `);
+  // "Pending approval" = the latest statusEvents doc per artwork is
+  // pending_approval — no cheap aggregate query for this in Firestore, so
+  // it's N reads (one per artwork). Fine at today's scale; flagged as the
+  // first thing to denormalize (e.g. a `latestStatus` field on the
+  // artwork doc itself, updated alongside each status event write) once
+  // artwork volume makes this expensive.
+  const statuses = await Promise.all(
+    artworkSnap.docs.map(async (doc) => {
+      const eventSnap = await db.collection(artworkStatusEventsCol(doc.id)).orderBy("changedAt", "desc").limit(1).get();
+      return (eventSnap.docs[0]?.data() as ArtworkStatusEventDoc | undefined)?.status;
+    }),
+  );
 
   return {
-    totalUsers: userTotal?.total ?? 0,
-    totalArtworks: artworkTotal?.total ?? 0,
-    pendingApprovalArtworks: Number(pendingApproval?.total ?? 0),
-    pendingWithdrawals: pendingWithdrawalTotal?.total ?? 0,
+    totalUsers: userCount.data().count,
+    totalArtworks: artworkSnap.size,
+    pendingApprovalArtworks: statuses.filter((s) => s === "pending_approval").length,
+    pendingWithdrawals: pendingWithdrawalCount.data().count,
   };
 }
 
-export async function listCategories(db: Db) {
-  return db.select().from(categories);
+export async function listCategories(db: Firestore): Promise<(CategoryDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.categories).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as CategoryDoc) }));
 }
 
-export async function createCategory(db: Db, name: string, slug: string): Promise<{ id: string }> {
-  const [row] = await db.insert(categories).values({ name, slug }).returning({ id: categories.id });
-  if (!row) throw new AdminError("insert into categories returned no row");
-  return row;
+export async function createCategory(db: Firestore, name: string, slug: string): Promise<{ id: string }> {
+  const ref = db.collection(Collections.categories).doc();
+  await ref.set({ name, slug });
+  return { id: ref.id };
 }
 
-export async function updateCategory(db: Db, id: string, name: string): Promise<void> {
-  const result = await db.update(categories).set({ name }).where(eq(categories.id, id));
-  if (result.count === 0) throw new AdminError(`No category ${id}`);
+export async function updateCategory(db: Firestore, id: string, name: string): Promise<void> {
+  const ref = db.collection(Collections.categories).doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new AdminError(`No category ${id}`);
+  await ref.update({ name });
 }
 
 /** Rejects if the category still holds artworks — matches the mock's own rule. */
-export async function deleteCategory(db: Db, id: string): Promise<void> {
-  const [category] = await db.select({ name: categories.name }).from(categories).where(eq(categories.id, id));
-  if (!category) throw new AdminError(`No category ${id}`);
-  const [inUse] = await db.select({ total: count() }).from(artworks).where(eq(artworks.category, category.name));
-  if ((inUse?.total ?? 0) > 0) {
-    throw new AdminError(`Category "${category.name}" still has ${inUse?.total} artwork(s) — cannot delete`);
+export async function deleteCategory(db: Firestore, id: string): Promise<void> {
+  const ref = db.collection(Collections.categories).doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new AdminError(`No category ${id}`);
+  const category = snap.data() as CategoryDoc;
+  const inUseSnap = await db.collection(Collections.artworks).where("category", "==", category.name).count().get();
+  if (inUseSnap.data().count > 0) {
+    throw new AdminError(`Category "${category.name}" still has ${inUseSnap.data().count} artwork(s) — cannot delete`);
   }
-  await db.delete(categories).where(eq(categories.id, id));
+  await ref.delete();
 }

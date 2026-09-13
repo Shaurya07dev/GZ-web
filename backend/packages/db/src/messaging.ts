@@ -1,32 +1,34 @@
-// Messaging + support — PARITY scope only (see schema/community.ts's own
-// header: matches exactly what the mock frontend does today — read+
-// markRead inboxes, list+submit tickets, no compose/send or admin
-// resolution). Not a guess at the plan's open "Scope calls" question —
-// this is the documented default already recorded there, applied rather
-// than left unbuilt while waiting on an answer that would only ADD scope,
-// never remove it.
+// Messaging + support — PARITY scope only, same as the Postgres version
+// (see collections.ts's own header). Firestore version.
 
-import { and, eq } from "drizzle-orm";
-import type { Db } from "./client.ts";
-import { messageThreads, supportTickets } from "./schema/community.ts";
+import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
+import { Collections, type MessageThreadDoc, type SupportTicketDoc } from "./collections.ts";
 
 export class MessagingError extends Error {}
 
-export async function listMessages(db: Db, userId: string) {
-  return db.select().from(messageThreads).where(eq(messageThreads.userId, userId));
+export async function listMessages(db: Firestore, userId: string): Promise<(MessageThreadDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.messageThreads).where("userId", "==", userId).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as MessageThreadDoc) }));
 }
 
-export async function markMessageRead(db: Db, userId: string, threadId: string): Promise<void> {
-  const result = await db.update(messageThreads).set({ unread: false }).where(and(eq(messageThreads.id, threadId), eq(messageThreads.userId, userId)));
-  if (result.count === 0) throw new MessagingError(`No message thread ${threadId} for user ${userId}`);
+export async function markMessageRead(db: Firestore, userId: string, threadId: string): Promise<void> {
+  const ref = db.collection(Collections.messageThreads).doc(threadId);
+  const snap = await ref.get();
+  if (!snap.exists || (snap.data() as MessageThreadDoc).userId !== userId) {
+    throw new MessagingError(`No message thread ${threadId} for user ${userId}`);
+  }
+  await ref.update({ unread: false });
 }
 
-export async function listSupportTickets(db: Db, userId: string) {
-  return db.select().from(supportTickets).where(eq(supportTickets.userId, userId));
+export async function listSupportTickets(db: Firestore, userId: string): Promise<(SupportTicketDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.supportTickets).where("userId", "==", userId).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as SupportTicketDoc) }));
 }
 
-export async function submitSupportTicket(db: Db, userId: string, subject: string, message: string): Promise<{ id: string }> {
-  const [row] = await db.insert(supportTickets).values({ userId, subject, message }).returning({ id: supportTickets.id });
-  if (!row) throw new MessagingError("insert into support_tickets returned no row");
-  return row;
+export async function submitSupportTicket(db: Firestore, userId: string, subject: string, message: string): Promise<{ id: string }> {
+  const ref = db.collection(Collections.supportTickets).doc();
+  const doc: SupportTicketDoc = { userId, subject, message, status: "open", createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp };
+  await ref.set(doc);
+  return { id: ref.id };
 }

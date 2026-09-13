@@ -1,13 +1,21 @@
-// Admin's all-artworks view (includes artistPricePaise — admin is one of
-// the three parties plan.md §8 allows to see it, alongside the owning
-// artist and an aggregator with an active consignment) plus rarity
-// ranking and delisting.
+// Admin's all-artworks view + rarity ranking + delisting — Firestore
+// version. The admin view legitimately includes artistPricePaise (plan.md
+// §8: admin is one of the parties allowed to see it) — read from the
+// pricing subcollection, same place firestore.rules gates it.
 
-import { desc, eq, sql } from "drizzle-orm";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { artworkStateMachine } from "@galleryzone/domain";
-import type { Db } from "./client.ts";
-import { artworkRarityValues, artworks, artworkStatusEvents, type ArtworkRarity } from "./schema/artwork.ts";
-import { auditLog } from "./schema/audit.ts";
+import {
+  Collections,
+  artworkPricingCol,
+  artworkStatusEventsCol,
+  type ArtworkDoc,
+  type ArtworkPricingDoc,
+  type ArtworkRarity,
+  type ArtworkStatusEventDoc,
+  type AuditLogDoc,
+  artworkRarityValues,
+} from "./collections.ts";
 
 export class AdminArtworkError extends Error {}
 
@@ -22,60 +30,76 @@ export interface AdminArtworkRow {
   status: string;
 }
 
-export async function listAllArtworksAdmin(db: Db): Promise<AdminArtworkRow[]> {
-  const rows = await db
-    .select({
-      id: artworks.id,
-      productCode: artworks.productCode,
-      artistId: artworks.artistId,
-      title: artworks.title,
-      category: artworks.category,
-      artistPricePaise: artworks.artistPricePaise,
-      rarityType: artworks.rarityType,
-    })
-    .from(artworks);
-
-  // One correlated subquery for "latest status" per row, same pattern as
-  // admin.ts's getAdminKpis() — status is an event log, not a column.
-  const withStatus = await Promise.all(
-    rows.map(async (row) => {
-      const [latest] = await db
-        .select({ status: artworkStatusEvents.status })
-        .from(artworkStatusEvents)
-        .where(eq(artworkStatusEvents.artworkId, row.id))
-        .orderBy(desc(artworkStatusEvents.changedAt))
-        .limit(1);
-      return { ...row, status: latest?.status ?? "draft" };
+export async function listAllArtworksAdmin(db: Firestore): Promise<AdminArtworkRow[]> {
+  const snap = await db.collection(Collections.artworks).get();
+  return Promise.all(
+    snap.docs.map(async (doc) => {
+      const artwork = doc.data() as ArtworkDoc;
+      const [pricingSnap, eventSnap] = await Promise.all([
+        db.collection(artworkPricingCol(doc.id)).doc("data").get(),
+        db.collection(artworkStatusEventsCol(doc.id)).orderBy("changedAt", "desc").limit(1).get(),
+      ]);
+      const pricing = pricingSnap.data() as ArtworkPricingDoc | undefined;
+      const latest = eventSnap.docs[0]?.data() as ArtworkStatusEventDoc | undefined;
+      return {
+        id: doc.id,
+        productCode: artwork.productCode,
+        artistId: artwork.artistId,
+        title: artwork.title,
+        category: artwork.category,
+        artistPricePaise: pricing?.artistPricePaise ?? 0,
+        rarityType: artwork.rarityType,
+        status: latest?.status ?? "draft",
+      };
     }),
   );
-  return withStatus;
 }
 
-export async function setArtworkRarity(db: Db, artworkId: string, rarity: ArtworkRarity | null, adminId: string): Promise<void> {
-  if (rarity !== null && !artworkRarityValues.includes(rarity)) throw new AdminArtworkError(`Invalid rarity ${rarity}`);
-  await db.transaction(async (tx) => {
-    const result = await tx.update(artworks).set({ rarityType: rarity }).where(eq(artworks.id, artworkId));
-    if (result.count === 0) throw new AdminArtworkError(`No artwork ${artworkId}`);
-    await tx.insert(auditLog).values({ adminId, action: "artwork.rarity_set", entityType: "artwork", entityId: artworkId, detail: { rarity } });
+export async function setArtworkRarity(db: Firestore, artworkId: string, rarity: ArtworkRarity | null, adminId: string): Promise<void> {
+  if (rarity !== null && !(artworkRarityValues as readonly string[]).includes(rarity)) throw new AdminArtworkError(`Invalid rarity ${rarity}`);
+  const ref = db.collection(Collections.artworks).doc(artworkId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new AdminArtworkError(`No artwork ${artworkId}`);
+    tx.update(ref, { rarityType: rarity });
+    const auditDoc: AuditLogDoc = {
+      adminId,
+      action: "artwork.rarity_set",
+      entityType: "artwork",
+      entityId: artworkId,
+      entityLabel: null,
+      detail: { rarity },
+      createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+    };
+    tx.set(db.collection(Collections.auditLog).doc(), auditDoc);
   });
 }
 
-export async function delistArtwork(db: Db, artworkId: string, adminId: string): Promise<void> {
-  const [latest] = await db
-    .select({ status: artworkStatusEvents.status })
-    .from(artworkStatusEvents)
-    .where(eq(artworkStatusEvents.artworkId, artworkId))
-    .orderBy(desc(artworkStatusEvents.changedAt))
-    .limit(1);
-  const current = latest?.status ?? "draft";
+export async function delistArtwork(db: Firestore, artworkId: string, adminId: string): Promise<void> {
+  const eventSnap = await db.collection(artworkStatusEventsCol(artworkId)).orderBy("changedAt", "desc").limit(1).get();
+  const current = (eventSnap.docs[0]?.data() as ArtworkStatusEventDoc | undefined)?.status ?? "draft";
   artworkStateMachine.assertTransition(current, "returned");
 
-  await db.transaction(async (tx) => {
-    await tx.insert(artworkStatusEvents).values({ artworkId, status: "returned", changedBy: adminId, reason: "Delisted by admin" });
-    await tx.insert(auditLog).values({ adminId, action: "artwork.delisted", entityType: "artwork", entityId: artworkId });
+  await db.runTransaction(async (tx) => {
+    tx.set(db.collection(artworkStatusEventsCol(artworkId)).doc(), {
+      status: "returned",
+      changedBy: adminId,
+      reason: "Delisted by admin",
+      changedAt: FieldValue.serverTimestamp(),
+    });
+    tx.set(db.collection(Collections.auditLog).doc(), {
+      adminId,
+      action: "artwork.delisted",
+      entityType: "artwork",
+      entityId: artworkId,
+      entityLabel: null,
+      detail: null,
+      createdAt: FieldValue.serverTimestamp(),
+    });
   });
 }
 
-export async function getAuditLog(db: Db, limit = 100) {
-  return db.select().from(auditLog).orderBy(sql`${auditLog.createdAt} desc`).limit(limit);
+export async function getAuditLog(db: Firestore, limit = 100): Promise<(AuditLogDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.auditLog).orderBy("createdAt", "desc").limit(limit).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as AuditLogDoc) }));
 }

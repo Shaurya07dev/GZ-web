@@ -1,37 +1,36 @@
-// Admin order detail + fulfillment status transitions — closes the
-// "no order-fulfillment state machine" gap the research pass flagged
-// (the mock frontend never drives Order.status past pending/paid).
+// Admin order detail + fulfillment status transitions — Firestore version.
 
-import { eq } from "drizzle-orm";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { orderStateMachine, type OrderStatus } from "@galleryzone/domain";
-import type { Db } from "./client.ts";
-import { orders, orderStatusEvents } from "./schema/order.ts";
-import { addresses } from "./schema/identity.ts";
+import { Collections, orderStatusEventsCol, type AddressDoc, type OrderDoc } from "./collections.ts";
 
 export class AdminOrderError extends Error {}
 
-export async function listOrdersAdmin(db: Db) {
-  return db.select().from(orders);
+export async function listOrdersAdmin(db: Firestore): Promise<(OrderDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.orders).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as OrderDoc) }));
 }
 
-export async function getOrderAdmin(db: Db, orderId: string) {
-  const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
-  return row ?? null;
+export async function getOrderAdmin(db: Firestore, orderId: string): Promise<(OrderDoc & { id: string }) | null> {
+  const snap = await db.collection(Collections.orders).doc(orderId).get();
+  return snap.exists ? { id: snap.id, ...(snap.data() as OrderDoc) } : null;
 }
 
-export async function getAddressAdmin(db: Db, addressId: string) {
-  const [row] = await db.select().from(addresses).where(eq(addresses.id, addressId));
-  return row ?? null;
+export async function getAddressAdmin(db: Firestore, addressId: string): Promise<(AddressDoc & { id: string }) | null> {
+  const snap = await db.collection(Collections.addresses).doc(addressId).get();
+  return snap.exists ? { id: snap.id, ...(snap.data() as AddressDoc) } : null;
 }
 
 /** Advances real order fulfillment — confirmed→packed→transit→delivered, or cancelled from an early state. */
-export async function advanceOrderStatus(db: Db, orderId: string, to: OrderStatus): Promise<void> {
-  const [order] = await db.select({ status: orders.status }).from(orders).where(eq(orders.id, orderId));
-  if (!order) throw new AdminOrderError(`No order ${orderId}`);
+export async function advanceOrderStatus(db: Firestore, orderId: string, to: OrderStatus): Promise<void> {
+  const ref = db.collection(Collections.orders).doc(orderId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new AdminOrderError(`No order ${orderId}`);
+  const order = snap.data() as OrderDoc;
   orderStateMachine.assertTransition(order.status, to);
 
-  await db.transaction(async (tx) => {
-    await tx.update(orders).set({ status: to }).where(eq(orders.id, orderId));
-    await tx.insert(orderStatusEvents).values({ orderId, status: to });
+  await db.runTransaction(async (tx) => {
+    tx.update(ref, { status: to });
+    tx.set(db.collection(orderStatusEventsCol(orderId)).doc(), { status: to, changedAt: FieldValue.serverTimestamp() });
   });
 }

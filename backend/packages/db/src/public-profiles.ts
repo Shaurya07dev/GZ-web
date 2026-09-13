@@ -1,12 +1,9 @@
-// Public artist profile + admin user management. Public reads never touch
-// artistPricePaise or PII columns (pan, bankAccountEncrypted, aadhaar*) —
-// selected field lists, not row spreads, same discipline as
-// artworks.controller.ts's toCustomerDto().
+// Public artist profile + admin user management — Firestore version.
+// Public reads never touch artistPricePaise or PII (that data lives in
+// separate subcollections/documents these functions never read from).
 
-import { count, eq } from "drizzle-orm";
-import { userStatusValues, users, profiles, type UserRole, type UserStatus } from "./schema/identity.ts";
-import type { Db } from "./client.ts";
-import { artworks } from "./schema/artwork.ts";
+import type { Firestore } from "firebase-admin/firestore";
+import { Collections, type PublicProfileDoc, type UserDoc, type UserRole, type UserStatus } from "./collections.ts";
 
 export class ProfileError extends Error {}
 
@@ -20,17 +17,22 @@ export interface PublicArtistProfile {
   artworkCount: number;
 }
 
-export async function getPublicArtistProfile(db: Db, artistId: string): Promise<PublicArtistProfile> {
-  const [row] = await db
-    .select({ id: users.id, name: users.name, headline: profiles.headline, bio: profiles.bio, location: profiles.location, profileImageUrl: profiles.profileImageUrl })
-    .from(users)
-    .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(eq(users.id, artistId));
-  if (!row) throw new ProfileError(`No artist ${artistId}`);
+export async function getPublicArtistProfile(db: Firestore, artistId: string): Promise<PublicArtistProfile> {
+  const snap = await db.collection(Collections.publicProfiles).doc(artistId).get();
+  if (!snap.exists) throw new ProfileError(`No artist ${artistId}`);
+  const profile = snap.data() as PublicProfileDoc;
 
-  const [artworkCount] = await db.select({ total: count() }).from(artworks).where(eq(artworks.artistId, artistId));
+  const countSnap = await db.collection(Collections.artworks).where("artistId", "==", artistId).count().get();
 
-  return { ...row, artworkCount: artworkCount?.total ?? 0 };
+  return {
+    id: artistId,
+    name: profile.name,
+    headline: profile.headline,
+    bio: profile.bio,
+    location: profile.location,
+    profileImageUrl: profile.profileImageUrl,
+    artworkCount: countSnap.data().count,
+  };
 }
 
 export interface AdminUserRow {
@@ -42,14 +44,19 @@ export interface AdminUserRow {
   createdAt: Date;
 }
 
-export async function listUsers(db: Db, role?: UserRole): Promise<AdminUserRow[]> {
-  const query = db.select({ id: users.id, name: users.name, email: users.email, role: users.role, status: users.status, createdAt: users.createdAt }).from(users);
-  const rows = role ? await query.where(eq(users.role, role)) : await query;
-  return rows as AdminUserRow[];
+export async function listUsers(db: Firestore, role?: UserRole): Promise<AdminUserRow[]> {
+  let query = db.collection(Collections.users) as FirebaseFirestore.Query;
+  if (role) query = query.where("role", "==", role);
+  const snap = await query.get();
+  return snap.docs.map((d) => {
+    const data = d.data() as UserDoc;
+    return { id: d.id, name: data.name, email: data.email, role: data.role, status: data.status, createdAt: data.createdAt.toDate() };
+  });
 }
 
-export async function setUserStatus(db: Db, userId: string, status: UserStatus): Promise<void> {
-  if (!userStatusValues.includes(status)) throw new ProfileError(`Invalid status ${status}`);
-  const result = await db.update(users).set({ status }).where(eq(users.id, userId));
-  if (result.count === 0) throw new ProfileError(`No user ${userId}`);
+export async function setUserStatus(db: Firestore, userId: string, status: UserStatus): Promise<void> {
+  const ref = db.collection(Collections.users).doc(userId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new ProfileError(`No user ${userId}`);
+  await ref.update({ status });
 }

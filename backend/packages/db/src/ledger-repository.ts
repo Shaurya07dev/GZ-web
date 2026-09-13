@@ -1,44 +1,49 @@
-// Turns packages/domain/settlement.ts's Posting[] into real ledger_entries
-// rows, inside one DB transaction — the "repository layer" that file's own
-// header comment describes. Every posting in a call shares one
-// transactionId, which is exactly what the ledger-balance CONSTRAINT
-// TRIGGER (migrations/0001) checks at COMMIT.
+// Turns packages/domain/settlement.ts's Posting[] into real Firestore
+// documents inside ONE Firestore transaction — the Postgres version's
+// equivalent used a DB transaction + a CONSTRAINT TRIGGER that verified
+// the balance server-side; Firestore has neither triggers nor a
+// cross-document CHECK constraint, so the guarantees here are:
 //
-// Account rows are found-or-created per (type, ownerId) pair rather than
-// minted fresh every call — a user has ONE artist_payable account, not one
-// per transaction. Known limitation, documented rather than hidden: this
-// does a plain SELECT-then-INSERT with no advisory lock, so two concurrent
-// first-ever postings for the same brand-new (type, ownerId) pair could
-// each try to create the account row. Low-risk in practice (an account is
-// created once per user per type, not on every transaction) and worth a
-// real fix (a partial unique index + ON CONFLICT) before Phase 2 goes to
-// production traffic — flagged here rather than silently shipped as if it
-// were already race-safe.
+//   1. assertBalanced() (re-run here, not just trusted from
+//      packages/domain, since there's no DB-level backstop anymore) — the
+//      postings must sum to zero before a single write is attempted.
+//   2. Firestore's transaction atomicity — every write in the batch
+//      commits together or not at all, so a mid-write failure can never
+//      leave a half-posted, unbalanced set of entries.
+//   3. Idempotency via `tx.create()` (not `set()`) keyed on
+//      idempotencyKey as the DOCUMENT ID — a replayed write with the same
+//      key throws ALREADY_EXISTS instead of silently double-posting,
+//      which is what the Postgres version's UNIQUE constraint did.
 
-import { randomUUID } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { FieldValue, type Firestore, type Transaction } from "firebase-admin/firestore";
 import type { Posting } from "@galleryzone/domain";
-import type { Db } from "./client.ts";
-import { ledgerAccounts, ledgerEntries } from "./schema/ledger.ts";
+import { Collections, type LedgerAccountDoc, type LedgerEntryDoc } from "./collections.ts";
 
-async function getOrCreateAccount(
-  tx: Parameters<Parameters<Db["transaction"]>[0]>[0],
+export class LedgerError extends Error {}
+
+function assertBalanced(postings: Posting[]): void {
+  const sum = postings.reduce((total, p) => total + p.amountPaise, 0);
+  if (sum !== 0) {
+    throw new LedgerError(`Postings do not sum to zero (got ${sum}) — refusing to write any of them`);
+  }
+}
+
+async function getOrCreateAccountId(
+  db: Firestore,
+  tx: Transaction,
   accountType: Posting["accountType"],
   ownerId: string | undefined,
 ): Promise<string> {
-  const ownerCondition = ownerId ? eq(ledgerAccounts.ownerId, ownerId) : isNull(ledgerAccounts.ownerId);
-  const [existing] = await tx
-    .select({ id: ledgerAccounts.id })
-    .from(ledgerAccounts)
-    .where(and(eq(ledgerAccounts.type, accountType), ownerCondition));
-  if (existing) return existing.id;
+  const col = db.collection(Collections.ledgerAccounts);
+  let query = col.where("type", "==", accountType);
+  query = ownerId ? query.where("ownerId", "==", ownerId) : query.where("ownerId", "==", null);
+  const snapshot = await tx.get(query);
+  if (!snapshot.empty) return snapshot.docs[0]!.id;
 
-  const [created] = await tx
-    .insert(ledgerAccounts)
-    .values({ type: accountType, ownerId: ownerId ?? null })
-    .returning({ id: ledgerAccounts.id });
-  if (!created) throw new Error(`failed to create ledger account ${accountType}/${ownerId ?? "system"}`);
-  return created.id;
+  const ref = col.doc();
+  const doc: LedgerAccountDoc = { type: accountType, ownerId: ownerId ?? null };
+  tx.set(ref, doc);
+  return ref.id;
 }
 
 export interface PostLedgerEntriesInput {
@@ -49,29 +54,32 @@ export interface PostLedgerEntriesInput {
   relatedHoldingId?: string;
 }
 
-/**
- * Writes a balanced set of postings as ledger_entries rows in one DB
- * transaction, sharing one transaction_id. Relies on the postings already
- * summing to zero (settlement.ts's assertBalanced() guarantees this before
- * this function ever sees them) — the DB's own CONSTRAINT TRIGGER is the
- * final, non-bypassable check.
- */
-export async function postLedgerEntries(db: Db, input: PostLedgerEntriesInput): Promise<{ transactionId: string }> {
-  const transactionId = randomUUID();
+export async function postLedgerEntries(db: Firestore, input: PostLedgerEntriesInput): Promise<{ transactionId: string }> {
+  assertBalanced(input.postings);
+  const transactionId = db.collection(Collections.ledgerAccounts).doc().id; // any collection works — just need a random ID generator
 
-  await db.transaction(async (tx) => {
-    for (const [index, posting] of input.postings.entries()) {
-      const accountId = await getOrCreateAccount(tx, posting.accountType, posting.ownerId);
-      await tx.insert(ledgerEntries).values({
+  await db.runTransaction(async (tx) => {
+    // Firestore transactions require ALL reads before ANY writes — resolve
+    // every account first, then issue every entry write.
+    const accountIds = await Promise.all(
+      input.postings.map((posting) => getOrCreateAccountId(db, tx, posting.accountType, posting.ownerId)),
+    );
+
+    input.postings.forEach((posting, index) => {
+      const idempotencyKey = `${input.idempotencyPrefix}:${index}`;
+      const ref = db.collection(Collections.ledgerEntries).doc(idempotencyKey);
+      const doc: LedgerEntryDoc = {
         transactionId,
-        accountId,
+        accountId: accountIds[index]!,
         amountPaise: posting.amountPaise,
         reason: posting.reason,
         relatedOrderId: input.relatedOrderId ?? null,
         relatedHoldingId: input.relatedHoldingId ?? null,
-        idempotencyKey: `${input.idempotencyPrefix}:${index}`,
-      });
-    }
+        idempotencyKey,
+        createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+      };
+      tx.create(ref, doc);
+    });
   });
 
   return { transactionId };

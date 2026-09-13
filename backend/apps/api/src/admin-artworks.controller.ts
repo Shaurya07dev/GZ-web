@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { listAllArtworksAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -20,15 +21,14 @@ export class AdminArtworksController {
 
   @Roles("admin")
   @Post("artworks/:id/rarity")
-  setRarity(@Param("id") id: string, @Body(new ZodValidationPipe(raritySchema)) body: RarityBody) {
-    // TODO(Phase 1): adminId from the authenticated request.
-    return setArtworkRarity(this.db, id, body.rarity, "TODO-authenticated-user-id");
+  setRarity(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(raritySchema)) body: RarityBody) {
+    return setArtworkRarity(this.db, id, body.rarity, req.authUser.uid);
   }
 
   @Roles("admin")
   @Post("artworks/:id/delist")
-  delist(@Param("id") id: string) {
-    return delistArtwork(this.db, id, "TODO-authenticated-user-id");
+  delist(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    return delistArtwork(this.db, id, req.authUser.uid);
   }
 
   @Roles("admin")

@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { listMessages, markMessageRead, listSupportTickets, submitSupportTicket, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -14,28 +15,27 @@ type TicketBody = z.infer<typeof ticketSchema>;
 export class MessagingController {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  // TODO(Phase 1): userId from the authenticated request on every method below.
   @Roles("artist", "aggregator", "customer")
   @Get("messages")
-  list() {
-    return listMessages(this.db, "TODO-authenticated-user-id");
+  list(@Req() req: AuthenticatedRequest) {
+    return listMessages(this.db, req.authUser.uid);
   }
 
   @Roles("artist", "aggregator", "customer")
   @Post("messages/:id/read")
-  markRead(@Param("id") id: string) {
-    return markMessageRead(this.db, "TODO-authenticated-user-id", id);
+  markRead(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    return markMessageRead(this.db, req.authUser.uid, id);
   }
 
   @Roles("artist", "aggregator", "customer")
   @Get("support")
-  listTickets() {
-    return listSupportTickets(this.db, "TODO-authenticated-user-id");
+  listTickets(@Req() req: AuthenticatedRequest) {
+    return listSupportTickets(this.db, req.authUser.uid);
   }
 
   @Roles("artist", "aggregator", "customer")
   @Post("support")
-  submitTicket(@Body(new ZodValidationPipe(ticketSchema)) body: TicketBody) {
-    return submitSupportTicket(this.db, "TODO-authenticated-user-id", body.subject, body.message);
+  submitTicket(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(ticketSchema)) body: TicketBody) {
+    return submitSupportTicket(this.db, req.authUser.uid, body.subject, body.message);
   }
 }

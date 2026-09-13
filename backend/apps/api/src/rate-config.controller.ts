@@ -1,18 +1,17 @@
 // The admin rules console's API surface — see the plan's "Admin rules
-// console" section. Now backed by the real PostgresRateConfigStore (a
-// module-scoped InMemoryRateConfigStore was the placeholder before a DB
-// connection existed) — approve() is the two-step console's second half,
-// which was missing until now.
+// console" section. Backed by the real FirestoreRateConfigStore.
 //
-// SECURITY: gated by RolesGuard (auth/roles.guard.ts), which fails closed
-// with 501 for every @Roles() route until real Firebase-token auth exists.
+// SECURITY: gated by RolesGuard (auth/roles.guard.ts) — a real Firebase
+// ID token is now verified and the caller's role re-derived from
+// Firestore on every request, not the 501 stub from before.
 
-import { Body, Controller, Get, Inject, Param, Post, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Req, UsePipes } from "@nestjs/common";
 import { loadActiveRates } from "@galleryzone/config";
-import { PostgresRateConfigStore, type Db } from "@galleryzone/db";
+import { FirestoreRateConfigStore, type Db } from "@galleryzone/db";
 import { proposeRateChangeSchema, type ProposeRateChangeInput } from "@galleryzone/contracts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 
 @Controller("v1/admin/rate-config")
@@ -22,20 +21,18 @@ export class RateConfigController {
   @Roles("admin", "platform_admin")
   @Get()
   async getActive() {
-    const rates = await loadActiveRates(new PostgresRateConfigStore(this.db));
+    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
     return { rates };
   }
 
   @Roles("platform_admin")
   @Post("propose")
   @UsePipes(new ZodValidationPipe(proposeRateChangeSchema))
-  async propose(@Body() body: ProposeRateChangeInput) {
-    // TODO(Phase 1): proposedBy comes from the authenticated request's
-    // user id once Firebase auth is wired in — never from the body.
-    const versionId = await new PostgresRateConfigStore(this.db).propose({
+  async propose(@Req() req: AuthenticatedRequest, @Body() body: ProposeRateChangeInput) {
+    const versionId = await new FirestoreRateConfigStore(this.db).propose({
       rates: body.rates,
       effectiveFrom: new Date(body.effectiveFrom),
-      proposedBy: "TODO-authenticated-user-id",
+      proposedBy: req.authUser.uid,
       reason: body.reason,
     });
     return { versionId, status: "pending_approval" };
@@ -43,10 +40,9 @@ export class RateConfigController {
 
   @Roles("platform_admin")
   @Post(":versionId/approve")
-  async approve(@Param("versionId") versionId: string) {
-    // TODO(Phase 1): approvedBy from the authenticated request — the store
-    // itself refuses a self-approval when proposedBy === approvedBy.
-    await new PostgresRateConfigStore(this.db).approve({ versionId, approvedBy: "TODO-authenticated-user-id" });
+  async approve(@Req() req: AuthenticatedRequest, @Param("versionId") versionId: string) {
+    // The store itself refuses a self-approval when proposedBy === approvedBy.
+    await new FirestoreRateConfigStore(this.db).approve({ versionId, approvedBy: req.authUser.uid });
     return { versionId, status: "approved" };
   }
 }

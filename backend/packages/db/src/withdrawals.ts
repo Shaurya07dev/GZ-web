@@ -1,41 +1,31 @@
-// Withdrawal requests — Phase 4's payout flow. requestWithdrawal() checks
-// the requester's actual ledger balance (summed from ledger_entries, not a
-// cached counter) and the policy minimum before creating a request;
-// approveWithdrawal() posts the real discharge-the-payable postings via
-// withdrawalPayoutPostings (packages/domain) — the same function
-// settlement.ts already defines and settlement.check.ts already proved
-// balances — through postLedgerEntries, so the payout is reflected in the
-// ledger the moment it's approved, not just in the withdrawal_requests row.
+// Withdrawal requests — Firestore version. requestWithdrawal() checks the
+// requester's actual ledger balance (summed live from ledgerEntries, same
+// sign-flip convention as the Postgres version — see the comment on
+// currentBalance() for why) before creating a request;
+// approveWithdrawal() posts the real withdrawalPayoutPostings through the
+// ledger repository.
 
-import { and, eq, sql } from "drizzle-orm";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { meetsMinWithdrawal, withdrawalPayoutPostings, withdrawalStateMachine, type PricingRates } from "@galleryzone/domain";
-import type { Db } from "./client.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
-import { ledgerAccounts, ledgerEntries, withdrawalRequests } from "./schema/ledger.ts";
+import { Collections, type LedgerAccountDoc, type LedgerEntryDoc, type WithdrawalRequestDoc } from "./collections.ts";
 
 export class WithdrawalError extends Error {}
 
-type WithdrawableAccountType = Extract<
-  (typeof ledgerAccounts.$inferSelect)["type"],
-  "artist_payable" | "aggregator_payable" | "customer_wallet"
->;
+export type WithdrawableAccountType = Extract<LedgerAccountDoc["type"], "artist_payable" | "aggregator_payable" | "customer_wallet">;
 
 // Postings' sign convention (see packages/domain/settlement.ts) records a
-// LIABILITY recognition (e.g. "GalleryZone owes this artist ₹X") as a
-// NEGATIVE amount on the owner's own account — it's the residual/debit
-// side of the transaction that captured money elsewhere (escrow). The
-// discharge posting (withdrawalPayoutPostings) then adds back the same
-// positive amount to cancel it. So the sum of raw postings for an owner's
-// account is the NEGATIVE of what's actually owed to them — this function
-// flips the sign so "balance" reads the way a human (and every caller
-// below) expects: positive = available to withdraw.
-async function currentBalance(db: Db, accountType: WithdrawableAccountType, ownerId: string): Promise<number> {
-  const [row] = await db
-    .select({ total: sql<string>`coalesce(sum(${ledgerEntries.amountPaise}), 0)` })
-    .from(ledgerEntries)
-    .innerJoin(ledgerAccounts, eq(ledgerEntries.accountId, ledgerAccounts.id))
-    .where(and(eq(ledgerAccounts.ownerId, ownerId), eq(ledgerAccounts.type, accountType)));
-  return -Number(row?.total ?? 0) || 0; // normalize -0, see wallets.ts's identical comment
+// LIABILITY recognition as a NEGATIVE amount on the owner's own account —
+// this function flips the sign so "balance" reads the way a human (and
+// every caller below) expects: positive = available to withdraw.
+async function currentBalance(db: Firestore, accountType: WithdrawableAccountType, ownerId: string): Promise<number> {
+  const accountSnap = await db.collection(Collections.ledgerAccounts).where("type", "==", accountType).where("ownerId", "==", ownerId).limit(1).get();
+  if (accountSnap.empty) return 0;
+  const accountId = accountSnap.docs[0]!.id;
+
+  const entriesSnap = await db.collection(Collections.ledgerEntries).where("accountId", "==", accountId).get();
+  const sum = entriesSnap.docs.reduce((total, doc) => total + (doc.data() as LedgerEntryDoc).amountPaise, 0);
+  return -sum || 0; // `|| 0` normalizes -0 the same way the Postgres version did
 }
 
 export async function requestWithdrawal({
@@ -45,7 +35,7 @@ export async function requestWithdrawal({
   amountPaise,
   rates,
 }: {
-  db: Db;
+  db: Firestore;
   userId: string;
   accountType: WithdrawableAccountType;
   amountPaise: number;
@@ -59,26 +49,37 @@ export async function requestWithdrawal({
     throw new WithdrawalError(`Requested amount (${amountPaise}) exceeds available balance (${balance})`);
   }
 
-  const [row] = await db.insert(withdrawalRequests).values({ userId, amountPaise, status: "pending" }).returning({ id: withdrawalRequests.id });
-  if (!row) throw new WithdrawalError("insert into withdrawal_requests returned no row");
-  return { withdrawalId: row.id };
+  const ref = db.collection(Collections.withdrawalRequests).doc();
+  const doc: WithdrawalRequestDoc = {
+    userId,
+    amountPaise,
+    status: "pending",
+    requestedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+    processedAt: null,
+  };
+  await ref.set(doc);
+  return { withdrawalId: ref.id };
 }
 
-export async function approveWithdrawal(db: Db, withdrawalId: string, accountType: WithdrawableAccountType): Promise<{ transactionId: string }> {
-  const [request] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, withdrawalId));
-  if (!request) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
+export async function approveWithdrawal(db: Firestore, withdrawalId: string, accountType: WithdrawableAccountType): Promise<{ transactionId: string }> {
+  const ref = db.collection(Collections.withdrawalRequests).doc(withdrawalId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
+  const request = snap.data() as WithdrawalRequestDoc;
   withdrawalStateMachine.assertTransition(request.status, "completed");
 
   const postings = withdrawalPayoutPostings({ accountType, ownerId: request.userId, amountPaise: request.amountPaise });
   const { transactionId } = await postLedgerEntries(db, { postings, idempotencyPrefix: `withdrawal:${withdrawalId}` });
 
-  await db.update(withdrawalRequests).set({ status: "completed", processedAt: new Date() }).where(eq(withdrawalRequests.id, withdrawalId));
+  await ref.update({ status: "completed", processedAt: FieldValue.serverTimestamp() });
   return { transactionId };
 }
 
-export async function rejectWithdrawal(db: Db, withdrawalId: string): Promise<void> {
-  const [request] = await db.select({ status: withdrawalRequests.status }).from(withdrawalRequests).where(eq(withdrawalRequests.id, withdrawalId));
-  if (!request) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
+export async function rejectWithdrawal(db: Firestore, withdrawalId: string): Promise<void> {
+  const ref = db.collection(Collections.withdrawalRequests).doc(withdrawalId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
+  const request = snap.data() as WithdrawalRequestDoc;
   withdrawalStateMachine.assertTransition(request.status, "rejected");
-  await db.update(withdrawalRequests).set({ status: "rejected", processedAt: new Date() }).where(eq(withdrawalRequests.id, withdrawalId));
+  await ref.update({ status: "rejected", processedAt: FieldValue.serverTimestamp() });
 }

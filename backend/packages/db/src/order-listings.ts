@@ -1,21 +1,25 @@
-// Order listing reads — customer's own order history and the artist's
-// dashboard "My Artworks" list. Both are plain filtered selects; the
-// interesting logic (checkout, payment, ledger) lives in checkout.ts.
+// Order listing reads — Firestore version.
 
-import { desc, eq } from "drizzle-orm";
-import type { Db } from "./client.ts";
-import { orders } from "./schema/order.ts";
-import { artworks } from "./schema/artwork.ts";
+import type { Firestore } from "firebase-admin/firestore";
+import { Collections, artworkPricingCol, type ArtworkDoc, type ArtworkPricingDoc, type OrderDoc } from "./collections.ts";
 
-export async function listCustomerOrders(db: Db, customerId: string) {
-  return db.select().from(orders).where(eq(orders.customerId, customerId)).orderBy(desc(orders.createdAt));
+export async function listCustomerOrders(db: Firestore, customerId: string): Promise<(OrderDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.orders).where("customerId", "==", customerId).orderBy("createdAt", "desc").get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as OrderDoc) }));
 }
 
-export async function getOrder(db: Db, orderId: string) {
-  const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
-  return row ?? null;
+export async function getOrder(db: Firestore, orderId: string): Promise<(OrderDoc & { id: string }) | null> {
+  const snap = await db.collection(Collections.orders).doc(orderId).get();
+  return snap.exists ? { id: snap.id, ...(snap.data() as OrderDoc) } : null;
 }
 
-export async function listArtistArtworks(db: Db, artistId: string) {
-  return db.select().from(artworks).where(eq(artworks.artistId, artistId)).orderBy(desc(artworks.createdAt));
+export async function listArtistArtworks(db: Firestore, artistId: string): Promise<((ArtworkDoc & { id: string; artistPricePaise: number }))[]> {
+  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).orderBy("createdAt", "desc").get();
+  return Promise.all(
+    snap.docs.map(async (d) => {
+      const pricingSnap = await db.collection(artworkPricingCol(d.id)).doc("data").get();
+      const pricing = pricingSnap.data() as ArtworkPricingDoc | undefined;
+      return { id: d.id, ...(d.data() as ArtworkDoc), artistPricePaise: pricing?.artistPricePaise ?? 0 };
+    }),
+  );
 }

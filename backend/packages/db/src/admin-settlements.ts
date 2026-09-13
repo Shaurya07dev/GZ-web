@@ -1,23 +1,23 @@
-// Admin settlements queue. settlements is a read model over ledger_entries
-// (see the schema file's own comment) — nothing here recomputes money,
-// it only lists/retries rows already written by checkout.ts/aggregator-
-// flow.ts.
+// Admin settlements queue — Firestore version. settlements is a read model,
+// not recomputed here — see the collections.ts header.
 
-import { eq } from "drizzle-orm";
+import type { Firestore } from "firebase-admin/firestore";
 import { settlementStateMachine } from "@galleryzone/domain";
-import type { Db } from "./client.ts";
-import { settlements } from "./schema/ledger.ts";
+import { Collections, type SettlementDoc } from "./collections.ts";
 
 export class SettlementError extends Error {}
 
-export async function listSettlements(db: Db) {
-  return db.select().from(settlements);
+export async function listSettlements(db: Firestore): Promise<(SettlementDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.settlements).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as SettlementDoc) }));
 }
 
 /** Only legal from "failed" — matches the mock's own retrySettlement rule. */
-export async function retrySettlement(db: Db, settlementId: string): Promise<void> {
-  const [row] = await db.select({ status: settlements.status }).from(settlements).where(eq(settlements.id, settlementId));
-  if (!row) throw new SettlementError(`No settlement ${settlementId}`);
-  settlementStateMachine.assertTransition(row.status, "pending");
-  await db.update(settlements).set({ status: "pending" }).where(eq(settlements.id, settlementId));
+export async function retrySettlement(db: Firestore, settlementId: string): Promise<void> {
+  const ref = db.collection(Collections.settlements).doc(settlementId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new SettlementError(`No settlement ${settlementId}`);
+  const settlement = snap.data() as SettlementDoc;
+  settlementStateMachine.assertTransition(settlement.status, "pending");
+  await ref.update({ status: "pending" });
 }

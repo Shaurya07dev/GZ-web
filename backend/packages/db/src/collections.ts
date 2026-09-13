@@ -1,0 +1,441 @@
+// Firestore collection layout — replaces the Drizzle schema/*.ts files
+// from the Postgres version. Every collection name + document shape a
+// module in this package writes to or reads from is declared here once,
+// so the mapping between "what plan.md's data model calls a table" and
+// "what Firestore actually calls a collection" stays in one reviewable
+// place, the same job schema/*.ts did before.
+//
+// Design notes carried over from the Postgres schema (see git history for
+// the original, fuller comments per field if you need the "why"):
+//   - Money is still BIGINT-equivalent: plain `number` in paise, never a
+//     float rupee amount.
+//   - Append-only collections (statusEvents, ownershipEvents, ledgerEntries,
+//     auditLog) are enforced by firestore.rules (`allow write: if false`
+//     for clients) + this package never issuing an update/delete against
+//     them itself — there's no DB-level trigger to fall back on the way
+//     Postgres's CONSTRAINT TRIGGER was, so this convention is the whole
+//     guarantee. Treat any code that updates a doc in one of these
+//     collections as a bug.
+//   - artistPricePaise lives in a `pricing` subcollection under each
+//     artwork doc, never on the artwork doc itself — see firestore.rules'
+//     own comment on why.
+
+import type {
+  ArtworkStatus,
+  HoldingStatus,
+  OrderStatus,
+  PenaltyStatus,
+  ResaleListingStatus,
+  ReviewStatus,
+  SettlementStatus,
+  ShipmentStatus,
+  WithdrawalStatus,
+} from "@galleryzone/domain";
+
+export const userRoleValues = ["artist", "aggregator", "customer", "admin"] as const;
+export type UserRole = (typeof userRoleValues)[number];
+
+export const userStatusValues = ["pending", "active", "suspended", "blocked"] as const;
+export type UserStatus = (typeof userStatusValues)[number];
+
+export type RoleGrant = "platform_admin" | "finance_admin" | "moderation_admin";
+export type ListingType = "marketplace_only" | "aggregator_only" | "marketplace_and_aggregator";
+export const artworkRarityValues = ["R", "U", "O", "N"] as const;
+export type ArtworkRarity = (typeof artworkRarityValues)[number];
+
+// --- Collection name constants -------------------------------------------------
+// Firestore has no schema enforcement, so these constants are the only
+// thing stopping a typo from silently creating collection "artwork"
+// alongside the real "artworks".
+
+export const Collections = {
+  users: "users",
+  publicProfiles: "publicProfiles",
+  addresses: "addresses",
+  artworks: "artworks",
+  categories: "categories",
+  externalSalePenalties: "externalSalePenalties",
+  physicalCoaRequests: "physicalCoaRequests",
+  orders: "orders",
+  payments: "payments",
+  ledgerAccounts: "ledgerAccounts",
+  ledgerEntries: "ledgerEntries",
+  settlements: "settlements",
+  withdrawalRequests: "withdrawalRequests",
+  aggregatorHoldings: "aggregatorHoldings",
+  aggregatorSales: "aggregatorSales",
+  gallerySpaces: "gallerySpaces",
+  buyerInvites: "buyerInvites",
+  auditLog: "auditLog",
+  disputes: "disputes",
+  rateConfigVersions: "rateConfigVersions",
+  messageThreads: "messageThreads",
+  artistReviews: "artistReviews",
+  resaleListings: "resaleListings",
+  supportTickets: "supportTickets",
+  artistConnections: "artistConnections",
+} as const;
+
+// Subcollection path helpers — Firestore subcollections are addressed as
+// `${parentCollection}/${parentId}/${subcollectionName}`, not a top-level
+// constant, so these are functions rather than strings.
+export const artworkPricingCol = (artworkId: string) => `artworks/${artworkId}/pricing`;
+export const artworkImagesCol = (artworkId: string) => `artworks/${artworkId}/images`;
+export const artworkStatusEventsCol = (artworkId: string) => `artworks/${artworkId}/statusEvents`;
+export const artworkOwnershipEventsCol = (artworkId: string) => `artworks/${artworkId}/ownershipEvents`;
+export const orderStatusEventsCol = (orderId: string) => `orders/${orderId}/statusEvents`;
+export const userProfileCol = (userId: string) => `users/${userId}/profile`;
+export const userFinancialCol = (userId: string) => `users/${userId}/financial`;
+
+// --- Document shapes ---------------------------------------------------------
+
+export interface UserDoc {
+  firebaseUid: string; // == the Firestore doc ID for this collection
+  role: UserRole;
+  status: UserStatus;
+  name: string;
+  email: string;
+  phone: string | null;
+  createdAt: FirebaseFirestore.Timestamp;
+  lastLoginAt: FirebaseFirestore.Timestamp | null;
+  roleGrants: string[]; // RoleGrant values, kept as string[] for forward-compat with a grant not yet in the RoleGrant union
+}
+
+export interface ProfileDoc {
+  bio: string | null;
+  profileImageUrl: string | null;
+  headline: string | null;
+  location: string | null;
+  instagram: string | null;
+  website: string | null;
+  pan: string | null;
+  gstin: string | null;
+  gstStatus: ReviewStatus | null;
+  aadhaarStatus: ReviewStatus | null;
+  aadhaarMasked: string | null;
+  bankAccountMasked: string | null;
+  ifsc: string | null;
+  pickupLine1: string | null;
+  pickupLine2: string | null;
+  pickupCity: string | null;
+  pickupState: string | null;
+  pickupPincode: string | null;
+  earningsAbove5L: boolean;
+  socialProofVideoUrl: string | null;
+  companyName: string | null;
+}
+
+export interface FinancialDoc {
+  bankAccountEncrypted: string | null;
+}
+
+export interface PublicProfileDoc {
+  name: string;
+  headline: string | null;
+  bio: string | null;
+  location: string | null;
+  profileImageUrl: string | null;
+}
+
+export interface AddressDoc {
+  userId: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  isDefault: boolean;
+}
+
+export interface ArtworkDoc {
+  productCode: string;
+  artistId: string;
+  title: string;
+  description: string;
+  category: string;
+  medium: string;
+  dimensions: string | null;
+  yearCreated: number | null;
+  artworkType: string | null;
+  listingType: ListingType;
+  rarityType: ArtworkRarity | null;
+  coaCertificateNumber: string | null;
+  nfcTagId: string | null;
+  insuranceNumber: string | null;
+  insuranceStatus: ReviewStatus | null;
+  editableUntil: FirebaseFirestore.Timestamp;
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+/** Lives at artworkPricingCol(id)/data — never spread into ArtworkDoc's public fields. */
+export interface ArtworkPricingDoc {
+  artistId: string; // duplicated so firestore.rules can check ownership without a second get()
+  artistPricePaise: number;
+}
+
+export interface ArtworkImageDoc {
+  url: string;
+  thumbnailUrl: string | null;
+  altText: string | null;
+  sortOrder: number;
+  storagePath: string;
+}
+
+export interface ArtworkStatusEventDoc {
+  status: ArtworkStatus;
+  changedBy: string | null;
+  reason: string | null;
+  changedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface OwnershipEventDoc {
+  kind: "ownership" | "display";
+  fromUserId: string | null;
+  toUserId: string | null;
+  toEmail: string | null;
+  initiatedAt: FirebaseFirestore.Timestamp;
+  acceptedAt: FirebaseFirestore.Timestamp | null;
+  cancelledAt: FirebaseFirestore.Timestamp | null;
+  displayEndsAt: FirebaseFirestore.Timestamp | null;
+  displayEndedAt: FirebaseFirestore.Timestamp | null;
+}
+
+export interface CategoryDoc {
+  name: string;
+  slug: string;
+}
+
+export interface ExternalSalePenaltyDoc {
+  artworkId: string;
+  amountPaise: number;
+  status: PenaltyStatus;
+  createdAt: FirebaseFirestore.Timestamp;
+  decidedAt: FirebaseFirestore.Timestamp | null;
+  decisionNote: string | null;
+  settledAt: FirebaseFirestore.Timestamp | null;
+}
+
+export interface PhysicalCoaRequestDoc {
+  artworkId: string;
+  requestedByUserId: string;
+  requestedAt: FirebaseFirestore.Timestamp;
+  deliveryLine1: string;
+  deliveryCity: string;
+  deliveryState: string;
+  deliveryPincode: string;
+  status: "requested" | "dispatched";
+  dispatchedAt: FirebaseFirestore.Timestamp | null;
+  courierRef: string | null;
+}
+
+export interface OrderDoc {
+  artworkId: string;
+  customerId: string;
+  addressId: string;
+  displayPricePaise: number;
+  gstPaise: number;
+  deliveryChargePaise: number;
+  convenienceFeePaise: number;
+  totalPaise: number;
+  status: OrderStatus;
+  rateConfigVersionId: string;
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+export interface OrderStatusEventDoc {
+  status: OrderStatus;
+  changedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface PaymentDoc {
+  orderId: string;
+  provider: string;
+  providerPaymentId: string | null;
+  method: string | null;
+  amountPaise: number;
+  idempotencyKey: string;
+  status: string;
+  rawWebhookPayload: unknown;
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+export type LedgerAccountType =
+  | "artist_payable"
+  | "aggregator_payable"
+  | "customer_wallet"
+  | "platform_revenue"
+  | "razorpay_escrow"
+  | "gst_payable"
+  | "tds_payable";
+
+export interface LedgerAccountDoc {
+  type: LedgerAccountType;
+  ownerId: string | null;
+}
+
+export interface LedgerEntryDoc {
+  transactionId: string;
+  accountId: string;
+  amountPaise: number;
+  reason: string;
+  relatedOrderId: string | null;
+  relatedHoldingId: string | null;
+  idempotencyKey: string; // enforced unique via idempotencyKey-as-doc-ID, see ledger-repository.ts
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+export interface SettlementDoc {
+  orderId: string | null;
+  holdingId: string | null;
+  artistId: string;
+  artistAmountPaise: number;
+  aggregatorCommissionPaise: number | null;
+  platformRevenuePaise: number;
+  status: SettlementStatus;
+  releaseAfter: FirebaseFirestore.Timestamp;
+  createdAt: FirebaseFirestore.Timestamp;
+  processedAt: FirebaseFirestore.Timestamp | null;
+}
+
+export interface WithdrawalRequestDoc {
+  userId: string;
+  amountPaise: number;
+  status: WithdrawalStatus;
+  requestedAt: FirebaseFirestore.Timestamp;
+  processedAt: FirebaseFirestore.Timestamp | null;
+}
+
+export interface AggregatorHoldingDoc {
+  artworkId: string;
+  aggregatorId: string;
+  cycleMonth: number;
+  advancePercent: number;
+  advanceAmountPaise: number;
+  deliveryDepositPaise: number | null;
+  displayPricePaise: number;
+  assignmentSource: "self_reserved" | "gz_assigned";
+  assignedAt: FirebaseFirestore.Timestamp;
+  expiresAt: FirebaseFirestore.Timestamp;
+  windowExtended: boolean;
+  status: HoldingStatus;
+  returnedAt: FirebaseFirestore.Timestamp | null;
+}
+
+export interface AggregatorSaleDoc {
+  holdingId: string;
+  artworkId: string;
+  soldPricePaise: number;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string | null;
+  deliveryAddress: string | null;
+  deliveryMode: "courier" | "self_pickup";
+  paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
+  remittedAt: FirebaseFirestore.Timestamp | null;
+  shipmentStatus: ShipmentStatus;
+  dispatchedAt: FirebaseFirestore.Timestamp | null;
+  deliveredAt: FirebaseFirestore.Timestamp | null;
+  courierRef: string | null;
+  soldAt: FirebaseFirestore.Timestamp;
+}
+
+export interface GallerySpaceDoc {
+  aggregatorId: string;
+  name: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  pincode: string;
+  capacity: number | null;
+  coordinatorName: string | null;
+}
+
+export interface BuyerInviteDoc {
+  email: string;
+  name: string;
+  artworkId: string;
+  soldPricePaise: number;
+  soldAt: FirebaseFirestore.Timestamp;
+  source: string;
+  claimedAt: FirebaseFirestore.Timestamp | null;
+}
+
+export interface AuditLogDoc {
+  adminId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  entityLabel: string | null;
+  detail: unknown;
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+export interface DisputeDoc {
+  orderId: string | null;
+  artworkId: string | null;
+  raisedByUserId: string;
+  reason: string;
+  status: string;
+  createdAt: FirebaseFirestore.Timestamp;
+  resolvedAt: FirebaseFirestore.Timestamp | null;
+  resolutionNote: string | null;
+}
+
+export interface RateConfigVersionDoc {
+  rates: unknown; // PricingRates, kept untyped here to avoid a domain<->db circular import; cast at the call site
+  effectiveFrom: FirebaseFirestore.Timestamp;
+  proposedBy: string;
+  proposedAt: FirebaseFirestore.Timestamp;
+  approvedBy: string | null;
+  approvedAt: FirebaseFirestore.Timestamp | null;
+  // Redundant with `approvedBy !== null` but real: Firestore can't
+  // combine a "field != null" filter with an orderBy on a different field
+  // without an awkward composite-index workaround, so getActiveVersion()
+  // filters on this plain boolean instead.
+  approved: boolean;
+  reason: string;
+}
+
+export interface MessageThreadDoc {
+  userId: string;
+  fromLabel: string;
+  subject: string;
+  preview: string;
+  body: string;
+  unread: boolean;
+  receivedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface ArtistReviewDoc {
+  artistId: string;
+  reviewerName: string;
+  rating: number;
+  comment: string;
+  artworkId: string | null;
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+export interface ResaleListingDoc {
+  sellerId: string;
+  artworkId: string;
+  listedPricePaise: number;
+  status: ResaleListingStatus;
+  listedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface SupportTicketDoc {
+  userId: string;
+  subject: string;
+  message: string;
+  status: "open" | "answered" | "closed";
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+export interface ArtistConnectionDoc {
+  requesterId: string;
+  recipientId: string;
+  status: "pending" | "accepted" | "declined";
+  message: string | null;
+  requestedAt: FirebaseFirestore.Timestamp;
+  respondedAt: FirebaseFirestore.Timestamp | null;
+}

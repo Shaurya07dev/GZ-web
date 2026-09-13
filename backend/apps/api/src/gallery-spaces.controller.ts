@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Inject, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { listGallerySpaces, addGallerySpace, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -14,16 +15,15 @@ type SpaceBody = z.infer<typeof spaceSchema>;
 export class GallerySpacesController {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  // TODO(Phase 1): aggregatorId from the authenticated request.
   @Roles("aggregator")
   @Get()
-  list() {
-    return listGallerySpaces(this.db, "TODO-authenticated-user-id");
+  list(@Req() req: AuthenticatedRequest) {
+    return listGallerySpaces(this.db, req.authUser.uid);
   }
 
   @Roles("aggregator")
   @Post()
-  add(@Body(new ZodValidationPipe(spaceSchema)) body: SpaceBody) {
-    return addGallerySpace(this.db, "TODO-authenticated-user-id", body);
+  add(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(spaceSchema)) body: SpaceBody) {
+    return addGallerySpace(this.db, req.authUser.uid, body);
   }
 }

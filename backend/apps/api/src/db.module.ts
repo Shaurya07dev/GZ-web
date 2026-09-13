@@ -1,15 +1,12 @@
-// Wires packages/db's connection-pool factory into Nest's DI container.
-// One pool per process (createDb() is called exactly once, in the
-// provider factory below, not per-request) — see packages/db/client.ts's
-// own comment on why.
+// Wires packages/db's Firestore client factory into Nest's DI container.
+// One initialized Firebase Admin app per process — see
+// packages/db/client.ts's own comment on why.
 
-import { Global, Module, type OnApplicationShutdown } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { createDb, type Db } from "@galleryzone/db";
 import { loadEnv } from "@galleryzone/config";
 
 export const DB = Symbol("DB");
-
-let closeFn: (() => Promise<void>) | null = null;
 
 @Global()
 @Module({
@@ -18,16 +15,11 @@ let closeFn: (() => Promise<void>) | null = null;
       provide: DB,
       useFactory: (): Db => {
         const env = loadEnv();
-        const { db, close } = createDb(env.databaseUrl);
-        closeFn = close;
+        const { db } = createDb(env.firebaseProjectId);
         return db;
       },
     },
   ],
   exports: [DB],
 })
-export class DbModule implements OnApplicationShutdown {
-  async onApplicationShutdown(): Promise<void> {
-    if (closeFn) await closeFn();
-  }
-}
+export class DbModule {}

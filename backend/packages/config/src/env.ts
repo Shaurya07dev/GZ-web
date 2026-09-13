@@ -5,12 +5,18 @@
 export interface AppEnv {
   nodeEnv: "development" | "staging" | "production" | "test";
   port: number;
-  databaseUrl: string;
-  redisUrl: string;
+  // Optional — nothing in this codebase actually uses Redis yet (it's
+  // reserved for rate limiting/caching per the plan); required only once
+  // something really connects to it.
+  redisUrl: string | null;
   firebaseProjectId: string;
-  razorpayKeyId: string;
-  razorpayKeySecret: string;
-  razorpayWebhookSecret: string;
+  // Optional for now — Razorpay is explicitly deferred (test-mode setup
+  // comes later); confirmSimulatedPayment() doesn't call out to Razorpay
+  // at all yet, so the app can boot and be exercised without these. They
+  // become required the moment Phase 2 wires in a real webhook handler.
+  razorpayKeyId: string | null;
+  razorpayKeySecret: string | null;
+  razorpayWebhookSecret: string | null;
   sentryDsn: string | null;
   gcpProjectId: string;
 }
@@ -43,12 +49,11 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   return {
     nodeEnv: nodeEnvOf(source.NODE_ENV),
     port: Number(source.PORT ?? 8080),
-    databaseUrl: required("DATABASE_URL", source.DATABASE_URL),
-    redisUrl: required("REDIS_URL", source.REDIS_URL),
+    redisUrl: optional(source.REDIS_URL),
     firebaseProjectId: required("FIREBASE_PROJECT_ID", source.FIREBASE_PROJECT_ID),
-    razorpayKeyId: required("RAZORPAY_KEY_ID", source.RAZORPAY_KEY_ID),
-    razorpayKeySecret: required("RAZORPAY_KEY_SECRET", source.RAZORPAY_KEY_SECRET),
-    razorpayWebhookSecret: required("RAZORPAY_WEBHOOK_SECRET", source.RAZORPAY_WEBHOOK_SECRET),
+    razorpayKeyId: optional(source.RAZORPAY_KEY_ID),
+    razorpayKeySecret: optional(source.RAZORPAY_KEY_SECRET),
+    razorpayWebhookSecret: optional(source.RAZORPAY_WEBHOOK_SECRET),
     sentryDsn: optional(source.SENTRY_DSN),
     gcpProjectId: required("GCP_PROJECT_ID", source.GCP_PROJECT_ID),
   };

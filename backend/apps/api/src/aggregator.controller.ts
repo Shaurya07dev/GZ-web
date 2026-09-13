@@ -4,10 +4,11 @@
 // RolesGuard makes HTTP-level verification impossible before Phase 1
 // auth exists (same reasoning as orders.controller.ts).
 
-import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
 import { reserveHolding, recordAggregatorSale, type Db } from "@galleryzone/db";
 import { reserveHoldingInputSchema, recordAggregatorSaleInputSchema, type ReserveHoldingInput, type RecordAggregatorSaleInput } from "@galleryzone/contracts";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -17,9 +18,8 @@ export class AggregatorController {
 
   @Roles("aggregator")
   @Post()
-  async reserve(@Body(new ZodValidationPipe(reserveHoldingInputSchema)) body: ReserveHoldingInput) {
-    // TODO(Phase 1): aggregatorId comes from the authenticated request, never the body.
-    return reserveHolding({ db: this.db, aggregatorId: "TODO-authenticated-user-id", artworkId: body.artworkId });
+  async reserve(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(reserveHoldingInputSchema)) body: ReserveHoldingInput) {
+    return reserveHolding({ db: this.db, aggregatorId: req.authUser.uid, artworkId: body.artworkId });
   }
 
   @Roles("aggregator")

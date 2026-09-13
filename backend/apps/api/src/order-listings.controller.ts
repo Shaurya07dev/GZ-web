@@ -1,17 +1,17 @@
-import { Controller, Get, Inject, Param } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Req } from "@nestjs/common";
 import { listCustomerOrders, getOrder, listArtistArtworks, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
+import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 
 @Controller("v1")
 export class OrderListingsController {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  // TODO(Phase 1): userId from the authenticated request, not a param.
   @Roles("customer")
   @Get("orders")
-  listMine() {
-    return listCustomerOrders(this.db, "TODO-authenticated-user-id");
+  listMine(@Req() req: AuthenticatedRequest) {
+    return listCustomerOrders(this.db, req.authUser.uid);
   }
 
   @Roles("customer")
@@ -22,7 +22,7 @@ export class OrderListingsController {
 
   @Roles("artist")
   @Get("artist/artworks")
-  myArtworks() {
-    return listArtistArtworks(this.db, "TODO-authenticated-user-id");
+  myArtworks(@Req() req: AuthenticatedRequest) {
+    return listArtistArtworks(this.db, req.authUser.uid);
   }
 }

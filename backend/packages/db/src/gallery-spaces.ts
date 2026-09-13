@@ -1,6 +1,5 @@
-import { eq } from "drizzle-orm";
-import type { Db } from "./client.ts";
-import { gallerySpaces } from "./schema/aggregator.ts";
+import type { Firestore } from "firebase-admin/firestore";
+import { Collections, type GallerySpaceDoc } from "./collections.ts";
 
 export class GallerySpaceError extends Error {}
 
@@ -14,15 +13,23 @@ export interface GallerySpaceInput {
   coordinatorName?: string | undefined;
 }
 
-export async function listGallerySpaces(db: Db, aggregatorId: string) {
-  return db.select().from(gallerySpaces).where(eq(gallerySpaces.aggregatorId, aggregatorId));
+export async function listGallerySpaces(db: Firestore, aggregatorId: string): Promise<(GallerySpaceDoc & { id: string })[]> {
+  const snap = await db.collection(Collections.gallerySpaces).where("aggregatorId", "==", aggregatorId).get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as GallerySpaceDoc) }));
 }
 
-export async function addGallerySpace(db: Db, aggregatorId: string, input: GallerySpaceInput): Promise<{ id: string }> {
-  const [row] = await db
-    .insert(gallerySpaces)
-    .values({ aggregatorId, name: input.name, addressLine1: input.addressLine1, city: input.city, state: input.state, pincode: input.pincode, capacity: input.capacity ?? null, coordinatorName: input.coordinatorName ?? null })
-    .returning({ id: gallerySpaces.id });
-  if (!row) throw new GallerySpaceError("insert into gallery_spaces returned no row");
-  return row;
+export async function addGallerySpace(db: Firestore, aggregatorId: string, input: GallerySpaceInput): Promise<{ id: string }> {
+  const ref = db.collection(Collections.gallerySpaces).doc();
+  const doc: GallerySpaceDoc = {
+    aggregatorId,
+    name: input.name,
+    addressLine1: input.addressLine1,
+    city: input.city,
+    state: input.state,
+    pincode: input.pincode,
+    capacity: input.capacity ?? null,
+    coordinatorName: input.coordinatorName ?? null,
+  };
+  await ref.set(doc);
+  return { id: ref.id };
 }
