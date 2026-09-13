@@ -5,3 +5,7 @@ build/
 .env
 .env.*
 !.env.example
+
+# Firebase Admin SDK service-account keys — real credentials, never committed.
+*firebase-adminsdk*.json
+*service-account*.json
