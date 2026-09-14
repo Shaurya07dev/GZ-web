@@ -1,12 +1,15 @@
-// Artist-side artwork submission — Firestore version. A new artwork still
-// starts at "pending_approval" (the real moderation gate the mock
-// frontend was missing) — pending_approval -> marketplace only happens
-// through an explicit approveArtwork() call.
+// Artist-side artwork submission and editing — Firestore version. A
+// submitted artwork starts at "pending_approval" (the real moderation gate
+// the mock frontend was missing) — pending_approval -> marketplace only
+// happens through an explicit approveArtwork() call. A draft stays with
+// the artist until they submit it for review.
 
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { artworkStateMachine, editWindowExpiresAt, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
-import { Collections, artworkPricingCol, type ArtworkDoc, type ArtworkPricingDoc, type ListingType } from "./collections.ts";
+import { artistSettlementOf, artworkStateMachine, editWindowExpiresAt, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
+import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPhysical, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ListingType } from "./collections.ts";
+import { listArtworkImages, type ArtworkImage } from "./artwork-images.ts";
+import { getPublicArtwork, type PublicArtworkView } from "./public-artworks.ts";
 import { issueCertificate } from "./coa.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 
@@ -23,6 +26,14 @@ export interface SubmitArtworkInput {
   listingType: ListingType;
   dimensions?: string | undefined;
   yearCreated?: number | undefined;
+  /** "draft" keeps it with the artist; "review" (default) submits for moderation. */
+  mode?: "draft" | "review" | undefined;
+  artworkType?: string | null | undefined;
+  paintingStyle?: string | null | undefined;
+  insuranceOpted?: boolean | undefined;
+  insuranceNumber?: string | null | undefined;
+  nfcTagId?: string | null | undefined;
+  physical?: ArtworkPhysical | null | undefined;
   rates: PricingRates;
 }
 
@@ -61,14 +72,17 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
     medium: input.medium,
     dimensions: input.dimensions ?? null,
     yearCreated: input.yearCreated ?? null,
-    artworkType: null,
+    artworkType: input.artworkType ?? null,
+    paintingStyle: input.paintingStyle ?? null,
+    physical: input.physical ?? null,
+    insuranceOpted: input.insuranceOpted ?? false,
     listingType: input.listingType,
     rarityType: null,
     coaCertificateNumber: null,
     coaIssuedAt: null,
-    nfcTagId: null,
-    insuranceNumber: null,
-    insuranceStatus: null,
+    nfcTagId: input.nfcTagId ?? null,
+    insuranceNumber: input.insuranceNumber ?? null,
+    insuranceStatus: input.insuranceNumber ? "submitted" : null,
     editableUntil: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp, // placeholder, overwritten below with a real computed value
     createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
   };
@@ -82,10 +96,147 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
   const pricingDoc: ArtworkPricingDoc = { artistId: input.artistId, artistPricePaise: input.artistPricePaise };
   await input.db.collection(artworkPricingCol(artworkRef.id)).doc("data").set(pricingDoc);
 
-  await appendArtworkStatus(input.db, artworkRef.id, { status: "pending_approval", changedBy: null, reason: null });
+  if (input.mode === "draft") {
+    await appendArtworkStatus(input.db, artworkRef.id, { status: "draft", changedBy: null, reason: null });
+  } else {
+    await appendArtworkStatus(input.db, artworkRef.id, { status: "pending_approval", changedBy: null, reason: null });
+  }
   await refreshListing(input.db, artworkRef.id, input.rates);
 
   return { artworkId: artworkRef.id, productCode };
+}
+
+export type UpdateArtworkPatch = {
+  [K in keyof Pick<
+    SubmitArtworkInput,
+    | "title"
+    | "description"
+    | "category"
+    | "medium"
+    | "artistPricePaise"
+    | "listingType"
+    | "dimensions"
+    | "yearCreated"
+    | "artworkType"
+    | "paintingStyle"
+    | "insuranceOpted"
+    | "insuranceNumber"
+    | "nfcTagId"
+    | "physical"
+  >]?: SubmitArtworkInput[K] | undefined;
+} & { mode?: "draft" | "review" | undefined };
+
+// Statuses in which the artist may still change the piece freely. A
+// marketplace listing is editable only inside its edit window (policy
+// canEditArtwork); anything reserved/sold is frozen.
+const FREELY_EDITABLE: ReadonlySet<ArtworkStatus> = new Set<ArtworkStatus>(["draft", "pending_approval", "returned"]);
+
+/** Edits one of the artist's own artworks. `mode: "review"` on a draft/returned piece submits it for moderation. */
+export async function updateArtwork(
+  db: Firestore,
+  { artistId, artworkId, patch, rates }: { artistId: string; artworkId: string; patch: UpdateArtworkPatch; rates: PricingRates },
+): Promise<void> {
+  const ref = db.collection(Collections.artworks).doc(artworkId);
+  const snap = await ref.get();
+  const artwork = snap.data() as ArtworkDoc | undefined;
+  if (!artwork || artwork.artistId !== artistId) throw new ArtistArtworkError(`No artwork ${artworkId}`);
+  const status = await latestStatusOf(db, artworkId);
+  const editable = FREELY_EDITABLE.has(status) || (status === "marketplace" && Date.now() < artwork.editableUntil.toDate().getTime());
+  if (!editable) throw new ArtistArtworkError(`An artwork that is ${status.replace("_", " ")} can no longer be edited`);
+
+  const fields: Partial<ArtworkDoc> = {};
+  if (patch.title !== undefined) fields.title = patch.title;
+  if (patch.description !== undefined) fields.description = patch.description;
+  if (patch.category !== undefined) fields.category = patch.category;
+  if (patch.medium !== undefined) fields.medium = patch.medium;
+  if (patch.listingType !== undefined) fields.listingType = patch.listingType;
+  if (patch.dimensions !== undefined) fields.dimensions = patch.dimensions ?? null;
+  if (patch.yearCreated !== undefined) fields.yearCreated = patch.yearCreated ?? null;
+  if (patch.artworkType !== undefined) fields.artworkType = patch.artworkType ?? null;
+  if (patch.paintingStyle !== undefined) fields.paintingStyle = patch.paintingStyle ?? null;
+  if (patch.insuranceOpted !== undefined) fields.insuranceOpted = patch.insuranceOpted;
+  if (patch.nfcTagId !== undefined) fields.nfcTagId = patch.nfcTagId ?? null;
+  if (patch.physical !== undefined) fields.physical = patch.physical ?? null;
+  if (patch.insuranceNumber !== undefined && patch.insuranceNumber !== artwork.insuranceNumber) {
+    fields.insuranceNumber = patch.insuranceNumber ?? null;
+    // A new number goes back to the admin for verification.
+    fields.insuranceStatus = patch.insuranceNumber ? "submitted" : null;
+  }
+  if (Object.keys(fields).length) await ref.update(fields);
+
+  if (patch.artistPricePaise !== undefined) {
+    const pricingDoc: ArtworkPricingDoc = { artistId, artistPricePaise: patch.artistPricePaise };
+    await db.collection(artworkPricingCol(artworkId)).doc("data").set(pricingDoc);
+  }
+
+  if (patch.mode === "review" && (status === "draft" || status === "returned")) {
+    artworkStateMachine.assertTransition(status, "pending_approval");
+    await appendArtworkStatus(db, artworkId, { status: "pending_approval", changedBy: null, reason: null });
+  }
+  await refreshListing(db, artworkId, rates);
+}
+
+/** Everything the public sees plus what only the owner may: the artist's price, net, full images, status history, insurance. */
+export interface OwnerArtworkView extends PublicArtworkView {
+  artistPricePaise: number;
+  artistNet: { marketplace: number; aggregatorEstimate: number };
+  images: ArtworkImage[];
+  statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
+  insuranceOpted: boolean;
+  insuranceNumber: string | null;
+  insuranceStatus: string | null;
+  nfcTagId: string | null;
+  artworkType: string | null;
+  paintingStyle: string | null;
+  physical: ArtworkPhysical | null;
+  editableUntil: string;
+}
+
+async function toOwnerView(db: Firestore, artworkId: string, artwork: ArtworkDoc, rates: PricingRates): Promise<OwnerArtworkView | null> {
+  const pub = await getPublicArtwork(db, artworkId);
+  if (!pub) return null;
+  const [pricingSnap, images, eventsSnap] = await Promise.all([
+    db.collection(artworkPricingCol(artworkId)).doc("data").get(),
+    listArtworkImages(db, artworkId),
+    db.collection(artworkStatusEventsCol(artworkId)).orderBy("changedAt", "asc").get(),
+  ]);
+  const artistPricePaise = (pricingSnap.data() as ArtworkPricingDoc | undefined)?.artistPricePaise ?? 0;
+  return {
+    ...pub,
+    images,
+    artistPricePaise,
+    artistNet: {
+      marketplace: artistSettlementOf(artistPricePaise, "marketplace", rates).net,
+      aggregatorEstimate: artistSettlementOf(artistPricePaise, "aggregator", rates).net,
+    },
+    statusHistory: eventsSnap.docs.map((d) => {
+      const e = d.data() as ArtworkStatusEventDoc;
+      return { status: e.status, changedAt: e.changedAt?.toDate().toISOString() ?? new Date(0).toISOString(), reason: e.reason };
+    }),
+    insuranceOpted: artwork.insuranceOpted ?? false,
+    insuranceNumber: artwork.insuranceNumber,
+    insuranceStatus: artwork.insuranceStatus,
+    nfcTagId: artwork.nfcTagId,
+    artworkType: artwork.artworkType,
+    paintingStyle: artwork.paintingStyle ?? null,
+    physical: artwork.physical ?? null,
+    editableUntil: artwork.editableUntil?.toDate().toISOString() ?? new Date(0).toISOString(),
+  };
+}
+
+/** One of the artist's own artworks, any status. Null when missing or not theirs. */
+export async function getArtistArtwork(db: Firestore, artistId: string, artworkId: string, rates: PricingRates): Promise<OwnerArtworkView | null> {
+  const snap = await db.collection(Collections.artworks).doc(artworkId).get();
+  const artwork = snap.data() as ArtworkDoc | undefined;
+  if (!artwork || artwork.artistId !== artistId) return null;
+  return toOwnerView(db, artworkId, artwork, rates);
+}
+
+/** All of the artist's artworks, newest first. */
+export async function listArtistArtworksOwned(db: Firestore, artistId: string, rates: PricingRates): Promise<OwnerArtworkView[]> {
+  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).orderBy("createdAt", "desc").get();
+  const views = await Promise.all(snap.docs.map((d) => toOwnerView(db, d.id, d.data() as ArtworkDoc, rates)));
+  return views.filter((v): v is OwnerArtworkView => v !== null);
 }
 
 export async function approveArtwork(db: Firestore, artworkId: string): Promise<void> {

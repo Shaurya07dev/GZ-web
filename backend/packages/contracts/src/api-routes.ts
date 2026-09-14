@@ -57,7 +57,7 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "PATCH", path: "/v1/artist/artworks/:id", authRole: "artist", summary: "Edit within the edit window", replaces: "artistDashboardService.updateArtwork" },
   { method: "POST", path: "/v1/artist/artworks/:id/sold-elsewhere", authRole: "artist", summary: "Mark sold off-platform, queues penalty", replaces: "artistDashboardService.markSoldElsewhere" },
   { method: "GET", path: "/v1/artist/artworks", authRole: "artist", summary: "This artist's own listings", replaces: "artistDashboardService.listArtworks" },
-  { method: "POST", path: "/v1/artist/artworks/:id/images", authRole: "artist", summary: "Signed upload URL for an image", replaces: "n/a — new (image pipeline gap)" },
+  { method: "GET", path: "/v1/artist/artworks/:id", authRole: "artist", summary: "One of my artworks, owner view", replaces: "artistDashboardService.getArtwork" },
 
   // --- Marketplace / Orders ---------------------------------------------------
   { method: "POST", path: "/v1/orders", authRole: "customer", summary: "Create + capture a checkout", replaces: "orderService.create" },

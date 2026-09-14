@@ -1,34 +1,66 @@
-// Artist artwork submission + the real admin moderation gate — closes the
-// gap the mock frontend has (auto-approve on submit). Real work lives in
-// @galleryzone/db/artist-artworks.ts, verified against real Postgres in
-// artist-artworks.check.ts.
+// Artist artwork submission/editing + the real admin moderation gate —
+// closes the gap the mock frontend had (auto-approve on submit). Real work
+// lives in @galleryzone/db/artist-artworks.ts.
 
-import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, Param, Patch, Post, Req } from "@nestjs/common";
 import { z } from "zod";
-import { submitArtwork, approveArtwork, rejectArtwork, FirestoreRateConfigStore, type Db } from "@galleryzone/db";
+import {
+  ArtistArtworkError,
+  FirestoreRateConfigStore,
+  approveArtwork,
+  getArtistArtwork,
+  listArtistArtworksOwned,
+  rejectArtwork,
+  submitArtwork,
+  updateArtwork,
+  type Db,
+} from "@galleryzone/db";
+import { IllegalTransitionError } from "@galleryzone/domain";
 import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
-import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
+import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
-const submitArtworkSchema = z
+const physicalSchema = z
   .object({
-    title: z.string().min(1),
-    description: z.string().min(1),
-    category: z.string().min(1),
-    medium: z.string().min(1),
-    artistPricePaise: z.number().int().positive(),
-    listingType: z.enum(["marketplace_only", "aggregator_only", "marketplace_and_aggregator"]),
-    dimensions: z.string().optional(),
-    yearCreated: z.number().int().optional(),
+    weightKg: z.number().positive().max(500).nullable(),
+    framing: z.string().trim().max(80).nullable(),
+    format: z.string().trim().max(80).nullable(),
+    hangingHardwareIncluded: z.boolean(),
+    packagingConfirmed: z.boolean(),
   })
   .strict();
+
+const artworkFields = {
+  title: z.string().trim().min(1).max(160),
+  description: z.string().trim().max(5000),
+  category: z.string().trim().min(1).max(80),
+  medium: z.string().trim().min(1).max(80),
+  artistPricePaise: z.number().int().positive().max(1_000_000_000),
+  listingType: z.enum(["marketplace_only", "aggregator_only", "marketplace_and_aggregator"]),
+  dimensions: z.string().trim().max(80).optional(),
+  yearCreated: z.number().int().min(1800).max(2100).optional(),
+  mode: z.enum(["draft", "review"]).optional(),
+  artworkType: z.string().trim().max(80).nullable().optional(),
+  paintingStyle: z.string().trim().max(80).nullable().optional(),
+  insuranceOpted: z.boolean().optional(),
+  insuranceNumber: z.string().trim().max(80).nullable().optional(),
+  nfcTagId: z.string().trim().max(80).nullable().optional(),
+  physical: physicalSchema.nullable().optional(),
+};
+
+const submitArtworkSchema = z.object(artworkFields).strict();
 type SubmitArtworkBody = z.infer<typeof submitArtworkSchema>;
+
+const updateArtworkSchema = z.object(artworkFields).partial().strict();
+type UpdateArtworkBody = z.infer<typeof updateArtworkSchema>;
 
 const rejectSchema = z.object({ reason: z.string().min(1) }).strict();
 type RejectBody = z.infer<typeof rejectSchema>;
+
+const notFound = () => new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
 
 @Controller("v1")
 export class ArtistArtworksController {
@@ -44,13 +76,54 @@ export class ArtistArtworksController {
     if (artistId) this.cache.invalidate(CacheKeys.artistArtworks(artistId));
   }
 
+  private rates() {
+    return loadActiveRates(new FirestoreRateConfigStore(this.db));
+  }
+
+  @Roles("artist")
+  @Get("artist/artworks")
+  async mine(@Req() req: AuthenticatedRequest) {
+    return { artworks: await listArtistArtworksOwned(this.db, req.authUser.uid, await this.rates()) };
+  }
+
+  @Roles("artist")
+  @Get("artist/artworks/:id")
+  async one(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    const artwork = await getArtistArtwork(this.db, req.authUser.uid, id, await this.rates());
+    if (!artwork) throw notFound();
+    return artwork;
+  }
+
   @Roles("artist")
   @Post("artist/artworks")
   async submit(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(submitArtworkSchema)) body: SubmitArtworkBody) {
-    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+    const rates = await this.rates();
     const result = await submitArtwork({ db: this.db, artistId: req.authUser.uid, ...body, rates });
     this.bust(result.artworkId, req.authUser.uid);
-    return result;
+    const artwork = await getArtistArtwork(this.db, req.authUser.uid, result.artworkId, rates);
+    return artwork ?? result;
+  }
+
+  @Roles("artist")
+  @Patch("artist/artworks/:id")
+  async update(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(updateArtworkSchema)) body: UpdateArtworkBody) {
+    const rates = await this.rates();
+    try {
+      await updateArtwork(this.db, { artistId: req.authUser.uid, artworkId: id, patch: body, rates });
+    } catch (error) {
+      if (error instanceof ArtistArtworkError) {
+        if (error.message.startsWith("No artwork")) throw notFound();
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "artwork_not_editable" });
+      }
+      if (error instanceof IllegalTransitionError) {
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
+      }
+      throw error;
+    }
+    this.bust(id, req.authUser.uid);
+    const artwork = await getArtistArtwork(this.db, req.authUser.uid, id, rates);
+    if (!artwork) throw notFound();
+    return artwork;
   }
 
   @Roles("admin")

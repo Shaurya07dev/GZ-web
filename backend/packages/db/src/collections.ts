@@ -169,10 +169,24 @@ export interface ArtworkDoc {
   nfcTagId: string | null;
   insuranceNumber: string | null;
   insuranceStatus: ReviewStatus | null;
+  /** Artist opted into transit insurance (MOU §10). Absent on older docs = false. */
+  insuranceOpted?: boolean;
+  /** Painting-only sub-classification (e.g. "Abstract"). */
+  paintingStyle?: string | null;
+  /** Shipping/packaging facts the artist declares at submission. */
+  physical?: ArtworkPhysical | null;
   editableUntil: FirebaseFirestore.Timestamp;
   createdAt: FirebaseFirestore.Timestamp;
   /** Denormalised read model (listing-projection.ts). Absent on docs written before it existed — reindex fills it. */
   listing?: ListingProjection;
+}
+
+export interface ArtworkPhysical {
+  weightKg: number | null;
+  framing: string | null;
+  format: string | null;
+  hangingHardwareIncluded: boolean;
+  packagingConfirmed: boolean;
 }
 
 /** Mirrors listing-projection.ts's ListingProjection (declared here to avoid an import cycle). */
