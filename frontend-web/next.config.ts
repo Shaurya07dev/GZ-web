@@ -1,8 +1,18 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import type { NextConfig } from "next";
+
+// One .env for the whole repo, at the root (see /.env.example). Next only
+// reads env files from its own directory, so load the root one here — this
+// runs before NEXT_PUBLIC_* values are inlined at build time. Absent on
+// Vercel (env vars come from the project settings there), hence the guard.
+const rootEnv = resolve(__dirname, "..", ".env");
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+
 
 const nextConfig: NextConfig = {
   // Playwright's baseURL is 127.0.0.1 (more reliable than localhost for this
-  // environment's curl/Playwright connectivity — see TESTING_VERIFICATION_REPORT.md),
+  // environment's curl/Playwright connectivity — see docs/TESTING_VERIFICATION_REPORT.md),
   // but `next dev`'s default cross-origin dev-asset protection only allows
   // "localhost" by default. Without this, every async chunk request (any
   // client component using next/dynamic, or split out by Turbopack — this

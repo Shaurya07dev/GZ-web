@@ -1,16 +1,14 @@
-# This repo tracks the website (frontend-web/) and the active Flutter mobile
-# app (mobile_flutter/). Everything else at the root (docs, PDFs, reference
-# images, corpus data) is workspace scratch material and stays untracked.
-#
-# mobile/ is the abandoned Expo attempt. It is kept on disk for one file,
-# mobile/migration-progress.md, and is deliberately NOT un-ignored here: it was
-# never going to be committed, and un-ignoring it only made git list its 58
-# files as untracked in every status and every editor sidebar, forever.
+# Website-only repo: the Next.js site (frontend-web/) and its NestJS API
+# (backend/). Everything else at the root is workspace scratch and stays
+# untracked unless listed here.
 /*
 !/frontend-web/
-!/mobile_flutter/
 !/backend/
+!/docs/
 !/.github/
 !/.gitignore
+!/.env.example
 !/README.md
-!/vercel.json
+
+# The single env file lives at the root — never committed.
+/.env
