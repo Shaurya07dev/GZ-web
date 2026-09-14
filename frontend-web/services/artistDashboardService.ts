@@ -15,6 +15,7 @@ import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { http } from "@/lib/api";
 import { artistArtworkApi, type SubmitImage } from "@/services/artistArtworkApi";
+import { artistWalletApi } from "@/services/artistWalletApi";
 import { authService } from "@/services/authService";
 import { MOU_VERSION } from "@/features/dashboard/mou-data";
 
@@ -173,27 +174,36 @@ function nextInsuranceStatus(
 }
 
 export const artistDashboardService = {
-  getKpiMetrics: (): Promise<ArtworkKpiMetric[]> => {
-    const wallet = artistWalletCol.get();
-    const pendingCount = artistArtworks().filter(
-      (a) => a.status === "pending_approval",
-    ).length;
-    return mockDelay([
-      KPI_METRICS[0],
+  getKpiMetrics: async (): Promise<ArtworkKpiMetric[]> => {
+    const [wallet, artworks, transactions] = await Promise.all([
+      artistWalletApi.getWallet(),
+      artistArtworkApi.list(),
+      artistWalletApi.listTransactions(),
+    ]);
+    const pendingCount = artworks.filter((a) => a.status === "pending_approval").length;
+    const soldCount = artworks.filter((a) => ["sold", "settlement_complete", "delivered", "completed"].includes(a.status)).length;
+    const revenue = transactions.filter((t) => t.type === "settlement" && t.status === "completed").reduce((sum, t) => sum + Math.max(0, t.amount), 0);
+    return [
+      {
+        ...KPI_METRICS[0],
+        value: `₹${revenue.toLocaleString("en-IN")}`,
+        delta: soldCount > 0 ? `${soldCount} ${soldCount === 1 ? "sale" : "sales"} settled` : "No sales settled yet",
+        positive: soldCount > 0,
+      },
       {
         ...KPI_METRICS[1],
         value: `₹${wallet.balance.toLocaleString("en-IN")}`,
         delta:
-          wallet.pendingBalance > 0
-            ? `₹${wallet.pendingBalance.toLocaleString("en-IN")} pending settlement`
-            : "No pending settlements",
+          wallet.lockedBalance > 0
+            ? `₹${wallet.lockedBalance.toLocaleString("en-IN")} withdrawal pending`
+            : "Available to withdraw",
       },
       {
         ...KPI_METRICS[2],
         value: String(pendingCount),
         delta: pendingCount > 0 ? "Awaiting admin review" : "All caught up",
       },
-    ]);
+    ];
   },
 
   getActivity: (): Promise<ActivityEntry[]> =>
@@ -291,19 +301,17 @@ export const artistDashboardService = {
   // Settlements are released lazily rather than on a timer: reading the wallet
   // is the only moment the 7-days-after-delivery rule is observable, and this
   // mock has no scheduler to run it any other way.
+  // Wallet is real (services/artistWalletApi.ts). "pending" = settled
+  // sales still inside the payout clock is not modelled by the ledger yet,
+  // so pendingBalance is 0; locked = withdrawal requests awaiting approval.
   getWallet: (): Promise<{
     balance: number;
     pendingBalance: number;
     lockedBalance: number;
-  }> => {
-    releaseDueArtistSettlements();
-    return mockDelay(artistWalletCol.get());
-  },
+  }> => artistWalletApi.getWallet(),
 
-  listWalletTransactions: (): Promise<WalletTransaction[]> => {
-    releaseDueArtistSettlements();
-    return mockDelay(artistWalletTransactionsCol.get());
-  },
+  listWalletTransactions: (): Promise<WalletTransaction[]> =>
+    artistWalletApi.listTransactions(),
 
   /** Sales waiting on the 7-day post-delivery clock. */
   listPendingSettlements: (): Promise<Settlement[]> =>
@@ -316,32 +324,8 @@ export const artistDashboardService = {
   },
 
   requestWithdrawal: (amount: number): Promise<WalletTransaction> => {
-    const wallet = artistWalletCol.get();
-    if (amount < 1000) return mockError("Minimum withdrawal is ₹1,000");
-    if (amount > wallet.balance)
-      return mockError("Exceeds your available balance");
-
-    artistWalletCol.set({ ...wallet, balance: wallet.balance - amount });
-
-    const transaction: WalletTransaction = {
-      id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-      type: "withdrawal",
-      label: `Withdrawal to bank ${artistProfileCol.get().bankAccountMasked.slice(-4)}`,
-      amount: -amount,
-      date: new Date().toISOString().slice(0, 10),
-      status: "completed",
-    };
-    artistWalletTransactionsCol.set([
-      transaction,
-      ...artistWalletTransactionsCol.get(),
-    ]);
-    appendActivity(
-      "withdrawal",
-      "Withdrawal requested",
-      `₹${amount.toLocaleString("en-IN")} sent to your bank account`,
-    );
-
-    return mockDelay(transaction);
+    if (amount < 1000) return Promise.reject(new Error("Minimum withdrawal is ₹1,000"));
+    return artistWalletApi.requestWithdrawal(amount);
   },
 
   // The profile record is still mock-backed (no backend write route for

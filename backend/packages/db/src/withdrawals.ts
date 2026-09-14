@@ -61,6 +61,25 @@ export async function requestWithdrawal({
   return { withdrawalId: ref.id };
 }
 
+export interface WithdrawalRequestView {
+  id: string;
+  amountPaise: number;
+  status: WithdrawalRequestDoc["status"];
+  requestedAt: Date;
+  processedAt: Date | null;
+}
+
+/** The user's own withdrawal requests, newest first. */
+export async function listWithdrawalRequests(db: Firestore, userId: string): Promise<WithdrawalRequestView[]> {
+  const snap = await db.collection(Collections.withdrawalRequests).where("userId", "==", userId).get();
+  return snap.docs
+    .map((d) => {
+      const w = d.data() as WithdrawalRequestDoc;
+      return { id: d.id, amountPaise: w.amountPaise, status: w.status, requestedAt: w.requestedAt?.toDate() ?? new Date(0), processedAt: w.processedAt?.toDate() ?? null };
+    })
+    .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+}
+
 export async function approveWithdrawal(db: Firestore, withdrawalId: string, accountType: WithdrawableAccountType): Promise<{ transactionId: string }> {
   const ref = db.collection(Collections.withdrawalRequests).doc(withdrawalId);
   const snap = await ref.get();

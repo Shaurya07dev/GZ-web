@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Req } from "@nestjs/common";
-import { getWalletBalance, listWalletTransactions, type Db } from "@galleryzone/db";
+import { getWalletBalance, listWalletTransactions, listWithdrawalRequests, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
@@ -8,16 +8,34 @@ import { DB } from "./db.module.ts";
 export class ArtistWalletController {
   constructor(@Inject(DB) private readonly db: Db) {}
 
+  /** Ledger balance plus what is spoken for by withdrawal requests still pending admin approval. */
   @Roles("artist")
   @Get()
   async get(@Req() req: AuthenticatedRequest) {
-    return getWalletBalance(this.db, "artist_payable", req.authUser.uid);
+    const [balance, withdrawals] = await Promise.all([
+      getWalletBalance(this.db, "artist_payable", req.authUser.uid),
+      listWithdrawalRequests(this.db, req.authUser.uid),
+    ]);
+    const lockedPaise = withdrawals.filter((w) => w.status === "pending").reduce((sum, w) => sum + w.amountPaise, 0);
+    return { ...balance, lockedPaise, availablePaise: Math.max(0, balance.balancePaise - lockedPaise) };
   }
 
+  /** Ledger entries and withdrawal requests, merged, newest first. */
   @Roles("artist")
   @Get("transactions")
   async transactions(@Req() req: AuthenticatedRequest) {
-    return listWalletTransactions(this.db, "artist_payable", req.authUser.uid);
+    const [entries, withdrawals] = await Promise.all([
+      listWalletTransactions(this.db, "artist_payable", req.authUser.uid),
+      listWithdrawalRequests(this.db, req.authUser.uid),
+    ]);
+    const rows = [
+      ...entries.map((e) => ({ id: e.id, kind: "ledger" as const, amountPaise: e.amountPaise, reason: e.reason, status: "completed" as const, at: e.createdAt.toISOString() })),
+      ...withdrawals
+        // Approved withdrawals already appear as ledger entries.
+        .filter((w) => w.status !== "completed")
+        .map((w) => ({ id: w.id, kind: "withdrawal" as const, amountPaise: -w.amountPaise, reason: "withdrawal", status: w.status === "pending" ? ("pending" as const) : ("failed" as const), at: w.requestedAt.toISOString() })),
+    ];
+    return { transactions: rows.sort((a, b) => b.at.localeCompare(a.at)) };
   }
 }
 
