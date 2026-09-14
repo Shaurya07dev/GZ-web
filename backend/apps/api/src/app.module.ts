@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { HealthController } from "./health.controller.ts";
 import { AuthController } from "./auth/auth.controller.ts";
 import { RateConfigController } from "./rate-config.controller.ts";
@@ -35,7 +36,17 @@ import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
 
 @Module({
-  imports: [DbModule],
+  imports: [
+    DbModule,
+    // Per-IP token buckets, in memory (one instance today). "burst" stops
+    // scripted hammering of the public routes; "sustained" caps a single
+    // client at a rate a human never reaches. Auth-gated routes get the
+    // same limits — a stolen token shouldn't scrape the API either.
+    ThrottlerModule.forRoot([
+      { name: "burst", ttl: 1_000, limit: 20 },
+      { name: "sustained", ttl: 60_000, limit: 300 },
+    ]),
+  ],
   controllers: [
     HealthController,
     AuthController,
@@ -69,7 +80,12 @@ import { DbModule } from "./db.module.ts";
     MouController,
     ImagesController,
   ],
-  providers: [{ provide: APP_GUARD, useClass: RolesGuard }, Storage, ListingBackfill],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    Storage,
+    ListingBackfill,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

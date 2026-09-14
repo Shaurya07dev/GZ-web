@@ -37,6 +37,8 @@ function codeFor(status: number): string {
       return "not_found";
     case 409:
       return "conflict";
+    case 429:
+      return "rate_limited";
     case 501:
       return "not_implemented";
     default:
