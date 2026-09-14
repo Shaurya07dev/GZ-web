@@ -29,6 +29,7 @@ import { OwnershipController } from "./ownership.controller.ts";
 import { MouController } from "./mou.controller.ts";
 import { ImagesController } from "./images.controller.ts";
 import { Storage } from "./storage.ts";
+import { ListingBackfill } from "./listing-backfill.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -68,7 +69,7 @@ import { DbModule } from "./db.module.ts";
     MouController,
     ImagesController,
   ],
-  providers: [{ provide: APP_GUARD, useClass: RolesGuard }, Storage],
+  providers: [{ provide: APP_GUARD, useClass: RolesGuard }, Storage, ListingBackfill],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
