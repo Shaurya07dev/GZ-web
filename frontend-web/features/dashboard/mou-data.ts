@@ -1,323 +1,18 @@
-// The artist's Memorandum of Understanding with GalleryZone, transcribed from
-// the signed PDF ("MOU of Artist.pdf") clause for clause. This is the artist's
-// overall agreement with the platform — distinct from the listing Terms &
-// Conditions, which apply per artwork at listing time.
+// The artist's Memorandum of Understanding with GalleryZone. GENERATED from
+// docs/legal/artist-mou-2026.2.txt by frontend-web/scripts/gen-mou.mjs —
+// do not hand-edit; fix the source document and regenerate, so the screen,
+// the PDF and the paper version can never say different things.
 //
-// Wording is the company's, not ours: fix typos in the source document and
-// re-transcribe rather than editing here, so the screen and the paper version
-// can never say different things.
+// Publishing a new version (bump MOU_VERSION) forces every artist to re-sign;
+// the signing time recorded is the server's clock at the moment of signing.
 
-import type { MouClause, MouDocument } from "@/features/mou/mou-agreement";
+import type { MouDocument } from "@/features/mou/mou-agreement";
 
-export const MOU_VERSION = "2026.1";
+export const MOU_VERSION = "2026.2";
 
 export const MOU_PREAMBLE = [
-  "This Memorandum of Understanding (“MOU”) is executed between GalleryZone Private Limited and the Artist for the listing, promotion, exhibition, marketing, and sale of artworks through the GalleryZone platform.",
-  "Both parties agree to the following terms and conditions.",
-];
-
-export const MOU_CLAUSES: MouClause[] = [
-  {
-    number: 1,
-    title: "Purpose",
-    paragraphs: [
-      "GalleryZone is a digital art marketplace and art management platform connecting artists, aggregators, collectors, investors, institutions, and art enthusiasts.",
-      "GalleryZone aims to:",
-    ],
-    points: [
-      "Build a permanent digital footprint for every artwork.",
-      "Increase artist recognition and credibility.",
-      "Create a verified digital portfolio.",
-      "Enable artworks to become collectible investment assets.",
-      "Maintain secure ownership and provenance records.",
-      "Promote artworks through online and offline sales channels.",
-      "Resale of the artwork.",
-    ],
-    closing: ["GalleryZone promotes artworks but does not guarantee a sale."],
-  },
-  {
-    number: 2,
-    title: "Artwork Eligibility",
-    paragraphs: ["The Artist confirms that:"],
-    points: [
-      "Every artwork submitted is 100% handmade and created by the Artist.",
-      "Once created, the Artist shall not replicate the same artwork again; doing so degrades the artwork's value and may lead to termination or delisting of the artwork.",
-      "No AI-generated artwork, AI-assisted artwork, digital artwork, digital print, machine-generated reproduction, NFT artwork, or copied artwork shall be accepted unless expressly approved in writing by GalleryZone.",
-      "The Artist is the sole owner of the artwork.",
-      "The artwork does not infringe any copyright, trademark, or intellectual property rights.",
-      "GalleryZone reserves the right to reject any artwork without assigning any reason.",
-    ],
-  },
-  {
-    number: 3,
-    title: "Artwork Submission Requirements",
-    paragraphs: ["Before shipment, the Artist shall provide:"],
-    points: [
-      "Completed artwork details.",
-      "Name of artwork.",
-      "Dimensions.",
-      "Medium used.",
-      "Subject.",
-      "Type of artwork.",
-      "Year of creation.",
-      "Description.",
-      "High-quality photographs.",
-      "Artist profile.",
-      "Certificate of Authenticity (COA).",
-      "Government ID.",
-      "Signature.",
-      "Any additional information requested by GalleryZone.",
-    ],
-  },
-  {
-    number: 4,
-    title: "Digital Footprint & Portfolio",
-    paragraphs: ["Upon approval:"],
-    points: [
-      "Every artwork shall receive a unique GalleryZone Digital Identity.",
-      "GalleryZone may create digital certificates, ownership records, QR records, NFC records and provenance history.",
-      "Artwork images may be used for marketing, exhibitions, publications, social media, and promotional activities.",
-    ],
-  },
-  {
-    number: 5,
-    title: "Artist Verification",
-    paragraphs: [
-      "Artists are encouraged to provide social media profiles including Instagram, Facebook, YouTube, X (Twitter) and TikTok, showing studio work, artwork creation, and work-in-progress to improve buyer confidence.",
-    ],
-  },
-  {
-    number: 6,
-    title: "Confidential Pricing",
-    paragraphs: [
-      "The Artist's quoted price shall remain confidential.",
-      "The Artist shall not publicly disclose artwork pricing through social media, websites, videos, interviews, exhibitions, promotional materials, or comments.",
-      "Violation may result in removal of the artwork and termination of this agreement.",
-    ],
-  },
-  {
-    number: 7,
-    title: "Artwork Listing",
-    paragraphs: [
-      "Listing artwork on GalleryZone is completely free. No confirmation fee shall be payable.",
-      "Artwork shall include the mandatory basic material with the artwork at the time of shipment, as advised by GalleryZone. The Artist shall ensure all documentation, packaging, labeling, and shipment requirements prescribed by GalleryZone are completed before dispatch.",
-      "Shipment cost, GST, taxes, convenience charges, insurance charges (if applicable), and any other agreed charges shall be deducted from the Artist's final settlement.",
-    ],
-  },
-  {
-    number: 8,
-    title: "Selling Channels",
-    paragraphs: ["GalleryZone may sell or promote artwork through:"],
-    points: [
-      "Online Marketplace (B2C).",
-      "Authorized GalleryZone Aggregators.",
-      "Art exhibitions.",
-      "Corporate sales.",
-      "Institutional sales.",
-      "Private collectors.",
-      "International buyers.",
-      "Any other sales channel developed by GalleryZone.",
-    ],
-    closing: [
-      "The Artist may promote the artwork independently. However, every promotion shall include the GalleryZone artwork link, and buyers shall complete purchases only through GalleryZone.",
-      "Once an artwork is selected by an authorized Aggregator for display, it shall not be removed from the GalleryZone marketplace until approved by GalleryZone or the listing period expires.",
-    ],
-  },
-  {
-    number: 9,
-    title: "Shipping & Insurance",
-    paragraphs: [
-      "Transit insurance is mandatory.",
-      "If the Artist voluntarily declines insurance, the Artist shall bear sole responsibility for:",
-    ],
-    points: [
-      "Theft.",
-      "Fire.",
-      "Transit damage.",
-      "Loss.",
-      "Wear and tear.",
-      "Natural disasters.",
-      "Any unforeseen incidents.",
-    ],
-    closing: [
-      "GalleryZone, its employees, aggregators, logistics partners, and affiliates shall not be liable where insurance has been declined. Insurance charges shall be borne by the Artist.",
-    ],
-  },
-  {
-    number: 10,
-    title: "Delivery Charges",
-    paragraphs: [
-      "One-time transportation charges for delivery of the artwork to the assigned Aggregator shall be deducted from the Artist's final settlement after successful sale.",
-      "Customer delivery charges shall be separately payable by the buyer wherever applicable.",
-    ],
-  },
-  {
-    number: 11,
-    title: "Certificate of Authenticity",
-    paragraphs: [
-      "The Artist shall complete the Certificate of Authenticity (COA) through the official GalleryZone website before shipment.",
-      "GalleryZone may retain digital copies permanently.",
-    ],
-  },
-  {
-    number: 12,
-    title: "Packaging Requirements",
-    paragraphs: ["For display through GalleryZone Aggregators:"],
-    points: [
-      "Artwork shall be supplied either professionally stretched on canvas or properly framed.",
-      "Packaging shall comply with GalleryZone shipping standards.",
-      "GalleryZone may reject improperly packed artworks.",
-      "Hangers shall be provided with the artwork.",
-      "Upon sale, if the customer requires a physical COA, the Artist shall print the COA, sign it, and dispatch it through the GalleryZone portal.",
-    ],
-  },
-  {
-    number: 13,
-    title: "Ownership Before Sale",
-    paragraphs: [
-      "Ownership of the artwork remains with the Artist until successful sale.",
-      "GalleryZone shall retain possession for display, marketing, and sale purposes where applicable.",
-    ],
-  },
-  {
-    number: 14,
-    title: "Rights Before Sale",
-    paragraphs: [
-      "The Artist grants GalleryZone a non-exclusive worldwide licence to photograph, publish, advertise, exhibit, and promote the artwork.",
-      "The Artist shall not sell or list the same artwork elsewhere during the active GalleryZone listing period.",
-    ],
-  },
-  {
-    number: 15,
-    title: "Rights After Sale",
-    paragraphs: [
-      "Upon successful payment and delivery, ownership transfers to the buyer.",
-      "The Artist retains only moral rights as the original creator unless otherwise agreed.",
-    ],
-  },
-  {
-    number: 16,
-    title: "Authenticity Records",
-    paragraphs: ["GalleryZone may maintain:"],
-    points: [
-      "Digital Certificate of Authenticity.",
-      "Ownership history.",
-      "QR verification.",
-      "Artwork provenance.",
-      "Transaction history.",
-    ],
-  },
-  {
-    number: 17,
-    title: "Aggregator Display Period",
-    paragraphs: [
-      "Each artwork may remain with an authorized Aggregator for an initial period of thirty (30) days.",
-      "If unsold, GalleryZone may relocate the artwork to another Aggregator, exhibition, or sales channel and revise the marketing strategy.",
-    ],
-  },
-  {
-    number: 18,
-    title: "Listing Period",
-    paragraphs: [
-      "Artwork shall remain listed for up to six (6) months.",
-      "If unsold, GalleryZone shall coordinate its return. Any agreed return shipment charges shall be communicated in advance.",
-    ],
-  },
-  {
-    number: 19,
-    title: "Responsibilities of the Artist",
-    paragraphs: ["The Artist shall:"],
-    points: [
-      "Provide genuine artwork.",
-      "Provide accurate information.",
-      "Cooperate during verification.",
-      "Complete the COA.",
-      "Respond promptly to GalleryZone communications.",
-      "Maintain professional conduct.",
-      "Ensure artwork quality matches submitted photographs.",
-    ],
-  },
-  {
-    number: 20,
-    title: "Responsibilities of GalleryZone",
-    paragraphs: ["GalleryZone shall:"],
-    points: [
-      "Promote the artwork.",
-      "Maintain digital records.",
-      "Connect artists with buyers.",
-      "Facilitate settlements.",
-      "Generate authenticity records.",
-      "Coordinate logistics.",
-      "Return unsold artworks where applicable.",
-    ],
-    closing: ["GalleryZone does not guarantee sales."],
-  },
-  {
-    number: 21,
-    title: "Settlement",
-    paragraphs: [
-      "After a successful sale, the Artist shall receive the confidential Artist Price, with applicable deductions including:",
-    ],
-    points: [
-      "GST.",
-      "Taxes.",
-      "Shipment charges.",
-      "Delivery charges.",
-      "Insurance charges.",
-      "Convenience charges.",
-      "Any other applicable deductions.",
-    ],
-    closing: [
-      "Settlement shall normally be processed after successful delivery and receipt of payment from the buyer.",
-    ],
-  },
-  {
-    number: 22,
-    title: "Termination",
-    paragraphs: ["GalleryZone may terminate this MOU if:"],
-    points: [
-      "Artwork is counterfeit.",
-      "False information is provided.",
-      "Pricing confidentiality is breached.",
-      "Intellectual property rights are violated.",
-      "Fraudulent activity is detected.",
-      "The Artist breaches this agreement.",
-    ],
-  },
-  {
-    number: 23,
-    title: "Limitation of Liability",
-    paragraphs: ["GalleryZone shall not be liable for:"],
-    points: [
-      "Failure to sell artwork.",
-      "Market fluctuations.",
-      "Loss where insurance has been declined by the Artist.",
-      "Indirect or consequential damages.",
-    ],
-  },
-  {
-    number: 24,
-    title: "Governing Law",
-    paragraphs: [
-      "This MOU shall be governed by the laws of India.",
-      "Courts at Hyderabad, Telangana shall have exclusive jurisdiction.",
-    ],
-  },
-  {
-    number: 25,
-    title: "Entire Agreement",
-    paragraphs: [
-      "This document constitutes the complete agreement between GalleryZone and the Artist.",
-      "Any amendment shall be valid only if made in writing and signed by both parties.",
-    ],
-  },
-];
-
-export const MOU_DECLARATION = [
-  "I have read this Memorandum of Understanding.",
-  "I understand every clause.",
-  "I voluntarily agree to abide by all terms and conditions.",
-  "I confirm that the submitted artworks are original and created entirely by me.",
+  "This Memorandum of Understanding is entered into between Galleryzone Private Limited (“Galleryzone”, “the Company”, or “the Platform”) and the Artist.",
+  "Galleryzone and the Artist are hereinafter individually referred to as a “Party” and collectively as the “Parties.”",
 ];
 
 export const ARTIST_MOU: MouDocument = {
@@ -325,6 +20,557 @@ export const ARTIST_MOU: MouDocument = {
   version: MOU_VERSION,
   intro: "Your overall agreement with GalleryZone. Read it in full, then sign.",
   preamble: MOU_PREAMBLE,
-  clauses: MOU_CLAUSES,
-  declaration: MOU_DECLARATION,
+  clauses: [
+    {
+      number: 1,
+      title: "Purpose",
+      blocks: [
+        { type: "paragraph", text: "1.1 This Memorandum of Understanding (“MOU”) is entered into between Galleryzone Private Limited and the Artist for the listing, promotion, exhibition, marketing, facilitation of sale, and sale of artworks through the Galleryzone platform and its authorized sales and distribution channels." },
+        { type: "paragraph", text: "1.2 Galleryzone operates as a digital art marketplace and art management platform connecting artists, aggregators, collectors, investors, institutions, and art enthusiasts." },
+        { type: "paragraph", text: "1.3 The objectives of Galleryzone include:" },
+        {
+          type: "list",
+          items: [
+            "establishing and maintaining a permanent digital footprint for artworks;",
+            "enhancing the recognition, visibility, and credibility of artists;",
+            "creating and maintaining verified digital portfolios;",
+            "facilitating artworks as collectible assets;",
+            "maintaining secure ownership and provenance records;",
+            "promoting artworks through online and offline sales and exhibition channels; and",
+            "facilitating subsequent resale of eligible artworks through Galleryzone, subject to the terms of this MOU and applicable policies.",
+          ],
+        },
+        { type: "paragraph", text: "1.4 Galleryzone shall use reasonable commercial efforts to promote and facilitate the sale of artworks; however, Galleryzone does not guarantee the sale of any artwork or any minimum level of sales, revenue, appreciation, or return." },
+      ],
+    },
+    {
+      number: 2,
+      title: "Artwork Eligibility",
+      blocks: [
+        { type: "paragraph", text: "2.1 The Artist represents, warrants, and confirms that:" },
+        {
+          type: "list",
+          items: [
+            "every artwork submitted to Galleryzone is original, handmade, and created by the Artist;",
+            "once an artwork has been created and submitted/listed, the Artist shall not reproduce, replicate, or create another substantially identical copy of the same artwork unless expressly permitted in writing by Galleryzone;",
+            "unauthorized replication or reproduction of an artwork may adversely affect its uniqueness, authenticity, collectible value, and market value and may result in delisting of the artwork and/or termination of this MOU;",
+            "no AI-generated, AI-assisted, machine-generated, digitally reproduced, NFT-based, copied, or otherwise non-original artwork shall be submitted unless expressly approved in writing by Galleryzone;",
+            "the Artist is the lawful and exclusive owner of the artwork and has full authority to submit, display, market, and sell the artwork;",
+            "the artwork does not infringe or violate any copyright, trademark, design right, intellectual property right, moral right, contractual right, or other proprietary right of any third party; and",
+            "all information and documentation submitted to Galleryzone in relation to the artwork is true, complete, accurate, and not misleading.",
+          ],
+        },
+        { type: "paragraph", text: "2.1(b) Originality and Restriction on Physical Recreation" },
+        { type: "paragraph", text: "The Artist represents and warrants that each Original Artwork submitted to Galleryzone is an original, handmade work created by the Artist and that the same Original Artwork shall not be physically recreated, replicated, copied, or reproduced as another physical artwork of substantially the same design, composition, dimensions, and artistic execution." },
+        { type: "paragraph", text: "For the avoidance of doubt, this restriction applies only to the physical recreation or replication of the Original Artwork itself and shall not prohibit any digital reproduction, digital print, merchandise, derivative work, promotional material, licensing activity, or other commercial exploitation that is expressly permitted under Clause 16, provided that such activity does not represent or pass off the reproduction as the Original Artwork." },
+        { type: "paragraph", text: "Unless otherwise expressly agreed in writing, no reproduction shall be represented as an Original Artwork or issued with the same status, authenticity, provenance record, or Certificate of Authenticity as the Original Artwork." },
+        { type: "paragraph", text: "2.2 Galleryzone reserves the right to review, approve, reject, suspend, restrict, or remove any artwork from its platform or sales channels at its sole discretion, including where the artwork does not satisfy Galleryzone's quality, authenticity, documentation, commercial, or compliance requirements." },
+      ],
+    },
+    {
+      number: 3,
+      title: "Artwork Submission Requirements",
+      blocks: [
+        { type: "paragraph", text: "3.1 The Artist shall provide all information and documentation reasonably required by Galleryzone, including:" },
+        {
+          type: "list",
+          items: [
+            "name/title of the artwork;",
+            "dimensions;",
+            "medium/materials used;",
+            "subject/theme;",
+            "type/category of artwork;",
+            "year of creation;",
+            "detailed description of the artwork;",
+            "high-resolution photographs;",
+            "Artist profile and relevant professional information;",
+            "Certificate of Authenticity (“COA”);",
+            "Government-issued identification, where required for verification;",
+            "Artist's signature; and",
+            "any other information or documentation reasonably requested by Galleryzone.",
+          ],
+        },
+        { type: "paragraph", text: "3.2 Galleryzone may require additional verification or supporting documentation before approving an artwork for listing, exhibition, or sale." },
+      ],
+    },
+    {
+      number: 4,
+      title: "Digital Footprint and Portfolio",
+      blocks: [
+        { type: "paragraph", text: "4.1 Upon approval of an artwork, Galleryzone may assign the artwork a unique Galleryzone Digital Identity." },
+        { type: "paragraph", text: "4.2 Galleryzone may create and maintain digital certificates, ownership records, QR-code records, NFC records, provenance information, and transaction history relating to the artwork." },
+        { type: "paragraph", text: "4.3 The Artist authorizes Galleryzone to use photographs, descriptions, artwork information, Artist information, and other submitted materials for the purpose of creating and maintaining the Artist's digital portfolio and promoting the artwork." },
+        { type: "paragraph", text: "4.4 Artwork images and related information may be used by Galleryzone for marketing, advertising, exhibitions, publications, catalogues, social media, websites, promotional campaigns, and other legitimate business and promotional activities." },
+      ],
+    },
+    {
+      number: 5,
+      title: "Artist Verification",
+      blocks: [
+        { type: "paragraph", text: "5.1 The Artist is encouraged to provide links or details of relevant social media profiles, including:" },
+        {
+          type: "list",
+          items: [
+            "Instagram;",
+            "Facebook;",
+            "YouTube;",
+            "X (formerly twitter);",
+            "TikTok; and",
+            "any other relevant professional or social media platform.",
+          ],
+        },
+        { type: "paragraph", text: "5.2 Such information may be used to support Artist verification, portfolio development, marketing, and buyer confidence." },
+        { type: "paragraph", text: "5.3 Where applicable, the Artist may be requested to provide evidence of studio work, artwork creation, work-in-progress, or other supporting material for verification purposes." },
+      ],
+    },
+    {
+      number: 6,
+      title: "Confidentiality of Artist Pricing",
+      blocks: [
+        { type: "paragraph", text: "6.1 The Artist's quoted price, confidential Artist Price, and other commercially sensitive pricing information shall be treated as confidential, subject to disclosure where required by law, regulatory authorities, tax authorities, auditors, payment processors, logistics providers, or other authorized service providers." },
+        { type: "paragraph", text: "6.2 Unless otherwise expressly authorized in writing by Galleryzone, the Artist shall not publicly disclose or publish the confidential Artist Price through:" },
+        {
+          type: "list",
+          items: [
+            "social media;",
+            "websites;",
+            "videos;",
+            "interviews;",
+            "exhibitions;",
+            "promotional materials;",
+            "public comments; or",
+            "any other public communication channel.",
+          ],
+        },
+        { type: "paragraph", text: "6.3 A material breach of this clause may result in suspension or removal of the artwork and/or termination of this MOU, subject to the circumstances of the breach." },
+      ],
+    },
+    {
+      number: 7,
+      title: "Artwork Listing and Subscription",
+      blocks: [
+        { type: "paragraph", text: "7.1 Initial Free Listing Period" },
+        { type: "paragraph", text: "The listing of eligible artworks on the Galleryzone platform shall be completely free of any technology, platform, or listing fees for the initial period of Six(6) months from the date of approval and activation of the artwork listing." },
+        { type: "paragraph", text: "7.2 Subscription Not Required for Continued Listing" },
+        { type: "paragraph", text: "The initial Six(6) month free listing period shall apply irrespective of whether or not the Artist subscribes to any Galleryzone subscription plan." },
+        { type: "paragraph", text: "Expiry of the initial Six (6) month free listing period shall not, by itself, result in delisting or removal of the artwork from the Galleryzone marketplace." },
+        { type: "paragraph", text: "The Artist shall not be required to maintain an active subscription merely to keep an eligible artwork listed on the Galleryzone marketplace." },
+        { type: "paragraph", text: "7.3 Purpose of Subscription" },
+        { type: "paragraph", text: "Galleryzone may offer subscription plans providing access to specified technology, platform, management, marketing, listing-related benefits, or other services." },
+        { type: "paragraph", text: "Subscription shall be an optional service arrangement and shall not constitute a mandatory condition for continued listing of an eligible artwork on the Galleryzone marketplace, unless otherwise expressly agreed in writing for a specific service or program me." },
+        { type: "paragraph", text: "7.4 Subscription Benefits" },
+        { type: "paragraph", text: "An Artist having an active and valid Galleryzone subscription shall receive the technology, platform, listing-related or other benefits included in the applicable subscription plan." },
+        { type: "paragraph", text: "Where expressly provided under the applicable subscription plan, technology or platform-related charges otherwise applicable to specified services may be waived during the active subscription period." },
+        { type: "paragraph", text: "7.5 Subscription Terms" },
+        { type: "paragraph", text: "Subscription fees, validity periods, included services, usage limits, exclusions, and other applicable conditions shall be communicated through the Galleryzone platform or other official communication channels." },
+        { type: "paragraph", text: "7.6 No Automatic Delisting Due to Subscription Expiry" },
+        { type: "paragraph", text: "The expiry, cancellation, non-renewal, or discontinuation of an Artist's subscription shall not automatically result in the removal or delisting of the Artist's artwork from the Galleryzone marketplace." },
+        { type: "paragraph", text: "An artwork may continue to remain listed in accordance with Clause 19, subject to Galleryzone's right to suspend, remove, or delist the artwork for reasons expressly permitted under this MOU." },
+        { type: "paragraph", text: "7.7 Charges Separate from Subscription" },
+        { type: "paragraph", text: "Subscription charges, where applicable, shall be separate from logistics, insurance, taxes, GST, delivery, withdrawal, handling, payment gateway, or other transaction-related charges unless expressly stated otherwise in the applicable subscription plan." },
+        { type: "paragraph", text: "7.8 Compliance" },
+        { type: "paragraph", text: "The Artist shall comply with all applicable terms, conditions, policies, procedures, and operational requirements prescribed by Galleryzone." },
+        { type: "paragraph", text: "7.9 Modification of Subscription Plans" },
+        { type: "paragraph", text: "Galleryzone may modify, introduce, discontinue, or revise subscription plans upon reasonable notice. Any such modification shall not by itself terminate an Artist's right to keep an eligible artwork listed on the Galleryzone marketplace." },
+      ],
+    },
+    {
+      number: 8,
+      title: "Mandatory Materials, Packaging and Dispatch Requirements",
+      blocks: [
+        { type: "paragraph", text: "8.1 The Artist shall ensure that all mandatory materials, documentation, labels, accessories, and other items specified by Galleryzone are provided with the artwork at the time of shipment." },
+        { type: "paragraph", text: "8.2 Such requirements may include, where applicable:" },
+        {
+          type: "list",
+          items: [
+            "Certificate of Authenticity;",
+            "artwork display accessories;",
+            "hangers;",
+            "display card;",
+            "NFC sticker/device;",
+            "QR code or QR label;",
+            "framing or canvas requirements; and",
+            "any other materials specified by Galleryzone.",
+          ],
+        },
+        { type: "paragraph", text: "8.3 The Artist shall complete all documentation, packaging, labeling, and shipment requirements prescribed by Galleryzone before dispatch." },
+        { type: "paragraph", text: "8.4 Any applicable shipment, logistics, GST, taxes, convenience charges, insurance charges, handling charges, or other agreed charges may be deducted from the Artist's final settlement or otherwise recovered in accordance with this MOU." },
+        { type: "paragraph", text: "For the purposes of calculating any Galleryzone deduction or settlement amount under this MOU, “Artist Price” means the gross price quoted, agreed, or recorded for the Artist's artwork for the applicable transaction, before deduction of any Galleryzone deduction, statutory taxes, GST, insurance, logistics, shipping, transportation, payment gateway charges, or other permitted charges." },
+      ],
+    },
+    {
+      number: 9,
+      title: "Selling Channels",
+      blocks: [
+        { type: "paragraph", text: "9.1 Galleryzone may market, promote, display, and facilitate the sale of artworks through:" },
+        {
+          type: "list",
+          items: [
+            "the online marketplace on a B2C basis;",
+            "authorized Galleryzone Aggregators;",
+            "art exhibitions;",
+            "corporate sales;",
+            "institutional sales;",
+            "private collectors;",
+            "international buyers;",
+            "galleries and other authorized sales partners; and",
+            "any other sales channel developed or authorized by Galleryzone.",
+          ],
+        },
+        { type: "paragraph", text: "9.2 Independent Promotion by Artist" },
+        { type: "paragraph", text: "The Artist may independently promote an artwork listed on Galleryzone through the Artist's own social media, website, professional network, exhibitions, or other promotional channels." },
+        { type: "paragraph", text: "However, during the period in which an artwork is actively listed with Galleryzone, the Artist shall not knowingly complete, facilitate, or redirect a sale of that artwork through another platform, gallery, aggregator, or sales channel where such transaction conflicts with the active Galleryzone listing or circumvents a Galleryzone-facilitated transaction." },
+        { type: "paragraph", text: "9.3 Galleryzone-Facilitated Transactions" },
+        { type: "paragraph", text: "Where a prospective buyer, enquiry, order, or transaction is generated, introduced, facilitated, or processed through Galleryzone, the applicable purchase shall be completed through the Galleryzone-approved purchasing and settlement process." },
+        { type: "paragraph", text: "9.4 Aggregator Selection and Display" },
+        { type: "paragraph", text: "Once an artwork has been selected by an authorized Aggregator for display, the Artist shall not remove, withdraw, or independently sell the artwork during the applicable Aggregator display period without prior approval from Galleryzone, except as otherwise expressly permitted under this MOU." },
+        { type: "paragraph", text: "9.5 No Circumvention" },
+        { type: "paragraph", text: "The Artist shall not knowingly circumvent Galleryzone in respect of a buyer, collector, institution, Aggregator, gallery, or other customer introduced or connected to the Artist through Galleryzone for the purpose of avoiding applicable Galleryzone charges or transaction procedures." },
+      ],
+    },
+    {
+      number: 10,
+      title: "Shipping and Transit Insurance",
+      blocks: [
+        { type: "paragraph", text: "10.1 Marketplace Sales – Insurance at Artist's Choice" },
+        { type: "paragraph", text: "For artworks sold through the Galleryzone online marketplace, insurance shall not be mandatory." },
+        { type: "paragraph", text: "The Artist may, at the Artist's sole discretion, choose to obtain transit insurance for shipment of the artwork in accordance with the applicable logistics and insurance arrangements." },
+        { type: "paragraph", text: "Where the Artist chooses not to obtain insurance for a marketplace shipment, the Artist acknowledges and agrees that any loss, damage, theft, deterioration, or other related risk that is not otherwise recoverable shall be borne by the Artist, subject to applicable law and the responsibilities of the relevant logistics provider." },
+        { type: "paragraph", text: "10.2 Aggregator Channel – Mandatory Insurance" },
+        { type: "paragraph", text: "Where an artwork is dispatched to, held by, displayed at, or otherwise placed with an authorized Galleryzone Aggregator, transit and applicable artwork insurance shall be mandatory for the applicable period during which the artwork is in transit to, in the custody of, or being displayed by the Aggregator." },
+        { type: "paragraph", text: "10.3 No Waiver for Aggregator Insurance" },
+        { type: "paragraph", text: "The Artist shall not be permitted to decline the insurance applicable to an artwork placed with an authorized Aggregator where such insurance is mandatory under this MOU or Galleryzone's applicable policies." },
+        { type: "paragraph", text: "10.4 Insurance Cost" },
+        { type: "paragraph", text: "Where insurance is mandatory for an Aggregator transaction or placement, the applicable insurance premium or charge shall be borne by the Artist." },
+        { type: "paragraph", text: "10.5 Insurance Policy Conditions" },
+        { type: "paragraph", text: "Applicable insurance coverage shall be subject to the terms, conditions, exclusions, limits, deductibles, and claims procedures of the relevant insurance policy or insurance provider." },
+        { type: "paragraph", text: "10.6 Marketplace Insurance Risk" },
+        { type: "paragraph", text: "In relation to marketplace sales, where the Artist voluntarily chooses not to obtain transit insurance, Galleryzone shall not be liable for loss or damage arising from risks that would otherwise have been covered by such insurance, except to the extent caused by Galleryzone's proven negligence, Wilful misconduct, or as otherwise required under applicable law." },
+        { type: "paragraph", text: "10.7 Aggregator Insurance Claims" },
+        { type: "paragraph", text: "The Artist shall reasonably cooperate with Galleryzone, Aggregators, logistics partners, and the relevant insurer in relation to any insurance claim, including providing documents, photographs, declarations, or other information reasonably required for processing the claim." },
+      ],
+    },
+    {
+      number: 11,
+      title: "Delivery and Transportation Charges",
+      blocks: [
+        { type: "paragraph", text: "11.1 The Artist shall not be required to make any upfront payment for delivery or transportation of an artwork to a designated Aggregator unless otherwise specifically agreed in writing." },
+        { type: "paragraph", text: "11.2 Applicable transportation charges for delivery of the artwork to the designated Aggregator shall be settled through the Artist's Galleryzone wallet or deducted from the Artist's final settlement, as applicable." },
+        { type: "paragraph", text: "11.3 Where sufficient funds are available in the Artist's Galleryzone wallet, applicable delivery charges may be deducted directly from such wallet." },
+        { type: "paragraph", text: "11.4 If an artwork remains unsold and is required to be returned to the Artist, applicable return transportation charges may also be settled through the Artist's Galleryzone wallet or deducted from any amount payable to the Artist." },
+        { type: "paragraph", text: "11.5 Unless otherwise agreed in writing, a maximum of two (2) delivery movements may be chargeable in relation to an unsold artwork, being:" },
+        {
+          type: "list",
+          items: [
+            "the original delivery to the designated location; and",
+            "the return delivery to the Artist.",
+          ],
+        },
+        { type: "paragraph", text: "11.6 Customer delivery charges arising after a successful sale shall, wherever applicable, be separately payable by the buyer." },
+        { type: "paragraph", text: "11.7 Applicable delivery and transportation charges shall be communicated to or made available to the Artist through the Galleryzone platform or other official communication channels." },
+      ],
+    },
+    {
+      number: 12,
+      title: "Certificate of Authenticity",
+      blocks: [
+        { type: "paragraph", text: "12.1 The Artist shall complete the Certificate of Authenticity (“COA”) through the official Galleryzone platform or website before shipment of the artwork." },
+        { type: "paragraph", text: "12.2 Galleryzone may retain digital copies of the COA and related authenticity records for as long as reasonably required for verification, provenance, record-keeping, resale, compliance, and business purposes." },
+        { type: "paragraph", text: "12.3 If a customer subsequently requires a physical COA, the Artist shall, upon request, print, sign, and dispatch the COA through the process specified by Galleryzone." },
+        { type: "paragraph", text: "12.4 Physical COA Provided by Artist" },
+        { type: "paragraph", text: "The Artist may, at the Artist's own discretion, provide a separate physical Certificate of Authenticity directly with the artwork or subsequently to the Buyer." },
+        { type: "paragraph", text: "Any physical COA independently provided by the Artist shall contain accurate information relating to the Original Artwork and shall not contradict or materially differ from the authenticity, ownership, provenance, dimensions, medium, or other official records maintained by Galleryzone." },
+        { type: "paragraph", text: "The provision of a physical COA by the Artist shall not affect Galleryzone's right to maintain its own digital COA, authenticity records, provenance records, QR records, NFC records, or other verification records relating to the artwork." },
+      ],
+    },
+    {
+      number: 13,
+      title: "Packaging and Display Requirements",
+      blocks: [
+        { type: "paragraph", text: "13.1 For artworks displayed through Galleryzone Aggregators, the artwork shall:" },
+        {
+          type: "list",
+          items: [
+            "be professionally stretched on canvas or properly framed, as applicable;",
+            "comply with Galleryzone's packaging and shipping standards;",
+            "include required hanging/display accessories;",
+            "include the required display card and NFC sticker/device, where applicable; and",
+            "comply with any additional packaging, labeling, or display requirements communicated by Galleryzone.",
+          ],
+        },
+        { type: "paragraph", text: "13.2 Galleryzone or an authorized Aggregator may reject an artwork if it is improperly packaged, inadequately protected, damaged, or otherwise fails to meet the prescribed standards." },
+        { type: "paragraph", text: "13.3 The Artist shall be responsible for ensuring that the artwork is securely packed and adequately protected against reasonably foreseeable transportation risks." },
+        { type: "paragraph", text: "13.4 For the avoidance of doubt, the insurance requirements applicable to marketplace sales and Aggregator sales shall be governed exclusively by Clause 10." },
+      ],
+    },
+    {
+      number: 14,
+      title: "Ownership Before Sale",
+      blocks: [
+        { type: "paragraph", text: "14.1 Legal ownership and title to an artwork shall remain solely with the Artist until the artwork is successfully sold and the applicable ownership transfer conditions have been satisfied." },
+        { type: "paragraph", text: "14.2 Where an artwork is delivered to Galleryzone or an authorized Aggregator for display, exhibition, marketing, logistics, or sale, Galleryzone or such Aggregator shall have only possession and custody of the artwork for the purposes authorized under this MOU." },
+        { type: "paragraph", text: "14.3 Possession or custody of the artwork by Galleryzone or an authorized Aggregator shall not constitute, and shall not be deemed to constitute, a transfer, assignment, sale, or relinquishment of ownership of the artwork." },
+        { type: "paragraph", text: "14.4 The Artist shall retain ownership of the physical artwork until ownership is transferred to the buyer in accordance with Clause 16." },
+      ],
+    },
+    {
+      number: 15,
+      title: "Rights and Licence Before Sale",
+      blocks: [
+        { type: "paragraph", text: "15.1 The Artist grants Galleryzone a non-exclusive, worldwide, royalty-free licence to photograph, digitally reproduce, publish, advertise, display, exhibit, catalogue, distribute for promotional purposes, and otherwise use the artwork and related artwork materials solely for the purposes contemplated under this MOU." },
+        { type: "paragraph", text: "15.2 The license granted under this Clause is limited to listing, marketing, advertising, promotion, exhibition, portfolio development, provenance, authentication, record-keeping, and facilitation of sale of the artwork." },
+        { type: "paragraph", text: "15.3 Galleryzone may create digital representations, promotional reproductions, catalogue images, website images, social-media content, advertisements, and other digital or promotional materials based on the artwork." },
+        { type: "paragraph", text: "15.4 Nothing contained in this MOU shall be construed as a transfer or assignment of the Artist's copyright in the artwork to Galleryzone." },
+        { type: "paragraph", text: "15.5The Artist shall retain copyright in the artwork, subject to the license granted to Galleryzone under this MOU and subject to the rights expressly granted to a buyer under the applicable sale transaction." },
+        { type: "paragraph", text: "15.6 The Artist may independently promote the artwork, provided that such promotion does not conflict with an active Galleryzone listing, Aggregator placement, exhibition commitment, confirmed transaction, or other obligation under this MOU." },
+        { type: "paragraph", text: "15.7 Nothing in this Clause shall grant Galleryzone ownership of the physical artwork or the Artist's copyright. The license granted to Galleryzone is limited to the legitimate purposes expressly stated in this Clause." },
+      ],
+    },
+    {
+      number: 16,
+      title: "Rights After Sale",
+      blocks: [
+        { type: "paragraph", text: "16.1 Transfer of Ownership: Upon successful completion of the sale, receipt of the applicable purchase consideration and fulfillment of all applicable delivery and transaction conditions, legal ownership and title to the physical original artwork shall transfer from the Artist to the Buyer." },
+        { type: "paragraph", text: "16.2 Rights of Buyer: Upon transfer of ownership, the Buyer shall have the right to possess, display, use, and subsequently resell the physical original artwork, subject to applicable law and the terms and conditions of the relevant sale transaction." },
+        { type: "paragraph", text: "16.3 No Reproduction of the Original Artwork: Upon sale of the original artwork, the Artist shall not reproduce or recreate the same original artwork as an identical or substantially identical physical artwork, particularly in the same dimensions, specifications, and form as the original artwork sold to the Buyer." },
+        { type: "paragraph", text: "16.4 Digital Prints and Other Commercial Activities: The Artist shall be permitted to create and commercially distribute digital prints, reproductions in different formats, merchandise, publications, promotional materials, digital content, or other derivative or commercial works based on the artwork, provided that such reproductions are not represented or sold as the original artwork and are not created in the same dimensions and specifications as the original artwork sold to the Buyer." },
+        { type: "paragraph", text: "16.5 Distinction Between Original Artwork and Reproductions: Any digital print, reproduction, merchandise, derivative work, or other commercial format created by the Artist shall be clearly distinguishable from the original artwork and shall not be represented as the original physical artwork sold through Galleryzone." },
+        { type: "paragraph", text: "16.6 Copyright and Commercial Rights" },
+        { type: "paragraph", text: "Except for the restriction on physically recreating or reproducing the sold Original Artwork as an identical or substantially identical physical artwork, the Artist shall retain the copyright and the right to commercially exploit the artwork through permitted formats, including digital prints , merchandise, publications, licensing, promotional materials, and other derivative or commercial works." },
+        { type: "paragraph", text: "For the avoidance of doubt, such permitted commercial activities shall not include the creation of another physical artwork that is identical or substantially identical to the sold Original Artwork in its design, composition, dimensions, specifications, and artistic execution, and no reproduction shall be represented or sold as the Original Artwork." },
+        { type: "paragraph", text: "16.7 Moral Rights: The Artist shall retain such moral rights and other non-economic rights as are available under applicable law." },
+      ],
+    },
+    {
+      number: 17,
+      title: "Authenticity and Provenance Records",
+      blocks: [
+        { type: "paragraph", text: "17.1 Galleryzone may create, maintain, update, and preserve records relating to the artwork, including:" },
+        {
+          type: "list",
+          items: [
+            "digital Certificate of Authenticity;",
+            "ownership history;",
+            "QR verification records;",
+            "NFC records;",
+            "artwork provenance;",
+            "transaction history; and",
+            "other records reasonably required to establish authenticity and provenance.",
+          ],
+        },
+        { type: "paragraph", text: "17.2 The Artist agrees to reasonably cooperate with Galleryzone in maintaining accurate authenticity and provenance records." },
+      ],
+    },
+    {
+      number: 18,
+      title: "Aggregator Display Period",
+      blocks: [
+        { type: "paragraph", text: "18.1 An artwork placed with an authorized Galleryzone Aggregator shall have an overall Aggregator channel period of up to six (6) months, unless otherwise agreed in writing between Galleryzone and the Artist." },
+        { type: "paragraph", text: "18.2 Within the overall six (6) month Aggregator period, each individual authorized Aggregator shall ordinarily display the artwork for an initial period of thirty (30) days." },
+        { type: "paragraph", text: "18.3 After completion of the applicable thirty (30) day display period, Galleryzone may, at its discretion:" },
+        {
+          type: "list",
+          items: [
+            "continue the display with the same Aggregator;",
+            "relocate the artwork to another authorized Aggregator;",
+            "place the artwork in an exhibition;",
+            "move the artwork to another approved sales channel; or",
+            "revise the marketing and sales strategy.",
+          ],
+        },
+        { type: "paragraph", text: "18.4 The thirty (30) day period applicable to an individual Aggregator shall not be interpreted as limiting the overall six (6) month Aggregator channel period." },
+        { type: "paragraph", text: "18.5 The Artist shall cooperate with reasonable relocation, collection, packaging, insurance, and logistics requirements arising under this Clause." },
+      ],
+    },
+    {
+      number: 19,
+      title: "Marketplace and Aggregator Listing Period",
+      blocks: [
+        { type: "paragraph", text: "19.1 Marketplace Listing" },
+        { type: "paragraph", text: "Unless otherwise agreed or unless the artwork is suspended, removed, or delisted in accordance with this MOU, an approved artwork may remain listed on the Galleryzone online marketplace for an unlimited period." },
+        { type: "paragraph", text: "19.2 Aggregator Listing Period" },
+        { type: "paragraph", text: "An artwork placed through the Galleryzone Aggregator channel may remain within the Aggregator channel for a maximum period of six (6) months, subject to the applicable thirty (30) day display period for each individual Aggregator." },
+        { type: "paragraph", text: "19.3 The expiry of an Artist's subscription shall not result in automatic removal of an artwork from the Galleryzone marketplace." },
+        { type: "paragraph", text: "19.4 If an artwork reaches the end of its applicable six (6) month Aggregator channel period and remains unsold, Galleryzone shall coordinate its return to the Artist or may, with the Artist's consent, continue the artwork through another applicable Galleryzone sales arrangement." },
+        { type: "paragraph", text: "19.5 Any applicable return shipment charges shall be communicated to the Artist in advance, wherever reasonably practicable." },
+      ],
+    },
+    {
+      number: 20,
+      title: "Artwork Withdrawal",
+      blocks: [
+        { type: "paragraph", text: "20.1 The Artist may request withdrawal of an artwork from the Galleryzone marketplace or Aggregator channel, subject to the terms of this MOU and any obligations already arising in respect of the artwork." },
+        { type: "paragraph", text: "20.2 The Artist's request for withdrawal shall not automatically require immediate removal where the artwork is subject to an active Aggregator display period, exhibition commitment, confirmed buyer transaction, logistics commitment, insurance arrangement, or other binding commercial obligation." },
+        { type: "paragraph", text: "20.3 Where withdrawal is requested before completion of an applicable Aggregator display period, exhibition period, agreed placement period, or other committed arrangement, Galleryzone may defer processing of the withdrawal request until completion of the relevant commitment or until suitable arrangements for withdrawal are made." },
+        { type: "paragraph", text: "20.4 A withdrawal fee may apply only to the extent of reasonable costs actually incurred by Galleryzone in connection with the withdrawal, including applicable administrative, logistics, handling, packaging, insurance, transportation, Aggregator, processing, or other third-party costs." },
+        { type: "paragraph", text: "20.5 The applicable withdrawal fee shall be communicated to the Artist before processing the withdrawal request, wherever reasonably practicable." },
+        { type: "paragraph", text: "20.6 Any applicable withdrawal costs may be deducted from the Artist's Galleryzone wallet or from any amount otherwise payable to the Artist." },
+        { type: "paragraph", text: "20.7 Withdrawal shall not affect any rights or obligations that have already arisen in connection with a completed sale, buyer transaction, ownership transfer, insurance claim, logistics commitment, or other binding transaction." },
+        { type: "paragraph", text: "20.8 Where an artwork has been selected by an authorized Aggregator or is subject to an active exhibition, confirmed sale, logistics commitment, or agreed display period, withdrawal shall remain subject to Galleryzone's approval and the applicable terms and conditions." },
+      ],
+    },
+    {
+      number: 21,
+      title: "Responsibilities of The Artist",
+      blocks: [
+        { type: "paragraph", text: "The Artist shall:" },
+        {
+          type: "list",
+          items: [
+            "provide genuine and original artwork;",
+            "provide accurate, complete, and truthful information;",
+            "cooperate with Galleryzone's verification and authentication procedures;",
+            "complete and maintain the required COA;",
+            "respond promptly to reasonable communications from Galleryzone;",
+            "maintain professional conduct in dealings with Galleryzone, buyers, Aggregators, logistics partners, and other authorized parties;",
+            "ensure that the quality and condition of the artwork correspond substantially with the photographs and descriptions submitted to Galleryzone;",
+            "comply with applicable packaging, shipping, documentation, and display requirements; and",
+            "promptly inform Galleryzone of any material change affecting the ownership, authenticity, condition, availability, or legal status of the artwork.",
+          ],
+        },
+      ],
+    },
+    {
+      number: 22,
+      title: "Responsibilities of Galleryzone",
+      blocks: [
+        { type: "paragraph", text: "Galleryzone shall, subject to this MOU and its applicable policies:" },
+        {
+          type: "list",
+          items: [
+            "promote and market the artwork through its available channels;",
+            "maintain relevant digital records;",
+            "facilitate connections between Artists and prospective buyers;",
+            "facilitate settlement of amounts payable to the Artist following successful transactions;",
+            "generate or maintain authenticity and provenance records;",
+            "coordinate logistics and authorized Aggregator arrangements, where applicable; and",
+            "coordinate the return of unsold artworks, where applicable.",
+          ],
+        },
+        { type: "paragraph", text: "22.2 Galleryzone does not guarantee the sale of any artwork, minimum sales volume, minimum income, appreciation in value, or investment return." },
+      ],
+    },
+    {
+      number: 23,
+      title: "Settlement",
+      blocks: [
+        { type: "paragraph", text: "23.1 Artist Price" },
+        { type: "paragraph", text: "For the purposes of this MOU, “Artist Price” means the gross price applicable to the Artist for the relevant artwork and recorded or agreed for the applicable transaction, before deduction of Galleryzone's permitted deductions and other separately identified charges." },
+        { type: "paragraph", text: "23.2 Marketplace Sales" },
+        { type: "paragraph", text: "For sales completed through the Galleryzone online marketplace, Galleryzone shall not deduct any technology, platform, service, facilitation, or similar Galleryzone commercial fee from the Artist Price, subject only to deductions expressly permitted under this MOU, excluding applicable statutory taxes, GST, logistics, shipping, transportation, optional insurance selected by the Artist, payment gateway charges, or other applicable third-party/pass-through charges." },
+        { type: "paragraph", text: "23.3 Aggregator Sales" },
+        { type: "paragraph", text: "For sales completed through an authorized Galleryzone Aggregator, Galleryzone may deduct an amount for its technology, platform, service, facilitation, or other internal commercial charges, provided that such Galleryzone deduction shall not exceed ten percent (10%) of the Artist Price applicable to that transaction." },
+        { type: "paragraph", text: "23.4 Exclusion from Ten Percent Cap" },
+        { type: "paragraph", text: "The ten percent (10%) cap specified in Clause 23.3 shall apply only to Galleryzone's own internal commercial deductions." },
+        { type: "paragraph", text: "The ten percent (10%) cap shall not include statutory taxes, GST, insurance premiums, logistics charges, shipping charges, delivery charges, transportation charges, payment gateway charges, Aggregator charges, or other third-party/pass-through costs incurred or payable in connection with the transaction." },
+        { type: "paragraph", text: "23.5 Permitted Deductions" },
+        { type: "paragraph", text: "Applicable deductions may include, where applicable:" },
+        {
+          type: "list",
+          items: [
+            "GST and other statutory taxes;",
+            "shipment charges;",
+            "delivery and transportation charges;",
+            "mandatory insurance charges for Aggregator transactions;",
+            "payment gateway or transaction processing charges;",
+            "withdrawal or handling charges, where applicable;",
+            "Aggregator or third-party charges; and",
+            "other charges expressly communicated to or agreed with the Artist.",
+          ],
+        },
+        { type: "paragraph", text: "23.6 No Galleryzone Fee on Marketplace Sales" },
+        { type: "paragraph", text: "For the avoidance of doubt, the ten percent (10%) Galleryzone deduction under Clause 23.3 shall not apply to sales completed through the Galleryzone online marketplace." },
+        { type: "paragraph", text: "23.7 Settlement Timing" },
+        { type: "paragraph", text: "Settlement shall ordinarily be processed after successful delivery of the artwork and receipt of the applicable payment from the buyer, subject to completion of applicable verification, transaction, reconciliation, and settlement procedures." },
+      ],
+    },
+    {
+      number: 24,
+      title: "Termination",
+      blocks: [
+        { type: "paragraph", text: "24.1 Galleryzone may terminate this MOU, suspend the Artist's account, or delist one or more artworks where:" },
+        {
+          type: "list",
+          items: [
+            "the artwork is counterfeit, copied, reproduced without authorization, or materially misrepresented;",
+            "false, incomplete, or misleading information has been provided;",
+            "the Artist materially breaches the pricing confidentiality obligations;",
+            "intellectual property rights or third-party rights are violated;",
+            "fraudulent, deceptive, or unlawful activity is detected;",
+            "the Artist materially breaches any provision of this MOU; or",
+            "continuation of the relationship would reasonably expose Galleryzone to legal, regulatory, reputational, or commercial risk.",
+          ],
+        },
+        { type: "paragraph", text: "24.2 Termination shall not affect any rights or obligations that accrued before the effective date of termination." },
+        { type: "paragraph", text: "24.3 Clauses relating to confidentiality, intellectual property, ownership, provenance, settlement, liability, resale royalty, dispute resolution, and any other provisions intended by their nature to survive termination shall continue to apply after termination." },
+      ],
+    },
+    {
+      number: 25,
+      title: "Resale Royalty",
+      blocks: [
+        { type: "paragraph", text: "25.1 Eligibility" },
+        { type: "paragraph", text: "Where an artwork previously sold through Galleryzone is subsequently resold through Galleryzone, the Artist shall be entitled to a resale royalty equal to two percent (2%) of the positive difference between the subsequent Resale Price and the Original Purchase Price, subject to the terms of this Clause." },
+        { type: "paragraph", text: "25.2 Calculation" },
+        { type: "paragraph", text: "For the purposes of this Clause:" },
+        { type: "paragraph", text: "“Original Purchase Price” means the price actually paid by the buyer for the artwork in the immediately preceding qualifying transaction, excluding applicable taxes, delivery charges, platform charges, and other separately identified charges." },
+        { type: "paragraph", text: "“Resale Price” means the price actually paid by the subsequent buyer for the artwork in the subsequent qualifying transaction, excluding applicable taxes, delivery charges, platform charges, and other separately identified charges." },
+        { type: "paragraph", text: "25.3 Royalty Calculation" },
+        { type: "paragraph", text: "The resale royalty shall be calculated as follows:" },
+        { type: "paragraph", text: "2% × (Resale Price − Original Purchase Price)" },
+        { type: "paragraph", text: "Where the difference between the Resale Price and the Original Purchase Price is zero or negative, no resale royalty shall be payable." },
+        { type: "paragraph", text: "25.4 Payment" },
+        { type: "paragraph", text: "The applicable resale royalty shall be calculated and settled by Galleryzone upon completion of the qualifying subsequent resale transaction and receipt of the applicable resale consideration." },
+      ],
+    },
+    {
+      number: 26,
+      title: "Limitation of Liability",
+      blocks: [
+        { type: "paragraph", text: "26.1 To the maximum extent permitted by applicable law, Galleryzone shall not be liable for:" },
+        {
+          type: "list",
+          items: [
+            "failure to sell an artwork;",
+            "market fluctuations or changes in market demand;",
+            "changes in the perceived or actual market value of an artwork;",
+            "in relation to marketplace sales, loss, damage, theft, deterioration, or other transit-related risks where the Artist voluntarily elected not to obtain transit insurance, to the extent such loss or damage would otherwise have been covered by the relevant insurance;",
+            "indirect, incidental, special, punitive, or consequential damages; or",
+            "losses arising from events beyond Galleryzone's reasonable control.",
+          ],
+        },
+        { type: "paragraph", text: "26.2 Marketplace Insurance" },
+        { type: "paragraph", text: "For marketplace sales, the Artist's decision to obtain or not obtain transit insurance shall be voluntary. Where the Artist elects not to obtain such insurance, the Artist shall bear the applicable uninsured transit risk, except to the extent that Galleryzone is directly responsible for such loss or damage due to its proven negligence, Wilful misconduct, or as otherwise required under applicable law." },
+        { type: "paragraph", text: "26.3 Aggregator Insurance" },
+        { type: "paragraph", text: "For Aggregator transactions or placements, where insurance is mandatory under Clause 10, the applicable insurance policy and its terms, conditions, exclusions, limits, deductibles, and claims procedures shall govern the insured risk." },
+        { type: "paragraph", text: "Galleryzone shall not be responsible for any loss or damage that is excluded from or not recoverable under the applicable insurance policy, except to the extent caused by Galleryzone's proven negligence, Wilful misconduct, or as otherwise required under applicable law." },
+        { type: "paragraph", text: "26.4 Nothing in this MOU shall exclude or limit any liability to the extent that such exclusion or limitation is prohibited under applicable law." },
+      ],
+    },
+    {
+      number: 27,
+      title: "Governing Law and Jurisdiction",
+      blocks: [
+        { type: "paragraph", text: "27.1 This MOU shall be governed by and construed in accordance with the laws of India." },
+        { type: "paragraph", text: "27.2 Subject to applicable law, the competent courts at Hyderabad, Telangana , India shall have exclusive jurisdiction over any dispute arising out of or relating to this MOU." },
+      ],
+    },
+    {
+      number: 28,
+      title: "Entire Agreement",
+      blocks: [
+        { type: "paragraph", text: "28.1 This MOU constitutes the entire understanding and agreement between Galleryzone and the Artist with respect to its subject matter and supersedes all prior discussions, communications, understandings, or representations relating to the same subject matter, unless expressly incorporated herein." },
+        { type: "paragraph", text: "28.2 Any amendment, modification, or variation to this MOU shall be valid only if made in writing and duly accepted or signed by both Parties, unless the relevant provision expressly permits modification through the Galleryzone platform or applicable published terms." },
+        { type: "paragraph", text: "28.3 If any provision of this MOU is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, such provision shall, to the extent necessary, be severed or modified without affecting the validity and enforceability of the remaining provisions." },
+      ],
+    },
+  ],
+  declaration: [
+    "I have read and understood this Memorandum of Understanding;",
+    "I have had the opportunity to understand the terms and conditions contained herein;",
+    "I voluntarily agree to comply with the terms and conditions of this MOU;",
+    "I confirm that the artworks submitted by me are original and have been created by me;",
+    "I confirm that the information and documentation provided by me are true and accurate to the best of my knowledge; and",
+    "I confirm that I have the lawful right and authority to submit the artworks to Galleryzone for listing, promotion, exhibition, and sale.",
+  ],
 };

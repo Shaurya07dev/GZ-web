@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import type { MouDocument, MouAcceptanceRecord } from "./mou-agreement";
+import { clauseBlocks, type MouDocument, type MouAcceptanceRecord } from "./mou-agreement";
 
 const PAGE_WIDTH = 210; // A4, mm
 const MARGIN = 18;
@@ -55,11 +55,13 @@ export function downloadMouPdf(
       bold: true,
       size: 11.5,
     });
-    clause.paragraphs?.forEach((p) => writeParagraph(p));
-    clause.points?.forEach((point) =>
-      writeParagraph(`•  ${point}`, { indent: 3 }),
-    );
-    clause.closing?.forEach((p) => writeParagraph(p));
+    for (const block of clauseBlocks(clause)) {
+      if (block.type === "paragraph") writeParagraph(block.text);
+      else
+        block.items.forEach((item, i) =>
+          writeParagraph(`${String.fromCharCode(97 + i)}.  ${item}`, { indent: 3 }),
+        );
+    }
   }
 
   y += 2;

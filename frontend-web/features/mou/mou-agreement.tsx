@@ -22,15 +22,32 @@ import { downloadMouPdf } from "./mou-pdf";
 // the whole thing, agree, sign with your own name. The caller supplies the
 // document and owns the mutation; this component owns the reading and signing.
 
+export type MouBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "list"; items: string[] };
+
 export interface MouClause {
   number: number;
   title: string;
+  /** Ordered body — numbered sub-clauses and lettered lists in document
+   *  order. Preferred over the flat fields below. */
+  blocks?: MouBlock[];
   /** Lead paragraphs, rendered before any list. */
   paragraphs?: string[];
   /** Bulleted items. */
   points?: string[];
   /** Closing paragraphs, rendered after the list. */
   closing?: string[];
+}
+
+/** Flattens a clause to its ordered blocks, whichever shape it was authored in. */
+export function clauseBlocks(clause: MouClause): MouBlock[] {
+  if (clause.blocks) return clause.blocks;
+  return [
+    ...(clause.paragraphs ?? []).map((text) => ({ type: "paragraph", text }) as const),
+    ...(clause.points?.length ? [{ type: "list", items: clause.points } as const] : []),
+    ...(clause.closing ?? []).map((text) => ({ type: "paragraph", text }) as const),
+  ];
 }
 
 export interface MouDocument {
@@ -389,23 +406,22 @@ function MouBody({
           <h3 className="text-sm font-semibold text-foreground">
             {clause.number}. {clause.title}
           </h3>
-          {clause.paragraphs?.map((p) => (
-            <p key={p} className="text-muted-foreground">
-              {p}
-            </p>
-          ))}
-          {clause.points && (
-            <ul className="flex list-disc flex-col gap-1 pl-5 text-muted-foreground">
-              {clause.points.map((point) => (
-                <li key={point}>{point}</li>
-              ))}
-            </ul>
+          {clauseBlocks(clause).map((block, i) =>
+            block.type === "paragraph" ? (
+              <p key={i} className="text-muted-foreground">
+                {block.text}
+              </p>
+            ) : (
+              <ol
+                key={i}
+                className="flex list-[lower-alpha] flex-col gap-1 pl-6 text-muted-foreground"
+              >
+                {block.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ol>
+            ),
           )}
-          {clause.closing?.map((p) => (
-            <p key={p} className="text-muted-foreground">
-              {p}
-            </p>
-          ))}
         </section>
       ))}
 
