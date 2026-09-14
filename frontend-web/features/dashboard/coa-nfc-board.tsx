@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaQueue } from "./physical-coa-queue";
+import { DownloadCoaButton } from "@/features/coa/download-coa-button";
 import { ArtworkHistory } from "./artwork-history";
 import { ARTIST } from "./dashboard-data";
 
@@ -210,7 +211,7 @@ function CertificateDialog({
                   {artwork.title}
                 </p>
                 <p className="font-mono text-xs text-muted-foreground">
-                  {artwork.coaCertificateNumber}
+                  {artwork.coaCertificateNumber || "Number issued on approval"}
                 </p>
               </div>
 
@@ -218,10 +219,12 @@ function CertificateDialog({
                 <div>
                   <dt className="text-xs text-muted-foreground">Issued</dt>
                   <dd className="text-foreground">
-                    {new Date(artwork.coaIssueDate).toLocaleDateString(
-                      "en-IN",
-                      { day: "numeric", month: "short", year: "numeric" },
-                    )}
+                    {artwork.coaIssueDate
+                      ? new Date(artwork.coaIssueDate).toLocaleDateString(
+                          "en-IN",
+                          { day: "numeric", month: "short", year: "numeric" },
+                        )
+                      : "Pending approval"}
                   </dd>
                 </div>
                 <div>
@@ -256,10 +259,23 @@ function CertificateDialog({
                 </div>
               </dl>
 
-              <p className="text-xs text-muted-foreground">
-                This is a preview — the platform isn&rsquo;t wired to generate a
-                downloadable PDF in this demo.
-              </p>
+              <DownloadCoaButton
+                certificate={{
+                  artworkId: artwork.id,
+                  title: artwork.title,
+                  artistName: artwork.artistName,
+                  category: artwork.category,
+                  medium: artwork.medium,
+                  dimensions: artwork.dimensions,
+                  yearCreated: artwork.yearCreated,
+                  coaCertificateNumber: artwork.coaCertificateNumber,
+                  coaIssueDate: artwork.coaIssueDate,
+                  ownerName:
+                    resolveCustody(artwork).legalOwnerName ??
+                    CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner],
+                }}
+                className="self-start"
+              />
 
               <ArtworkHistory artwork={artwork} />
 

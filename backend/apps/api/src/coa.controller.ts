@@ -18,6 +18,7 @@ import {
   type ArtworkDoc,
   type Db,
   type PhysicalCoaRequest,
+  type UserDoc,
 } from "@galleryzone/db";
 import { firestoreId } from "@galleryzone/contracts";
 import { IllegalTransitionError } from "@galleryzone/domain";
@@ -44,18 +45,39 @@ function problem(status: number, title: string, code: string) {
   return { type: "about:blank", title, status, code };
 }
 
-/** Timestamps -> ISO so the wire shape is stable JSON, not Firestore's {_seconds,_nanoseconds}. */
-function toDto(r: PhysicalCoaRequest) {
-  return {
+/**
+ * Wire shape: timestamps as ISO (not Firestore's {_seconds,_nanoseconds}),
+ * plus the artwork title / certificate number / requester name joined in so
+ * the queue UI needs no follow-up reads. Names only — never the requester's
+ * email or phone.
+ */
+async function toDtos(db: Db, requests: PhysicalCoaRequest[]) {
+  const artworkIds = [...new Set(requests.map((r) => r.artworkId))];
+  const userIds = [...new Set(requests.map((r) => r.requestedByUserId))];
+  const [artworkSnaps, userSnaps] = await Promise.all([
+    Promise.all(artworkIds.map((id) => db.collection(Collections.artworks).doc(id).get())),
+    Promise.all(userIds.map((id) => db.collection(Collections.users).doc(id).get())),
+  ]);
+  const artworks = new Map(artworkSnaps.map((s) => [s.id, s.data() as ArtworkDoc | undefined]));
+  const users = new Map(userSnaps.map((s) => [s.id, s.data() as UserDoc | undefined]));
+
+  return requests.map((r) => ({
     id: r.id,
     artworkId: r.artworkId,
+    artworkTitle: artworks.get(r.artworkId)?.title ?? "Artwork",
+    coaCertificateNumber: artworks.get(r.artworkId)?.coaCertificateNumber ?? null,
     requestedByUserId: r.requestedByUserId,
+    requestedByName: users.get(r.requestedByUserId)?.name ?? "Collector",
     requestedAt: r.requestedAt?.toDate().toISOString() ?? null,
     delivery: { line1: r.deliveryLine1, city: r.deliveryCity, state: r.deliveryState, pincode: r.deliveryPincode },
     status: r.status,
     dispatchedAt: r.dispatchedAt?.toDate().toISOString() ?? null,
     courierRef: r.courierRef,
-  };
+  }));
+}
+
+async function toDto(db: Db, request: PhysicalCoaRequest) {
+  return (await toDtos(db, [request]))[0]!;
 }
 
 function rethrow(error: unknown): never {
@@ -73,7 +95,7 @@ export class CoaController {
   @Post("coa/requests")
   async request(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(requestSchema)) body: RequestBody) {
     try {
-      return toDto(await createPhysicalCoaRequest(this.db, { artworkId: body.artworkId, requestedByUserId: req.authUser.uid, delivery: body.delivery }));
+      return toDto(this.db, await createPhysicalCoaRequest(this.db, { artworkId: body.artworkId, requestedByUserId: req.authUser.uid, delivery: body.delivery }));
     } catch (error) {
       rethrow(error);
     }
@@ -89,20 +111,20 @@ export class CoaController {
     ]);
     const isArtist = (artworkSnap.data() as ArtworkDoc | undefined)?.artistId === req.authUser.uid;
     const isAdmin = req.authUser.role === "admin";
-    return requests.filter((r) => isAdmin || isArtist || r.requestedByUserId === req.authUser.uid).map(toDto);
+    return toDtos(this.db, requests.filter((r) => isAdmin || isArtist || r.requestedByUserId === req.authUser.uid));
   }
 
   @Roles("artist")
   @Get("artist/coa/requests")
   async listForArtist(@Req() req: AuthenticatedRequest) {
-    return (await listPhysicalCoaRequestsForArtist(this.db, req.authUser.uid)).map(toDto);
+    return toDtos(this.db, await listPhysicalCoaRequestsForArtist(this.db, req.authUser.uid));
   }
 
   @Roles("artist")
   @Post("artist/coa/requests/:id/dispatch")
   async dispatch(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(dispatchSchema)) body: DispatchBody) {
     try {
-      return toDto(await markPhysicalCoaDispatched(this.db, { requestId: id, artistId: req.authUser.uid, courierRef: body.courierRef }));
+      return toDto(this.db, await markPhysicalCoaDispatched(this.db, { requestId: id, artistId: req.authUser.uid, courierRef: body.courierRef }));
     } catch (error) {
       rethrow(error);
     }
