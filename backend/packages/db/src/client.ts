@@ -31,13 +31,16 @@ export function createDb(projectId: string): { db: Db; close: () => Promise<void
     if (usingEmulator) {
       app = getApps()[0] ?? initializeApp({ projectId });
     } else {
-      if (!credentialsPath) {
+      // Hosted platforms (Railway etc.) have no file to point at, so the
+      // key can also arrive inline as FIREBASE_SERVICE_ACCOUNT_JSON.
+      const inlineJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      if (!credentialsPath && !inlineJson) {
         throw new Error(
-          "GOOGLE_APPLICATION_CREDENTIALS is not set. Generate a service-account key at " +
-            "https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk and set its path in .env.",
+          "Neither GOOGLE_APPLICATION_CREDENTIALS (file path) nor FIREBASE_SERVICE_ACCOUNT_JSON (inline) is set. Generate a service-account key at " +
+            "https://console.firebase.google.com/project/_/settings/serviceaccounts/adminsdk.",
         );
       }
-      const serviceAccount = JSON.parse(readFileSync(credentialsPath, "utf8"));
+      const serviceAccount = JSON.parse(inlineJson ?? readFileSync(credentialsPath!, "utf8"));
       app = getApps()[0] ?? initializeApp({ credential: cert(serviceAccount), projectId });
     }
   }
