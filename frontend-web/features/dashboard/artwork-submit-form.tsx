@@ -61,7 +61,7 @@ import {
   INSURANCE_PARTNER,
   INSURANCE_PARTNER_URL,
   ARTWORK_FORMATS,
-  PLACEHOLDER_ARTWORK_IMAGES,
+
 } from "./artwork-submit-data";
 import { PAINTING_ART_FORMS } from "./painting-art-forms";
 import { InsuranceFaqChat } from "./insurance-faq-chat";
@@ -201,14 +201,10 @@ function composeDimensions(form: FormState): string {
   return `${parts} ${form.dimensionUnit}`;
 }
 
-type ImagePreview = { id: string; url: string; name: string };
+type ImagePreview = { id: string; url: string; name: string; file?: File; imageId?: string };
 
-// Uploads never block submit — every slot starts filled with a stock photo
-// (no backend to store a real one either way); picking a real file just
-// swaps a slot's placeholder for a real preview.
-const INITIAL_IMAGES: ImagePreview[] = PLACEHOLDER_ARTWORK_IMAGES.map(
-  (url, i) => ({ id: `placeholder-${i}`, url, name: `Stock photo ${i + 1}` }),
-);
+// A new listing starts with no images — every photo is a real upload.
+const INITIAL_IMAGES: ImagePreview[] = [];
 
 function generateNfcTagId(): string {
   return `NFC-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -271,7 +267,7 @@ function PriceRow({
   );
 }
 
-export type EditableArtwork = Artwork & { artistPrice: number };
+export type EditableArtwork = Artwork & { artistPrice: number; imageIds?: string[] };
 
 // Seeds the form from an existing listing when editing. Everything the form
 // collects has a home on the artwork already, except the aggregator
@@ -336,6 +332,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
           id: `existing-${i}`,
           url: img.url,
           name: img.altText || `Photo ${i + 1}`,
+          imageId: artwork.imageIds?.[i],
         }))
       : INITIAL_IMAGES,
   );
@@ -422,6 +419,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
       url: URL.createObjectURL(file),
       name: file.name,
+      file,
     }));
     setImages((prev) => [...prev, ...next]);
   }
@@ -477,9 +475,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       nfcTagId: form.nfcTagId || null,
       images: images.map((img, i) => ({
         url: img.url,
-        thumbnailUrl: img.url,
-        sortOrder: i,
         altText: `${form.title || "Artwork"}, photo ${i + 1}`,
+        ...(img.file ? { file: img.file } : {}),
+        ...(img.imageId ? { imageId: img.imageId } : {}),
       })),
     };
 
@@ -655,9 +653,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             Artwork images
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Up to {MAX_ARTWORK_IMAGES} photos, cover image first. Slots start
-            filled with placeholders — remove one and add a real photo to
-            replace it.
+            Up to {MAX_ARTWORK_IMAGES} photos, cover image first. JPEG, PNG or
+            WebP, 15 MB each. Photos upload when you save.
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -691,7 +688,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 <span className="text-[11px]">Add photo</span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   multiple
                   className="sr-only"
                   onChange={(e) => handleAddImages(e.target.files)}

@@ -14,6 +14,7 @@ import type { Order } from "@/types/order";
 import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { http } from "@/lib/api";
+import { artistArtworkApi, type SubmitImage } from "@/services/artistArtworkApi";
 import { authService } from "@/services/authService";
 import { MOU_VERSION } from "@/features/dashboard/mou-data";
 
@@ -153,7 +154,7 @@ export interface SubmitArtworkInput {
   insuranceNumber: string | null;
   physical: ArtworkPhysical;
   nfcTagId: string | null;
-  images: ArtworkImage[];
+  images: SubmitImage[];
   mode: "draft" | "review";
 }
 
@@ -198,168 +199,29 @@ export const artistDashboardService = {
   getActivity: (): Promise<ActivityEntry[]> =>
     mockDelay(artistActivityCol.get()),
 
-  listArtworks: (): Promise<Array<Artwork & { artistPrice: number }>> => {
-    const prices = artistPricesCol.get();
-    return mockDelay(
-      artistArtworks().map((artwork) => ({
-        ...artwork,
-        artistPrice: prices[artwork.id] ?? 0,
-      })),
-    );
-  },
+  // Artwork CRUD is real (services/artistArtworkApi.ts): the API, with the
+  // image pipeline. The rest of this file is still the mock and is being
+  // replaced method by method.
+  listArtworks: (): Promise<Array<Artwork & { artistPrice: number }>> =>
+    artistArtworkApi.list(),
+
+  getArtwork: (artworkId: string): Promise<Artwork & { artistPrice: number }> =>
+    artistArtworkApi.get(artworkId),
 
   submitArtwork: (input: SubmitArtworkInput): Promise<Artwork> => {
-    if (!input.title.trim()) return mockError("A title is required");
-    if (input.artistPrice <= 0)
-      return mockError("Enter your price for this artwork");
-
-    const now = new Date().toISOString();
-    // Submitting publishes. There is no curator sitting behind this mock, so a
-    // piece that waited for one waited forever — the whole flow after listing
-    // (reserve, display, sale, settlement) was unreachable without an admin
-    // detour. The review step is still RECORDED, so the artwork's history reads
-    // truthfully: submitted, then approved, a moment apart.
-    const status = input.mode === "draft" ? "draft" : "marketplace";
-    const id = `aw-${crypto.randomUUID().slice(0, 8)}`;
-
-    const artwork: Artwork = {
-      id,
-      title: input.title.trim(),
-      artistId: CURRENT_ARTIST_ID,
-      artistName: CURRENT_ARTIST_NAME,
-      verifiedArtist: true,
-      category: input.category,
-      medium: input.medium,
-      artworkType: input.artworkType,
-      paintingStyle: input.paintingStyle,
-      customerPrice: displayPriceOf(input.artistPrice),
-      thumbnailUrl: input.images[0]?.url ?? "",
-      insured: input.insuranceOpted,
-      insuranceNumber: input.insuranceNumber,
-      insuranceStatus: nextInsuranceStatus(
-        "not_submitted",
-        null,
-        input.insuranceNumber,
-      ),
-      status,
-      listingType: input.listingType,
-      description: input.description,
-      dimensions: input.dimensions || null,
-      yearCreated: input.yearCreated || null,
-      images: input.images,
-      coaCertificateNumber: `GZ-COA-${new Date().getFullYear()}-${id.toUpperCase()}`,
-      coaIssueDate: now,
-      socialProofLinks: [],
-      statusHistory:
-        input.mode === "draft"
-          ? [{ status: "draft" as const, changedAt: now }]
-          : [
-              { status: "pending_approval" as const, changedAt: now },
-              { status: "marketplace" as const, changedAt: now },
-            ],
-      nfcTagId: input.nfcTagId,
-      physical: input.physical,
-      // Unranked until an admin sets it — see ARTWORK_RARITY_OPTIONS.
-      rarityType: null,
-    };
-
-    artistPricesCol.set({ ...artistPricesCol.get(), [id]: input.artistPrice });
-    // A draft is still the artist's own; a published piece belongs in the live
-    // collection the marketplace reads.
-    if (input.mode === "draft") {
-      pendingArtworksCol.set([artwork, ...pendingArtworksCol.get()]);
-    } else {
-      artworksCol.set([artwork, ...artworksCol.get()]);
-      settlePendingPenalties(artwork.title);
-    }
-
-    appendActivity(
-      "artwork_submitted",
-      input.mode === "draft"
-        ? `"${artwork.title}" saved as draft`
-        : `"${artwork.title}" is live`,
-      input.mode === "draft"
-        ? "Not yet sent for review"
-        : "Approved automatically and listed on the marketplace",
-    );
-
-    return mockDelay(artwork);
+    if (!input.title.trim()) return Promise.reject(new Error("A title is required"));
+    if (input.artistPrice <= 0) return Promise.reject(new Error("Enter your price for this artwork"));
+    return artistArtworkApi.submit(input);
   },
 
-  // Edits are refused here, not just hidden in the UI: 7 days from listing, or
-  // until the piece is bought or claimed, whichever comes first.
   updateArtwork: (input: {
     artworkId: string;
     patch: Omit<SubmitArtworkInput, "mode">;
+    mode?: "draft" | "review";
   }): Promise<Artwork> => {
-    const inLive = artworksCol.get().find((a) => a.id === input.artworkId);
-    const inPending = pendingArtworksCol
-      .get()
-      .find((a) => a.id === input.artworkId);
-    const artwork = inLive ?? inPending;
-
-    if (!artwork || artwork.artistId !== CURRENT_ARTIST_ID)
-      return mockError("Artwork not found");
-
-    const editState = artworkEditState(artwork);
-    if (!editState.editable) {
-      return mockError(
-        editState.reason === "purchased"
-          ? "This artwork has been claimed or sold — it can no longer be edited"
-          : `The ${ARTWORK_EDIT_WINDOW_DAYS}-day edit window for this artwork has closed`,
-      );
-    }
-
-    const { patch } = input;
-    if (!patch.title.trim()) return mockError("A title is required");
-    if (patch.artistPrice <= 0)
-      return mockError("Enter your price for this artwork");
-
-    const updated: Artwork = {
-      ...artwork,
-      title: patch.title.trim(),
-      description: patch.description,
-      category: patch.category,
-      medium: patch.medium,
-      artworkType: patch.artworkType,
-      paintingStyle: patch.paintingStyle,
-      dimensions: patch.dimensions || null,
-      yearCreated: patch.yearCreated || null,
-      artistName: artwork.artistName,
-      customerPrice: displayPriceOf(patch.artistPrice),
-      listingType: patch.listingType,
-      insured: patch.insuranceOpted,
-      insuranceNumber: patch.insuranceNumber,
-      insuranceStatus: nextInsuranceStatus(
-        artwork.insuranceStatus,
-        artwork.insuranceNumber,
-        patch.insuranceNumber,
-      ),
-      physical: patch.physical,
-      nfcTagId: patch.nfcTagId,
-      images: patch.images.length > 0 ? patch.images : artwork.images,
-      thumbnailUrl: patch.images[0]?.url ?? artwork.thumbnailUrl,
-    };
-
-    const replace = (list: Artwork[]) =>
-      list.map((a) => (a.id === updated.id ? updated : a));
-    if (inLive) artworksCol.set(replace(artworksCol.get()));
-    if (inPending) pendingArtworksCol.set(replace(pendingArtworksCol.get()));
-
-    artistPricesCol.set({
-      ...artistPricesCol.get(),
-      [updated.id]: patch.artistPrice,
-    });
-
-    appendActivity(
-      "artwork_submitted",
-      `"${updated.title}" updated`,
-      editState.reason === "draft"
-        ? "Draft changes saved"
-        : `${editState.daysLeft} ${editState.daysLeft === 1 ? "day" : "days"} left in the edit window`,
-    );
-
-    return mockDelay(updated);
+    if (!input.patch.title.trim()) return Promise.reject(new Error("A title is required"));
+    if (input.patch.artistPrice <= 0) return Promise.reject(new Error("Enter your price for this artwork"));
+    return artistArtworkApi.update({ artworkId: input.artworkId, patch: input.patch, ...(input.mode ? { mode: input.mode } : {}) });
   },
 
   // "Sold on another platform": the piece leaves every GalleryZone channel at

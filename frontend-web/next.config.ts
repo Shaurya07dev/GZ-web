@@ -10,7 +10,18 @@ const rootEnv = resolve(__dirname, "..", ".env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 
+// Artwork images are served by the API (GET /v1/images/...) from the
+// private storage bucket; next/image must be told it may optimise them.
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL) : null;
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: apiUrl
+      ? [{ protocol: apiUrl.protocol.replace(":", "") as "http" | "https", hostname: apiUrl.hostname, pathname: "/v1/images/**" }]
+      : [],
+    // Object keys are immutable, so optimised variants can live for a long time.
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
   // Playwright's baseURL is 127.0.0.1 (more reliable than localhost for this
   // environment's curl/Playwright connectivity — see docs/TESTING_VERIFICATION_REPORT.md),
   // but `next dev`'s default cross-origin dev-asset protection only allows
