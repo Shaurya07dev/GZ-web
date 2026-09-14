@@ -83,8 +83,11 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false;
       }
+      // Transfer docs carry the invited recipient's email, so they are NOT
+      // client-readable; the public provenance view is served (with name
+      // snapshots only) by GET /v1/verify/:artworkId.
       match /ownershipEvents/{eventId} {
-        allow read: if true;
+        allow read: if false;
         allow write: if false;
       }
     }

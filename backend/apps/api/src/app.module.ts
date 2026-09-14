@@ -24,6 +24,8 @@ import { MessagingController } from "./messaging.controller.ts";
 import { ResaleController } from "./resale.controller.ts";
 import { ReportsController } from "./reports.controller.ts";
 import { CoaController } from "./coa.controller.ts";
+import { VerifyController } from "./verify.controller.ts";
+import { OwnershipController } from "./ownership.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -58,6 +60,8 @@ import { DbModule } from "./db.module.ts";
     ResaleController,
     ReportsController,
     CoaController,
+    VerifyController,
+    OwnershipController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })

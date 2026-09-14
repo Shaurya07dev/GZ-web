@@ -14,6 +14,7 @@ export * from "./admin.ts";
 export * from "./public-profiles.ts";
 export * from "./public-artworks.ts";
 export * from "./coa.ts";
+export * from "./ownership.ts";
 export * from "./admin-artworks.ts";
 export * from "./addresses.ts";
 export * from "./admin-settlements.ts";

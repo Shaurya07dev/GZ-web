@@ -9,19 +9,23 @@
 // the original, fuller comments per field if you need the "why"):
 //   - Money is still BIGINT-equivalent: plain `number` in paise, never a
 //     float rupee amount.
-//   - Append-only collections (statusEvents, ownershipEvents, ledgerEntries,
-//     auditLog) are enforced by firestore.rules (`allow write: if false`
-//     for clients) + this package never issuing an update/delete against
-//     them itself — there's no DB-level trigger to fall back on the way
-//     Postgres's CONSTRAINT TRIGGER was, so this convention is the whole
-//     guarantee. Treat any code that updates a doc in one of these
-//     collections as a bug.
+//   - Append-only collections (statusEvents, ledgerEntries, auditLog) are
+//     enforced by firestore.rules (`allow write: if false` for clients) +
+//     this package never issuing an update/delete against them itself —
+//     there's no DB-level trigger to fall back on the way Postgres's
+//     CONSTRAINT TRIGGER was, so this convention is the whole guarantee.
+//     Treat any code that updates a doc in one of these collections as a
+//     bug. ownershipEvents is the one exception: a transfer is one doc
+//     whose status moves pending -> accepted | cancelled (ownership.ts is
+//     the only writer, via transferStateMachine); once settled it is
+//     immutable, and it is never deleted.
 //   - artistPricePaise lives in a `pricing` subcollection under each
 //     artwork doc, never on the artwork doc itself — see firestore.rules'
 //     own comment on why.
 
 import type {
   ArtworkStatus,
+  TransferStatus,
   HoldingStatus,
   OrderStatus,
   PenaltyStatus,
@@ -190,11 +194,25 @@ export interface ArtworkStatusEventDoc {
   changedAt: FirebaseFirestore.Timestamp;
 }
 
+/**
+ * One transfer of legal ownership (or time-boxed display rights) of an
+ * artwork. The CURRENT owner is a projection (latest accepted `ownership`
+ * event's toUserId, else the artist) — never a field on ArtworkDoc.
+ * Sale-triggered transfers (orderId set) are written already-accepted when
+ * the order is paid; manual ones start pending and need the recipient.
+ */
 export interface OwnershipEventDoc {
   kind: "ownership" | "display";
+  status: TransferStatus;
   fromUserId: string | null;
   toUserId: string | null;
+  /** Manual transfers: the invited recipient before they have an account. Never on the public passport. */
   toEmail: string | null;
+  /** Display-name snapshots so the passport needs no user reads (and no PII lookups). */
+  fromName: string;
+  toName: string;
+  /** Set on sale-triggered transfers; makes the payment hook idempotent. */
+  orderId: string | null;
   initiatedAt: FirebaseFirestore.Timestamp;
   acceptedAt: FirebaseFirestore.Timestamp | null;
   cancelledAt: FirebaseFirestore.Timestamp | null;
