@@ -13,6 +13,18 @@ import type { AggregatorHolding } from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
+import { http } from "@/lib/api";
+import { authService } from "@/services/authService";
+import { MOU_VERSION } from "@/features/dashboard/mou-data";
+
+/** Wire shape from apps/api mou.controller.ts. */
+interface MouAcceptanceDto {
+  party: "artist" | "aggregator";
+  version: string;
+  signatureName: string;
+  signatureDataUrl: string | null;
+  acceptedAt: string;
+}
 import {
   artworksCol,
   pendingArtworksCol,
@@ -470,41 +482,62 @@ export const artistDashboardService = {
     return mockDelay(transaction);
   },
 
-  getProfile: () => mockDelay(artistProfileCol.get()),
+  // The profile record is still mock-backed (no backend write route for
+  // PAN/GST/bank details yet), but two things on it are real: the identity
+  // (name/email from GET /v1/auth/me — the MOU signature has to match the
+  // account's real name) and the signed MOU record (GET /v1/artist/mou).
+  // An acceptance for an older MOU version is reported as null, which is
+  // what makes a newly published MOU require a fresh signature.
+  getProfile: async () => {
+    const profile = artistProfileCol.get();
+    const [me, mou] = await Promise.all([
+      authService.me(),
+      http.get<{ acceptance: MouAcceptanceDto | null }>("/v1/artist/mou"),
+    ]);
+    const acceptance = mou.acceptance;
+    return {
+      ...profile,
+      fullName: me?.name ?? profile.fullName,
+      email: me?.email ?? profile.email,
+      mouAcceptance:
+        acceptance && acceptance.version === MOU_VERSION
+          ? {
+              acceptedAt: acceptance.acceptedAt,
+              signatureName: acceptance.signatureName,
+              version: acceptance.version,
+              signatureDataUrl: acceptance.signatureDataUrl,
+            }
+          : null,
+    };
+  },
 
-  // Signing the MOU is its own method rather than a profile patch: it records
-  // when and against which version, and must never be silently overwritten by
-  // an ordinary profile save.
-  acceptMou: (input: {
+  // Signing the MOU is its own call rather than a profile patch: the server
+  // records the signing time and the version, checks the typed name against
+  // the account, and never lets an ordinary profile save overwrite it.
+  acceptMou: async (input: {
     signatureName: string;
     version: string;
     signatureDataUrl?: string | null;
   }) => {
-    const profile = artistProfileCol.get();
-    if (!input.signatureName.trim())
-      return mockError("Type your full name to sign");
-    if (
-      input.signatureName.trim().toLowerCase() !==
-      profile.fullName.trim().toLowerCase()
-    )
-      return mockError("The signature must match the name on your profile");
-
-    const updated = {
-      ...profile,
-      mouAcceptance: {
-        acceptedAt: new Date().toISOString(),
-        signatureName: input.signatureName.trim(),
-        version: input.version,
-        signatureDataUrl: input.signatureDataUrl ?? null,
-      },
-    };
-    artistProfileCol.set(updated);
+    const acceptance = await http.post<MouAcceptanceDto>("/v1/artist/mou/accept", {
+      version: input.version,
+      signatureName: input.signatureName.trim(),
+      signatureDataUrl: input.signatureDataUrl ?? null,
+    });
     appendActivity(
       "verification",
       "MOU signed",
-      `Memorandum of Understanding v${input.version} accepted`,
+      `Memorandum of Understanding v${acceptance.version} accepted`,
     );
-    return mockDelay(updated);
+    return {
+      ...artistProfileCol.get(),
+      mouAcceptance: {
+        acceptedAt: acceptance.acceptedAt,
+        signatureName: acceptance.signatureName,
+        version: acceptance.version,
+        signatureDataUrl: acceptance.signatureDataUrl,
+      },
+    };
   },
 
   // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a

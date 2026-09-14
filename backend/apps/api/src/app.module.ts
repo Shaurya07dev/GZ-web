@@ -26,6 +26,7 @@ import { ReportsController } from "./reports.controller.ts";
 import { CoaController } from "./coa.controller.ts";
 import { VerifyController } from "./verify.controller.ts";
 import { OwnershipController } from "./ownership.controller.ts";
+import { MouController } from "./mou.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -62,6 +63,7 @@ import { DbModule } from "./db.module.ts";
     CoaController,
     VerifyController,
     OwnershipController,
+    MouController,
   ],
   providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
 })
