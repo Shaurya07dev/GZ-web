@@ -13,6 +13,7 @@
     "check:price-leak": "node --experimental-strip-types packages/contracts/src/artwork-dto.check.ts",
     "check:policies": "node --experimental-strip-types packages/domain/src/policies.check.ts",
     "check:aggregator-cycle": "node --experimental-strip-types packages/domain/src/aggregator-cycle.check.ts",
+    "check:coa": "node --experimental-strip-types packages/db/src/coa.check.ts",
     "check:api-routes": "node --experimental-strip-types packages/contracts/src/api-routes.check.ts",
     "check:rate-config-store": "node --experimental-strip-types packages/db/src/in-memory/rate-config-store.check.ts",
     "check:types": "tsc -b tsconfig.build.json",

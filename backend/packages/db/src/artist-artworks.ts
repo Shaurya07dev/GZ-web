@@ -8,6 +8,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { artworkStateMachine, editWindowExpiresAt, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
 import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ListingType } from "./collections.ts";
 import { latestArtworkStatus } from "./public-artworks.ts";
+import { issueCertificate } from "./coa.ts";
 
 export class ArtistArtworkError extends Error {}
 
@@ -91,6 +92,9 @@ export async function approveArtwork(db: Firestore, artworkId: string): Promise<
   const current = await latestArtworkStatus(db, artworkId);
   artworkStateMachine.assertTransition(current, "marketplace");
   await db.collection(artworkStatusEventsCol(artworkId)).add({ status: "marketplace", changedBy: null, reason: null, changedAt: FieldValue.serverTimestamp() });
+  // A listed artwork always has a certificate number (artist MOU §11) —
+  // idempotent, so re-approval after a return keeps the original number.
+  await issueCertificate(db, artworkId);
 }
 
 export async function rejectArtwork(db: Firestore, artworkId: string, reason: string): Promise<void> {
