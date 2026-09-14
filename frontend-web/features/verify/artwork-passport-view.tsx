@@ -6,17 +6,21 @@ import { ArrowLeft, Nfc } from "lucide-react";
 import { CUSTODY_PARTY_LABEL, resolveCustody } from "@/types/artwork";
 import { useArtwork } from "@/hooks/useArtwork";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
+import { useVerifyPassport } from "@/hooks/useVerify";
+import { DownloadCoaButton } from "@/features/coa/download-coa-button";
 import { ArtworkPassportCard } from "./artwork-passport-card";
+import { ArtworkQr } from "./artwork-qr";
 import { OwnershipHistory } from "./ownership-history";
 import { ProvenanceTimeline } from "./provenance-timeline";
 
-// Client-rendered (not the Server Component the marketplace detail page
-// uses) so the passport for an artwork submitted and approved through the
-// Artist Dashboard this session — which only exists in the browser's
-// localStorage-backed mock-db, not in the seeded fixtures a server render
-// can see — actually resolves instead of 404ing.
+// Public page a scanned QR / NFC tag lands on. The artwork facts come from
+// the listing DTO; the CURRENT OWNER and the transfer chain come from the
+// public passport (GET /v1/verify/:id), which is a projection of the
+// backend's ownership event log — the artist until the first sale, then
+// whoever the last accepted transfer went to.
 export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
   const { data: artwork, isLoading } = useArtwork(artworkId);
+  const { data: passport } = useVerifyPassport(artworkId);
   const { data: artist } = useArtistProfile(artwork?.artistId ?? "");
 
   if (isLoading) {
@@ -32,6 +36,11 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
   }
 
   const custody = resolveCustody(artwork);
+  // The ledger wins over the status-derived guess once we have it.
+  const ownerName =
+    passport?.owner.displayName ??
+    custody.legalOwnerName ??
+    CUSTODY_PARTY_LABEL[custody.legalOwner];
   const coverImage =
     [...artwork.images].sort((a, b) => a.sortOrder - b.sortOrder)[0]?.url ??
     artwork.thumbnailUrl;
@@ -72,7 +81,7 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
             Owner
           </dt>
           <dd className="mt-1 text-sm font-medium text-foreground">
-            {custody.legalOwnerName ?? CUSTODY_PARTY_LABEL[custody.legalOwner]}
+            {ownerName}
           </dd>
         </div>
         <div className="rounded-lg border border-border bg-card px-3 py-3">
@@ -94,6 +103,27 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
       </dl>
 
       <OwnershipHistory artworkId={artwork.id} artistName={artwork.artistName} />
+
+      {/* The same code printed on the physical label — anyone can re-scan
+          it to land back here and see the current owner. */}
+      <div className="mx-auto mt-12 flex max-w-md flex-col items-center gap-4">
+        <ArtworkQr artworkId={artwork.id} size={144} showUrl />
+        <DownloadCoaButton
+          certificate={{
+            artworkId: artwork.id,
+            productCode: passport?.productCode,
+            title: artwork.title,
+            artistName: artwork.artistName,
+            category: artwork.category,
+            medium: artwork.medium,
+            dimensions: artwork.dimensions,
+            yearCreated: artwork.yearCreated,
+            coaCertificateNumber: artwork.coaCertificateNumber,
+            coaIssueDate: artwork.coaIssueDate,
+            ownerName,
+          }}
+        />
+      </div>
 
       <div className="mx-auto mt-14 max-w-md">
         <ProvenanceTimeline history={artwork.statusHistory} />

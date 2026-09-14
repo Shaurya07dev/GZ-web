@@ -66,7 +66,7 @@ export function ArtworkPassportCard({
                 Certificate No.
               </dt>
               <dd className="mt-1 font-display text-sm font-medium tabular-nums text-gold-bright">
-                {coaCertificateNumber}
+                {coaCertificateNumber || "Pending approval"}
               </dd>
             </div>
             <div>
@@ -74,7 +74,7 @@ export function ArtworkPassportCard({
                 Issued
               </dt>
               <dd className="mt-1 font-display text-sm font-medium text-foreground">
-                {formatDate(coaIssueDate)}
+                {coaIssueDate ? formatDate(coaIssueDate) : "—"}
               </dd>
             </div>
           </dl>

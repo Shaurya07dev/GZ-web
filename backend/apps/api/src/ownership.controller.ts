@@ -14,6 +14,7 @@ import {
   initiateTransfer,
   OwnershipConflictError,
   OwnershipNotFoundError,
+  type ArtworkDoc,
   type Db,
   type OwnershipEvent,
   type UserDoc,
@@ -46,9 +47,10 @@ function rethrow(error: unknown): never {
   throw error;
 }
 
-/** A party's view: the public fields plus the invite email (they're one of the two people it concerns) and the artwork id. */
-function toPartyDto(e: OwnershipEvent) {
-  return { ...toPublicEvent(e), artworkId: e.artworkId, toEmail: e.toEmail };
+/** A party's view: the public fields plus the invite email (they're one of the two people it concerns), the artwork id and title. */
+async function toPartyDto(db: Db, e: OwnershipEvent) {
+  const artwork = (await db.collection(Collections.artworks).doc(e.artworkId).get()).data() as ArtworkDoc | undefined;
+  return { ...toPublicEvent(e), artworkId: e.artworkId, artworkTitle: artwork?.title ?? "Artwork", toEmail: e.toEmail };
 }
 
 @Controller("v1")
@@ -67,7 +69,7 @@ export class OwnershipController {
         toEmail: body.toEmail,
         displayEndsAt: body.displayEndsAt ? new Date(body.displayEndsAt) : undefined,
       });
-      return toPartyDto(event);
+      return toPartyDto(this.db, event);
     } catch (error) {
       rethrow(error);
     }
@@ -81,14 +83,14 @@ export class OwnershipController {
     const me = (await this.db.collection(Collections.users).doc(req.authUser.uid).get()).data() as UserDoc | undefined;
     const isParty = event.fromUserId === req.authUser.uid || event.toUserId === req.authUser.uid || (me && event.toEmail === me.email.toLowerCase());
     if (!isParty) throw new NotFoundException(problem(404, "Not found", "not_found"));
-    return toPartyDto(event);
+    return toPartyDto(this.db, event);
   }
 
   @Roles("customer", "artist", "aggregator")
   @Post("transfers/:id/accept")
   async accept(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return toPartyDto(await acceptTransfer(this.db, { transferId: id, byUserId: req.authUser.uid }));
+      return toPartyDto(this.db, await acceptTransfer(this.db, { transferId: id, byUserId: req.authUser.uid }));
     } catch (error) {
       rethrow(error);
     }
@@ -98,7 +100,7 @@ export class OwnershipController {
   @Post("transfers/:id/cancel")
   async cancel(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return toPartyDto(await cancelTransfer(this.db, { transferId: id, byUserId: req.authUser.uid }));
+      return toPartyDto(this.db, await cancelTransfer(this.db, { transferId: id, byUserId: req.authUser.uid }));
     } catch (error) {
       rethrow(error);
     }
@@ -108,7 +110,7 @@ export class OwnershipController {
   @Post("transfers/:id/end-display")
   async endDisplay(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return toPartyDto(await endDisplay(this.db, { transferId: id, byUserId: req.authUser.uid }));
+      return toPartyDto(this.db, await endDisplay(this.db, { transferId: id, byUserId: req.authUser.uid }));
     } catch (error) {
       rethrow(error);
     }

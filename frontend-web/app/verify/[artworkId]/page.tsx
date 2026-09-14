@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ArtworkPassportView } from "@/features/verify/artwork-passport-view";
-import { getArtworkById } from "@/lib/mock-data/helpers";
+import { verifyService } from "@/services/verifyService";
 
 export async function generateMetadata(
   props: PageProps<"/verify/[artworkId]">,
 ): Promise<Metadata> {
   const { artworkId } = await props.params;
-  const artwork = getArtworkById(artworkId);
+  const artwork = await verifyService.getForMetadata(artworkId);
 
   if (!artwork) {
     return { title: "Artwork Passport | GalleryZone" };
@@ -20,11 +20,9 @@ export async function generateMetadata(
   };
 }
 
-// Public, unauthenticated page a physical NFC/QR tag resolves to (mirrors
-// GET /nfc/{artwork_id}). Rendered by a client component (see
-// ArtworkPassportView) rather than server-side, since the mock-db an
-// artist-submitted-and-approved artwork lives in is localStorage-backed and
-// therefore invisible to a server render — see that file's header comment.
+// Public, unauthenticated page a physical NFC/QR tag resolves to (backed by
+// GET /v1/verify/:artworkId). Metadata is fetched server-side; the body is
+// a client component so the owner/chain re-fetch as transfers happen.
 export default async function ArtworkPassportPage(
   props: PageProps<"/verify/[artworkId]">,
 ) {
