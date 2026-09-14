@@ -123,6 +123,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/artworks/:id/reject", authRole: "admin", summary: "Reject, reason required", replaces: "adminService.rejectArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/delist", authRole: "admin", summary: "Pull off the marketplace", replaces: "adminService.delistArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/rarity", authRole: "admin", summary: "Set R/U/O/N rank", replaces: "adminService.setArtworkRarity" },
+  { method: "POST", path: "/v1/admin/artworks/reindex", authRole: "admin", summary: "Rebuild every artwork's denormalised listing projection", replaces: "n/a — new" },
+  { method: "POST", path: "/v1/admin/artworks/:id/reindex", authRole: "admin", summary: "Rebuild one artwork's listing projection", replaces: "n/a — new" },
   { method: "GET", path: "/v1/admin/users", authRole: "admin", summary: "All users, filterable by role", replaces: "adminService.listUsers" },
   { method: "PATCH", path: "/v1/admin/users/:id/status", authRole: "admin", summary: "Suspend/activate/block a user", replaces: "adminService.setUserStatus" },
   { method: "PATCH", path: "/v1/admin/users/:id/earnings-above-5l", authRole: "admin", summary: "TDS §194-O flag", replaces: "adminService.setEarningsAbove5L" },

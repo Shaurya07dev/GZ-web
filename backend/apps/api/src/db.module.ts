@@ -5,6 +5,7 @@
 import { Global, Module } from "@nestjs/common";
 import { createDb, type Db } from "@galleryzone/db";
 import { loadEnv, type AppEnv } from "@galleryzone/config";
+import { ReadCache } from "./read-cache.ts";
 
 export const DB = Symbol("DB");
 /** The typed env, for the few controllers whose behaviour is env-gated (e.g. PAYMENTS_MODE). */
@@ -13,6 +14,7 @@ export const ENV = Symbol("ENV");
 @Global()
 @Module({
   providers: [
+    ReadCache,
     { provide: ENV, useFactory: (): AppEnv => loadEnv() },
     {
       provide: DB,
@@ -23,6 +25,6 @@ export const ENV = Symbol("ENV");
       },
     },
   ],
-  exports: [DB, ENV],
+  exports: [DB, ENV, ReadCache],
 })
 export class DbModule {}

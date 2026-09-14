@@ -5,6 +5,7 @@
 
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { artworkStateMachine } from "@galleryzone/domain";
+import { appendArtworkStatus } from "./listing-projection.ts";
 import {
   Collections,
   artworkPricingCol,
@@ -80,13 +81,8 @@ export async function delistArtwork(db: Firestore, artworkId: string, adminId: s
   const current = (eventSnap.docs[0]?.data() as ArtworkStatusEventDoc | undefined)?.status ?? "draft";
   artworkStateMachine.assertTransition(current, "returned");
 
+  await appendArtworkStatus(db, artworkId, { status: "returned", changedBy: adminId, reason: "Delisted by admin" });
   await db.runTransaction(async (tx) => {
-    tx.set(db.collection(artworkStatusEventsCol(artworkId)).doc(), {
-      status: "returned",
-      changedBy: adminId,
-      reason: "Delisted by admin",
-      changedAt: FieldValue.serverTimestamp(),
-    });
     tx.set(db.collection(Collections.auditLog).doc(), {
       adminId,
       action: "artwork.delisted",

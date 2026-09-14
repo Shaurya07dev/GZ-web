@@ -6,11 +6,12 @@
 // packages/contracts/artwork-dto.check.ts's price-leak regex is applied to
 // this DTO too (verify-dto.check.ts).
 
-import { Controller, Get, Inject, NotFoundException, Param } from "@nestjs/common";
+import { Controller, Get, Header, Inject, NotFoundException, Param } from "@nestjs/common";
 import { getCurrentOwner, getPublicArtwork, listOwnershipEvents, OwnershipNotFoundError, type Db, type OwnershipEvent } from "@galleryzone/db";
 import type { VerifyPassportDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
+import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 
 const iso = (t: FirebaseFirestore.Timestamp | null | undefined) => t?.toDate().toISOString() ?? null;
 
@@ -32,11 +33,19 @@ export function toPublicEvent(e: OwnershipEvent): VerifyPassportDto["events"][nu
 
 @Controller("v1/verify")
 export class VerifyController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly cache: ReadCache,
+  ) {}
 
   @Public()
   @Get(":artworkId")
-  async passport(@Param("artworkId") artworkId: string): Promise<VerifyPassportDto> {
+  @Header("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=60")
+  passport(@Param("artworkId") artworkId: string): Promise<VerifyPassportDto> {
+    return this.cache.getOrFill(CacheKeys.verify(artworkId), TTL.artwork, () => this.buildPassport(artworkId));
+  }
+
+  private async buildPassport(artworkId: string): Promise<VerifyPassportDto> {
     const artwork = await getPublicArtwork(this.db, artworkId);
     if (!artwork) throw new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
     let owner;

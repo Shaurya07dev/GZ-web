@@ -11,6 +11,7 @@ import { IllegalTransitionError } from "@galleryzone/domain";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB, ENV } from "./db.module.ts";
+import { ReadCache } from "./read-cache.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 @Controller("v1/orders")
@@ -18,6 +19,7 @@ export class OrdersController {
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(ENV) private readonly env: AppEnv,
+    private readonly cache: ReadCache,
   ) {}
 
   @Roles("customer")
@@ -63,7 +65,10 @@ export class OrdersController {
       }
     }
     try {
-      return await confirmSimulatedPayment(this.db, id);
+      const result = await confirmSimulatedPayment(this.db, id);
+      // The piece just left the marketplace and changed owner.
+      this.cache.clear();
+      return result;
     } catch (error) {
       if (error instanceof CheckoutError) {
         throw new NotFoundException({ type: "about:blank", title: error.message, status: 404, code: "not_found" });

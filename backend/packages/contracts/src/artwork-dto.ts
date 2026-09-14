@@ -25,6 +25,10 @@ export interface CustomerArtworkDto {
   coaCertificateNumber: string | null;
   coaIssuedAt: string | null;
   createdAt: string;
+  /** The artist's public location; an artwork has none of its own. */
+  artistLocation: string | null;
+  /** small / medium / large by canvas area; null when dimensions are unparseable. */
+  sizeBand: "small" | "medium" | "large" | null;
 }
 
 // Everything a customer sees, plus the artist's own price — visible only to

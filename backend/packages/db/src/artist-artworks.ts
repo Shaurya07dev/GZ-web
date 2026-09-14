@@ -6,9 +6,9 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { artworkStateMachine, editWindowExpiresAt, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
-import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ListingType } from "./collections.ts";
-import { latestArtworkStatus } from "./public-artworks.ts";
+import { Collections, artworkPricingCol, type ArtworkDoc, type ArtworkPricingDoc, type ListingType } from "./collections.ts";
 import { issueCertificate } from "./coa.ts";
+import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 
 export class ArtistArtworkError extends Error {}
 
@@ -82,16 +82,16 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
   const pricingDoc: ArtworkPricingDoc = { artistId: input.artistId, artistPricePaise: input.artistPricePaise };
   await input.db.collection(artworkPricingCol(artworkRef.id)).doc("data").set(pricingDoc);
 
-  const statusEvent: ArtworkStatusEventDoc = { status: "pending_approval", changedBy: null, reason: null, changedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp };
-  await input.db.collection(artworkStatusEventsCol(artworkRef.id)).add(statusEvent);
+  await appendArtworkStatus(input.db, artworkRef.id, { status: "pending_approval", changedBy: null, reason: null });
+  await refreshListing(input.db, artworkRef.id, input.rates);
 
   return { artworkId: artworkRef.id, productCode };
 }
 
 export async function approveArtwork(db: Firestore, artworkId: string): Promise<void> {
-  const current = await latestArtworkStatus(db, artworkId);
+  const current = await latestStatusOf(db, artworkId);
   artworkStateMachine.assertTransition(current, "marketplace");
-  await db.collection(artworkStatusEventsCol(artworkId)).add({ status: "marketplace", changedBy: null, reason: null, changedAt: FieldValue.serverTimestamp() });
+  await appendArtworkStatus(db, artworkId, { status: "marketplace", changedBy: null, reason: null });
   // A listed artwork always has a certificate number (artist MOU §11) —
   // idempotent, so re-approval after a return keeps the original number.
   await issueCertificate(db, artworkId);
@@ -99,9 +99,9 @@ export async function approveArtwork(db: Firestore, artworkId: string): Promise<
 
 export async function rejectArtwork(db: Firestore, artworkId: string, reason: string): Promise<void> {
   if (!reason) throw new ArtistArtworkError("A rejection requires a reason");
-  const current = await latestArtworkStatus(db, artworkId);
+  const current = await latestStatusOf(db, artworkId);
   artworkStateMachine.assertTransition(current, "returned");
-  await db.collection(artworkStatusEventsCol(artworkId)).add({ status: "returned", changedBy: null, reason, changedAt: FieldValue.serverTimestamp() });
+  await appendArtworkStatus(db, artworkId, { status: "returned", changedBy: null, reason });
 }
 
 /** How many artworks this artist has ever submitted — feeds the rating-card composite score's artwork-count factor. */

@@ -1,30 +1,62 @@
 // The marketplace listing/detail endpoints — the highest-traffic read path
 // in the whole system. Public: no auth required, but SECURITY-CRITICAL
 // regardless — see packages/db/public-artworks.ts, which owns the DTO
-// construction and the price-leak discipline. This controller is thin.
+// construction and the price-leak discipline. This controller is thin:
+// parse the query, serve from the read cache, set cache headers.
 
-import { Controller, Get, Inject, NotFoundException, Param } from "@nestjs/common";
-import { getPublicArtwork, listMarketplaceArtworks, type Db } from "@galleryzone/db";
+import { Controller, Get, Header, Inject, NotFoundException, Param, Query } from "@nestjs/common";
+import { z } from "zod";
+import { getPublicArtwork, loadMarketplace, queryMarketplace, type Db, type MarketplacePage } from "@galleryzone/db";
 import type { CustomerArtworkDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
+import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
+import { ZodValidationPipe } from "./zod-validation.pipe.ts";
+
+const listQuerySchema = z.object({
+    category: z.string().trim().min(1).max(80).optional(),
+    medium: z.string().trim().min(1).max(80).optional(),
+    rarity: z.string().trim().min(1).max(20).optional(),
+    artistId: z.string().trim().min(1).max(200).optional(),
+    location: z.string().trim().min(1).max(80).optional(),
+    size: z.enum(["small", "medium", "large"]).optional(),
+    minPricePaise: z.coerce.number().int().min(0).optional(),
+    maxPricePaise: z.coerce.number().int().min(0).optional(),
+    q: z.string().trim().max(120).optional(),
+    sort: z.enum(["newest", "price_asc", "price_desc"]).optional(),
+    page: z.coerce.number().int().min(1).max(10_000).optional(),
+    pageSize: z.coerce.number().int().min(1).max(60).optional(),
+  });
+  // Deliberately not .strict(): unknown params (utm_*, fbclid) are stripped, never a 400 on a public page.
+type ListQuery = z.infer<typeof listQuerySchema>;
+
+// Browsers and Vercel's edge may hold a listing for 30s and serve it stale
+// for a minute while revalidating; the API's own cache is the real
+// backstop, this just shaves round-trips on the busiest pages.
+const PUBLIC_CACHE = "public, max-age=30, s-maxage=60, stale-while-revalidate=60";
 
 @Controller("v1/artworks")
 export class ArtworksController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly cache: ReadCache,
+  ) {}
 
-  /** Only pieces currently on the marketplace (status projected from statusEvents), never drafts/pending/sold. */
+  /** Live marketplace only, filtered/sorted/paged server-side. Facets describe the whole live marketplace. */
   @Public()
   @Get()
-  async list(): Promise<{ artworks: CustomerArtworkDto[] }> {
-    return { artworks: await listMarketplaceArtworks(this.db) };
+  @Header("Cache-Control", PUBLIC_CACHE)
+  async list(@Query(new ZodValidationPipe(listQuerySchema)) query: ListQuery): Promise<MarketplacePage> {
+    const all = await this.cache.getOrFill(CacheKeys.marketplace, TTL.marketplace, () => loadMarketplace(this.db));
+    return queryMarketplace(all, query);
   }
 
   /** Any status — a passport/COA link must still resolve after a sale. */
   @Public()
   @Get(":id")
+  @Header("Cache-Control", PUBLIC_CACHE)
   async get(@Param("id") id: string): Promise<CustomerArtworkDto> {
-    const artwork = await getPublicArtwork(this.db, id);
+    const artwork = await this.cache.getOrFill(CacheKeys.artwork(id), TTL.artwork, () => getPublicArtwork(this.db, id));
     if (!artwork) throw new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
     return artwork;
   }

@@ -7,16 +7,21 @@
 
 import { Body, Controller, Get, Inject, Param, Post, Req, UsePipes } from "@nestjs/common";
 import { loadActiveRates } from "@galleryzone/config";
-import { FirestoreRateConfigStore, type Db } from "@galleryzone/db";
+import { FirestoreRateConfigStore, reindexAllListings, type Db } from "@galleryzone/db";
 import { proposeRateChangeSchema, type ProposeRateChangeInput } from "@galleryzone/contracts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
+import { ReadCache } from "./read-cache.ts";
+
 
 @Controller("v1/admin/rate-config")
 export class RateConfigController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly cache: ReadCache,
+  ) {}
 
   @Roles("admin", "platform_admin")
   @Get()
@@ -43,6 +48,9 @@ export class RateConfigController {
   async approve(@Req() req: AuthenticatedRequest, @Param("versionId") versionId: string) {
     // The store itself refuses a self-approval when proposedBy === approvedBy.
     await new FirestoreRateConfigStore(this.db).approve({ versionId, approvedBy: req.authUser.uid });
+    // Every display price just moved: rebuild the projections, then drop the caches.
+    await reindexAllListings(this.db);
+    this.cache.clear();
     return { versionId, status: "approved" };
   }
 }

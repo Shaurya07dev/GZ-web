@@ -18,9 +18,9 @@ import {
 } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
-import { Collections, artworkPricingCol, artworkStatusEventsCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
+import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
+import { appendArtworkStatus, latestStatusOf } from "./listing-projection.ts";
 import { recordSaleTransfer } from "./ownership.ts";
-import { latestArtworkStatus } from "./public-artworks.ts";
 
 export class CheckoutError extends Error {}
 
@@ -133,10 +133,10 @@ export async function confirmSimulatedPayment(db: Firestore, orderId: string): P
   // delivery). Idempotent on orderId. The artwork leaves the marketplace
   // at the same moment — a one-of-a-kind original can't be bought twice.
   await recordSaleTransfer(db, { artworkId: order.artworkId, orderId, buyerId: order.customerId });
-  const artworkStatus = await latestArtworkStatus(db, order.artworkId);
+  const artworkStatus = await latestStatusOf(db, order.artworkId);
   if (artworkStatus !== "sold") {
     artworkStateMachine.assertTransition(artworkStatus, "sold");
-    await db.collection(artworkStatusEventsCol(order.artworkId)).add({ status: "sold", changedBy: null, reason: `order:${orderId}`, changedAt: FieldValue.serverTimestamp() });
+    await appendArtworkStatus(db, order.artworkId, { status: "sold", changedBy: null, reason: `order:${orderId}` });
   }
   await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get().then((snap) => {
     if (!snap.empty) snap.docs[0]!.ref.update({ status: "captured" });

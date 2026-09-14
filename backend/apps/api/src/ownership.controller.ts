@@ -23,6 +23,7 @@ import { IllegalTransitionError } from "@galleryzone/domain";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
+import { CacheKeys, ReadCache } from "./read-cache.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { toPublicEvent } from "./verify.controller.ts";
 
@@ -55,7 +56,10 @@ async function toPartyDto(db: Db, e: OwnershipEvent) {
 
 @Controller("v1")
 export class OwnershipController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly cache: ReadCache,
+  ) {}
 
   @Roles("customer", "artist", "aggregator")
   @Post("artworks/:artworkId/transfers")
@@ -69,6 +73,7 @@ export class OwnershipController {
         toEmail: body.toEmail,
         displayEndsAt: body.displayEndsAt ? new Date(body.displayEndsAt) : undefined,
       });
+      this.cache.invalidate(CacheKeys.verify(artworkId));
       return toPartyDto(this.db, event);
     } catch (error) {
       rethrow(error);
@@ -90,7 +95,9 @@ export class OwnershipController {
   @Post("transfers/:id/accept")
   async accept(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return toPartyDto(this.db, await acceptTransfer(this.db, { transferId: id, byUserId: req.authUser.uid }));
+      const event = await acceptTransfer(this.db, { transferId: id, byUserId: req.authUser.uid });
+      this.cache.invalidate(CacheKeys.verify(event.artworkId));
+      return toPartyDto(this.db, event);
     } catch (error) {
       rethrow(error);
     }
@@ -100,7 +107,9 @@ export class OwnershipController {
   @Post("transfers/:id/cancel")
   async cancel(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return toPartyDto(this.db, await cancelTransfer(this.db, { transferId: id, byUserId: req.authUser.uid }));
+      const event = await cancelTransfer(this.db, { transferId: id, byUserId: req.authUser.uid });
+      this.cache.invalidate(CacheKeys.verify(event.artworkId));
+      return toPartyDto(this.db, event);
     } catch (error) {
       rethrow(error);
     }
@@ -110,7 +119,9 @@ export class OwnershipController {
   @Post("transfers/:id/end-display")
   async endDisplay(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     try {
-      return toPartyDto(this.db, await endDisplay(this.db, { transferId: id, byUserId: req.authUser.uid }));
+      const event = await endDisplay(this.db, { transferId: id, byUserId: req.authUser.uid });
+      this.cache.invalidate(CacheKeys.verify(event.artworkId));
+      return toPartyDto(this.db, event);
     } catch (error) {
       rethrow(error);
     }

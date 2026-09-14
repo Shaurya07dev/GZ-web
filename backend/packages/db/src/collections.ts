@@ -171,6 +171,24 @@ export interface ArtworkDoc {
   insuranceStatus: ReviewStatus | null;
   editableUntil: FirebaseFirestore.Timestamp;
   createdAt: FirebaseFirestore.Timestamp;
+  /** Denormalised read model (listing-projection.ts). Absent on docs written before it existed — reindex fills it. */
+  listing?: ListingProjection;
+}
+
+/** Mirrors listing-projection.ts's ListingProjection (declared here to avoid an import cycle). */
+export interface ListingProjection {
+  status: ArtworkStatus;
+  onMarketplace: boolean;
+  displayPricePaise: number;
+  artistName: string;
+  /** From publicProfiles/{artistId}.location — an artwork has no location of its own. */
+  artistLocation: string | null;
+  /** Parsed from `dimensions` ("24 x 36 in") into small/medium/large by area; null when unparseable. */
+  sizeBand: "small" | "medium" | "large" | null;
+  coverImageUrl: string | null;
+  coverThumbnailUrl: string | null;
+  imageCount: number;
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 /** Lives at artworkPricingCol(id)/data — never spread into ArtworkDoc's public fields. */
