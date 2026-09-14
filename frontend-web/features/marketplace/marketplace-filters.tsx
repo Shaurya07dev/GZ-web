@@ -11,7 +11,6 @@ import {
   Ruler,
   User,
   MapPin,
-  CircleCheck,
 } from "lucide-react";
 import {
   Accordion,
@@ -29,8 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { mockArtworks } from "@/lib/mock-data/artworks";
-import { mockArtists } from "@/lib/mock-data/artists";
+import { useMarketplaceFacets } from "@/hooks/useArtworks";
 import {
   ARTWORK_RARITY_OPTIONS,
   type ArtworkFilters,
@@ -44,54 +42,20 @@ import {
 // "all" category.
 const ALL_VALUE = "all";
 
-const CATEGORY_OPTIONS = Array.from(
-  new Set(mockArtworks.map((artwork) => artwork.category)),
-).sort();
-
-const MEDIUM_OPTIONS = Array.from(
-  new Set(mockArtworks.map((artwork) => artwork.medium)),
-).sort();
-
-// Only artists who actually have a marketplace-eligible piece — an artist
-// filter full of dead ends would be worse than not having one.
-const ARTIST_OPTIONS = Array.from(
-  new Map(mockArtworks.map((a) => [a.artistId, a.artistName])).entries(),
-)
-  .map(([id, name]) => ({ id, name }))
-  .sort((a, b) => a.name.localeCompare(b.name));
-
-// An artwork has no location of its own — only its artist does
-// (types/artist.ts ArtistProfile.location) — so this joins through
-// artistId exactly the way filterArtworks() does server-side.
-const LOCATION_OPTIONS = Array.from(
-  new Set(
-    mockArtworks
-      .map(
-        (a) => mockArtists.find((artist) => artist.id === a.artistId)?.location,
-      )
-      .filter((loc): loc is string => Boolean(loc)),
-  ),
-).sort();
-
 const SIZE_OPTIONS: { value: ArtworkSizeBand; label: string }[] = [
   { value: "small", label: "Small" },
   { value: "medium", label: "Medium" },
   { value: "large", label: "Large" },
 ];
 
-const AVAILABILITY_OPTIONS: {
-  value: NonNullable<ArtworkFilters["availability"]>;
-  label: string;
-}[] = [
-  { value: "available", label: "Available now" },
-  { value: "unavailable", label: "Reserved / sold" },
-];
-
-// Upper bound for the price slider — comfortably above the highest
-// customerPrice in the current catalogue (lib/mock-data/artworks.ts tops out
-// around ₹1,49,000), rounded for a clean slider scale rather than tied to a
-// value that shifts every time a new fixture is added.
-const MAX_PRICE_BOUND = 200_000;
+// Upper bound for the price slider: the priciest live piece, rounded up to
+// a clean step so the scale doesn't jitter as listings come and go. Falls
+// back to a sane default while the facets load.
+function priceBoundFor(max: number | undefined): number {
+  if (!max || max <= 0) return 200_000;
+  const step = max >= 1_000_000 ? 500_000 : max >= 100_000 ? 50_000 : 10_000;
+  return Math.ceil(max / step) * step;
+}
 
 // Same solid per-rank colors as the artwork card's corner stamp
 // (components/shared/rarity-badge.tsx "stamp" variant) — one rank language
@@ -120,7 +84,6 @@ function hasActiveStructuredFilters(filters: ArtworkFilters): boolean {
     filters.artistId ||
     filters.location ||
     filters.size ||
-    filters.availability ||
     typeof filters.minPrice === "number" ||
     typeof filters.maxPrice === "number",
   );
@@ -140,20 +103,20 @@ export function MarketplaceFilters({
   const minId = useId();
   const maxId = useId();
 
-  // Fixed totals per rank across the live catalogue — the reference board's
-  // own counts (6/7/5/4) are exactly this: how many of each rank exist, not
-  // how many match the other filters currently active. Recomputing a live
-  // per-combination count is a full facet-search engine this app doesn't
-  // have anywhere else yet.
-  const rankCounts = useMemo(() => {
-    const counts: Record<ArtworkRarity, number> = { R: 0, U: 0, O: 0, N: 0 };
-    for (const artwork of mockArtworks) {
-      if (artwork.status === "marketplace" && artwork.rarityType) {
-        counts[artwork.rarityType] += 1;
-      }
-    }
-    return counts;
-  }, []);
+  // Every option list below comes from the live marketplace's facets —
+  // distinct values across all listed pieces, so no option is a dead end.
+  const facets = useMarketplaceFacets();
+  const CATEGORY_OPTIONS = facets.categories;
+  const MEDIUM_OPTIONS = facets.mediums;
+  const ARTIST_OPTIONS = facets.artists;
+  const LOCATION_OPTIONS = facets.locations;
+  // Totals per rank across the live catalogue — how many of each rank
+  // exist, not how many match the other filters currently active.
+  const rankCounts = useMemo<Record<ArtworkRarity, number>>(
+    () => ({ R: 0, U: 0, O: 0, N: 0, ...facets.rarityCounts }),
+    [facets.rarityCounts],
+  );
+  const MAX_PRICE_BOUND = priceBoundFor(facets.priceRange?.max);
 
   function update(patch: Partial<ArtworkFilters>) {
     onChange({ ...filters, ...patch });
@@ -426,39 +389,11 @@ export function MarketplaceFilters({
           onSelectChange={(value) =>
             update({ location: value !== ALL_VALUE ? value : undefined })
           }
+          isLast
         >
           {LOCATION_OPTIONS.map((location) => (
             <SelectItem key={location} value={location}>
               {location}
-            </SelectItem>
-          ))}
-        </SelectFilterGroup>
-
-        <SelectFilterGroup
-          value="availability"
-          icon={CircleCheck}
-          label="Availability"
-          allLabel="All"
-          current={
-            filters.availability
-              ? AVAILABILITY_OPTIONS.find((o) => o.value === filters.availability)
-                  ?.label
-              : null
-          }
-          selectValue={filters.availability ?? ALL_VALUE}
-          onSelectChange={(value) =>
-            update({
-              availability:
-                value !== ALL_VALUE
-                  ? (value as ArtworkFilters["availability"])
-                  : undefined,
-            })
-          }
-          isLast
-        >
-          {AVAILABILITY_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
             </SelectItem>
           ))}
         </SelectFilterGroup>
@@ -478,8 +413,8 @@ export function MarketplaceFilters({
   );
 }
 
-// The six filter groups that are "just a Select" (Art Type, Medium, Size,
-// Artist, Location, Availability) share one shape: an icon+label trigger
+// The five filter groups that are "just a Select" (Art Type, Medium, Size,
+// Artist, Location) share one shape: an icon+label trigger
 // with the current selection shown as a subtitle even while collapsed
 // (matching the reference board), and a Select in the panel. Rank
 // (checkboxes) and Price Range (slider) don't fit this shape, so they stay

@@ -64,7 +64,8 @@ export function MarketplaceGrid({
   onToggleFilters,
   onOpenMobileFilters,
 }: MarketplaceGridProps) {
-  const { data: artworks, isPending, isError } = useArtworks(filters);
+  const { data: page, isPending, isError } = useArtworks(filters);
+  const artworks = page?.artworks;
   // Default to list on mobile, grid on larger screens (controlled purely via class, not state)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortOpen, setSortOpen] = useState(false);
@@ -83,13 +84,10 @@ export function MarketplaceGrid({
     if (filters.rarity) {
       chips.push({ key: "rarity", label: `Rank: ${filters.rarity}`, onRemove: () => onChange({ ...filters, rarity: undefined }) });
     }
-    if (filters.availability) {
-      chips.push({ key: "availability", label: filters.availability === "available" ? "Available now" : "Reserved / sold", onRemove: () => onChange({ ...filters, availability: undefined }) });
-    }
     if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
       const min = filters.minPrice ?? 0;
-      const max = filters.maxPrice ?? 200000;
-      chips.push({ key: "price", label: `₹${Math.floor(min / 1000)}k – ₹${Math.floor(max / 1000)}k`, onRemove: () => onChange({ ...filters, minPrice: undefined, maxPrice: undefined }) });
+      const max = filters.maxPrice;
+      chips.push({ key: "price", label: max === undefined ? `From ₹${Math.floor(min / 1000)}k` : `₹${Math.floor(min / 1000)}k – ₹${Math.floor(max / 1000)}k`, onRemove: () => onChange({ ...filters, minPrice: undefined, maxPrice: undefined }) });
     }
     if (filters.query) {
       chips.push({ key: "query", label: `"${filters.query}"`, onRemove: () => onChange({ ...filters, query: undefined }) });
@@ -113,7 +111,7 @@ export function MarketplaceGrid({
     );
   }
 
-  if (isError || !artworks) {
+  if (isError || !artworks || !page) {
     return (
       <EmptyState
         icon={TriangleAlert}
@@ -196,8 +194,8 @@ export function MarketplaceGrid({
             </button>
           )}
           <p className="text-sm text-muted-foreground" role="status">
-            <strong className="font-semibold text-foreground">{artworks.length}</strong>{" "}
-            {artworks.length === 1 ? "artwork" : "artworks"} found
+            <strong className="font-semibold text-foreground">{page.total}</strong>{" "}
+            {page.total === 1 ? "artwork" : "artworks"} found
           </p>
         </div>
 
@@ -307,6 +305,15 @@ export function MarketplaceGrid({
         ))}
       </div>
 
+      <Pagination
+        page={page.page}
+        pageCount={Math.max(1, Math.ceil(page.total / page.pageSize))}
+        onPage={(next) => {
+          onChange({ ...filters, page: next > 1 ? next : undefined });
+          if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+      />
+
       {/* Mobile sort bottom sheet */}
       <MobileSortSheet
         open={sortOpen}
@@ -318,6 +325,36 @@ export function MarketplaceGrid({
         }}
       />
     </div>
+  );
+}
+
+function Pagination({
+  page,
+  pageCount,
+  onPage,
+}: {
+  page: number;
+  pageCount: number;
+  onPage: (page: number) => void;
+}) {
+  if (pageCount <= 1) return null;
+  const buttonClass =
+    "inline-flex h-9 items-center rounded-lg border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40";
+  return (
+    <nav
+      aria-label="Marketplace pages"
+      className="mt-8 flex items-center justify-center gap-3"
+    >
+      <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => onPage(page - 1)}>
+        Previous
+      </button>
+      <span className="text-sm text-muted-foreground" aria-current="page">
+        Page <strong className="font-semibold text-foreground">{page}</strong> of {pageCount}
+      </span>
+      <button type="button" className={buttonClass} disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
+        Next
+      </button>
+    </nav>
   );
 }
 

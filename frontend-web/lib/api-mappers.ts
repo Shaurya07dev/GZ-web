@@ -3,7 +3,7 @@
 // fixtures in rupees. Mapping lives here, in one place, so services stay
 // thin and nothing in features/ learns the wire shape.
 
-import type { Artwork, ArtworkStatus, ArtworkSummary, ListingType, ArtworkRarity } from "@/types/artwork";
+import type { Artwork, ArtworkStatus, ArtworkSummary, ListingType, ArtworkRarity, MarketplacePage } from "@/types/artwork";
 import type { ArtistProfile } from "@/types/artist";
 import type { Order, OrderStatus } from "@/types/order";
 import type { Address } from "@/types/customer";
@@ -29,6 +29,45 @@ export interface ArtworkDto {
   coaCertificateNumber: string | null;
   coaIssuedAt: string | null;
   createdAt: string;
+  artistLocation?: string | null;
+  sizeBand?: "small" | "medium" | "large" | null;
+}
+
+/** Mirrors backend MarketplacePage (packages/db/public-artworks.ts). */
+export interface MarketplacePageDto {
+  artworks: ArtworkDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+  facets: {
+    categories: string[];
+    mediums: string[];
+    rarities: string[];
+    rarityCounts: Record<string, number>;
+    locations: string[];
+    artists: { id: string; name: string }[];
+    priceRangePaise: { min: number; max: number } | null;
+  };
+}
+
+export function toMarketplacePage(dto: MarketplacePageDto): MarketplacePage {
+  return {
+    artworks: dto.artworks.map(toArtworkSummary),
+    total: dto.total,
+    page: dto.page,
+    pageSize: dto.pageSize,
+    facets: {
+      categories: dto.facets.categories,
+      mediums: dto.facets.mediums,
+      rarities: dto.facets.rarities,
+      rarityCounts: dto.facets.rarityCounts as MarketplacePage["facets"]["rarityCounts"],
+      locations: dto.facets.locations,
+      artists: dto.facets.artists,
+      priceRange: dto.facets.priceRangePaise
+        ? { min: paiseToRupees(dto.facets.priceRangePaise.min), max: paiseToRupees(dto.facets.priceRangePaise.max) }
+        : null,
+    },
+  };
 }
 
 // Until the image upload pipeline exists every backend artwork has

@@ -516,4 +516,28 @@ export interface ArtworkFilters {
   /** "available" = currently marketplace-listed; "unavailable" = reserved,
    * sold, or otherwise off the open market but still publicly visible. */
   availability?: "available" | "unavailable";
+  /** 1-based. Absent = first page. */
+  page?: number;
+}
+
+/** What the marketplace listing endpoint returns: one page plus the facets
+ *  (distinct filter values across the WHOLE live marketplace) that drive
+ *  the filter sidebar — nothing about the filter UI is hardcoded. */
+export interface MarketplacePage {
+  artworks: ArtworkSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+  facets: MarketplaceFacets;
+}
+
+export interface MarketplaceFacets {
+  categories: string[];
+  mediums: string[];
+  rarities: string[];
+  rarityCounts: Partial<Record<ArtworkRarity, number>>;
+  locations: string[];
+  artists: { id: string; name: string }[];
+  /** Rupees. Null when the marketplace is empty. */
+  priceRange: { min: number; max: number } | null;
 }

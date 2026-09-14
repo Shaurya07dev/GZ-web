@@ -13,8 +13,8 @@ import {
 import { MarketplaceSearchBar } from "@/features/marketplace/marketplace-search-bar";
 import { MarketplaceGrid } from "@/features/marketplace/marketplace-grid";
 import { cn } from "@/lib/utils";
-import type { ArtworkFilters } from "@/types/artwork";
-import { mockArtworks } from "@/lib/mock-data/artworks";
+import type { ArtworkFilters, ArtworkSummary } from "@/types/artwork";
+import { useMarketplaceOverview } from "@/hooks/useArtworks";
 
 export default function MarketplacePage() {
   return (
@@ -34,21 +34,15 @@ function MarketplaceFallback() {
   );
 }
 
-// Build category quick-filter chips from real mock data
-const CATEGORY_ORDER = [
-  "painting",
-  "photography",
-  "digital art",
-  "sculpture",
-  "textile art",
-  "printmaking",
-  "mixed media",
-] as const;
-
-const QUICK_CATEGORIES = CATEGORY_ORDER.map((cat) => {
-  const sample = mockArtworks.find((a) => a.category === cat);
-  return { label: cat.charAt(0).toUpperCase() + cat.slice(1), value: cat, thumbnail: sample?.thumbnailUrl };
-}).filter((c) => c.thumbnail);
+// Quick-filter chips: one per category that is actually live, with the
+// newest piece in that category as its thumbnail.
+function quickCategories(categories: string[], artworks: ArtworkSummary[]) {
+  return categories.map((value) => ({
+    value,
+    label: value.charAt(0).toUpperCase() + value.slice(1),
+    thumbnail: artworks.find((a) => a.category === value)?.thumbnailUrl,
+  }));
+}
 
 function MarketplacePageContent() {
   const searchParams = useSearchParams();
@@ -59,6 +53,8 @@ function MarketplacePageContent() {
   }));
   const [showFilters, setShowFilters] = useState(true);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const overview = useMarketplaceOverview().data;
+  const QUICK_CATEGORIES = quickCategories(overview?.facets.categories ?? [], overview?.artworks ?? []);
 
   return (
     <>

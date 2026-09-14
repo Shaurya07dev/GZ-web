@@ -1,30 +1,43 @@
-import type { Artwork, ArtworkFilters, ArtworkSummary } from "@/types/artwork";
+import type { Artwork, ArtworkFilters, ArtworkSummary, MarketplacePage } from "@/types/artwork";
 import type { ArtistProfile } from "@/types/artist";
 import { http, isApiError } from "@/lib/api";
 import {
   toArtistProfile,
   toArtwork,
   toArtworkSummary,
+  toMarketplacePage,
   type ArtistDto,
   type ArtworkDto,
+  type MarketplacePageDto,
 } from "@/lib/api-mappers";
-import { filterArtworks, sortArtworks, toSummary } from "@/lib/mock-data/helpers";
 
 // Real implementation of the SAD §5.3 Page -> Hook -> Service -> API
-// pattern. Only the method bodies changed from the mock phase — every hook
-// (useArtworks/useArtwork/useArtistProfile) and every component stays
-// untouched.
-//
-// The backend's GET /v1/artworks returns the whole marketplace (only
-// pieces currently listed — status is projected server-side) with no
-// filter/sort params yet, so filtering and sorting still happen here with
-// the same helpers the mock used. Moving them server-side is a backend
-// change with no frontend impact beyond this file.
+// pattern. Filtering, sorting, search and pagination all happen on the
+// server (GET /v1/artworks?...): the browser never downloads the whole
+// catalogue, and the filter options come back as facets computed from
+// what is actually live.
+export const PAGE_SIZE = 24;
+
+function toQuery(filters: ArtworkFilters): Record<string, string> {
+  const q: Record<string, string> = { pageSize: String(PAGE_SIZE) };
+  if (filters.category) q.category = filters.category;
+  if (filters.medium) q.medium = filters.medium;
+  if (filters.rarity) q.rarity = filters.rarity;
+  if (filters.artistId) q.artistId = filters.artistId;
+  if (filters.location) q.location = filters.location;
+  if (filters.size) q.size = filters.size;
+  if (typeof filters.minPrice === "number") q.minPricePaise = String(Math.round(filters.minPrice * 100));
+  if (typeof filters.maxPrice === "number") q.maxPricePaise = String(Math.round(filters.maxPrice * 100));
+  if (filters.query?.trim()) q.q = filters.query.trim();
+  if (filters.sortBy) q.sort = filters.sortBy;
+  if (filters.page && filters.page > 1) q.page = String(filters.page);
+  return q;
+}
+
 export const artworkService = {
-  async list(filters: ArtworkFilters): Promise<ArtworkSummary[]> {
-    const { artworks } = await http.get<{ artworks: ArtworkDto[] }>("/v1/artworks");
-    const filtered = filterArtworks(artworks.map(toArtwork), filters);
-    return sortArtworks(filtered, filters.sortBy).map(toSummary);
+  async list(filters: ArtworkFilters): Promise<MarketplacePage> {
+    const dto = await http.get<MarketplacePageDto>("/v1/artworks", { params: toQuery(filters) });
+    return toMarketplacePage(dto);
   },
 
   // Full Artwork for the detail page; undefined when no artwork matches,
