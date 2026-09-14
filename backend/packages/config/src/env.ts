@@ -27,6 +27,10 @@ export interface AppEnv {
    * refuses that route for customers, so a deploy can't accidentally ship free checkout.
    */
   paymentsMode: "simulated" | "razorpay";
+  /** S3-compatible object storage for artwork images (Railway bucket). Null until configured — image routes then 503. */
+  /** Where this API is reachable by browsers — baked into image URLs. */
+  publicApiUrl: string;
+  s3: { bucket: string; accessKeyId: string; secretAccessKey: string; endpoint: string; region: string } | null;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -66,5 +70,18 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     gcpProjectId: required("GCP_PROJECT_ID", source.GCP_PROJECT_ID),
     corsOrigins: (source.CORS_ORIGINS ?? "http://localhost:3000").split(",").map((o) => o.trim()).filter(Boolean),
     paymentsMode: source.PAYMENTS_MODE === "razorpay" ? "razorpay" : "simulated",
+    publicApiUrl:
+      optional(source.PUBLIC_API_URL) ??
+      (source.RAILWAY_PUBLIC_DOMAIN ? `https://${source.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${Number(source.PORT ?? 8080)}`),
+    s3:
+      source.S3_BUCKET && source.S3_ACCESS_KEY_ID && source.S3_SECRET_ACCESS_KEY && source.S3_ENDPOINT
+        ? {
+            bucket: source.S3_BUCKET,
+            accessKeyId: source.S3_ACCESS_KEY_ID,
+            secretAccessKey: source.S3_SECRET_ACCESS_KEY,
+            endpoint: source.S3_ENDPOINT,
+            region: source.S3_REGION || "auto",
+          }
+        : null,
   };
 }

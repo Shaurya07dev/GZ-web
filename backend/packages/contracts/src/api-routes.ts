@@ -13,7 +13,7 @@
 // otherwise — that ownership check is enforced in the handler, not
 // expressible in this table alone.
 
-export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type AuthRole = "public" | "customer" | "artist" | "aggregator" | "admin" | "platform_admin";
 
 export interface RouteSpec {
@@ -123,6 +123,12 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/artworks/:id/reject", authRole: "admin", summary: "Reject, reason required", replaces: "adminService.rejectArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/delist", authRole: "admin", summary: "Pull off the marketplace", replaces: "adminService.delistArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/rarity", authRole: "admin", summary: "Set R/U/O/N rank", replaces: "adminService.setArtworkRarity" },
+  { method: "GET", path: "/v1/artist/artworks/:id/images", authRole: "artist", summary: "Images of one of my artworks", replaces: "n/a — new" },
+  { method: "POST", path: "/v1/artist/artworks/:id/images/upload-url", authRole: "artist", summary: "Presigned PUT for a new image (browser uploads straight to the bucket)", replaces: "n/a — new" },
+  { method: "POST", path: "/v1/artist/artworks/:id/images/confirm", authRole: "artist", summary: "Record an uploaded object as an image; cover = sortOrder 0", replaces: "n/a — new" },
+  { method: "DELETE", path: "/v1/artist/artworks/:id/images/:imageId", authRole: "artist", summary: "Remove an image (bucket object too)", replaces: "n/a — new" },
+  { method: "PUT", path: "/v1/artist/artworks/:id/images/order", authRole: "artist", summary: "Reorder images", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/images/artworks/:artworkId/:file", authRole: "public", summary: "Serve an image from the private bucket, immutable-cached", replaces: "n/a — new" },
   { method: "POST", path: "/v1/admin/artworks/reindex", authRole: "admin", summary: "Rebuild every artwork's denormalised listing projection", replaces: "n/a — new" },
   { method: "POST", path: "/v1/admin/artworks/:id/reindex", authRole: "admin", summary: "Rebuild one artwork's listing projection", replaces: "n/a — new" },
   { method: "GET", path: "/v1/admin/users", authRole: "admin", summary: "All users, filterable by role", replaces: "adminService.listUsers" },

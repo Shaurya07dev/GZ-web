@@ -27,6 +27,8 @@ import { CoaController } from "./coa.controller.ts";
 import { VerifyController } from "./verify.controller.ts";
 import { OwnershipController } from "./ownership.controller.ts";
 import { MouController } from "./mou.controller.ts";
+import { ImagesController } from "./images.controller.ts";
+import { Storage } from "./storage.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -64,8 +66,9 @@ import { DbModule } from "./db.module.ts";
     VerifyController,
     OwnershipController,
     MouController,
+    ImagesController,
   ],
-  providers: [{ provide: APP_GUARD, useClass: RolesGuard }],
+  providers: [{ provide: APP_GUARD, useClass: RolesGuard }, Storage],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

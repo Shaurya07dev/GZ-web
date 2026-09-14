@@ -8,6 +8,8 @@
     "start": "node --experimental-strip-types dist/main.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1132.0",
+    "@aws-sdk/s3-request-presigner": "^3.1132.0",
     "@galleryzone/config": "*",
     "@galleryzone/contracts": "*",
     "@galleryzone/db": "*",
