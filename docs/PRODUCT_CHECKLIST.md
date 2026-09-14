@@ -1,6 +1,6 @@
 # GalleryZone — from deployed prototype to product
 
-Audited 2026-09-14 against commit `bc2e686`. Rule for "done": **nothing on a
+Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-15 (commit `c3a7fd2`). Rule for "done": **nothing on a
 web page is hardcoded** — every number, name, list and status comes from the
 API (or from a CMS/config the API serves). Tick items only when verified live.
 
@@ -19,13 +19,13 @@ files directly (`lib/mock-data/*`, `features/**/…-data.ts`, `mock-collections`
 - [ ] Seed the first approved rate-config version (propose → approve).
 - [ ] Add `gz-web-livid.vercel.app` to Firebase Auth authorized domains.
 - [ ] Run the gated verification: approve artwork → certificate issued → checkout → sale-triggered ownership transfer → CoA request/dispatch.
-- [ ] Wire the artist-MOU content update (text file pending) and bump `MOU_VERSION`.
+- [x] Artist MOU v2026.2 generated from `docs/legal/artist-mou-2026.2.txt` (`frontend-web/scripts/gen-mou.mjs`).
 
 ## 1. Remove every hardcoded thing on the web pages (2–3 weeks)
 Swap each remaining service to the API **and** delete the direct fixture imports in the components that bypass services. Backend routes marked ✅ already exist.
 
 **Artist portal** (`features/dashboard/*`, `dashboard-data.ts`, `CURRENT_ARTIST_*`)
-- [ ] `artistDashboardService` — listArtworks ✅, submitArtwork ✅, updateArtwork ✅, markSoldElsewhere ✅, getWallet ✅, listWalletTransactions ✅, requestWithdrawal ✅, requestDeactivation ✅, profile read/update (**backend: no profile write route yet** — PAN, GST, bank, headline/bio/social links, photo).
+- [ ] `artistDashboardService` — listArtworks ✔ done, getArtwork ✔, submitArtwork ✔ (drafts + real image uploads), updateArtwork ✔, getWallet ✔, listWalletTransactions ✔, requestWithdrawal ✔, getKpiMetrics ✔; still mock: markSoldElsewhere (route ✅), requestDeactivation (route ✅), getActivity, listOrders, listSettlements, listGallerySpaces, settings, profile read/update (**backend: no profile write route yet** — PAN, GST, bank, headline/bio/social links, photo).
 - [ ] `artistPayoutService`, `artistRatingService`, `artistNetworkService`, `profileStatsService` (**backend: no rating / network / stats routes yet**).
 - [ ] Components importing `dashboard-data.ts` / `ARTIST`: dashboard-shell, dashboard-greeting, portfolio-board, orders-table, wallet-overview, revenue-chart, recent-activity-feed, rating-card, verification-progress/detail, artist-analytics-view, artist-settings-view, artist-profile-summary, artist-network-panel, gallery-spaces-table, profile-kyc-form, coa-nfc-board (rows).
 
@@ -43,7 +43,7 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [ ] Components: collector-dashboard, collection-board, order-list, resale-view, wallet-overview, physical-coa-request (`mockCustomer`), `app/wishlist` (server-side wishlist instead of localStorage), `app/checkout` (address/pricing from API only).
 
 **Shared / public**
-- [ ] `artworkService.list` — move filtering/sorting/pagination server-side (`GET /v1/artworks?category=&medium=&sort=&page=`); drop `lib/mock-data/helpers` import; `marketplace-filters` option lists (categories, mediums, locations) from the API, not constants.
+- [x] `artworkService.list` — server-side filter/sort/search/pagination + facets; marketplace filters, quick chips and rank counts all from the API.
 - [ ] `artwork-card`, `site-header` (search suggestions from API), `app/artists` (artist directory route needed), `app/marketplace` page shell, `about-stats-section` (real counts), `artist-story`, `artist-connect-button`, `auth-layout-panel`, `notification-04` (real notifications).
 - [ ] `messagesService`, `supportService` ✅ routes exist (artist-scoped; extend to all roles).
 - [ ] Content pages (landing journey/ecosystem/FAQ, about, contact, terms, FAQ) — keep as versioned content but serve from one `content/` source or a CMS, not scattered `*-data.ts`; remove placeholder copy/figures.
@@ -51,7 +51,7 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [ ] Delete `lib/mock-collections.ts`, `lib/mock-db.ts`, `lib/mock-utils.ts`, `lib/mock-data/*`, `features/**/*-data.ts` fixtures, `*.check.ts` that test mocks. CI should fail on any import of them.
 
 ## 2. Backend features that don't exist yet (3–4 weeks)
-- [ ] **Images**: upload pipeline (signed upload → storage → derivatives → `artworks/{id}/images`), admin image moderation. Storage host decision (Supabase Storage / Firebase Storage on Blaze / R2 / Railway bucket).
+- [x] **Images**: Railway bucket `artwork-images` (sin), presigned PUT → confirm → `artworks/{id}/images`, served via `GET /v1/images/...` immutable. Still to do: admin image moderation, derivatives (next/image covers resizing).
 - [ ] **Payments**: Razorpay order + checkout + signed webhook (`PAYMENTS_MODE=razorpay`), refunds/cancellation, retry on failure.
 - [ ] **Payouts**: RazorpayX (or manual bank) settlement to artists/aggregators; today the ledger records, nobody is paid.
 - [ ] **Profiles**: artist/aggregator/customer profile write routes; KYC/PAN/GST document upload + review.
@@ -64,13 +64,13 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [ ] **NFC** (plan §12 NTAG 424 DNA SUN verification) — optional for launch; QR-only is fine if stated.
 
 ## 3. Production hardening (1–2 weeks)
-- [ ] Rate limiting + bot protection on public routes (`/v1/verify`, `/v1/artworks`, auth).
+- [x] Rate limiting (20 rps burst / 300 rpm per IP, all routes). Bot protection (Cloudflare/Turnstile) still open.
 - [ ] Sentry (API + web), structured logs, uptime checks, Railway alerts.
 - [ ] Firestore emulator test suite for `packages/db` (deleted in the pivot) + CI for the frontend (lint, build, smoke).
 - [ ] Security review: rules re-audit, admin-only routes, secrets rotation (the Admin SDK key has lived in the repo dir), dependency audit (15 vulns reported at build).
 - [ ] Backups/export for Firestore; data retention policy.
 - [ ] Custom domain (Vercel + `NEXT_PUBLIC_SITE_URL` + `CORS_ORIGINS`), staging environment on both platforms.
-- [ ] Performance: image CDN, caching headers, `GET /v1/artworks` N+1 reads (pricing/status per artwork) → denormalise `status`/`displayPrice` on the artwork doc.
+- [x] Performance: `artworks.listing` projection (status, price, artist, cover, location, size), 60 s API read cache with write invalidation, public Cache-Control headers, boot-time reindex + admin reindex routes. Image CDN = Vercel image optimiser over the immutable API route.
 
 ## 4. Product / legal / go-to-market
 - [ ] MOU content update; terms, privacy, refund/return policy reviewed by counsel; ownership-on-payment reflected in MOU wording.
