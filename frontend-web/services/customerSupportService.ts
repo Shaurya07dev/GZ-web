@@ -1,33 +1,17 @@
 import type { SupportTicket } from "@/types/support";
-import { mockDelay, mockError } from "@/lib/mock-utils";
-import { customerSupportTicketsCol } from "@/lib/mock-collections";
+import { supportApi } from "./supportApi";
 
 export interface SubmitCustomerTicketInput {
   subject: string;
   message: string;
 }
 
-// Own file, not folded into customerService.ts — same reasoning as the
-// Aggregator/Artist tracks' separate support services.
+// Tickets on the API, scoped to the signed-in account.
 export const customerSupportService = {
-  listTickets: (): Promise<SupportTicket[]> =>
-    mockDelay(customerSupportTicketsCol.get()),
+  listTickets: (): Promise<SupportTicket[]> => supportApi.listTickets(),
 
-  submitTicket: (input: SubmitCustomerTicketInput): Promise<SupportTicket> => {
-    if (!input.subject.trim()) return mockError("A subject is required");
-    if (!input.message.trim()) return mockError("Enter a message");
-
-    const ticket: SupportTicket = {
-      id: `cust-ticket-${crypto.randomUUID().slice(0, 8)}`,
-      subject: input.subject.trim(),
-      message: input.message.trim(),
-      status: "open",
-      createdAt: new Date().toISOString(),
-    };
-    customerSupportTicketsCol.set([
-      ticket,
-      ...customerSupportTicketsCol.get(),
-    ]);
-    return mockDelay(ticket);
+  submitTicket: (input: { subject: string; message: string }): Promise<SupportTicket> => {
+    if (!input.subject.trim() || !input.message.trim()) return Promise.reject(new Error("Add a subject and a message"));
+    return supportApi.submitTicket(input);
   },
 };

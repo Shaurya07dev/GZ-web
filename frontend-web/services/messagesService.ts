@@ -1,18 +1,9 @@
 import type { MessageThread } from "@/types/message";
-import { mockDelay } from "@/lib/mock-utils";
-import { artistMessagesCol } from "@/lib/mock-collections";
+import { supportApi } from "./supportApi";
 
-// Own file, not folded into artistDashboardService.ts — a distinct
-// actor-facing domain (inbox, not account data), same reasoning as
-// aggregatorService.ts staying separate from artistDashboardService.ts.
+// Inbox on the API, scoped to the signed-in account.
 export const messagesService = {
-  list: (): Promise<MessageThread[]> => mockDelay(artistMessagesCol.get()),
+  list: (): Promise<MessageThread[]> => supportApi.listMessages(),
 
-  markRead: (id: string): Promise<MessageThread | undefined> => {
-    const updated = artistMessagesCol.get().map((message) =>
-      message.id === id ? { ...message, unread: false } : message,
-    );
-    artistMessagesCol.set(updated);
-    return mockDelay(updated.find((message) => message.id === id));
-  },
+  markRead: (id: string): Promise<MessageThread | undefined> => supportApi.markRead(id),
 };
