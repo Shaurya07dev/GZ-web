@@ -28,7 +28,6 @@ import { AuthCrest } from "./auth-crest";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
-import { AppleAuthButton } from "./apple-auth-button";
 import { RoleToggle } from "./role-toggle";
 import { useRegisterMutation } from "@/hooks/useAuth";
 import {
@@ -265,7 +264,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
           </span>
           <div className="grow border-t border-border" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <GoogleAuthButton
             role={role}
             name={name || undefined}
@@ -273,7 +272,6 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
               router.push(ROLE_SECTION_HOME[grantedRole])
             }
           />
-          <AppleAuthButton />
         </div>
       </div>
 

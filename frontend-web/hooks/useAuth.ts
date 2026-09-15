@@ -14,21 +14,21 @@ import type {
 
 export function useLoginMutation() {
   return useMutation({
-    mutationFn: (input: LoginInput & { simulateError?: boolean }) =>
+    mutationFn: (input: LoginInput) =>
       authService.login(input),
   });
 }
 
 export function useRegisterMutation() {
   return useMutation({
-    mutationFn: (input: RegisterInput & { simulateError?: boolean }) =>
+    mutationFn: (input: RegisterInput) =>
       authService.register(input),
   });
 }
 
 export function useForgotPasswordMutation() {
   return useMutation({
-    mutationFn: (input: ForgotPasswordInput & { simulateError?: boolean }) =>
+    mutationFn: (input: ForgotPasswordInput) =>
       authService.forgotPassword(input),
   });
 }
@@ -36,14 +36,14 @@ export function useForgotPasswordMutation() {
 export function useResetPasswordMutation() {
   return useMutation({
     mutationFn: (
-      input: ResetPasswordInput & { token?: string; simulateError?: boolean },
+      input: ResetPasswordInput & { token?: string },
     ) => authService.resetPassword(input),
   });
 }
 
 export function useVerifyEmailMutation() {
   return useMutation({
-    mutationFn: (input: { token?: string; simulateError?: boolean }) =>
+    mutationFn: (input: { token?: string }) =>
       authService.verifyEmail(input),
   });
 }

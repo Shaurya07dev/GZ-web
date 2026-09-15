@@ -22,9 +22,7 @@ import { useReservableArtwork } from "@/hooks/useAggregatorInventory";
 import { useReserveArtworkMutation } from "@/hooks/useAggregatorInventory";
 import {
   useAggregatorWallet,
-  useAddAggregatorFundsMutation,
 } from "@/hooks/useAggregatorWallet";
-import { DevPanel } from "@/features/auth/components/dev-panel";
 import { CycleStepper } from "./cycle-stepper";
 
 // Full-page replacement for what used to be a confirm dialog. Reserving is a
@@ -38,7 +36,6 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
   const { data: artwork, isPending, isError } =
     useReservableArtwork(artworkId);
   const reserveMutation = useReserveArtworkMutation();
-  const addFunds = useAddAggregatorFundsMutation();
   const { data: wallet } = useAggregatorWallet();
 
   if (isPending) {
@@ -87,15 +84,6 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
   const free = wallet ? wallet.balance - wallet.lockedBalance : 0;
   const shortfall = Math.max(0, offer.payable - free);
 
-  function handleTopUp() {
-    addFunds.mutate(shortfall, {
-      onSuccess: () =>
-        toast.success(`${formatINR(shortfall)} added`, {
-          description: "Confirm the reservation to hold it against this piece.",
-        }),
-      onError: (error) => toast.error(error.message),
-    });
-  }
 
   function handleConfirm() {
     reserveMutation.mutate(artworkId, {
@@ -272,26 +260,20 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
         </div>
 
         {shortfall > 0 && (
-          <DevPanel className="items-start">
+          <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
             <span className="flex flex-1 flex-col gap-0.5">
               <span className="text-xs font-medium text-foreground">
                 {formatINR(shortfall)} short
               </span>
               <span className="text-[11px] leading-snug text-muted-foreground">
-                No gateway is connected, so this credits the wallet directly —
-                the same top-up as the Wallet page. Money is held, not spent:
-                it comes back when the piece sells.
+                Top up your wallet to reserve this piece. Money is held, not
+                spent: it comes back when the piece sells.
               </span>
             </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleTopUp}
-              disabled={addFunds.isPending}
-            >
-              {addFunds.isPending ? "Adding…" : `Add ${formatINR(shortfall)}`}
+            <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/aggregator/wallet" />}>
+              Go to wallet
             </Button>
-          </DevPanel>
+          </div>
         )}
 
         <div className="flex items-center justify-end gap-2">

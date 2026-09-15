@@ -29,8 +29,6 @@ import type {
 // the route guard and the header keep working exactly as before — just
 // fed by the backend instead of a "sign in as" toggle.
 //
-// `simulateError` is kept on the signatures so the forms' DEV panels still
-// demo the error path; it short-circuits before any network call.
 
 export interface CurrentUser {
   uid: string;
@@ -102,9 +100,8 @@ async function establishSession(rememberMe = true): Promise<CurrentUser> {
 
 export const authService = {
   login: async (
-    input: LoginInput & { simulateError?: boolean },
+    input: LoginInput,
   ): Promise<AuthAck> => {
-    if (input.simulateError) throw new Error("Invalid email or password");
     try {
       await signInWithEmailAndPassword(
         firebaseAuth(),
@@ -167,9 +164,8 @@ export const authService = {
   },
 
   register: async (
-    input: RegisterInput & { simulateError?: boolean },
+    input: RegisterInput,
   ): Promise<AuthAck> => {
-    if (input.simulateError) throw new Error("That email is already registered");
     // companyName/contactPerson (aggregator) have no backend field yet —
     // the aggregator profile flow captures them later.
     await http.post<{ uid: string }>("/v1/auth/register", {
@@ -196,11 +192,8 @@ export const authService = {
   // the address belongs to an account (Email Enumeration Protection), and
   // neither does this — the resolved payload is the same either way.
   forgotPassword: async (
-    input: ForgotPasswordInput & { simulateError?: boolean },
+    input: ForgotPasswordInput,
   ): Promise<{ email: string }> => {
-    if (input.simulateError) {
-      throw new Error("Something went wrong. Please try again.");
-    }
     try {
       await sendPasswordResetEmail(firebaseAuth(), input.email);
     } catch (error) {
@@ -213,11 +206,8 @@ export const authService = {
 
   // `token` is Firebase's oobCode from the emailed link (?oobCode=…).
   resetPassword: async (
-    input: ResetPasswordInput & { token?: string; simulateError?: boolean },
+    input: ResetPasswordInput & { token?: string },
   ): Promise<AuthResult> => {
-    if (input.simulateError) {
-      throw new Error("This reset link has expired. Request a new one.");
-    }
     if (!input.token) {
       throw new Error("This reset link is missing its code. Request a new one.");
     }
@@ -231,11 +221,7 @@ export const authService = {
 
   verifyEmail: async (input: {
     token?: string;
-    simulateError?: boolean;
   }): Promise<AuthResult> => {
-    if (input.simulateError || input.token === "invalid") {
-      throw new Error("This verification link is invalid or has expired.");
-    }
     if (!input.token) {
       throw new Error("This verification link is missing its code.");
     }

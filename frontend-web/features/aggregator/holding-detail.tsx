@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { ArtworkPassportCard } from "@/features/verify/artwork-passport-card";
-import { DevPanel } from "@/features/auth/components/dev-panel";
 import { ExpiryCountdown } from "./expiry-countdown";
 import { CycleStepper } from "./cycle-stepper";
 import { RecordSaleDialog } from "./record-sale-dialog";
@@ -18,10 +17,9 @@ import { ReturnHoldingDialog } from "./return-holding-dialog";
 import { HOLDING_STATUS_CONFIG } from "./holding-status";
 import {
   useAggregatorHolding,
-  useDebugSkipAheadMutation,
 } from "@/hooks/useAggregatorCollection";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
-import { AGGREGATOR_CYCLE_MONTHS, AGGREGATOR_PLACEMENT_DAYS } from "@/lib/pricing";
+import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import { formatINR } from "@/lib/utils";
 
 function formatDate(iso: string): string {
@@ -40,7 +38,6 @@ function formatDate(iso: string): string {
 // same page.
 export function HoldingDetail({ holdingId }: { holdingId: string }) {
   const { data: holding, isPending, isError } = useAggregatorHolding(holdingId);
-  const skipAheadMutation = useDebugSkipAheadMutation();
   const [saleDialogOpen, setSaleDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   // Snapshotted once (react-hooks/purity forbids a bare Date.now() in render
@@ -93,20 +90,6 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
   // to see (types/artwork.ts's coa fields live permanently on the artwork).
   const showPassport = !isReturned;
 
-  function handleSkipAhead() {
-    if (!holding) return;
-    skipAheadMutation.mutate(
-      { holdingId: holding.id },
-      {
-        onSuccess: () =>
-          toast.success(`Skipped ${AGGREGATOR_PLACEMENT_DAYS} days ahead`, {
-            description:
-              "The display window now reads as fully elapsed — Return or Record sale to see what happens next.",
-          }),
-        onError: (error) => toast.error(error.message),
-      },
-    );
-  }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -202,22 +185,6 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
               Reserved {formatDate(holding.assignedAt)} &middot; expires{" "}
               {formatDate(holding.expiresAt)}
             </p>
-            <DevPanel>
-              <span className="text-xs text-muted-foreground">
-                No real clock to wait on — skip the {AGGREGATOR_PLACEMENT_DAYS}
-                -day window to test what happens after it elapses.
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={skipAheadMutation.isPending}
-                onClick={handleSkipAhead}
-              >
-                {skipAheadMutation.isPending
-                  ? "Skipping…"
-                  : `Skip ${AGGREGATOR_PLACEMENT_DAYS} days`}
-              </Button>
-            </DevPanel>
           </div>
         )}
 

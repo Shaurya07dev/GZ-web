@@ -16,8 +16,6 @@ import { AuthCrest } from "./auth-crest";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
-import { AppleAuthButton } from "./apple-auth-button";
-import { DevPanel } from "./dev-panel";
 import { useLoginMutation } from "@/hooks/useAuth";
 import { ROLE_SECTION_HOME } from "@/lib/session";
 import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth-schemas";
@@ -53,7 +51,6 @@ const itemVariants: Variants = {
 export function LoginForm() {
   const router = useRouter();
   const loginMutation = useLoginMutation();
-  const [simulateError, setSimulateError] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues, undefined, LoginInput>({
@@ -66,7 +63,7 @@ export function LoginForm() {
   function onSubmit(values: LoginInput) {
     setFormError(null);
     loginMutation.mutate(
-      { ...values, simulateError },
+      values,
       {
         onSuccess: ({ role }) => {
           // authService already wrote the role cookie proxy.ts guards on
@@ -171,16 +168,6 @@ export function LoginForm() {
           Sign in
         </Button>
 
-        <DevPanel>
-          <label htmlFor="simulateError" className="text-xs text-muted-foreground">
-            Simulate invalid credentials
-          </label>
-          <Checkbox
-            id="simulateError"
-            checked={simulateError}
-            onCheckedChange={(checked) => setSimulateError(checked === true)}
-          />
-        </DevPanel>
       </motion.form>
 
       <motion.div variants={itemVariants} className="flex flex-col gap-5">
@@ -191,11 +178,10 @@ export function LoginForm() {
           </span>
           <div className="grow border-t border-border" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <GoogleAuthButton
             onSignedIn={(role) => router.push(ROLE_SECTION_HOME[role])}
           />
-          <AppleAuthButton />
         </div>
       </motion.div>
 

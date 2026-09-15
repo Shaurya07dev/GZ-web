@@ -19,9 +19,7 @@ import {
   useArtistWalletTransactions,
   usePendingSettlements,
   useRequestWithdrawalMutation,
-  useSimulateDeliveryMutation,
 } from "@/hooks/useArtistWallet";
-import { DevPanel } from "@/features/auth/components/dev-panel";
 import { ARTIST_PAYOUT_DAYS_AFTER_DELIVERY } from "@/lib/pricing";
 import type { Settlement } from "@/types/admin";
 import {
@@ -124,7 +122,6 @@ function formatDay(iso: string): string {
 // "where is my money" before the artist has to ask.
 function PendingSettlementsCard() {
   const { data: settlements } = usePendingSettlements();
-  const simulateDelivery = useSimulateDeliveryMutation();
 
   if (!settlements || settlements.length === 0) return null;
 
@@ -161,19 +158,6 @@ function PendingSettlementsCard() {
         ))}
       </ul>
 
-      <DevPanel className="mt-1">
-        <span className="text-xs text-muted-foreground">
-          No courier is connected, so nothing here ever gets marked delivered.
-        </span>
-        <button
-          type="button"
-          disabled={simulateDelivery.isPending}
-          onClick={() => simulateDelivery.mutate(settlements[0]!.id)}
-          className="shrink-0 rounded border border-gold/40 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-gold-bright transition-colors hover:bg-gold/10 disabled:opacity-50"
-        >
-          Simulate delivery
-        </button>
-      </DevPanel>
     </div>
   );
 }

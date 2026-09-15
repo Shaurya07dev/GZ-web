@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
 import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
-import { DevPanel } from "./dev-panel";
 import { useForgotPasswordMutation } from "@/hooks/useAuth";
 import {
   forgotPasswordSchema,
@@ -27,11 +26,8 @@ export function ForgotPasswordForm() {
   });
 
   function onSubmit(values: ForgotPasswordInput) {
-    // Deliberately no simulateError path wired up here (see
-    // services/authService.ts's forgotPassword comment): this screen never
-    // confirms or denies whether an account exists for the address, so the
-    // only meaningful UI states are "form" and "sent" — real security
-    // practice, not a mock-phase shortcut (spec §3).
+    // This screen never confirms or denies whether an account exists for
+    // the address, so the only UI states are "form" and "sent".
     forgotPasswordMutation.mutate(values);
   }
 
@@ -68,17 +64,6 @@ export function ForgotPasswordForm() {
             <ArrowLeft className="size-3.5" />
             Back to sign in
           </Link>
-          <DevPanel className="mt-1">
-            <span className="text-xs text-muted-foreground">
-              Skip the real email
-            </span>
-            <Link
-              href="/reset-password?token=mock"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gold/50 px-3 py-1.5 text-xs font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
-            >
-              Dev: skip to reset form
-            </Link>
-          </DevPanel>
         </motion.div>
       ) : (
         <motion.div

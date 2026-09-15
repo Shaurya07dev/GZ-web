@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DevPanel } from "@/features/auth/components/dev-panel";
 import {
   useAddAggregatorFundsMutation,
   useAggregatorWallet,
@@ -175,11 +174,6 @@ function AddFundsCard() {
         >
           {addFunds.isPending ? "Adding…" : "Add to wallet"}
         </button>
-        <DevPanel className="w-full sm:w-auto">
-          <span className="text-xs text-muted-foreground">
-            No gateway is connected — this credits the wallet directly.
-          </span>
-        </DevPanel>
       </div>
     </form>
   );
