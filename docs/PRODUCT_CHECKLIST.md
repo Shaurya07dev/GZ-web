@@ -1,6 +1,6 @@
 # GalleryZone — from deployed prototype to product
 
-Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-15 (commit `c3a7fd2`). Rule for "done": **nothing on a
+Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-16 (commit `38c09f9`). Testing walkthrough: `docs/TESTING_GUIDE.md`. Rule for "done": **nothing on a
 web page is hardcoded** — every number, name, list and status comes from the
 API (or from a CMS/config the API serves). Tick items only when verified live.
 
@@ -15,8 +15,8 @@ files directly (`lib/mock-data/*`, `features/**/…-data.ts`, `mock-collections`
 ---
 
 ## 0. Unblock (days)
-- [ ] Promote a real admin (`users/xYVwIZKMHrTPF3aiAeYjRRpCU9d2` → `role: admin`, `status: active`, `roleGrants: ["platform_admin"]`) + a second platform admin (rate-config approval needs two).
-- [ ] Seed the first approved rate-config version (propose → approve).
+- [x] Admin #1 promoted. **Admin #2 created (`users/Bh5GphRZkWeXHQziqWNgFm93bZA2`) — flip role/status/roleGrants in Firestore.**
+- [ ] Seed the first approved rate-config version — now a button on `/admin/settings` (propose with admin #1, approve with admin #2).
 - [ ] Add `gz-web-livid.vercel.app` to Firebase Auth authorized domains.
 - [ ] Run the gated verification: approve artwork → certificate issued → checkout → sale-triggered ownership transfer → CoA request/dispatch.
 - [x] Artist MOU v2026.2 generated from `docs/legal/artist-mou-2026.2.txt` (`frontend-web/scripts/gen-mou.mjs`).
@@ -34,7 +34,7 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [ ] Components: aggregator-shell, activity-feed, analytics-view, expiry-countdown, gallery-spaces-board, sales-table, shipping-table, wallet-overview, aggregator-mobile-bottom-nav.
 
 **Admin portal** (`features/admin/*`, `admin-data.ts`)
-- [ ] `adminService` — every route exists ✅ (KPIs, users, artworks, moderation queues, withdrawals, settlements, orders, categories, external fees, deactivation, audit log, reports, rate-config).
+- [x] `adminService` core on API: KPIs, artworks (list/detail/approve/reject/delist/rarity/insurance), users (list/detail/status), KYC + GST queues, withdrawals, orders/addresses, audit log, categories, pricing rules. Still mock: activity feed, settlements, external fees, deactivation queue, portfolios, settings form, reports, analytics charts.
 - [ ] Charts/analytics currently fixture-driven: revenue-area, growth-line, category-bar, funnel, tier-donut, volume-bar, top-performers, range-selector, analytics-view (**backend: needs an analytics/aggregates endpoint**).
 - [ ] order-admin-table, artwork-review-panel, withdrawal-queue-table, `app/admin/page.tsx`.
 
@@ -52,10 +52,10 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 
 ## 2. Backend features that don't exist yet (3–4 weeks)
 - [x] **Images**: Railway bucket `artwork-images` (sin), presigned PUT → confirm → `artworks/{id}/images`, served via `GET /v1/images/...` immutable. Still to do: admin image moderation, derivatives (next/image covers resizing).
-- [ ] **Payments**: Razorpay order + checkout + signed webhook (`PAYMENTS_MODE=razorpay`), refunds/cancellation, retry on failure.
+- [x] **Payments**: Razorpay order + Checkout.js + signed verify + signed webhook, `PAYMENTS_MODE=razorpay` live in test mode. Still open: refunds/cancellation flow, live-mode keys after KYC.
 - [ ] **Payouts**: RazorpayX (or manual bank) settlement to artists/aggregators; today the ledger records, nobody is paid.
 - [ ] **Profiles**: artist/aggregator/customer profile write routes; KYC/PAN/GST document upload + review.
-- [ ] **Email/notifications**: verification, password reset templates, transfer invites, order/dispatch/payout updates, admin alerts. Notification outbox + a provider (Resend/SES).
+- [x] **Email** via Resend: welcome+verify, password reset, artwork submitted/approved/returned, order paid (buyer+artist), order status, transfer invite, CoA request, withdrawal requested/decided. **Domain galleryzone.art registered — DNS records pending (until then only the owner's inbox receives mail).** In-app notification feed still open.
 - [ ] **Invoices & tax**: GST invoice PDF per order, TDS §194-O flags into reports, aggregator remittance statements.
 - [ ] **Scheduled jobs** (no Cloud Functions on Spark): consignment window sweep, reserved-artwork TTL release, settlement initiation, subscription renewal — as a Railway cron service.
 - [ ] **Search & catalogue**: server-side filters/sort/pagination, categories/mediums as data, artist directory, full-text search.
@@ -65,7 +65,7 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 
 ## 3. Production hardening (1–2 weeks)
 - [x] Rate limiting (20 rps burst / 300 rpm per IP, all routes). Bot protection (Cloudflare/Turnstile) still open.
-- [ ] Sentry (API + web), structured logs, uptime checks, Railway alerts.
+- [x] Sentry on API (`galleryzone-api`) and web (`javascript-nextjs`). Uptime checks / Railway alerts still open.
 - [ ] Firestore emulator test suite for `packages/db` (deleted in the pivot) + CI for the frontend (lint, build, smoke).
 - [ ] Security review: rules re-audit, admin-only routes, secrets rotation (the Admin SDK key has lived in the repo dir), dependency audit (15 vulns reported at build).
 - [ ] Backups/export for Firestore; data retention policy.

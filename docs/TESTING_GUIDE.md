@@ -19,8 +19,8 @@ Change any password with **Forgot password** on `/login` — the email is real (
 
 ## The one-time bootstrap (admin, ~5 minutes)
 
-1. Sign in as Admin #1 → `/admin/rules` (rate config) → **Propose** a version (defaults are fine).
-2. Sign in as Admin #2 → **Approve** it. Two different admins are required by design. Checkout is impossible until this exists.
+1. Sign in as Admin #1 → `/admin/settings` → **Pricing rules → Propose default rules**.
+2. Sign in as Admin #2 → `/admin/settings` → **Approve** the pending version. Two different platform admins are required by design; checkout is impossible until this exists.
 3. `/admin/categories` → create the categories artists may pick (Painting, Sculpture, Photography, …).
 
 ## Flow 1 — Artist lists a piece
@@ -29,7 +29,7 @@ Change any password with **Forgot password** on `/login` — the email is real (
 2. Profile → sign the **MOU** (v2026.2). Signature name must match the account name.
 3. Add artwork → fill details, upload 1–8 photos (JPEG/PNG/WebP), set your price → **Submit for review**.
    - You receive "in review"; every admin receives "Review: …".
-4. Admin → `/admin/artworks` (queue) → open → **Approve** (or reject with a reason).
+4. Admin → `/admin/moderation/artworks` → open → **Approve** (or reject with a reason).
    - Approval issues the certificate number `GZ-COA-2026-nnnn` and emails the artist.
 5. The piece appears on `/marketplace` within 60 s (read cache) with real facets/filters; `/artists` now lists the artist; `/about` counts update.
 
@@ -51,7 +51,7 @@ Change any password with **Forgot password** on `/login` — the email is real (
 ## Flow 4 — Money
 
 - Artist → **Wallet**: balance = settled sales; **Withdraw** (min ₹1,000) → artist + admins emailed.
-- Admin → `/admin/withdrawals` → approve/reject → artist emailed. (Actual bank transfer is still manual — see "left".)
+- Admin → `/admin/moderation/withdrawals` → approve/reject → artist emailed. (Actual bank transfer is still manual — see "left".)
 
 ## What to look at if something fails
 
