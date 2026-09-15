@@ -16,6 +16,8 @@ export interface Order {
   id: string;
   artworkId: string;
   addressId: string;
+  /** Buyer's uid — present on admin reads. */
+  customerId?: string;
   amount: number; // artwork's customerPrice at time of purchase
   gstAmount: number;
   deliveryCharge: number;

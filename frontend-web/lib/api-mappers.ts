@@ -203,6 +203,7 @@ export function toOrder(dto: OrderDto): Order {
     id: dto.id,
     artworkId: dto.artworkId,
     addressId: dto.addressId,
+    customerId: dto.customerId,
     amount: paiseToRupees(dto.displayPricePaise),
     gstAmount: paiseToRupees(dto.gstPaise),
     deliveryCharge: paiseToRupees(dto.deliveryChargePaise),

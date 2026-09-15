@@ -40,6 +40,7 @@ import {
 } from "@/lib/mock-data/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { adminApi } from "@/services/adminApi";
+import { artistService } from "@/services/artworkService";
 import { http } from "@/lib/api";
 import { paiseToRupees } from "@/lib/api-mappers";
 import { ADMIN } from "@/features/admin/admin-data";
@@ -149,6 +150,23 @@ interface DeactivationDto {
 function toDeactivation(d: DeactivationDto): DeactivationRequest {
   return { ...d, userRole: "artist" };
 }
+
+interface SettlementDto {
+  id: string;
+  orderId: string | null;
+  holdingId: string | null;
+  artistId: string;
+  artistName: string;
+  artworkTitle: string;
+  artistAmountPaise: number;
+  aggregatorCommissionPaise: number | null;
+  platformRevenuePaise: number;
+  status: Settlement["status"];
+  releaseAfter: string;
+  createdAt: string;
+  processedAt: string | null;
+}
+let sessionReports: GeneratedReport[] = [];
 
 export const adminService = {
   // --- overview + analytics ------------------------------------------------
@@ -383,23 +401,11 @@ export const adminService = {
 
   setUserStatus: (id: string, status: UserStatus): Promise<{ id: string; status: UserStatus }> => adminApi.setUserStatus(id, status),
 
-  getArtistPortfolio: (
-    userId: string,
-  ): Promise<
-    | {
-        user: AdminUser;
-        profile: ArtistProfile | undefined;
-        artworks: Artwork[];
-      }
-    | undefined
-  > => {
-    const user = adminUsersCol
-      .get()
-      .find((u) => u.id === userId && u.role === "artist");
-    if (!user) return mockDelay(undefined);
-    const profile = mockArtists.find((a) => a.name === user.name);
-    const artworks = profile ? getArtworksByArtist(profile.id) : [];
-    return mockDelay({ user, profile, artworks });
+  getArtistPortfolio: async (userId: string): Promise<{ user: AdminUser; profile: ArtistProfile | undefined; artworks: Artwork[] } | undefined> => {
+    const user = await adminApi.getUser(userId);
+    if (!user || user.role !== "artist") return undefined;
+    const [profile, all] = await Promise.all([artistService.get(userId), adminApi.listAllArtworks()]);
+    return { user, profile, artworks: all.filter((a) => a.artistId === userId) };
   },
 
   // Holdings aren't partitioned per aggregator in this mock (same shortcut
@@ -429,20 +435,14 @@ export const adminService = {
 
   // Orders aren't partitioned per customer in this mock either (mockOrders is
   // a single-customer sample) — same shortcut as the aggregator portfolio.
-  getCustomerPortfolio: (
-    userId: string,
-  ): Promise<
-    { user: AdminUser; orders: Order[]; addresses: Address[] } | undefined
-  > => {
-    const user = adminUsersCol
-      .get()
-      .find((u) => u.id === userId && u.role === "customer");
-    if (!user) return mockDelay(undefined);
-    return mockDelay({
-      user,
-      orders: ordersCol.get(),
-      addresses: addressesCol.get(),
-    });
+  getCustomerPortfolio: async (userId: string): Promise<{ user: AdminUser; orders: Order[]; addresses: Address[] } | undefined> => {
+    const user = await adminApi.getUser(userId);
+    if (!user || user.role !== "customer") return undefined;
+    const orders = (await adminApi.listOrders()).filter((o) => o.customerId === userId);
+    const addresses = (
+      await Promise.all([...new Set(orders.map((o) => o.addressId))].map((id) => adminApi.getAddress(id)))
+    ).filter((a): a is Address => a !== undefined);
+    return { user, orders, addresses };
   },
 
   // --- commerce ------------------------------------------------------------
@@ -452,60 +452,76 @@ export const adminService = {
 
   getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),
 
-  getSettlementByOrder: (orderId: string): Promise<Settlement | undefined> =>
-    mockDelay(mockSettlements.find((s) => s.orderId === orderId)),
+  getSettlementByOrder: async (orderId: string): Promise<Settlement | undefined> =>
+    (await adminService.listSettlements()).find((s) => s.orderId === orderId),
 
-  listSettlements: (): Promise<Settlement[]> => mockDelay(mockSettlements),
+  listSettlements: async (): Promise<Settlement[]> => {
+    const rows = await http.get<SettlementDto[] | { settlements: SettlementDto[] }>("/v1/admin/settlements");
+    return (Array.isArray(rows) ? rows : rows.settlements).map((s) => ({
+      id: s.id,
+      orderId: s.orderId ?? s.holdingId ?? "",
+      artworkTitle: s.artworkTitle,
+      artistName: s.artistName,
+      artistAmount: paiseToRupees(s.artistAmountPaise),
+      aggregatorCommission: paiseToRupees(s.aggregatorCommissionPaise ?? 0),
+      platformRevenue: paiseToRupees(s.platformRevenuePaise),
+      status: s.status,
+      createdAt: s.createdAt,
+      processedAt: s.processedAt,
+      releaseAfter: s.releaseAfter,
+    }));
+  },
 
-  retrySettlement: (
-    id: string,
-  ): Promise<{ id: string; status: "processed" }> => {
-    const settlement = mockSettlements.find((s) => s.id === id);
-    if (!settlement) return mockError(`Settlement "${id}" not found`);
-    if (settlement.status !== "failed")
-      return mockError("Only failed settlements can be retried");
-    return mockDelay({ id, status: "processed" as const });
+  retrySettlement: async (id: string): Promise<{ id: string; status: "processed" }> => {
+    await http.post(`/v1/admin/settlements/${encodeURIComponent(id)}/retry`);
+    return { id, status: "processed" };
   },
 
   // --- system --------------------------------------------------------------
   listAuditLog: (): Promise<AuditLogEntry[]> => adminApi.listAuditLog(),
 
-  getSettings: (): Promise<PlatformSettings> =>
-    mockDelay(defaultPlatformSettings),
+  // Platform settings ARE the active rate config; edit them through the
+  // pricing-rules panel (propose + approve), never here.
+  getSettings: async (): Promise<PlatformSettings> => {
+    const { rates } = await http.get<{ rates: Record<string, number> }>("/v1/admin/rate-config");
+    return {
+      markupPercent: Math.round((rates.platformMarkup ?? 0) * 100),
+      gstPercent: Math.round((rates.gstRate ?? 0) * 100),
+      minWithdrawalAmount: paiseToRupees(rates.minWithdrawalPaise ?? 0),
+      insuranceThreshold: defaultPlatformSettings.insuranceThreshold,
+      aggregatorCommissionPercent: Math.round((rates.aggregatorCommissionRate ?? 0) * 100),
+    };
+  },
 
-  updateSettings: (
-    patch: Partial<PlatformSettings>,
-  ): Promise<PlatformSettings> =>
-    mockDelay({ ...defaultPlatformSettings, ...patch }),
+  updateSettings: async (_patch: Partial<PlatformSettings>): Promise<PlatformSettings> => {
+    throw new Error("Pricing rules change through a proposed and approved version — use the Pricing rules panel above.");
+  },
 
-  listReports: (): Promise<GeneratedReport[]> => mockDelay(mockReports),
+  // Generated reports aren't persisted on the API yet; each generation
+  // returns live totals and is kept for this browser session only.
+  listReports: async (): Promise<GeneratedReport[]> => sessionReports,
 
-  generateReport: (input: GenerateReportInput): Promise<GeneratedReport> => {
+  generateReport: async (input: GenerateReportInput): Promise<GeneratedReport> => {
     const from = new Date(input.from);
     const to = new Date(input.to);
-    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-      return mockError("Enter a valid date range");
-    }
-    if (to.getTime() < from.getTime())
-      return mockError("The end date must fall after the start date");
-
-    // Row count is a plausible stand-in derived from the range length — there
-    // is no ledger to count, and pretending otherwise would be a fake number
-    // dressed up as a real one.
-    const spanDays = Math.max(
-      1,
-      Math.round((to.getTime() - from.getTime()) / DAY_MS) + 1,
-    );
-    return mockDelay({
-      id: `rpt-${crypto.randomUUID().slice(0, 8)}`,
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) throw new Error("Enter a valid date range");
+    if (to.getTime() < from.getTime()) throw new Error("The end date is before the start date");
+    const apiType = input.type === "artist_payouts" ? "settlements" : input.type === "aggregator_commission" ? "settlements" : input.type;
+    const row = await http.post<{ type: string; totalOrders: number; totalGstPaise: number; totalSettledPaise: number }>("/v1/admin/reports", { type: apiType });
+    const label = { sales: "Marketplace sales", settlements: "Settlement register", artist_payouts: "Artist payouts", aggregator_commission: "Aggregator commission", gst: "GST summary" }[input.type];
+    const report: GeneratedReport = {
+      id: `rpt-${Date.now().toString(36)}`,
       type: input.type,
-      label: `${REPORT_TYPE_LABELS[input.type]} (${formatReportRange(input.from, input.to)})`,
+      label: `${label} · ${row.totalOrders} orders · GST ₹${paiseToRupees(row.totalGstPaise).toLocaleString("en-IN")} · settled ₹${paiseToRupees(row.totalSettledPaise).toLocaleString("en-IN")}`,
       from: input.from,
       to: input.to,
       generatedAt: new Date().toISOString(),
-      generatedBy: ADMIN.name,
-      rowCount: Math.round(spanDays * 1.8),
-      status: "ready" as const,
-    });
+      generatedBy: "you",
+      rowCount: row.totalOrders,
+      status: "ready",
+    };
+    sessionReports = [report, ...sessionReports];
+    return report;
   },
+
 };
