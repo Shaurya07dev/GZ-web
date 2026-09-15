@@ -263,8 +263,25 @@ export const artistDashboardService = {
     ];
   },
 
-  getActivity: (): Promise<ActivityEntry[]> =>
-    mockDelay(artistActivityCol.get()),
+  // Derived from real events: artwork status history and wallet
+  // transactions, newest first. No stored feed — nothing to drift.
+  getActivity: async (): Promise<ActivityEntry[]> => {
+    const [artworks, transactions] = await Promise.all([artistArtworkApi.list(), artistWalletApi.listTransactions()]);
+    const entries: ActivityEntry[] = [];
+    for (const a of artworks) {
+      for (const e of a.statusHistory) {
+        if (e.status === "pending_approval") entries.push({ id: `${a.id}:${e.changedAt}:sub`, kind: "artwork_submitted", title: "Submitted for review", detail: `"${a.title}" is with the curation team`, time: e.changedAt });
+        else if (e.status === "marketplace") entries.push({ id: `${a.id}:${e.changedAt}:live`, kind: "artwork_approved", title: "Artwork approved", detail: `"${a.title}" is live on the marketplace`, time: e.changedAt });
+        else if (e.status === "returned") entries.push({ id: `${a.id}:${e.changedAt}:ret`, kind: "artwork_submitted", title: "Artwork returned", detail: `"${a.title}" needs changes before it can be listed`, time: e.changedAt });
+        else if (e.status === "sold") entries.push({ id: `${a.id}:${e.changedAt}:sold`, kind: "settlement", title: "Artwork sold", detail: `"${a.title}" has a buyer`, time: e.changedAt });
+      }
+    }
+    for (const t of transactions) {
+      if (t.type === "withdrawal") entries.push({ id: `wt:${t.id}`, kind: "withdrawal", title: t.status === "pending" ? "Withdrawal requested" : "Withdrawal processed", detail: `₹${Math.abs(t.amount).toLocaleString("en-IN")} · ${t.label}`, time: t.date });
+      else if (t.type === "settlement") entries.push({ id: `wt:${t.id}`, kind: "settlement", title: "Settlement credited", detail: `₹${t.amount.toLocaleString("en-IN")} · ${t.label}`, time: t.date });
+    }
+    return entries.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 30);
+  },
 
   // Artwork CRUD is real (services/artistArtworkApi.ts): the API, with the
   // image pipeline. The rest of this file is still the mock and is being

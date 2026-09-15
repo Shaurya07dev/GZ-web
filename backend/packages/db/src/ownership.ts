@@ -219,3 +219,37 @@ export async function endDisplay(db: Firestore, { transferId, byUserId }: { tran
   const saved = await ref.get();
   return { id: transferId, artworkId: found.artworkId, ...(saved.data() as OwnershipEventDoc) };
 }
+
+/** Everything this user currently owns: accepted ownership events addressed to them, minus pieces they have since passed on. */
+export interface CollectionEntry {
+  artworkId: string;
+  acquiredAt: Date;
+  orderId: string | null;
+  fromName: string;
+  source: "marketplace_order" | "transfer";
+}
+
+export async function listCollection(db: Firestore, userId: string): Promise<CollectionEntry[]> {
+  const snap = await db.collectionGroup("ownershipEvents").where("toUserId", "==", userId).where("status", "==", "accepted").get();
+  const entries: CollectionEntry[] = [];
+  for (const d of snap.docs) {
+    const e = d.data() as OwnershipEventDoc;
+    if (e.kind !== "ownership") continue;
+    const artworkId = d.ref.parent.parent?.id;
+    if (!artworkId) continue;
+    // Still the owner only if no later accepted ownership event moved it on.
+    const owner = await getCurrentOwner(db, artworkId).catch(() => null);
+    if (owner?.userId !== userId) continue;
+    entries.push({
+      artworkId,
+      acquiredAt: e.acceptedAt?.toDate() ?? e.initiatedAt?.toDate() ?? new Date(0),
+      orderId: e.orderId,
+      fromName: e.fromName,
+      source: e.orderId ? "marketplace_order" : "transfer",
+    });
+  }
+  const seen = new Set<string>();
+  return entries
+    .sort((a, b) => b.acquiredAt.getTime() - a.acquiredAt.getTime())
+    .filter((e) => (seen.has(e.artworkId) ? false : (seen.add(e.artworkId), true)));
+}

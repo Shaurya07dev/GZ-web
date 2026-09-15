@@ -128,8 +128,21 @@ export const adminService = {
   // every KPI tile agrees with the table/queue it links to.
   getKpis: (): Promise<AdminKpis> => adminApi.getKpis(),
 
-  getActivity: (): Promise<AdminActivityEvent[]> =>
-    mockDelay(mockAdminActivity),
+  // Derived from the audit log and recent orders — no stored feed.
+  getActivity: async (): Promise<AdminActivityEvent[]> => {
+    const [audit, orders] = await Promise.all([adminApi.listAuditLog(), adminApi.listOrders()]);
+    const events: AdminActivityEvent[] = audit.map((a) => ({
+      id: `audit:${a.id}`,
+      label: a.action.replace(/[._]/g, " "),
+      detail: a.entityLabel,
+      at: a.createdAt,
+      kind: a.entityType === "artwork" ? "artwork" : a.entityType === "withdrawal" ? "withdrawal" : a.entityType === "settlement" ? "settlement" : "user",
+    }));
+    for (const o of orders.slice(0, 20)) {
+      events.push({ id: `order:${o.id}`, label: o.status === "pending" ? "Order started" : `Order ${o.status}`, detail: o.artwork?.title ?? o.artworkId, at: o.createdAt, kind: "order" });
+    }
+    return events.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40);
+  },
 
   // --- moderation ----------------------------------------------------------
   listPendingArtworks: (): Promise<Artwork[]> => adminApi.listPendingArtworks(),

@@ -35,6 +35,7 @@ import { Mailer } from "./mail/mailer.ts";
 import { Emails } from "./mail/emails.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
+import { CollectionController } from "./collection.controller.ts";
 import { Razorpay } from "./payments/razorpay.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
@@ -87,6 +88,7 @@ import { DbModule } from "./db.module.ts";
     ImagesController,
     PaymentsController,
     ProfileController,
+    CollectionController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
