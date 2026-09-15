@@ -1,10 +1,6 @@
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
-import { mockDelay, mockError } from "@/lib/mock-utils";
-import {
-  customerProfileCol,
-  customerWalletCol,
-  customerWalletTransactionsCol,
-} from "@/lib/mock-collections";
+import { http } from "@/lib/api";
+import { paiseToRupees } from "@/lib/api-mappers";
 
 // This balance is refund credit and resale proceeds. It is applied
 // automatically at the collector's next checkout — but it is their money, so
@@ -14,48 +10,22 @@ import {
 export const MIN_CUSTOMER_WITHDRAWAL = 500;
 
 export const customerWalletService = {
-  getWallet: (): Promise<{
+  getWallet: async (): Promise<{
     balance: number;
     pendingBalance: number;
     lockedBalance: number;
-  }> => mockDelay(customerWalletCol.get()),
+  }> => {
+    const w = await http.get<{ balancePaise: number }>("/v1/customer/wallet");
+    return { balance: paiseToRupees(w.balancePaise), pendingBalance: 0, lockedBalance: 0 };
+  },
 
-  listTransactions: (): Promise<WalletTransaction[]> =>
-    mockDelay(customerWalletTransactionsCol.get()),
+  // The customer wallet has no transaction feed route yet — an empty list,
+  // not a fixture one.
+  listTransactions: async (): Promise<WalletTransaction[]> => [],
 
-  // Refuses in the service, not just by hiding the button, so a stale tab
-  // cannot ask for money with no account to send it to.
-  requestWithdrawal: (amount: number): Promise<WalletTransaction> => {
-    const profile = customerProfileCol.get();
-    if (!profile.bankAccountNumber || !profile.bankIfsc) {
-      return mockError(
-        "Add your bank details below before withdrawing — we need somewhere to send it",
-      );
-    }
-
-    const wallet = customerWalletCol.get();
-    if (amount < MIN_CUSTOMER_WITHDRAWAL) {
-      return mockError(
-        `Minimum withdrawal is ₹${MIN_CUSTOMER_WITHDRAWAL.toLocaleString("en-IN")}`,
-      );
-    }
-    if (amount > wallet.balance) return mockError("Exceeds your balance");
-
-    customerWalletCol.set({ ...wallet, balance: wallet.balance - amount });
-
-    const transaction: WalletTransaction = {
-      id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-      type: "withdrawal",
-      label: `Withdrawal to bank ${profile.bankAccountNumber.slice(-4)}`,
-      amount: -amount,
-      date: new Date().toISOString().slice(0, 10),
-      status: "pending",
-    };
-    customerWalletTransactionsCol.set([
-      transaction,
-      ...customerWalletTransactionsCol.get(),
-    ]);
-
-    return mockDelay(transaction);
+  // Customer wallet withdrawals aren't a backend operation yet: the balance
+  // is applied automatically at checkout. Refused loudly, not faked.
+  requestWithdrawal: async (_amount: number): Promise<WalletTransaction> => {
+    throw new Error("Wallet credit is applied at your next checkout. Bank withdrawals for collectors are coming soon.");
   },
 };
