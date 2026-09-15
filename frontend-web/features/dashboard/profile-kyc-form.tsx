@@ -23,6 +23,7 @@ import {
   PlayCircle,
   TriangleAlert,
   Palette,
+  Landmark,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -169,6 +170,26 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   }
 
   const [docsSubmitted, setDocsSubmitted] = useState(false);
+
+  // Payout account. The number is write-only: the API stores it where no
+  // read route reaches and returns only the last four digits.
+  const [bankForm, setBankForm] = useState({ bankAccountNumber: "", ifsc: profile.ifsc ?? "" });
+  const [bankSaved, setBankSaved] = useState(false);
+  const bankNumberInvalid = bankForm.bankAccountNumber !== "" && !/^\d{9,18}$/.test(bankForm.bankAccountNumber);
+  const ifscInvalid = bankForm.ifsc !== "" && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankForm.ifsc.toUpperCase());
+  function handleBankSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (bankNumberInvalid || ifscInvalid) return;
+    saveProfileMutation.mutate(
+      { ...(bankForm.bankAccountNumber ? { bankAccountNumber: bankForm.bankAccountNumber } : {}), ifsc: bankForm.ifsc.toUpperCase() },
+      {
+        onSuccess: () => {
+          setBankSaved(true);
+          setBankForm((prev) => ({ ...prev, bankAccountNumber: "" }));
+        },
+      },
+    );
+  }
 
   // Signing reorders this page (unsigned artists get the agreement first)
   // and is what gates listing work for aggregator display.
@@ -698,6 +719,65 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               animate={{ opacity: 1 }}
               className="flex items-center gap-1.5 text-sm text-gold-bright"
             >
+              <Check className="size-3.5" />
+              Saved
+            </motion.span>
+          )}
+        </div>
+      </form>
+
+      <form
+        onSubmit={handleBankSubmit}
+        className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6 lg:order-last lg:col-span-2"
+      >
+        <div className="flex items-start gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+            <Landmark className="size-4 text-gold-bright" strokeWidth={1.75} />
+          </span>
+          <div>
+            <h2 className="font-display text-base font-semibold text-foreground">Payout account</h2>
+            <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+              Where your settlements are paid. {profile.bankAccountMasked ? `On file: ${profile.bankAccountMasked}${profile.ifsc ? ` · ${profile.ifsc}` : ""}.` : "Nothing on file yet — withdrawals need this."}
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="bankAccountNumber">Account number</Label>
+            <Input
+              id="bankAccountNumber"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder={profile.bankAccountMasked ? "Enter a new number to replace it" : "9–18 digits"}
+              value={bankForm.bankAccountNumber}
+              onChange={(e) => { setBankForm((p) => ({ ...p, bankAccountNumber: e.target.value.replace(/\s/g, "") })); setBankSaved(false); }}
+              className="h-10"
+            />
+            {bankNumberInvalid && <p className="text-xs text-destructive">Account numbers are 9–18 digits.</p>}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="ifsc">IFSC</Label>
+            <Input
+              id="ifsc"
+              autoComplete="off"
+              placeholder="HDFC0001234"
+              value={bankForm.ifsc}
+              onChange={(e) => { setBankForm((p) => ({ ...p, ifsc: e.target.value.toUpperCase() })); setBankSaved(false); }}
+              className="h-10 uppercase"
+            />
+            {ifscInvalid && <p className="text-xs text-destructive">IFSC looks like HDFC0001234.</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={saveProfileMutation.isPending || bankNumberInvalid || ifscInvalid || (!bankForm.bankAccountNumber && !bankForm.ifsc)}
+            className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
+          >
+            Save payout account
+          </button>
+          {bankSaved && (
+            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1.5 text-sm text-gold-bright">
               <Check className="size-3.5" />
               Saved
             </motion.span>

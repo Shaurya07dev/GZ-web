@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useArtistAccount";
 import { passwordRule } from "@/features/auth/schemas/auth-schemas";
 import { SUBSCRIPTION } from "./dashboard-data";
+import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
 
 const NOTIFICATION_TOGGLES = [
   {
@@ -200,10 +201,13 @@ function DangerZone() {
   );
 }
 
-// Static plan card — every artist is on the founding-member plan (free for
-// the first year) and there is no billing system to read a real plan from
-// yet. It exists so the artist can actually see the benefit they are on.
+// Every artist is on the founding-member plan (free for the first year) —
+// a platform policy, not per-user data. The one per-user fact, the renewal
+// date, is a year after the account was created.
 function SubscriptionCard() {
+  const { data: profile } = useArtistAccountProfile();
+  const startedOn = profile?.joinedAt ?? new Date().toISOString();
+  const renewsOn = new Date(new Date(startedOn).setFullYear(new Date(startedOn).getFullYear() + 1)).toISOString();
   return (
     <div className="rounded-lg border border-gold/30 bg-gold/5 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -238,7 +242,7 @@ function SubscriptionCard() {
       </ul>
 
       <p className="mt-4 border-t border-gold/20 pt-3 text-xs text-muted-foreground">
-        Renews {formatPlanDate(SUBSCRIPTION.renewsOn)} at{" "}
+        Renews {formatPlanDate(renewsOn)} at{" "}
         {SUBSCRIPTION.renewalPriceLabel}. Nothing to pay until then, and we
         will tell you well before anything changes.
       </p>

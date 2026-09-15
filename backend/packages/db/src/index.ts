@@ -16,6 +16,7 @@ export * from "./public-artworks.ts";
 export * from "./listing-projection.ts";
 export * from "./artwork-images.ts";
 export * from "./admin-reads.ts";
+export * from "./profiles.ts";
 export * from "./coa.ts";
 export * from "./ownership.ts";
 export * from "./mou.ts";

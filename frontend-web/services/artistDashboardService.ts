@@ -17,6 +17,62 @@ import { http } from "@/lib/api";
 import { paiseToRupees, toOrder, type OrderDto } from "@/lib/api-mappers";
 import { artistArtworkApi, type SubmitImage } from "@/services/artistArtworkApi";
 import { artistWalletApi } from "@/services/artistWalletApi";
+import { profileApi, type OwnProfileDto, type OwnProfilePatch } from "@/services/profileApi";
+
+// The shape the dashboard's profile/KYC screens were written against.
+export interface ArtistProfileView {
+  fullName: string;
+  email: string;
+  phone: string;
+  bio: string;
+  instagram: string;
+  website: string;
+  bankAccountMasked: string;
+  /** Write-only: never returned by the API. */
+  bankAccountNumber?: string;
+  ifsc: string;
+  aadhaarStatus: "not_submitted" | "submitted" | "approved" | "rejected";
+  aadhaarMasked: string;
+  gstin: string;
+  pan: string | null;
+  gstStatus: "not_submitted" | "submitted" | "approved" | "rejected";
+  socialProofVideoUrl: string | null;
+  pickupLine1: string;
+  pickupLine2: string;
+  pickupCity: string;
+  pickupState: string;
+  pickupPincode: string;
+  location: string | null;
+  headline: string | null;
+  joinedAt: string;
+}
+
+function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
+  return {
+    fullName: p.fullName,
+    email: p.email,
+    phone: p.phone ?? "",
+    bio: p.bio ?? "",
+    instagram: p.instagram ?? "",
+    website: p.website ?? "",
+    bankAccountMasked: p.bankAccountMasked ?? "",
+    ifsc: p.ifsc ?? "",
+    aadhaarStatus: p.aadhaarStatus,
+    aadhaarMasked: p.aadhaarMasked ?? "",
+    gstin: p.gstin ?? "",
+    pan: p.pan,
+    gstStatus: p.gstStatus,
+    socialProofVideoUrl: p.socialProofVideoUrl,
+    pickupLine1: p.pickupLine1 ?? "",
+    pickupLine2: p.pickupLine2 ?? "",
+    pickupCity: p.pickupCity ?? "",
+    pickupState: p.pickupState ?? "",
+    pickupPincode: p.pickupPincode ?? "",
+    location: p.location,
+    headline: p.headline,
+    joinedAt: p.createdAt,
+  };
+}
 import { authService } from "@/services/authService";
 import { MOU_VERSION } from "@/features/dashboard/mou-data";
 
@@ -335,17 +391,18 @@ export const artistDashboardService = {
   // account's real name) and the signed MOU record (GET /v1/artist/mou).
   // An acceptance for an older MOU version is reported as null, which is
   // what makes a newly published MOU require a fresh signature.
+  // The account's own profile (GET /v1/me/profile) plus the signed MOU
+  // record (GET /v1/artist/mou). An acceptance for an older MOU version is
+  // reported as null, which is what makes a newly published MOU require a
+  // fresh signature.
   getProfile: async () => {
-    const profile = artistProfileCol.get();
-    const [me, mou] = await Promise.all([
-      authService.me(),
+    const [p, mou] = await Promise.all([
+      profileApi.get(),
       http.get<{ acceptance: MouAcceptanceDto | null }>("/v1/artist/mou"),
     ]);
     const acceptance = mou.acceptance;
     return {
-      ...profile,
-      fullName: me?.name ?? profile.fullName,
-      email: me?.email ?? profile.email,
+      ...toArtistProfileView(p),
       mouAcceptance:
         acceptance && acceptance.version === MOU_VERSION
           ? {
@@ -377,7 +434,7 @@ export const artistDashboardService = {
       `Memorandum of Understanding v${acceptance.version} accepted`,
     );
     return {
-      ...artistProfileCol.get(),
+      ...toArtistProfileView(await profileApi.get()),
       mouAcceptance: {
         acceptedAt: acceptance.acceptedAt,
         signatureName: acceptance.signatureName,
@@ -387,26 +444,31 @@ export const artistDashboardService = {
     };
   },
 
-  // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
-  // literal "Z", then a checksum character. Matches the pattern the profile
-  // form itself validates against.
-  updateProfile: (patch: Partial<ReturnType<typeof artistProfileCol.get>>) => {
-    const current = artistProfileCol.get();
-    let gstStatus = current.gstStatus;
-    // Saving a valid GSTIN for the first time starts the approval clock —
-    // only an admin (GST queue) can move it past "submitted" from here.
-    if (
-      patch.gstin !== undefined &&
-      gstStatus === "not_submitted" &&
-      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(
-        patch.gstin.trim(),
-      )
-    ) {
-      gstStatus = "submitted";
+  updateProfile: async (patch: Partial<ArtistProfileView>) => {
+    const body: OwnProfilePatch = {};
+    if (patch.fullName !== undefined) body.fullName = patch.fullName;
+    if (patch.phone !== undefined) body.phone = patch.phone || null;
+    if (patch.bio !== undefined) body.bio = patch.bio || null;
+    if (patch.instagram !== undefined) body.instagram = patch.instagram || null;
+    if (patch.website !== undefined) body.website = patch.website || null;
+    if (patch.socialProofVideoUrl !== undefined) body.socialProofVideoUrl = patch.socialProofVideoUrl || null;
+    if (patch.pan !== undefined) body.pan = patch.pan || null;
+    if (patch.gstin !== undefined) body.gstin = patch.gstin || null;
+    if (patch.ifsc !== undefined) body.ifsc = patch.ifsc || null;
+    if (patch.bankAccountNumber !== undefined) body.bankAccountNumber = patch.bankAccountNumber || null;
+    for (const key of ["pickupLine1", "pickupLine2", "pickupCity", "pickupState", "pickupPincode"] as const) {
+      if (patch[key] !== undefined) body[key] = patch[key] || null;
     }
-    const updated = { ...current, ...patch, gstStatus };
-    artistProfileCol.set(updated);
-    return mockDelay(updated);
+    const updated = toArtistProfileView(await profileApi.update(body));
+    const mou = await http.get<{ acceptance: MouAcceptanceDto | null }>("/v1/artist/mou");
+    const acceptance = mou.acceptance;
+    return {
+      ...updated,
+      mouAcceptance:
+        acceptance && acceptance.version === MOU_VERSION
+          ? { acceptedAt: acceptance.acceptedAt, signatureName: acceptance.signatureName, version: acceptance.version, signatureDataUrl: acceptance.signatureDataUrl }
+          : null,
+    };
   },
 
   listOrders: async (): Promise<Array<Order & { artistPayout: number }>> => {

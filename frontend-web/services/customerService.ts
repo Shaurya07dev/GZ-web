@@ -1,7 +1,18 @@
 import type { Address, CustomerProfile } from "@/types/customer";
-import { mockDelay } from "@/lib/mock-utils";
-import { customerProfileCol } from "@/lib/mock-collections";
 import { http } from "@/lib/api";
+import { profileApi, type OwnProfileDto, type OwnProfilePatch } from "@/services/profileApi";
+
+function toCustomerProfile(p: OwnProfileDto): CustomerProfile {
+  return {
+    name: p.fullName,
+    email: p.email,
+    phone: p.phone ?? "",
+    ...(p.gstin ? { gstin: p.gstin } : {}),
+    ...(p.bankAccountMasked ? { bankAccountNumber: p.bankAccountMasked } : {}),
+    ...(p.ifsc ? { bankIfsc: p.ifsc } : {}),
+    joinedAt: p.createdAt,
+  };
+}
 import { toAddress, type AddressDto } from "@/lib/api-mappers";
 
 // Addresses are real (GET/POST/PATCH/DELETE /v1/account/addresses) because
@@ -10,12 +21,18 @@ import { toAddress, type AddressDto } from "@/lib/api-mappers";
 // profile write route yet.
 
 export const customerService = {
-  getProfile: (): Promise<CustomerProfile> => mockDelay(customerProfileCol.get()),
+  getProfile: async (): Promise<CustomerProfile> => toCustomerProfile(await profileApi.get()),
 
-  updateProfile: (patch: Partial<CustomerProfile>): Promise<CustomerProfile> => {
-    const updated = { ...customerProfileCol.get(), ...patch };
-    customerProfileCol.set(updated);
-    return mockDelay(updated);
+  // Bank details are write-only on the API: the number never comes back,
+  // only a masked tail, so the settings form can't echo a full number.
+  updateProfile: async (patch: Partial<CustomerProfile>): Promise<CustomerProfile> => {
+    const body: OwnProfilePatch = {};
+    if (patch.name !== undefined) body.fullName = patch.name;
+    if (patch.phone !== undefined) body.phone = patch.phone || null;
+    if (patch.gstin !== undefined) body.gstin = patch.gstin || null;
+    if (patch.bankAccountNumber !== undefined) body.bankAccountNumber = patch.bankAccountNumber || null;
+    if (patch.bankIfsc !== undefined) body.ifsc = patch.bankIfsc || null;
+    return toCustomerProfile(await profileApi.update(body));
   },
 
   listAddresses: async (): Promise<Address[]> => {
