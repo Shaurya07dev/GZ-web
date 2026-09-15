@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 // One .env for the whole repo, at the root (see /.env.example). Next only
 // reads env files from its own directory, so load the root one here — this
@@ -36,4 +37,14 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
 };
 
-export default nextConfig;
+// Source maps upload only when SENTRY_AUTH_TOKEN is present (Vercel env);
+// otherwise this is a pass-through and the build never talks to Sentry.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

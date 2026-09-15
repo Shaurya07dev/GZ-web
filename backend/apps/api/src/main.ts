@@ -1,3 +1,4 @@
+import "./instrument.ts";
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { loadEnv } from "@galleryzone/config";

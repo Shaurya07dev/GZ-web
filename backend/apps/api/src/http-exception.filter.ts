@@ -6,6 +6,7 @@
 // meaning error-format consistency was previously true only for validation
 // errors, by accident of which code path happened to run first.
 
+import * as Sentry from "@sentry/node";
 import {
   ArgumentsHost,
   Catch,
@@ -79,6 +80,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // but DO log it server-side or the 500 is undebuggable.
     const req = ctx.getRequest<{ method?: string; originalUrl?: string }>();
     this.logger.error(`${req.method ?? "?"} ${req.originalUrl ?? "?"} -> unhandled`, exception instanceof Error ? exception.stack : String(exception));
+    Sentry.captureException(exception, { extra: { method: req.method, url: req.originalUrl } });
     const problem: ProblemDetails = {
       type: "about:blank",
       title: "Internal server error",
