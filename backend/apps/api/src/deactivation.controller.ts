@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
-import { requestDeactivation, decideDeactivation, listExternalSaleFees, decideExternalSaleFee, type Db } from "@galleryzone/db";
+import { requestDeactivation, decideDeactivation, listExternalSaleFees, decideExternalSaleFee, type Db, getDeactivationRequest, listDeactivationRequests } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
@@ -16,6 +16,18 @@ type FeeDecisionBody = z.infer<typeof feeDecisionSchema>;
 @Controller("v1")
 export class DeactivationController {
   constructor(@Inject(DB) private readonly db: Db) {}
+
+  @Roles("artist")
+  @Get("artist/deactivation")
+  async mine(@Req() req: AuthenticatedRequest) {
+    return { request: await getDeactivationRequest(this.db, req.authUser.uid) };
+  }
+
+  @Roles("admin")
+  @Get("admin/deactivation")
+  async queue() {
+    return { requests: await listDeactivationRequests(this.db) };
+  }
 
   @Roles("artist")
   @Post("artist/deactivation")

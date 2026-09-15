@@ -40,6 +40,8 @@ import {
 } from "@/lib/mock-data/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { adminApi } from "@/services/adminApi";
+import { http } from "@/lib/api";
+import { paiseToRupees } from "@/lib/api-mappers";
 import { ADMIN } from "@/features/admin/admin-data";
 import { aggregatorService } from "@/services/aggregatorService";
 import {
@@ -119,6 +121,35 @@ function deactivateUser(artistId: string): void {
   );
 }
 
+
+interface PenaltyDto {
+  id: string;
+  artworkId: string;
+  artworkTitle: string;
+  amountPaise: number;
+  status: "pending_review" | "approved" | "waived";
+  createdAt: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  settledAt: string | null;
+}
+function toPenalty(p: PenaltyDto): ExternalSalePenalty {
+  return { id: p.id, artworkId: p.artworkId, artworkTitle: p.artworkTitle, amount: paiseToRupees(p.amountPaise), createdAt: p.createdAt, settledAt: p.settledAt, status: p.status, decidedAt: p.decidedAt, decisionNote: p.decisionNote };
+}
+interface DeactivationDto {
+  id: string;
+  userId: string;
+  userName: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
+}
+function toDeactivation(d: DeactivationDto): DeactivationRequest {
+  return { ...d, userRole: "artist" };
+}
+
 export const adminService = {
   // --- overview + analytics ------------------------------------------------
   // gmv/platformRevenue/artistPayouts/totalOrders stay the seeded 12-month
@@ -191,32 +222,17 @@ export const adminService = {
     return adminApi.rejectWithdrawal(id, reason);
   },
 
-  listExternalSaleFees: (): Promise<ExternalSalePenalty[]> =>
-    mockDelay(
-      [...artistPenaltiesCol.get()].sort((a, b) =>
-        b.createdAt.localeCompare(a.createdAt),
-      ),
-    ),
+  listExternalSaleFees: async (): Promise<ExternalSalePenalty[]> => {
+    const rows = await http.get<PenaltyDto[] | { fees: PenaltyDto[] }>("/v1/admin/external-fees");
+    return (Array.isArray(rows) ? rows : rows.fees).map(toPenalty);
+  },
 
-  decideExternalSaleFee: (input: {
-    id: string;
-    approve: boolean;
-    note?: string;
-  }): Promise<ExternalSalePenalty> => {
-    const all = artistPenaltiesCol.get();
-    const penalty = all.find((p) => p.id === input.id);
-    if (!penalty) return mockError(`Fee "${input.id}" not found`);
-    if (penaltyStatus(penalty) !== "pending_review")
-      return mockError("That fee has already been decided");
-
-    const decided: ExternalSalePenalty = {
-      ...penalty,
-      status: input.approve ? "approved" : "waived",
-      decidedAt: new Date().toISOString(),
-      decisionNote: input.note?.trim() ?? null,
-    };
-    artistPenaltiesCol.set(all.map((p) => (p.id === input.id ? decided : p)));
-    return mockDelay(decided);
+  decideExternalSaleFee: async (input: { id: string; approve: boolean; note?: string }): Promise<ExternalSalePenalty> => {
+    await http.post(`/v1/admin/external-fees/${encodeURIComponent(input.id)}/decide`, { decision: input.approve ? "approved" : "waived", ...(input.note ? { note: input.note } : {}) });
+    const all = await adminService.listExternalSaleFees();
+    const found = all.find((p) => p.id === input.id);
+    if (!found) throw new Error("Fee not found after decision");
+    return found;
   },
 
   // --- account deactivation ------------------------------------------------
@@ -224,43 +240,18 @@ export const adminService = {
   // Approving suspends the account, which is what the Artists table already
   // renders — no second notion of "closed" is invented here.
 
-  listDeactivationRequests: (): Promise<DeactivationRequest[]> =>
-    mockDelay(
-      [...deactivationRequestsCol.get()].sort((a, b) =>
-        b.requestedAt.localeCompare(a.requestedAt),
-      ),
-    ),
+  listDeactivationRequests: async (): Promise<DeactivationRequest[]> => {
+    const { requests } = await http.get<{ requests: DeactivationDto[] }>("/v1/admin/deactivation");
+    return requests.map(toDeactivation);
+  },
 
-  decideDeactivation: (input: {
-    id: string;
-    approve: boolean;
-    note?: string;
-  }): Promise<DeactivationRequest> => {
-    const all = deactivationRequestsCol.get();
-    const request = all.find((r) => r.id === input.id);
-    if (!request) return mockError(`Request "${input.id}" not found`);
-    if (request.status !== "pending")
-      return mockError("That request has already been decided");
-    if (!input.approve && !input.note?.trim())
-      return mockError("A reason is required when refusing a closure");
-
-    const decided: DeactivationRequest = {
-      ...request,
-      status: input.approve ? "approved" : "rejected",
-      decidedAt: new Date().toISOString(),
-      decisionNote: input.note?.trim() ?? null,
-    };
-    deactivationRequestsCol.set(
-      all.map((r) => (r.id === input.id ? decided : r)),
-    );
-
-    if (input.approve) {
-      // The admin user id carries a "user-" prefix, and the demo artist's
-      // carries "user-artist-" — match on the suffix rather than rebuilding it.
-      deactivateUser(request.userId);
-    }
-
-    return mockDelay(decided);
+  decideDeactivation: async (input: { id: string; approve: boolean; note?: string }): Promise<DeactivationRequest> => {
+    const all = await adminService.listDeactivationRequests();
+    const target = all.find((r) => r.id === input.id);
+    if (!target) throw new Error("Request not found");
+    await http.post(`/v1/admin/deactivation/${encodeURIComponent(target.userId)}/${input.approve ? "approve" : "reject"}`, input.note ? { note: input.note } : {});
+    const after = await adminService.listDeactivationRequests();
+    return after.find((r) => r.userId === target.userId) ?? { ...target, status: input.approve ? "approved" : "rejected" };
   },
 
   // --- catalog -------------------------------------------------------------

@@ -15,7 +15,7 @@ import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { http } from "@/lib/api";
 import { paiseToRupees, toOrder, type OrderDto } from "@/lib/api-mappers";
-import { artistArtworkApi, type SubmitImage } from "@/services/artistArtworkApi";
+import { artistArtworkApi, toOwnerArtwork, type OwnerArtworkDto, type SubmitImage } from "@/services/artistArtworkApi";
 import { artistWalletApi } from "@/services/artistWalletApi";
 import { profileApi, type OwnProfileDto, type OwnProfilePatch } from "@/services/profileApi";
 
@@ -230,6 +230,35 @@ function nextInsuranceStatus(
   return "submitted";
 }
 
+
+interface PenaltyDto {
+  id: string;
+  artworkId: string;
+  artworkTitle: string;
+  amountPaise: number;
+  status: "pending_review" | "approved" | "waived";
+  createdAt: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  settledAt: string | null;
+}
+function toPenalty(p: PenaltyDto): ExternalSalePenalty {
+  return { id: p.id, artworkId: p.artworkId, artworkTitle: p.artworkTitle, amount: paiseToRupees(p.amountPaise), createdAt: p.createdAt, settledAt: p.settledAt, status: p.status, decidedAt: p.decidedAt, decisionNote: p.decisionNote };
+}
+interface DeactivationDto {
+  id: string;
+  userId: string;
+  userName: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string;
+  decidedAt: string | null;
+  decisionNote: string | null;
+}
+function toDeactivation(d: DeactivationDto): DeactivationRequest {
+  return { ...d, userRole: "artist" };
+}
+
 export const artistDashboardService = {
   getKpiMetrics: async (): Promise<ArtworkKpiMetric[]> => {
     const [wallet, artworks, transactions] = await Promise.all([
@@ -313,64 +342,16 @@ export const artistDashboardService = {
   // for review. It is NOT charged here and not charged automatically later —
   // an admin decides whether it stands, and only then does it come out of the
   // next listing (settlePendingPenalties above).
-  markSoldElsewhere: (artworkId: string): Promise<Artwork> => {
-    const inLive = artworksCol.get().find((a) => a.id === artworkId);
-    const inPending = pendingArtworksCol.get().find((a) => a.id === artworkId);
-    const artwork = inLive ?? inPending;
-
-    if (!artwork || artwork.artistId !== CURRENT_ARTIST_ID)
-      return mockError("Artwork not found");
-    if (artwork.status === "sold_externally")
-      return mockError("This artwork is already marked as sold elsewhere");
-    if (!WITHDRAWABLE_STATUSES.has(artwork.status))
-      return mockError(
-        "This artwork is already claimed on GalleryZone and can no longer be withdrawn",
-      );
-
-    const now = new Date().toISOString();
-    const updated: Artwork = {
-      ...artwork,
-      status: "sold_externally",
-      statusHistory: [
-        ...artwork.statusHistory,
-        { status: "sold_externally", changedAt: now },
-      ],
-      custody: {
-        legalOwner: "customer",
-        custodian: "customer",
-        locationLabel: "Sold outside GalleryZone",
-      },
-    };
-
-    const replace = (list: Artwork[]) =>
-      list.map((a) => (a.id === artworkId ? updated : a));
-    if (inLive) artworksCol.set(replace(artworksCol.get()));
-    if (inPending) pendingArtworksCol.set(replace(pendingArtworksCol.get()));
-
-    const penalty: ExternalSalePenalty = {
-      id: `pen-${crypto.randomUUID().slice(0, 8)}`,
-      artworkId,
-      artworkTitle: artwork.title,
-      amount: Math.round(artwork.customerPrice * EXTERNAL_SALE_PENALTY_RATE),
-      createdAt: now,
-      settledAt: null,
-      status: "pending_review",
-      decidedAt: null,
-      decisionNote: null,
-    };
-    artistPenaltiesCol.set([penalty, ...artistPenaltiesCol.get()]);
-
-    appendActivity(
-      "artwork_submitted",
-      `"${artwork.title}" marked sold elsewhere`,
-      `Removed from GalleryZone. A ₹${penalty.amount.toLocaleString("en-IN")} fee has gone to GalleryZone for review — nothing is charged unless it is approved.`,
-    );
-
-    return mockDelay(updated);
+  markSoldElsewhere: async (artworkId: string): Promise<Artwork> => {
+    const { artwork } = await http.post<{ artwork: OwnerArtworkDto | null }>(`/v1/artist/artworks/${encodeURIComponent(artworkId)}/sold-elsewhere`);
+    if (!artwork) throw new Error("Artwork not found");
+    return toOwnerArtwork(artwork);
   },
 
-  listPenalties: (): Promise<ExternalSalePenalty[]> =>
-    mockDelay(artistPenaltiesCol.get()),
+  listPenalties: async (): Promise<ExternalSalePenalty[]> => {
+    const { penalties } = await http.get<{ penalties: PenaltyDto[] }>("/v1/artist/penalties");
+    return penalties.map(toPenalty);
+  },
 
   // Settlements are released lazily rather than on a timer: reading the wallet
   // is the only moment the 7-days-after-delivery rule is observable, and this
@@ -516,62 +497,23 @@ export const artistDashboardService = {
   // account may still owe a settlement, hold a piece with an aggregator, or
   // have a transfer someone is waiting to accept.
 
-  getDeactivationRequest: (): Promise<DeactivationRequest | null> =>
-    mockDelay(
-      deactivationRequestsCol
-        .get()
-        .filter((r) => r.userId === CURRENT_ARTIST_ID)
-        .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0] ?? null,
-    ),
-
-  requestDeactivation: (input: {
-    reason: string;
-  }): Promise<DeactivationRequest> => {
-    if (!input.reason.trim())
-      return mockError("Tell us why you are closing the account");
-
-    const open = deactivationRequestsCol
-      .get()
-      .some((r) => r.userId === CURRENT_ARTIST_ID && r.status === "pending");
-    if (open) return mockError("You already have a request under review");
-
-    const request: DeactivationRequest = {
-      id: `deact-${crypto.randomUUID().slice(0, 8)}`,
-      userId: CURRENT_ARTIST_ID,
-      userName: CURRENT_ARTIST_NAME,
-      userRole: "artist",
-      reason: input.reason.trim(),
-      status: "pending",
-      requestedAt: new Date().toISOString(),
-      decidedAt: null,
-      decisionNote: null,
-    };
-    deactivationRequestsCol.set([request, ...deactivationRequestsCol.get()]);
-    appendActivity(
-      "verification",
-      "Deactivation requested",
-      "Your account closure is waiting on a GalleryZone review.",
-    );
-    return mockDelay(request);
+  getDeactivationRequest: async (): Promise<DeactivationRequest | null> => {
+    const { request } = await http.get<{ request: DeactivationDto | null }>("/v1/artist/deactivation");
+    return request ? toDeactivation(request) : null;
   },
 
-  withdrawDeactivation: (requestId: string): Promise<{ id: string }> => {
-    const request = deactivationRequestsCol
-      .get()
-      .find((r) => r.id === requestId);
-    if (!request) return mockError("Request not found");
-    if (request.status !== "pending")
-      return mockError("That request has already been decided");
+  requestDeactivation: async (input: { reason: string }): Promise<DeactivationRequest> => {
+    if (!input.reason.trim()) throw new Error("Tell us why you're leaving so an admin can review it");
+    await http.post("/v1/artist/deactivation", { reason: input.reason.trim() });
+    const { request } = await http.get<{ request: DeactivationDto | null }>("/v1/artist/deactivation");
+    if (!request) throw new Error("The request was not recorded");
+    return toDeactivation(request);
+  },
 
-    deactivationRequestsCol.set(
-      deactivationRequestsCol.get().filter((r) => r.id !== requestId),
-    );
-    appendActivity(
-      "verification",
-      "Deactivation withdrawn",
-      "You cancelled your account closure request.",
-    );
-    return mockDelay({ id: requestId });
+  // Withdrawing a pending request isn't a backend operation yet; an admin
+  // rejecting it has the same effect. Surfaced as an error, not a silent no-op.
+  withdrawDeactivation: async (_requestId: string): Promise<{ id: string }> => {
+    throw new Error("Contact support to withdraw a pending deactivation request");
   },
 
   getSettings: () => mockDelay(artistSettingsCol.get()),

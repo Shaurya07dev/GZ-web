@@ -10,6 +10,8 @@ import {
   approveArtwork,
   getArtistArtwork,
   listArtistOrders,
+  listArtistPenalties,
+  markSoldElsewhere,
   listArtistArtworksOwned,
   rejectArtwork,
   submitArtwork,
@@ -99,6 +101,31 @@ export class ArtistArtworksController {
   @Get("artist/orders")
   async orders(@Req() req: AuthenticatedRequest) {
     return { orders: await listArtistOrders(this.db, req.authUser.uid) };
+  }
+
+  @Roles("artist")
+  @Get("artist/penalties")
+  async penalties(@Req() req: AuthenticatedRequest) {
+    return { penalties: await listArtistPenalties(this.db, req.authUser.uid) };
+  }
+
+  @Roles("artist")
+  @Post("artist/artworks/:id/sold-elsewhere")
+  async soldElsewhere(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    const rates = await this.rates();
+    try {
+      const result = await markSoldElsewhere(this.db, { artistId: req.authUser.uid, artworkId: id, rates });
+      this.bust(id, req.authUser.uid);
+      const artwork = await getArtistArtwork(this.db, req.authUser.uid, id, rates);
+      return { ...result, artwork };
+    } catch (error) {
+      if (error instanceof ArtistArtworkError) {
+        if (error.message.startsWith("No artwork")) throw notFound();
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "conflict" });
+      }
+      if (error instanceof IllegalTransitionError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
+      throw error;
+    }
   }
 
   @Roles("artist")

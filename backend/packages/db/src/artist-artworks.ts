@@ -6,8 +6,8 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { artistSettlementOf, artworkStateMachine, editWindowExpiresAt, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
-import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPhysical, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ListingType } from "./collections.ts";
+import { artistSettlementOf, artworkStateMachine, editWindowExpiresAt, externalSalePenaltyOf, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
+import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPhysical, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ExternalSalePenaltyDoc, type ListingType } from "./collections.ts";
 import { listArtworkImages, type ArtworkImage } from "./artwork-images.ts";
 import { getPublicArtwork, type PublicArtworkView } from "./public-artworks.ts";
 import { issueCertificate } from "./coa.ts";
@@ -259,4 +259,65 @@ export async function rejectArtwork(db: Firestore, artworkId: string, reason: st
 export async function countArtistArtworks(db: Firestore, artistId: string): Promise<number> {
   const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).count().get();
   return snap.data().count;
+}
+
+/**
+ * "Sold on another platform": the piece leaves every GalleryZone channel
+ * and an external-sale fee (rates.externalSalePenaltyRate × artist price)
+ * is raised for admin review. Allowed from draft/marketplace/returned.
+ */
+export async function markSoldElsewhere(
+  db: Firestore,
+  { artistId, artworkId, rates }: { artistId: string; artworkId: string; rates: PricingRates },
+): Promise<{ penaltyId: string; amountPaise: number }> {
+  const snap = await db.collection(Collections.artworks).doc(artworkId).get();
+  const artwork = snap.data() as ArtworkDoc | undefined;
+  if (!artwork || artwork.artistId !== artistId) throw new ArtistArtworkError(`No artwork ${artworkId}`);
+  const status = await latestStatusOf(db, artworkId);
+  if (status === "sold_externally") throw new ArtistArtworkError("This artwork is already marked as sold elsewhere");
+  artworkStateMachine.assertTransition(status, "sold_externally");
+
+  const pricing = (await db.collection(artworkPricingCol(artworkId)).doc("data").get()).data() as ArtworkPricingDoc | undefined;
+  const amountPaise = externalSalePenaltyOf(pricing?.artistPricePaise ?? 0, rates);
+
+  await appendArtworkStatus(db, artworkId, { status: "sold_externally", changedBy: artistId, reason: "Sold on another platform" });
+  const ref = await db.collection(Collections.externalSalePenalties).add({
+    artworkId,
+    amountPaise,
+    status: "pending_review",
+    createdAt: FieldValue.serverTimestamp(),
+    decidedAt: null,
+    decisionNote: null,
+    settledAt: null,
+  });
+  await refreshListing(db, artworkId, rates);
+  return { penaltyId: ref.id, amountPaise };
+}
+
+/** This artist's external-sale fees, newest first, with the artwork title. */
+export async function listArtistPenalties(db: Firestore, artistId: string) {
+  const artworksSnap = await db.collection(Collections.artworks).where("artistId", "==", artistId).select("title").get();
+  const titles = new Map(artworksSnap.docs.map((d) => [d.id, (d.data() as { title: string }).title]));
+  const ids = [...titles.keys()];
+  if (!ids.length) return [];
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30));
+  const snaps = await Promise.all(chunks.map((c) => db.collection(Collections.externalSalePenalties).where("artworkId", "in", c).get()));
+  return snaps
+    .flatMap((s) => s.docs)
+    .map((d) => {
+      const p = d.data() as ExternalSalePenaltyDoc;
+      return {
+        id: d.id,
+        artworkId: p.artworkId,
+        artworkTitle: titles.get(p.artworkId) ?? p.artworkId,
+        amountPaise: p.amountPaise,
+        status: p.status,
+        createdAt: p.createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
+        decidedAt: p.decidedAt?.toDate().toISOString() ?? null,
+        decisionNote: p.decisionNote,
+        settledAt: p.settledAt?.toDate().toISOString() ?? null,
+      };
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
