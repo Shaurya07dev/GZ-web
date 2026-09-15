@@ -175,7 +175,16 @@ export class ArtistArtworksController {
   @Roles("admin")
   @Post("admin/artworks/:id/approve")
   async approve(@Param("id") id: string) {
-    await approveArtwork(this.db, id);
+    const before = await this.artworkOf(id);
+    if (!before) throw notFound();
+    // Idempotent: a retried approval of a live piece is a no-op, not a 500.
+    if (before.listing?.status === "marketplace") return { status: "marketplace" };
+    try {
+      await approveArtwork(this.db, id);
+    } catch (error) {
+      if (error instanceof IllegalTransitionError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
+      throw error;
+    }
     this.cache.clear();
     const artwork = await this.artworkOf(id);
     if (artwork) void this.emails.artworkApproved(id, artwork.artistId, artwork.title, artwork.coaCertificateNumber).catch(this.emails.swallow("approved mail"));
@@ -185,7 +194,16 @@ export class ArtistArtworksController {
   @Roles("admin")
   @Post("admin/artworks/:id/reject")
   async reject(@Param("id") id: string, @Body(new ZodValidationPipe(rejectSchema)) body: RejectBody) {
-    await rejectArtwork(this.db, id, body.reason);
+    const before = await this.artworkOf(id);
+    if (!before) throw notFound();
+    if (before.listing?.status === "returned") return { status: "returned" };
+    try {
+      await rejectArtwork(this.db, id, body.reason);
+    } catch (error) {
+      if (error instanceof IllegalTransitionError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
+      if (error instanceof ArtistArtworkError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "bad_request" });
+      throw error;
+    }
     this.cache.clear();
     const artwork = await this.artworkOf(id);
     if (artwork) void this.emails.artworkRejected(id, artwork.artistId, artwork.title, body.reason).catch(this.emails.swallow("rejected mail"));
