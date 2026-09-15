@@ -10,16 +10,9 @@ import { FunnelChart } from "@/features/admin/charts/funnel-chart";
 import { GrowthLineChart } from "@/features/admin/charts/growth-line-chart";
 import { TierDonutChart } from "@/features/admin/charts/tier-donut-chart";
 import {
-  revenueSeries,
-  volumeSeries,
-  userGrowthSeries,
-  categoryPerformance,
-  artworkFunnel,
-  verificationTiers,
-  topArtists,
-  topAggregators,
   type RangeKey,
 } from "@/lib/mock-data/admin-analytics";
+import { useAdminAnalytics } from "@/hooks/useAdminAnalytics";
 import { formatINR } from "@/lib/utils";
 
 const RANGE_LABEL: Record<RangeKey, string> = {
@@ -31,9 +24,7 @@ const RANGE_LABEL: Record<RangeKey, string> = {
 export function AnalyticsView() {
   const [range, setRange] = useState<RangeKey>("30d");
 
-  const revenue = revenueSeries[range];
-  const volume = volumeSeries[range];
-  const growth = userGrowthSeries[range];
+  const { revenue, volume, growth, categoryPerformance, funnel: artworkFunnel, tiers: verificationTiers, topArtists, topAggregators } = useAdminAnalytics(range);
 
   const gmv = revenue.reduce((sum, p) => sum + p.gmv, 0);
   const platform = revenue.reduce((sum, p) => sum + p.platform, 0);
