@@ -1,19 +1,9 @@
-import {
-  ARTWORK_EDIT_WINDOW_DAYS,
-  EXTERNAL_SALE_PENALTY_RATE,
-  isPenaltyCollectable,
-  WITHDRAWABLE_STATUSES,
-  artworkEditState,
-  type Artwork,
-  type ArtworkImage,
-  type ArtworkPhysical,
-  type ExternalSalePenalty,
-} from "@/types/artwork";
+import type { Artwork, ArtworkPhysical, ExternalSalePenalty } from "@/types/artwork";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { Order } from "@/types/order";
 import type { DeactivationRequest, Settlement } from "@/types/admin";
-import { mockDelay, mockError } from "@/lib/mock-utils";
 import { http } from "@/lib/api";
+import { ARTIST_PAYOUT_DAYS_AFTER_DELIVERY } from "@/lib/pricing";
 import { paiseToRupees, toOrder, type OrderDto } from "@/lib/api-mappers";
 import { artistArtworkApi, toOwnerArtwork, type OwnerArtworkDto, type SubmitImage } from "@/services/artistArtworkApi";
 import { artistWalletApi } from "@/services/artistWalletApi";
@@ -73,8 +63,8 @@ function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
     joinedAt: p.createdAt,
   };
 }
-import { authService } from "@/services/authService";
 import { MOU_VERSION } from "@/features/dashboard/mou-data";
+import { KPI_METRICS } from "@/features/dashboard/dashboard-data";
 
 /** Wire shape from apps/api mou.controller.ts. */
 interface MouAcceptanceDto {
@@ -84,109 +74,15 @@ interface MouAcceptanceDto {
   signatureDataUrl: string | null;
   acceptedAt: string;
 }
-import {
-  artworksCol,
-  pendingArtworksCol,
-  artistWalletCol,
-  artistWalletTransactionsCol,
-  artistActivityCol,
-  artistProfileCol,
-  artistPricesCol,
-  artistSettlementsCol,
-  artistSettingsCol,
-  artistPenaltiesCol,
-  deactivationRequestsCol,
-  ordersCol,
-  holdingsCol,
-  CURRENT_ARTIST_ID,
-  CURRENT_ARTIST_NAME,
-  KPI_METRICS,
-} from "@/lib/mock-collections";
-import { displayPriceOf } from "@/lib/pricing";
-import {
-  pendingArtistSettlements,
-  releaseDueArtistSettlements,
-  simulateDeliveryAndRelease,
-} from "./artistPayoutService";
 import type {
   ActivityEntry,
-  ActivityKind,
   WalletTransaction,
 } from "@/features/dashboard/dashboard-data";
 
-// Mock service for the Artist Dashboard, following the same Page -> Hook ->
-// Service pattern as aggregatorService/adminService — the one track that
-// predated that convention and read straight from a static fixture module
-// instead. Everything here reads/writes lib/mock-collections.ts, so a
-// submission actually lands in the admin moderation queue and a withdrawal
-// actually moves the wallet balance.
-
-function artistArtworks(): Artwork[] {
-  return [...artworksCol.get(), ...pendingArtworksCol.get()].filter(
-    (a) => a.artistId === CURRENT_ARTIST_ID,
-  );
-}
-
-function appendActivity(kind: ActivityKind, title: string, detail: string) {
-  const entry: ActivityEntry = {
-    id: `act-${crypto.randomUUID().slice(0, 8)}`,
-    kind,
-    title,
-    detail,
-    time: "Just now",
-  };
-  artistActivityCol.set([entry, ...artistActivityCol.get()]);
-}
-
-// A fee an artist owes for selling a piece elsewhere is collected the next
-// time they actually list something — drafts don't trigger it. Charged as a
-// wallet adjustment; the balance floors at 0 because there's no
-// negative-balance/recovery flow in the mock.
-//
-// Only fees an admin has APPROVED are collected. One still awaiting review, or
-// waived, is passed over — the artist is never charged for a decision nobody
-// has made.
-function settlePendingPenalties(listingTitle: string) {
-  const outstanding = artistPenaltiesCol.get().filter(isPenaltyCollectable);
-  if (outstanding.length === 0) return;
-
-  const now = new Date().toISOString();
-  const total = outstanding.reduce((sum, penalty) => sum + penalty.amount, 0);
-  const settledIds = new Set(outstanding.map((penalty) => penalty.id));
-
-  artistPenaltiesCol.set(
-    artistPenaltiesCol
-      .get()
-      .map((penalty) =>
-        settledIds.has(penalty.id) ? { ...penalty, settledAt: now } : penalty,
-      ),
-  );
-
-  const wallet = artistWalletCol.get();
-  artistWalletCol.set({
-    ...wallet,
-    balance: Math.max(0, wallet.balance - total),
-  });
-
-  const transaction: WalletTransaction = {
-    id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-    type: "adjustment",
-    label: `Off-platform sale fee (${outstanding.length} artwork${outstanding.length > 1 ? "s" : ""}), charged on "${listingTitle}"`,
-    amount: -total,
-    date: now.slice(0, 10),
-    status: "completed",
-  };
-  artistWalletTransactionsCol.set([
-    transaction,
-    ...artistWalletTransactionsCol.get(),
-  ]);
-
-  appendActivity(
-    "settlement",
-    "Off-platform sale fee charged",
-    `₹${total.toLocaleString("en-IN")} deducted with your new listing.`,
-  );
-}
+// The artist dashboard's service — every method is on the API. Artwork
+// CRUD lives in artistArtworkApi.ts, the wallet in artistWalletApi.ts, the
+// profile in profileApi.ts; the rest is here. Derived views (KPIs, activity,
+// settlements) are computed from those reads, never stored.
 
 export interface ArtworkKpiMetric {
   key: string;
@@ -216,21 +112,6 @@ export interface SubmitArtworkInput {
   mode: "draft" | "review";
 }
 
-// A number is "submitted" the moment it's entered — GalleryZone verifies it
-// from there. Re-entering the same number after approval doesn't reset
-// review; entering a different one (or clearing it) does.
-function nextInsuranceStatus(
-  current: Artwork["insuranceStatus"],
-  previousNumber: string | null | undefined,
-  nextNumber: string | null,
-): NonNullable<Artwork["insuranceStatus"]> {
-  if (!nextNumber) return "not_submitted";
-  if (current === "approved" && nextNumber === previousNumber)
-    return "approved";
-  return "submitted";
-}
-
-
 interface PenaltyDto {
   id: string;
   artworkId: string;
@@ -257,6 +138,52 @@ interface DeactivationDto {
 }
 function toDeactivation(d: DeactivationDto): DeactivationRequest {
   return { ...d, userRole: "artist" };
+}
+
+// Settlements are a projection of my orders: paid → pending until
+// delivered + the payout window, then completed. Amounts are the artist's
+// net for that order (marketplace channel pays the artist price in full).
+async function settlementsFromOrders(): Promise<Settlement[]> {
+  const orders = await artistDashboardService.listOrders();
+  return orders
+    .filter((o) => o.status !== "pending" && o.status !== "cancelled")
+    .map((o) => {
+      const delivered = o.statusHistory.find((e) => e.status === "delivered")?.changedAt ?? null;
+      const releaseAfter = delivered ? new Date(new Date(delivered).getTime() + ARTIST_PAYOUT_DAYS_AFTER_DELIVERY * 86_400_000).toISOString() : null;
+      const released = releaseAfter !== null && new Date(releaseAfter).getTime() <= Date.now();
+      return {
+        id: `stl-${o.id}`,
+        orderId: o.id,
+        artworkTitle: o.artwork?.title ?? o.artworkId,
+        artistName: "",
+        artistAmount: o.artistPayout,
+        aggregatorCommission: 0,
+        platformRevenue: Math.max(0, o.amount - o.artistPayout),
+        status: released ? "processed" : "pending",
+        createdAt: o.createdAt,
+        processedAt: released ? releaseAfter : null,
+        releaseAfter,
+      } satisfies Settlement;
+    });
+}
+
+// Notification preferences are per-browser until a preferences route
+// exists; defaults are all-on, which is what the emails do today.
+export interface ArtistSettings {
+  notifyArtworkApproved: boolean;
+  notifyNewSale: boolean;
+  notifyWithdrawalProcessed: boolean;
+  notifyNewMessage: boolean;
+}
+const SETTINGS_KEY = "gz.artist.settings";
+const DEFAULT_SETTINGS: ArtistSettings = { notifyArtworkApproved: true, notifyNewSale: true, notifyWithdrawalProcessed: true, notifyNewMessage: true };
+async function readSettings(): Promise<ArtistSettings> {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SETTINGS_KEY) : null;
+    return raw ? { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<ArtistSettings>) } : DEFAULT_SETTINGS;
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
 }
 
 export const artistDashboardService = {
@@ -312,9 +239,6 @@ export const artistDashboardService = {
     return entries.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 30);
   },
 
-  // Artwork CRUD is real (services/artistArtworkApi.ts): the API, with the
-  // image pipeline. The rest of this file is still the mock and is being
-  // replaced method by method.
   listArtworks: (): Promise<Array<Artwork & { artistPrice: number }>> =>
     artistArtworkApi.list(),
 
@@ -353,9 +277,6 @@ export const artistDashboardService = {
     return penalties.map(toPenalty);
   },
 
-  // Settlements are released lazily rather than on a timer: reading the wallet
-  // is the only moment the 7-days-after-delivery rule is observable, and this
-  // mock has no scheduler to run it any other way.
   // Wallet is real (services/artistWalletApi.ts). "pending" = settled
   // sales still inside the payout clock is not modelled by the ledger yet,
   // so pendingBalance is 0; locked = withdrawal requests awaiting approval.
@@ -369,13 +290,12 @@ export const artistDashboardService = {
     artistWalletApi.listTransactions(),
 
   /** Sales waiting on the 7-day post-delivery clock. */
-  listPendingSettlements: (): Promise<Settlement[]> =>
-    mockDelay(pendingArtistSettlements()),
+  /** Sales waiting on delivery + the payout clock — derived from my orders. */
+  listPendingSettlements: async (): Promise<Settlement[]> =>
+    (await settlementsFromOrders()).filter((s) => s.status === "pending"),
 
-  /** Demo shortcut — nothing in this app marks a customer order delivered. */
-  simulateDelivery: (settlementId: string): Promise<void> => {
-    simulateDeliveryAndRelease(settlementId);
-    return mockDelay(undefined);
+  simulateDelivery: async (_settlementId: string): Promise<void> => {
+    throw new Error("Deliveries are recorded by the operations team, not simulated");
   },
 
   requestWithdrawal: (amount: number): Promise<WalletTransaction> => {
@@ -426,11 +346,6 @@ export const artistDashboardService = {
       signatureName: input.signatureName.trim(),
       signatureDataUrl: input.signatureDataUrl ?? null,
     });
-    appendActivity(
-      "verification",
-      "MOU signed",
-      `Memorandum of Understanding v${acceptance.version} accepted`,
-    );
     return {
       ...toArtistProfileView(await profileApi.get()),
       mouAcceptance: {
@@ -474,23 +389,11 @@ export const artistDashboardService = {
     return orders.map((o) => ({ ...toOrder(o), artistPayout: paiseToRupees(o.artistNetPaise) }));
   },
 
-  listSettlements: (): Promise<Settlement[]> =>
-    mockDelay(artistSettlementsCol.get()),
+  listSettlements: (): Promise<Settlement[]> => settlementsFromOrders(),
 
-  listGallerySpaces: (): Promise<
-    Array<AggregatorHolding & { artwork: Artwork }>
-  > => {
-    const artworkById = new Map(artistArtworks().map((a) => [a.id, a]));
-    return mockDelay(
-      holdingsCol
-        .get()
-        .filter((holding) => artworkById.has(holding.artworkId))
-        .map((holding) => ({
-          ...holding,
-          artwork: artworkById.get(holding.artworkId)!,
-        })),
-    );
-  },
+  // Partner-gallery placements need the aggregator flow on the API; until
+  // then the table is empty rather than fixture-filled.
+  listGallerySpaces: async (): Promise<Array<AggregatorHolding & { artwork: Artwork }>> => [],
 
   // --- Account deactivation ------------------------------------------------
   // Asking is all the artist can do. An admin decides, because a closing
@@ -516,13 +419,16 @@ export const artistDashboardService = {
     throw new Error("Contact support to withdraw a pending deactivation request");
   },
 
-  getSettings: () => mockDelay(artistSettingsCol.get()),
+  getSettings: (): Promise<ArtistSettings> => readSettings(),
 
-  updateSettings: (
-    patch: Partial<ReturnType<typeof artistSettingsCol.get>>,
-  ) => {
-    const updated = { ...artistSettingsCol.get(), ...patch };
-    artistSettingsCol.set(updated);
-    return mockDelay(updated);
+  updateSettings: async (patch: Partial<ArtistSettings>): Promise<ArtistSettings> => {
+    const next = { ...(await readSettings()), ...patch };
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    } catch {
+      /* private mode */
+    }
+    return next;
   },
+
 };
