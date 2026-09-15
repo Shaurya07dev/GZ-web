@@ -8,8 +8,8 @@ Payments are in **Razorpay test mode** — nothing real is charged.
 | Role | Email | Password | Notes |
 |---|---|---|---|
 | Admin #1 | `gz-test-admin@example.com` | `Passw0rd123` | promoted (platform_admin) |
-| Admin #2 | `gz-admin-2@galleryzone.art` | `Passw0rd123` | **you must set** `role: admin`, `status: active`, `roleGrants: ["platform_admin"]` on `users/Bh5GphRZkWeXHQziqWNgFm93bZA2` |
-| Artist | `gz-test-oauth@example.com` | `Passw0rd123` | has one artwork pending approval |
+| Admin #2 | `gz-admin-2@galleryzone.art` | `Passw0rd123` | platform_admin (done) |
+| Artist | `gz-test-oauth@example.com` | `Passw0rd123` | owns "Test Canvas" (live); profile has PAN, bank mask, location |
 | Customer | `gz-test-customer@example.com` | `Passw0rd123` | |
 | You | `shaurya8851@gmail.com` | (reset via email) | only inbox that receives mail until DNS is done |
 
@@ -17,11 +17,11 @@ Register fresh accounts at `/register` (artist / aggregator / customer). Admins 
 
 Change any password with **Forgot password** on `/login` — the email is real (Resend).
 
-## The one-time bootstrap (admin, ~5 minutes)
+## Bootstrap — DONE on 2026-09-16
 
-1. Sign in as Admin #1 → `/admin/settings` → **Pricing rules → Propose default rules**.
-2. Sign in as Admin #2 → `/admin/settings` → **Approve** the pending version. Two different platform admins are required by design; checkout is impossible until this exists.
-3. `/admin/categories` → create the categories artists may pick (Painting, Sculpture, Photography, …).
+- Pricing rules v1 proposed by Admin #1 and approved by Admin #2 (`/admin/settings` shows them). Checkout works.
+- The test artist's piece "Test Canvas" is **approved and live** (certificate `GZ-COA-2026-0001`) — `/marketplace`, `/artists`, `/verify/KPLfLUGiuoj0GFXpkJRG` all show it.
+- Still to do by hand: `/admin/categories` → create the categories artists may pick (Painting, Sculpture, Photography, …).
 
 ## Flow 1 — Artist lists a piece
 

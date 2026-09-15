@@ -1,6 +1,6 @@
 # GalleryZone — from deployed prototype to product
 
-Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-16 (commit `38c09f9`). Testing walkthrough: `docs/TESTING_GUIDE.md`. Rule for "done": **nothing on a
+Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-16 (commit `2dc3925`). Testing walkthrough: `docs/TESTING_GUIDE.md`. Rule for "done": **nothing on a
 web page is hardcoded** — every number, name, list and status comes from the
 API (or from a CMS/config the API serves). Tick items only when verified live.
 
@@ -15,37 +15,37 @@ files directly (`lib/mock-data/*`, `features/**/…-data.ts`, `mock-collections`
 ---
 
 ## 0. Unblock (days)
-- [x] Admin #1 promoted. **Admin #2 created (`users/Bh5GphRZkWeXHQziqWNgFm93bZA2`) — flip role/status/roleGrants in Firestore.**
-- [ ] Seed the first approved rate-config version — now a button on `/admin/settings` (propose with admin #1, approve with admin #2).
+- [x] Two platform admins exist.
+- [x] Rate config v1 approved (2026-09-16).
 - [ ] Add `gz-web-livid.vercel.app` to Firebase Auth authorized domains.
-- [ ] Run the gated verification: approve artwork → certificate issued → checkout → sale-triggered ownership transfer → CoA request/dispatch.
+- [x] Approve → certificate → marketplace → Razorpay session verified live. Browser-side: pay with the test card → transfer → CoA request (see TESTING_GUIDE).
 - [x] Artist MOU v2026.2 generated from `docs/legal/artist-mou-2026.2.txt` (`frontend-web/scripts/gen-mou.mjs`).
 
 ## 1. Remove every hardcoded thing on the web pages (2–3 weeks)
 Swap each remaining service to the API **and** delete the direct fixture imports in the components that bypass services. Backend routes marked ✅ already exist.
 
 **Artist portal** (`features/dashboard/*`, `dashboard-data.ts`, `CURRENT_ARTIST_*`)
-- [ ] `artistDashboardService` — listArtworks ✔ done, getArtwork ✔, submitArtwork ✔ (drafts + real image uploads), updateArtwork ✔, getWallet ✔, listWalletTransactions ✔, requestWithdrawal ✔, getKpiMetrics ✔; still mock: markSoldElsewhere (route ✅), requestDeactivation (route ✅), getActivity, listOrders, listSettlements, listGallerySpaces, settings, profile read/update (**backend: no profile write route yet** — PAN, GST, bank, headline/bio/social links, photo).
-- [ ] `artistPayoutService`, `artistRatingService`, `artistNetworkService`, `profileStatsService` (**backend: no rating / network / stats routes yet**).
-- [ ] Components importing `dashboard-data.ts` / `ARTIST`: dashboard-shell, dashboard-greeting, portfolio-board, orders-table, wallet-overview, revenue-chart, recent-activity-feed, rating-card, verification-progress/detail, artist-analytics-view, artist-settings-view, artist-profile-summary, artist-network-panel, gallery-spaces-table, profile-kyc-form, coa-nfc-board (rows).
+- [x] `artistDashboardService` — fully on the API (artworks, images, wallet, withdrawals, KPIs, activity, orders, settlements projection, penalties, deactivation, profile/KYC/payout account via `/v1/me/profile`). Gallery-spaces table empty until the aggregator flow lands; notification prefs per-browser; profile photo upload still open.
+- [x] `profileStatsService` (artist + collector) computed from the API; `artistRatingService` honest zero. Still fixture: `artistNetworkService` (artist-to-artist connections — no routes), `artistPayoutService` helpers (only used by aggregator mock now).
+- [x] Artist portal components no longer import fixture values (only type/label constants).
 
 **Aggregator portal** (`features/aggregator/*`, `aggregator-data.ts`)
 - [ ] `aggregatorService` (inventory ✅, reserve ✅, release ✅, recordSale ✅, collection ✅), `aggregatorSalesService` (sales ✅, remittances ✅, shipment ✅, wallet ✅, gallery spaces ✅), `aggregatorProfileService` (MOU ✅; profile/GSTIN/settings **no route yet**), `aggregatorMessagesService`, `aggregatorSupportService`, `aggregatorSettingsService`.
 - [ ] Components: aggregator-shell, activity-feed, analytics-view, expiry-countdown, gallery-spaces-board, sales-table, shipping-table, wallet-overview, aggregator-mobile-bottom-nav.
 
 **Admin portal** (`features/admin/*`, `admin-data.ts`)
-- [x] `adminService` core on API: KPIs, artworks (list/detail/approve/reject/delist/rarity/insurance), users (list/detail/status), KYC + GST queues, withdrawals, orders/addresses, audit log, categories, pricing rules. Still mock: activity feed, settlements, external fees, deactivation queue, portfolios, settings form, reports, analytics charts.
-- [ ] Charts/analytics currently fixture-driven: revenue-area, growth-line, category-bar, funnel, tier-donut, volume-bar, top-performers, range-selector, analytics-view (**backend: needs an analytics/aggregates endpoint**).
+- [x] `adminService` on API: everything except the aggregator portfolio / holding pull-back. Analytics charts computed from real orders/artworks/users.
+- [x] Analytics charts derived client-side from admin data (`hooks/useAdminAnalytics`). A server aggregate endpoint becomes worthwhile past a few thousand orders.
 - [ ] order-admin-table, artwork-review-panel, withdrawal-queue-table, `app/admin/page.tsx`.
 
 **Collector account** (`features/account/*`, `account-data.ts`, `mockCustomer`)
-- [ ] `customerService.getProfile/updateProfile` (**backend: no customer profile route**), `customerCollectionService` (owned artworks — derive from ownership events; **needs a "my collection" route**), `customerWalletService` ✅, `customerResaleService` ✅, `customerSupportService`, `buyerInviteService` (**no route**).
+- [x] Collector: profile (`/v1/me/profile`), collection (`/v1/account/collection`), wallet, resale, support on the API. Still fixture: `buyerInviteService` (partner-gallery buyer claims — aggregator flow).
 - [ ] Components: collector-dashboard, collection-board, order-list, resale-view, wallet-overview, physical-coa-request (`mockCustomer`), `app/wishlist` (server-side wishlist instead of localStorage), `app/checkout` (address/pricing from API only).
 
 **Shared / public**
 - [x] `artworkService.list` — server-side filter/sort/search/pagination + facets; marketplace filters, quick chips and rank counts all from the API.
 - [ ] `artwork-card`, `site-header` (search suggestions from API), `app/artists` (artist directory route needed), `app/marketplace` page shell, `about-stats-section` (real counts), `artist-story`, `artist-connect-button`, `auth-layout-panel`, `notification-04` (real notifications).
-- [ ] `messagesService`, `supportService` ✅ routes exist (artist-scoped; extend to all roles).
+- [x] Support tickets + inbox on the API for all portals.
 - [ ] Content pages (landing journey/ecosystem/FAQ, about, contact, terms, FAQ) — keep as versioned content but serve from one `content/` source or a CMS, not scattered `*-data.ts`; remove placeholder copy/figures.
 - [ ] `verifiedArtist`, `socialProofLinks`, `joinedAt`, artist verification tiers: currently defaulted in `lib/api-mappers.ts` — add to the backend DTOs.
 - [ ] Delete `lib/mock-collections.ts`, `lib/mock-db.ts`, `lib/mock-utils.ts`, `lib/mock-data/*`, `features/**/*-data.ts` fixtures, `*.check.ts` that test mocks. CI should fail on any import of them.
