@@ -21,6 +21,8 @@ import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
+import { Emails } from "./mail/emails.ts";
+import { Collections, type ArtworkDoc } from "@galleryzone/db";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 const physicalSchema = z
@@ -67,7 +69,13 @@ export class ArtistArtworksController {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
+    private readonly emails: Emails,
   ) {}
+
+  private async artworkOf(id: string): Promise<(ArtworkDoc & { id: string }) | null> {
+    const snap = await this.db.collection(Collections.artworks).doc(id).get();
+    return snap.exists ? { id, ...(snap.data() as ArtworkDoc) } : null;
+  }
 
   private bust(artworkId: string, artistId?: string) {
     this.cache.invalidate(CacheKeys.marketplace);
@@ -100,6 +108,7 @@ export class ArtistArtworksController {
     const rates = await this.rates();
     const result = await submitArtwork({ db: this.db, artistId: req.authUser.uid, ...body, rates });
     this.bust(result.artworkId, req.authUser.uid);
+    if (body.mode !== "draft") void this.emails.artworkSubmitted(result.artworkId, req.authUser.uid, body.title).catch(this.emails.swallow("submitted mail"));
     const artwork = await getArtistArtwork(this.db, req.authUser.uid, result.artworkId, rates);
     return artwork ?? result;
   }
@@ -123,6 +132,9 @@ export class ArtistArtworksController {
     this.bust(id, req.authUser.uid);
     const artwork = await getArtistArtwork(this.db, req.authUser.uid, id, rates);
     if (!artwork) throw notFound();
+    if (body.mode === "review" && artwork.status === "pending_approval") {
+      void this.emails.artworkSubmitted(id, req.authUser.uid, artwork.title).catch(this.emails.swallow("submitted mail"));
+    }
     return artwork;
   }
 
@@ -131,6 +143,8 @@ export class ArtistArtworksController {
   async approve(@Param("id") id: string) {
     await approveArtwork(this.db, id);
     this.cache.clear();
+    const artwork = await this.artworkOf(id);
+    if (artwork) void this.emails.artworkApproved(id, artwork.artistId, artwork.title, artwork.coaCertificateNumber).catch(this.emails.swallow("approved mail"));
     return { status: "marketplace" };
   }
 
@@ -139,6 +153,8 @@ export class ArtistArtworksController {
   async reject(@Param("id") id: string, @Body(new ZodValidationPipe(rejectSchema)) body: RejectBody) {
     await rejectArtwork(this.db, id, body.reason);
     this.cache.clear();
+    const artwork = await this.artworkOf(id);
+    if (artwork) void this.emails.artworkRejected(id, artwork.artistId, artwork.title, body.reason).catch(this.emails.swallow("rejected mail"));
     return { status: "returned" };
   }
 }

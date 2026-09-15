@@ -1,7 +1,6 @@
 import {
   applyActionCode,
   confirmPasswordReset,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
@@ -191,17 +190,18 @@ export const authService = {
   // Non-committal by design: Firebase itself reveals nothing about whether
   // the address belongs to an account (Email Enumeration Protection), and
   // neither does this — the resolved payload is the same either way.
+  // The API sends a branded reset email (Resend) whose link lands on
+  // /reset-password?token=<oobCode>; it always answers 202 so the UI can't
+  // be used to probe which addresses have accounts.
   forgotPassword: async (
     input: ForgotPasswordInput,
   ): Promise<{ email: string }> => {
-    try {
-      await sendPasswordResetEmail(firebaseAuth(), input.email);
-    } catch (error) {
-      if (firebaseCode(error) !== "auth/user-not-found") {
-        throw friendlyAuthError(error);
-      }
-    }
+    await http.post("/v1/auth/password-reset", { email: input.email });
     return { email: input.email };
+  },
+
+  resendVerification: async (): Promise<void> => {
+    await http.post("/v1/auth/resend-verification");
   },
 
   // `token` is Firebase's oobCode from the emailed link (?oobCode=…).

@@ -31,6 +31,8 @@ import { MouController } from "./mou.controller.ts";
 import { ImagesController } from "./images.controller.ts";
 import { Storage } from "./storage.ts";
 import { ListingBackfill } from "./listing-backfill.ts";
+import { Mailer } from "./mail/mailer.ts";
+import { Emails } from "./mail/emails.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -85,6 +87,8 @@ import { DbModule } from "./db.module.ts";
     { provide: APP_GUARD, useClass: RolesGuard },
     Storage,
     ListingBackfill,
+    Mailer,
+    Emails,
   ],
 })
 export class AppModule implements NestModule {

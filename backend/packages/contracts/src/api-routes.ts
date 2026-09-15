@@ -129,6 +129,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "DELETE", path: "/v1/artist/artworks/:id/images/:imageId", authRole: "artist", summary: "Remove an image (bucket object too)", replaces: "n/a — new" },
   { method: "PUT", path: "/v1/artist/artworks/:id/images/order", authRole: "artist", summary: "Reorder images", replaces: "n/a — new" },
   { method: "GET", path: "/v1/images/artworks/:artworkId/:file", authRole: "public", summary: "Serve an image from the private bucket, immutable-cached", replaces: "n/a — new" },
+  { method: "POST", path: "/v1/auth/password-reset", authRole: "public", summary: "Email a branded password-reset link (always 202)", replaces: "authService.forgotPassword" },
+  { method: "POST", path: "/v1/auth/resend-verification", authRole: "customer", summary: "Re-send the email verification link", replaces: "n/a — new" },
   { method: "POST", path: "/v1/admin/artworks/reindex", authRole: "admin", summary: "Rebuild every artwork's denormalised listing projection", replaces: "n/a — new" },
   { method: "POST", path: "/v1/admin/artworks/:id/reindex", authRole: "admin", summary: "Rebuild one artwork's listing projection", replaces: "n/a — new" },
   { method: "GET", path: "/v1/admin/users", authRole: "admin", summary: "All users, filterable by role", replaces: "adminService.listUsers" },

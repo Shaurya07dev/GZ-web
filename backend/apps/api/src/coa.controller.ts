@@ -23,6 +23,7 @@ import {
 import { firestoreId } from "@galleryzone/contracts";
 import { IllegalTransitionError } from "@galleryzone/domain";
 import { Roles } from "./auth/roles.decorator.ts";
+import { Emails } from "./mail/emails.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
@@ -89,13 +90,20 @@ function rethrow(error: unknown): never {
 
 @Controller("v1")
 export class CoaController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly emails: Emails,
+  ) {}
 
   @Roles("customer", "artist", "aggregator")
   @Post("coa/requests")
   async request(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(requestSchema)) body: RequestBody) {
     try {
-      return toDto(this.db, await createPhysicalCoaRequest(this.db, { artworkId: body.artworkId, requestedByUserId: req.authUser.uid, delivery: body.delivery }));
+      const request = await createPhysicalCoaRequest(this.db, { artworkId: body.artworkId, requestedByUserId: req.authUser.uid, delivery: body.delivery });
+      const dto = await toDto(this.db, request);
+      const artwork = (await this.db.collection(Collections.artworks).doc(body.artworkId).get()).data() as ArtworkDoc | undefined;
+      if (artwork) void this.emails.physicalCoaRequested({ requestId: dto.id, artistId: artwork.artistId, title: dto.artworkTitle, requestedByName: dto.requestedByName }).catch(this.emails.swallow("coa mail"));
+      return dto;
     } catch (error) {
       rethrow(error);
     }

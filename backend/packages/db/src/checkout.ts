@@ -14,8 +14,7 @@ import {
   marketplaceCheckoutPostings,
   orderStateMachine,
   artworkStateMachine,
-  type PricingRates,
-} from "@galleryzone/domain";
+  type PricingRates, artistSettlementOf } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
@@ -98,7 +97,18 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
  * webhook handling (signature verification, idempotent-by-webhook-id) —
  * callers (and the order/ledger shape it produces) don't change.
  */
-export async function confirmSimulatedPayment(db: Firestore, orderId: string): Promise<{ transactionId: string }> {
+export interface PaymentConfirmation {
+  transactionId: string;
+  orderId: string;
+  customerId: string;
+  artistId: string;
+  artworkId: string;
+  artworkTitle: string;
+  totalPaise: number;
+  artistNetPaise: number;
+}
+
+export async function confirmSimulatedPayment(db: Firestore, orderId: string): Promise<PaymentConfirmation> {
   const orderRef = db.collection(Collections.orders).doc(orderId);
   const orderSnap = await orderRef.get();
   if (!orderSnap.exists) throw new CheckoutError(`No order ${orderId}`);
@@ -142,5 +152,16 @@ export async function confirmSimulatedPayment(db: Firestore, orderId: string): P
     if (!snap.empty) snap.docs[0]!.ref.update({ status: "captured" });
   });
 
-  return { transactionId };
+  const artworkSnap = await db.collection(Collections.artworks).doc(order.artworkId).get();
+  const artworkTitle = (artworkSnap.data() as { title?: string } | undefined)?.title ?? "your artwork";
+  return {
+    transactionId,
+    orderId,
+    customerId: order.customerId,
+    artistId: pricing.artistId,
+    artworkId: order.artworkId,
+    artworkTitle,
+    totalPaise: order.totalPaise,
+    artistNetPaise: artistSettlementOf(pricing.artistPricePaise, "marketplace", version.rates).net,
+  };
 }

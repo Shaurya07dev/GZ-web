@@ -20,6 +20,22 @@ function authService() {
   return getAuth(app);
 }
 
+/** Firebase-hosted action links; callers extract the oobCode and build their own page URL. */
+export function generatePasswordResetLink(email: string, continueUrl: string): Promise<string> {
+  return authService().generatePasswordResetLink(email, { url: continueUrl, handleCodeInApp: false });
+}
+export function generateEmailVerificationLink(email: string, continueUrl: string): Promise<string> {
+  return authService().generateEmailVerificationLink(email, { url: continueUrl, handleCodeInApp: false });
+}
+export async function userRecordByEmail(email: string): Promise<{ uid: string; displayName: string | null; emailVerified: boolean } | null> {
+  try {
+    const u = await authService().getUserByEmail(email);
+    return { uid: u.uid, displayName: u.displayName ?? null, emailVerified: u.emailVerified };
+  } catch {
+    return null;
+  }
+}
+
 export interface VerifiedUser {
   uid: string;
   email: string | null;

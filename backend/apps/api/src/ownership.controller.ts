@@ -24,6 +24,7 @@ import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
+import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { toPublicEvent } from "./verify.controller.ts";
 
@@ -59,6 +60,7 @@ export class OwnershipController {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
+    private readonly emails: Emails,
   ) {}
 
   @Roles("customer", "artist", "aggregator")
@@ -74,7 +76,13 @@ export class OwnershipController {
         displayEndsAt: body.displayEndsAt ? new Date(body.displayEndsAt) : undefined,
       });
       this.cache.invalidate(CacheKeys.verify(artworkId));
-      return toPartyDto(this.db, event);
+      const dto = await toPartyDto(this.db, event);
+      if (event.toEmail) {
+        void this.emails
+          .transferInvite({ transferId: dto.id, toEmail: event.toEmail, toName: event.toName, fromName: event.fromName, title: dto.artworkTitle, kind: event.kind })
+          .catch(this.emails.swallow("transfer mail"));
+      }
+      return dto;
     } catch (error) {
       rethrow(error);
     }

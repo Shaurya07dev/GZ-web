@@ -12,6 +12,7 @@ import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB, ENV } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
+import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 @Controller("v1/orders")
@@ -20,6 +21,7 @@ export class OrdersController {
     @Inject(DB) private readonly db: Db,
     @Inject(ENV) private readonly env: AppEnv,
     private readonly cache: ReadCache,
+    private readonly emails: Emails,
   ) {}
 
   @Roles("customer")
@@ -68,7 +70,8 @@ export class OrdersController {
       const result = await confirmSimulatedPayment(this.db, id);
       // The piece just left the marketplace and changed owner.
       this.cache.clear();
-      return result;
+      void this.emails.orderPaid({ orderId: id, customerId: result.customerId, artistId: result.artistId, title: result.artworkTitle, totalPaise: result.totalPaise, artistNetPaise: result.artistNetPaise }).catch(this.emails.swallow("order mail"));
+      return { transactionId: result.transactionId };
     } catch (error) {
       if (error instanceof CheckoutError) {
         throw new NotFoundException({ type: "about:blank", title: error.message, status: 404, code: "not_found" });

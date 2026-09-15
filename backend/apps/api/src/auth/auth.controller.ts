@@ -30,11 +30,16 @@ import { z } from "zod";
 import {
   AuthError,
   createUserProfile,
+  generateEmailVerificationLink,
+  generatePasswordResetLink,
   getCurrentUser,
   registerUser,
+  userRecordByEmail,
   verifyIdToken,
   type Db,
 } from "@galleryzone/db";
+import { Emails, oobCodeOf } from "../mail/emails.ts";
+import { Throttle } from "@nestjs/throttler";
 import { Public, Roles } from "./roles.decorator.ts";
 import type { AuthenticatedRequest } from "./roles.guard.ts";
 import { DB } from "../db.module.ts";
@@ -54,6 +59,11 @@ type RegisterBody = z.infer<typeof registerSchema>;
 const bootstrapSchema = z.object({ role: selfServeRole, name: z.string().trim().min(2).max(120).optional(), phone }).strict();
 type BootstrapBody = z.infer<typeof bootstrapSchema>;
 
+const emailOnlySchema = z.object({ email: z.string().email() }).strict();
+type EmailOnlyBody = z.infer<typeof emailOnlySchema>;
+
+const SITE = () => (process.env.PUBLIC_SITE_URL || "https://www.galleryzone.art").replace(/\/$/, "");
+
 function problem(status: number, title: string, code: string, detail?: string) {
   return { type: "about:blank", title, status, code, ...(detail ? { detail } : {}) };
 }
@@ -65,14 +75,29 @@ function firebaseAuthCode(error: unknown): string | null {
 
 @Controller("v1/auth")
 export class AuthController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly emails: Emails,
+  ) {}
+
+  /** Welcome mail with an email-verification link that lands on OUR /verify-email page. Never fails the request. */
+  private sendWelcome(uid: string, email: string) {
+    void generateEmailVerificationLink(email, `${SITE()}/login`)
+      .then((link) => {
+        const code = oobCodeOf(link);
+        return this.emails.welcome(uid, code ? `${SITE()}/verify-email?token=${encodeURIComponent(code)}` : null);
+      })
+      .catch(this.emails.swallow("welcome mail"));
+  }
 
   @Public()
   @Post("register")
   @HttpCode(201)
   async register(@Body(new ZodValidationPipe(registerSchema)) body: RegisterBody): Promise<{ uid: string }> {
     try {
-      return await registerUser(this.db, body);
+      const result = await registerUser(this.db, body);
+      this.sendWelcome(result.uid, body.email);
+      return result;
     } catch (error) {
       const code = firebaseAuthCode(error);
       if (code === "auth/email-already-exists") {
@@ -111,7 +136,40 @@ export class AuthController {
       if (error instanceof AuthError) throw new ConflictException(problem(409, error.message, "profile_exists"));
       throw error;
     }
+    // OAuth providers hand us a verified email, so no verification link.
+    void this.emails.welcome(verified.uid, null).catch(this.emails.swallow("welcome mail"));
     return getCurrentUser(this.db, verified.uid);
+  }
+
+  /**
+   * Password reset by email, sent through our own mailer so it carries our
+   * branding and lands on /reset-password?token=<oobCode>. Always answers
+   * 202 — the response never reveals whether the address has an account.
+   */
+  @Public()
+  @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 10, ttl: 3_600_000 } })
+  @Post("password-reset")
+  @HttpCode(202)
+  async passwordReset(@Body(new ZodValidationPipe(emailOnlySchema)) body: EmailOnlyBody): Promise<{ accepted: true }> {
+    void (async () => {
+      const record = await userRecordByEmail(body.email);
+      if (!record) return;
+      const link = await generatePasswordResetLink(body.email, `${SITE()}/login`);
+      const code = oobCodeOf(link);
+      if (!code) return;
+      await this.emails.passwordReset(body.email, record.displayName, `${SITE()}/reset-password?token=${encodeURIComponent(code)}`);
+    })().catch(this.emails.swallow("password reset mail"));
+    return { accepted: true };
+  }
+
+  /** Re-send the verification link to a signed-in, still-unverified account. */
+  @Roles("customer", "artist", "aggregator", "admin")
+  @Post("resend-verification")
+  @HttpCode(202)
+  async resendVerification(@Req() req: AuthenticatedRequest): Promise<{ accepted: true }> {
+    const user = await getCurrentUser(this.db, req.authUser.uid);
+    if (user) this.sendWelcome(user.uid, user.email);
+    return { accepted: true };
   }
 
   @Roles("customer", "artist", "aggregator", "admin")
