@@ -7,7 +7,8 @@
 
 import { Body, Controller, Get, Inject, Param, Post, Req, UsePipes } from "@nestjs/common";
 import { loadActiveRates } from "@galleryzone/config";
-import { FirestoreRateConfigStore, reindexAllListings, type Db } from "@galleryzone/db";
+import { Collections, FirestoreRateConfigStore, reindexAllListings, type Db, type RateConfigVersionDoc } from "@galleryzone/db";
+import { DEFAULT_RATE_SEED } from "@galleryzone/domain";
 import { proposeRateChangeSchema, type ProposeRateChangeInput } from "@galleryzone/contracts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Roles } from "./auth/roles.decorator.ts";
@@ -28,6 +29,36 @@ export class RateConfigController {
   async getActive() {
     const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
     return { rates };
+  }
+
+  /** Every proposed version, newest first — the second admin sees what is waiting for approval. */
+  @Roles("admin", "platform_admin")
+  @Get("versions")
+  async versions() {
+    const snap = await this.db.collection(Collections.rateConfigVersions).orderBy("proposedAt", "desc").limit(20).get();
+    return {
+      versions: snap.docs.map((d) => {
+        const v = d.data() as RateConfigVersionDoc;
+        return {
+          id: d.id,
+          rates: v.rates,
+          effectiveFrom: v.effectiveFrom?.toDate().toISOString() ?? null,
+          proposedBy: v.proposedBy,
+          proposedAt: v.proposedAt?.toDate().toISOString() ?? null,
+          approvedBy: v.approvedBy,
+          approvedAt: v.approvedAt?.toDate().toISOString() ?? null,
+          approved: v.approved,
+          reason: v.reason ?? null,
+        };
+      }),
+    };
+  }
+
+  /** The seed every deployment starts from — a proposal form can pre-fill from it. */
+  @Roles("admin", "platform_admin")
+  @Get("defaults")
+  defaults() {
+    return { rates: DEFAULT_RATE_SEED };
   }
 
   @Roles("platform_admin")

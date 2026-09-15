@@ -1,5 +1,6 @@
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { SettingsForm } from "@/features/admin/system/settings-form";
+import { PricingRulesPanel } from "@/features/admin/system/pricing-rules-panel";
 
 export const metadata = {
   title: "Settings | GalleryZone Admin",
@@ -12,6 +13,7 @@ export default function AdminSettingsPage() {
         title="Platform settings"
         description="Pricing, commission, and payout rules. Changes apply to new listings and settlements."
       />
+      <PricingRulesPanel />
       <SettingsForm />
     </div>
   );

@@ -127,6 +127,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "DELETE", path: "/v1/artist/artworks/:id/images/:imageId", authRole: "artist", summary: "Remove an image (bucket object too)", replaces: "n/a — new" },
   { method: "PUT", path: "/v1/artist/artworks/:id/images/order", authRole: "artist", summary: "Reorder images", replaces: "n/a — new" },
   { method: "GET", path: "/v1/images/artworks/:artworkId/:file", authRole: "public", summary: "Serve an image from the private bucket, immutable-cached", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/admin/rate-config/versions", authRole: "admin", summary: "Proposed/approved pricing rule versions", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/admin/rate-config/defaults", authRole: "admin", summary: "Seed pricing rules to pre-fill a proposal", replaces: "n/a — new" },
   { method: "GET", path: "/v1/artist/orders", authRole: "artist", summary: "Orders for my artworks", replaces: "artistDashboardService.listOrders" },
   { method: "GET", path: "/v1/admin/artworks/:id", authRole: "admin", summary: "One artwork, admin view", replaces: "adminService.getArtworkAdmin" },
   { method: "GET", path: "/v1/admin/users/:id", authRole: "admin", summary: "One user with profile facts", replaces: "adminService.getUser" },
