@@ -28,7 +28,6 @@ import { useCollection } from "@/hooks/useCollection";
 import type { CollectionItem } from "@/services/customerCollectionService";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaRequest } from "./physical-coa-request";
-import { mockCustomer } from "@/lib/mock-data/customer";
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-IN", {

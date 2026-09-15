@@ -1,5 +1,5 @@
 import { Controller, Get, Header, Inject, NotFoundException, Param } from "@nestjs/common";
-import { getPublicArtistProfile, listArtistPublicArtworks, ProfileError, type Db } from "@galleryzone/db";
+import { getPublicArtistProfile, listArtistPublicArtworks, listPublicArtists, publicStats, ProfileError, type Db } from "@galleryzone/db";
 import type { CustomerArtworkDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
@@ -7,12 +7,36 @@ import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 
 const PUBLIC_CACHE = "public, max-age=30, s-maxage=60, stale-while-revalidate=60";
 
+@Controller("v1/stats")
+export class PublicStatsController {
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly cache: ReadCache,
+  ) {}
+
+  @Public()
+  @Get("public")
+  @Header("Cache-Control", "public, max-age=300, s-maxage=600")
+  stats() {
+    return this.cache.getOrFill("stats:public", TTL.artist, () => publicStats(this.db));
+  }
+}
+
 @Controller("v1/artists")
 export class PublicArtistsController {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
   ) {}
+
+  /** Directory: every artist with a live listing. */
+  @Public()
+  @Get()
+  @Header("Cache-Control", PUBLIC_CACHE)
+  async list() {
+    const artists = await this.cache.getOrFill("artists:directory", TTL.marketplace, () => listPublicArtists(this.db));
+    return { artists };
+  }
 
   @Public()
   @Get(":id")

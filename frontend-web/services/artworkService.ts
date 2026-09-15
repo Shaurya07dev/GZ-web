@@ -61,7 +61,31 @@ export const artworkService = {
   },
 };
 
+/** Mirrors backend PublicArtistCard. */
+interface ArtistCardDto extends ArtistDto {
+  coverImageUrl: string | null;
+}
+
+export interface PublicStats {
+  artworksListed: number;
+  artistsOnboard: number;
+  mediums: number;
+  categories: number;
+}
+
+export const statsService = {
+  async publicStats(): Promise<PublicStats> {
+    return http.get<PublicStats>("/v1/stats/public");
+  },
+};
+
 export const artistService = {
+  /** Directory: artists with at least one live listing. */
+  async list(): Promise<(ArtistProfile & { coverImageUrl: string | null })[]> {
+    const { artists } = await http.get<{ artists: ArtistCardDto[] }>("/v1/artists");
+    return artists.map((a) => ({ ...toArtistProfile(a), coverImageUrl: a.coverImageUrl }));
+  },
+
   async get(id: string): Promise<ArtistProfile | undefined> {
     try {
       return toArtistProfile(await http.get<ArtistDto>(`/v1/artists/${encodeURIComponent(id)}`));

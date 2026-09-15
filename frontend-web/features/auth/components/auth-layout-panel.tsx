@@ -5,23 +5,15 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { mockArtworks } from "@/lib/mock-data/artworks";
+import { useMarketplaceOverview } from "@/hooks/useArtworks";
 
 // A small, deliberately varied slice of the fixture set (one painting, one
 // sculpture, one photograph, one textile piece) so the rotating showcase
 // reads as "the breadth of what's on GalleryZone", not four near-identical
 // canvases. Falls back gracefully (renders fewer frames) if any of these
 // specific ids ever moves in lib/mock-data/artworks.ts.
-const SHOWCASE_IDS = [
-  "monsoon-over-madurai",
-  "ancestral-bronze-study",
-  "last-show-at-metro-talkies",
-  "field-of-kusum-dye",
-];
-
-const SHOWCASE_ARTWORKS = SHOWCASE_IDS.map((id) =>
-  mockArtworks.find((artwork) => artwork.id === id),
-).filter((artwork): artwork is NonNullable<typeof artwork> => Boolean(artwork));
+// The showcase rotates through the newest live listings.
+const SHOWCASE_COUNT = 4;
 
 const ROTATE_INTERVAL_MS = 5000;
 
@@ -72,6 +64,7 @@ function Wordmark() {
 function RotatingShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
   const prefersReducedMotion = useReducedMotion();
+  const SHOWCASE_ARTWORKS = (useMarketplaceOverview().data?.artworks ?? []).slice(0, SHOWCASE_COUNT);
 
   useEffect(() => {
     if (prefersReducedMotion || SHOWCASE_ARTWORKS.length < 2) return;
@@ -79,7 +72,7 @@ function RotatingShowcase() {
       setActiveIndex((current) => (current + 1) % SHOWCASE_ARTWORKS.length);
     }, ROTATE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, SHOWCASE_ARTWORKS.length]);
 
   const active = SHOWCASE_ARTWORKS[activeIndex];
   if (!active) return null;

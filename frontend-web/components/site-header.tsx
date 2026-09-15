@@ -30,7 +30,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { mockArtworks } from "@/lib/mock-data/artworks";
+import { useMarketplaceOverview } from "@/hooks/useArtworks";
 import {
   ROLE_SECTION_HOME,
   readSessionRole,
@@ -42,23 +42,10 @@ function titleCase(value: string): string {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-const CATEGORY_ORDER = [
-  "painting",
-  "sculpture",
-  "photography",
-  "printmaking",
-  "textile art",
-  "mixed media",
-] as const;
-
-const EXPLORE_CATEGORIES = CATEGORY_ORDER.map((category) => {
-  const items = mockArtworks.filter((artwork) => artwork.category === category);
-  return {
-    category,
-    label: titleCase(category),
-    count: items.length,
-  };
-});
+// Explore menu: the categories that are actually live, from the marketplace facets.
+function exploreCategoriesFrom(categories: string[]) {
+  return categories.map((category) => ({ category, label: titleCase(category) }));
+}
 
 const SELL_WITH_US = [
   {
@@ -100,6 +87,7 @@ export function SiteHeader() {
   // here and nowhere else.
   const isLandingPage = pathname === "/";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const EXPLORE_CATEGORIES = exploreCategoriesFrom(useMarketplaceOverview().data?.facets.categories ?? []);
 
   // The cookie isn't available during the server render, and rendering
   // "Sign In" to someone who is already signed in is exactly the trap this

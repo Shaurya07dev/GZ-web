@@ -12,7 +12,7 @@ import { ArtistArtworksController } from "./artist-artworks.controller.ts";
 import { WithdrawalsController, AdminWithdrawalsController } from "./withdrawals.controller.ts";
 import { ArtistWalletController, AggregatorWalletController, CustomerWalletController } from "./wallets.controller.ts";
 import { AdminController } from "./admin.controller.ts";
-import { PublicArtistsController } from "./public-profiles.controller.ts";
+import { PublicArtistsController, PublicStatsController } from "./public-profiles.controller.ts";
 import { AdminArtworksController } from "./admin-artworks.controller.ts";
 import { AddressesController } from "./addresses.controller.ts";
 import { AdminSettlementsController } from "./admin-settlements.controller.ts";
@@ -67,6 +67,7 @@ import { DbModule } from "./db.module.ts";
     CustomerWalletController,
     AdminController,
     PublicArtistsController,
+    PublicStatsController,
     AdminArtworksController,
     AddressesController,
     AdminSettlementsController,

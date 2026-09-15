@@ -8,7 +8,6 @@ import {
   useRequestPhysicalCoaMutation,
 } from "@/hooks/usePhysicalCoa";
 import { useAddresses } from "@/hooks/useAddresses";
-import { mockCustomer } from "@/lib/mock-data/customer";
 
 // The buyer's side of MOU §12. The digital certificate always exists; this
 // asks the artist for the signed paper original, posted to the collector's

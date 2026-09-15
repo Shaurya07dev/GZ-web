@@ -13,9 +13,8 @@ import Notification4, {
 
 // Shared across all four logged-in shells (Admin, Artist Dashboard,
 // Aggregator, Account) — one bell, same place in every Topbar, right next to
-// SwitchMode. `groups` is optional: omit it to get the shared generic mock
-// feed (today's behaviour for every shell); pass a role-specific list to
-// show that role's own items instead (see aggregator-shell.tsx).
+// SwitchMode. `groups` is optional: omit it for the empty state; pass a
+// role-specific list to show that role's own items.
 export function NotificationsPopover({
   groups,
 }: {
@@ -30,7 +29,9 @@ export function NotificationsPopover({
         className="relative rounded-md p-1.5 text-foreground/80 transition-colors hover:text-foreground"
       >
         <Bell className="size-5" strokeWidth={1.75} />
-        <span className="absolute top-1 right-1 size-2 rounded-full bg-gold-bright ring-2 ring-background" />
+        {(groups?.length ?? 0) > 0 && (
+          <span className="absolute top-1 right-1 size-2 rounded-full bg-gold-bright ring-2 ring-background" />
+        )}
       </PopoverTrigger>
       <PopoverContent
         align="end"

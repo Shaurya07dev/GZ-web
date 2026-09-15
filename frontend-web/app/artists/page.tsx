@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { ArtistCard } from "@/features/artists/artist-card";
-import { mockArtists } from "@/lib/mock-data/artists";
+import { ArtistDirectoryGrid } from "@/features/artists/artist-directory-grid";
 
 export const metadata: Metadata = {
   title: "Artists | GalleryZone",
@@ -10,8 +9,6 @@ export const metadata: Metadata = {
     "Meet the independent, verified artists selling original artwork on GalleryZone.",
 };
 
-// Simple static grid over the full fixture set — no filters/search in scope
-// for this page (Task 16 Step 2), so a plain server component is enough.
 export default function ArtistsDirectoryPage() {
   return (
     <>
@@ -31,11 +28,7 @@ export default function ArtistsDirectoryPage() {
         </section>
 
         <section className="px-6 py-10 lg:px-10">
-          <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
-            {mockArtists.map((artist) => (
-              <ArtistCard key={artist.id} artist={artist} />
-            ))}
-          </div>
+          <ArtistDirectoryGrid />
         </section>
       </main>
       <SiteFooter />

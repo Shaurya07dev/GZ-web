@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { mockArtworks } from "@/lib/mock-data/artworks";
 
 export interface NotificationSource {
   name: string;
@@ -36,80 +35,9 @@ export interface Notification4Props {
   className?: string;
 }
 
-function artworkAvatar(id: string): { avatar?: string; initials: string } {
-  const artwork = mockArtworks.find((a) => a.id === id);
-  const initials = (artwork?.title ?? "GZ")
-    .split(" ")
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-  return { avatar: artwork?.thumbnailUrl, initials };
-}
-
-const defaultGroups: NotificationGroup[] = [
-  {
-    id: "today",
-    label: "Today",
-    items: [
-      {
-        id: "artwork-approved",
-        source: {
-          name: "Monsoon Over Madurai",
-          ...artworkAvatar("monsoon-over-madurai"),
-        },
-        title: "Your artwork was approved",
-        subtitle: "Monsoon Over Madurai is now live on the marketplace",
-        timestamp: "12m ago",
-        unread: true,
-      },
-      {
-        id: "new-order",
-        source: {
-          name: "Ancestral Bronze Study",
-          ...artworkAvatar("ancestral-bronze-study"),
-        },
-        title: "You have a new order",
-        subtitle: "Ancestral Bronze Study: payment confirmed",
-        timestamp: "24m ago",
-        unread: true,
-      },
-      {
-        id: "kyc-verified",
-        source: { name: "GalleryZone", initials: "GZ" },
-        title: "KYC verification complete",
-        subtitle: "Tier 2 documents verified",
-        timestamp: "38m ago",
-        unread: true,
-      },
-    ],
-  },
-  {
-    id: "earlier",
-    label: "Earlier",
-    items: [
-      {
-        id: "wishlist-add",
-        source: {
-          name: "Last Show at Metro Talkies",
-          ...artworkAvatar("last-show-at-metro-talkies"),
-        },
-        title: "Added to a wishlist",
-        subtitle: "Last Show at Metro Talkies was saved by a collector",
-        timestamp: "3h ago",
-        unread: true,
-      },
-      {
-        id: "settlement-paid",
-        source: { name: "GalleryZone", initials: "GZ" },
-        title: "Settlement paid out",
-        subtitle: "₹42,300 transferred to your wallet",
-        timestamp: "5h ago",
-        unread: false,
-      },
-    ],
-  },
-];
+// No notification feed exists on the API yet: the bell opens to an honest
+// empty state rather than a fixture feed.
+const defaultGroups: NotificationGroup[] = [];
 
 export default function Notification4({
   title = "Notifications",
@@ -158,6 +86,11 @@ export default function Notification4({
         </CardHeader>
 
         <CardContent className="space-y-2 px-2">
+          {groups.length === 0 && (
+            <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+              You're all caught up — nothing new right now.
+            </p>
+          )}
           {groups.map((group) => (
             <NotificationGroupCard key={group.id} group={group} />
           ))}

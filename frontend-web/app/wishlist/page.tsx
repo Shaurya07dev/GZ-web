@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import Link from "next/link";
 import { useWishlistStore } from "@/store/useWishlistStore";
-import { getArtworkById, toSummary } from "@/lib/mock-data/helpers";
+import { useQueries } from "@tanstack/react-query";
+import { artworkService } from "@/services/artworkService";
+import { toSummary } from "@/lib/artwork-summary";
 import { ArtworkCard } from "@/components/shared/artwork-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ArtworkCardSkeleton } from "@/components/shared/artwork-card-skeleton";
@@ -19,9 +21,15 @@ export default function WishlistPage() {
     setMounted(true);
   }, []);
 
-  const artworks = ids
-    .map((id) => getArtworkById(id))
-    .filter((artwork) => artwork !== undefined)
+  // Saved ids live in the browser; each piece is read from the API so a
+  // sold or delisted artwork simply drops out of the list.
+  const results = useQueries({
+    queries: ids.map((id) => ({ queryKey: ["artwork", id], queryFn: () => artworkService.get(id), staleTime: 60_000 })),
+  });
+  const loading = mounted && results.some((r) => r.isPending);
+  const artworks = results
+    .map((r) => r.data)
+    .filter((artwork) => artwork !== undefined && artwork !== null)
     .map(toSummary);
 
   return (
@@ -37,7 +45,7 @@ export default function WishlistPage() {
           </p>
         </div>
 
-        {!mounted ? (
+        {!mounted || loading ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <ArtworkCardSkeleton key={i} />

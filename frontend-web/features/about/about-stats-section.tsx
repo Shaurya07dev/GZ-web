@@ -2,38 +2,20 @@
 
 import "@/lib/motion-config";
 import { motion } from "framer-motion";
-import { mockArtworks } from "@/lib/mock-data/artworks";
-import { mockArtists } from "@/lib/mock-data/artists";
+import { usePublicStats } from "@/hooks/usePublic";
 import { VERIFICATION_TIERS } from "./about-data";
 
-// Real counts from the current catalog fixtures rather than invented
-// vanity metrics -- GalleryZone's own marketing already frames itself as
-// early-stage (see "Become an Early Artist" CTAs), so this states what's
-// actually on the platform today instead of a fabricated user base.
-const CATEGORY_COUNT = new Set(mockArtworks.map((a) => a.category)).size;
-
-const STATS = [
-  {
-    value: `${mockArtworks.length}`,
-    label: "Artworks listed",
-    sublabel: `across ${CATEGORY_COUNT} mediums`,
-  },
-  {
-    value: `${mockArtists.length}`,
-    label: "Artists onboard",
-    sublabel: "and growing",
-  },
-  {
-    value: `${CATEGORY_COUNT}`,
-    label: "Mediums",
-    sublabel: "painting to mixed media",
-  },
-  {
-    value: `${VERIFICATION_TIERS.length}`,
-    label: "Verification tiers",
-    sublabel: "identity to first sale",
-  },
-];
+// Live numbers from GET /v1/stats/public — what is actually on the
+// platform today, never a fabricated user base.
+function statsFor(s: { artworksListed: number; artistsOnboard: number; mediums: number; categories: number } | undefined) {
+  const n = (v: number | undefined) => (v === undefined ? "—" : String(v));
+  return [
+    { value: n(s?.artworksListed), label: "Artworks listed", sublabel: `across ${n(s?.categories)} categories` },
+    { value: n(s?.artistsOnboard), label: "Artists onboard", sublabel: "and growing" },
+    { value: n(s?.mediums), label: "Mediums", sublabel: "painting to mixed media" },
+    { value: `${VERIFICATION_TIERS.length}`, label: "Verification tiers", sublabel: "identity to first sale" },
+  ];
+}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -41,6 +23,8 @@ const fadeUp = {
 };
 
 export function AboutStatsSection() {
+  const { data } = usePublicStats();
+  const STATS = statsFor(data);
   return (
     <section className="relative overflow-hidden py-20 md:py-28">
       <div className="mx-auto max-w-[1280px] px-6 lg:px-10">

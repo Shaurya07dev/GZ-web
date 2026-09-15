@@ -129,6 +129,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "DELETE", path: "/v1/artist/artworks/:id/images/:imageId", authRole: "artist", summary: "Remove an image (bucket object too)", replaces: "n/a — new" },
   { method: "PUT", path: "/v1/artist/artworks/:id/images/order", authRole: "artist", summary: "Reorder images", replaces: "n/a — new" },
   { method: "GET", path: "/v1/images/artworks/:artworkId/:file", authRole: "public", summary: "Serve an image from the private bucket, immutable-cached", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/artists", authRole: "public", summary: "Artist directory (artists with a live listing)", replaces: "mockArtists" },
+  { method: "GET", path: "/v1/stats/public", authRole: "public", summary: "Headline platform numbers for the About page", replaces: "about-stats-section fixtures" },
   { method: "POST", path: "/v1/orders/:id/payment/session", authRole: "customer", summary: "Open a gateway checkout session (Razorpay order) or learn payments are simulated", replaces: "n/a — new" },
   { method: "POST", path: "/v1/orders/:id/payment/verify", authRole: "customer", summary: "Checkout.js callback: verify HMAC and mark paid", replaces: "n/a — new" },
   { method: "POST", path: "/v1/payments/razorpay/webhook", authRole: "public", summary: "Razorpay webhook (signature-verified, idempotent)", replaces: "n/a — new" },
