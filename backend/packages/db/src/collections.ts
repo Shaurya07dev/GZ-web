@@ -303,6 +303,8 @@ export interface PaymentDoc {
   orderId: string;
   provider: string;
   providerPaymentId: string | null;
+  /** The gateway's own order id (Razorpay order_…), set when a checkout session is opened. */
+  providerOrderId?: string | null;
   method: string | null;
   amountPaise: number;
   idempotencyKey: string;

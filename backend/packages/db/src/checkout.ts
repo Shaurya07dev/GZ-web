@@ -1,9 +1,10 @@
-// Marketplace checkout orchestration — Firestore version. Same two-step
-// design as the Postgres version: createOrder() records intent at
-// "pending" with nothing captured yet; confirmSimulatedPayment() is the
-// explicit PRE-RAZORPAY placeholder that moves the order to "paid" and
-// posts the real ledger entries. Phase 2 replaces confirmSimulatedPayment's
-// body with real webhook handling, not its callers.
+// Marketplace checkout orchestration — Firestore version. Two steps:
+// createOrder() records intent at "pending" with nothing captured yet;
+// markOrderPaid() moves it to "paid", posts the ledger entries, passes
+// title to the buyer and takes the piece off the marketplace. Who calls
+// markOrderPaid depends on PAYMENTS_MODE: the Razorpay webhook / checkout
+// verification (payments.controller.ts) in production, or the customer's
+// own simulate-payment call in simulated mode. Idempotent on the order.
 
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
@@ -90,13 +91,12 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   return { orderId: orderRef.id, totalPaise: checkout.total };
 }
 
-/**
- * PRE-RAZORPAY PLACEHOLDER. Simulates a successful payment capture: moves
- * the order pending -> paid and posts the real marketplace-channel ledger
- * entries. Phase 2 replaces this function's body with real Razorpay
- * webhook handling (signature verification, idempotent-by-webhook-id) —
- * callers (and the order/ledger shape it produces) don't change.
- */
+export interface PaymentCapture {
+  method: string;
+  providerPaymentId: string | null;
+  rawWebhookPayload?: unknown;
+}
+
 export interface PaymentConfirmation {
   transactionId: string;
   orderId: string;
@@ -108,12 +108,48 @@ export interface PaymentConfirmation {
   artistNetPaise: number;
 }
 
-export async function confirmSimulatedPayment(db: Firestore, orderId: string): Promise<PaymentConfirmation> {
+/** Simulated capture — only reachable while PAYMENTS_MODE=simulated (orders.controller.ts gates it). */
+export function confirmSimulatedPayment(db: Firestore, orderId: string): Promise<PaymentConfirmation> {
+  return markOrderPaid(db, orderId, { method: "simulated", providerPaymentId: null });
+}
+
+/** Records the gateway's order id against our payment doc so a webhook can find the order. */
+export async function attachProviderOrder(db: Firestore, orderId: string, providerOrderId: string): Promise<void> {
+  const snap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
+  if (snap.empty) throw new CheckoutError(`No payment record for order ${orderId}`);
+  await snap.docs[0]!.ref.update({ providerOrderId });
+}
+
+export async function orderIdForProviderOrder(db: Firestore, providerOrderId: string): Promise<string | null> {
+  const snap = await db.collection(Collections.payments).where("providerOrderId", "==", providerOrderId).limit(1).get();
+  return snap.empty ? null : (snap.docs[0]!.data() as PaymentDoc).orderId;
+}
+
+export async function markPaymentFailed(db: Firestore, orderId: string, detail: { providerPaymentId: string | null; rawWebhookPayload: unknown }): Promise<void> {
+  const snap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
+  if (snap.empty) return;
+  const payment = snap.docs[0]!.data() as PaymentDoc;
+  // A failed attempt never overwrites a capture that already happened.
+  if (payment.status === "captured") return;
+  await snap.docs[0]!.ref.update({ status: "failed", providerPaymentId: detail.providerPaymentId, rawWebhookPayload: detail.rawWebhookPayload ?? null });
+}
+
+/**
+ * The one place an order becomes paid. Idempotent: a second call for an
+ * already-paid order (webhook after checkout verification, or a retried
+ * webhook) returns the same confirmation without posting anything twice —
+ * the ledger's idempotencyPrefix and the state machine both guard it.
+ */
+export async function markOrderPaid(db: Firestore, orderId: string, capture: PaymentCapture): Promise<PaymentConfirmation> {
   const orderRef = db.collection(Collections.orders).doc(orderId);
   const orderSnap = await orderRef.get();
   if (!orderSnap.exists) throw new CheckoutError(`No order ${orderId}`);
   const order = orderSnap.data() as OrderDoc;
 
+  if (order.status !== "pending") {
+    if (order.status === "cancelled") throw new CheckoutError(`Order ${orderId} was cancelled`);
+    return confirmationFor(db, orderId, order, null);
+  }
   orderStateMachine.assertTransition(order.status, "paid");
 
   const pricingSnap = await db.collection(artworkPricingCol(order.artworkId)).doc("data").get();
@@ -149,19 +185,36 @@ export async function confirmSimulatedPayment(db: Firestore, orderId: string): P
     await appendArtworkStatus(db, order.artworkId, { status: "sold", changedBy: null, reason: `order:${orderId}` });
   }
   await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get().then((snap) => {
-    if (!snap.empty) snap.docs[0]!.ref.update({ status: "captured" });
+    if (!snap.empty) {
+      snap.docs[0]!.ref.update({
+        status: "captured",
+        method: capture.method,
+        providerPaymentId: capture.providerPaymentId,
+        rawWebhookPayload: capture.rawWebhookPayload ?? null,
+      });
+    }
   });
 
-  const artworkSnap = await db.collection(Collections.artworks).doc(order.artworkId).get();
+  return confirmationFor(db, orderId, order, transactionId);
+}
+
+async function confirmationFor(db: Firestore, orderId: string, order: OrderDoc, transactionId: string | null): Promise<PaymentConfirmation> {
+  const [artworkSnap, pricingSnap] = await Promise.all([
+    db.collection(Collections.artworks).doc(order.artworkId).get(),
+    db.collection(artworkPricingCol(order.artworkId)).doc("data").get(),
+  ]);
+  const pricing = pricingSnap.data() as ArtworkPricingDoc | undefined;
+  const rateStore = new FirestoreRateConfigStore(db);
+  const version = await rateStore.getActiveVersion(order.createdAt.toDate());
   const artworkTitle = (artworkSnap.data() as { title?: string } | undefined)?.title ?? "your artwork";
   return {
-    transactionId,
+    transactionId: transactionId ?? `order:${orderId}`,
     orderId,
     customerId: order.customerId,
-    artistId: pricing.artistId,
+    artistId: pricing?.artistId ?? "",
     artworkId: order.artworkId,
     artworkTitle,
     totalPaise: order.totalPaise,
-    artistNetPaise: artistSettlementOf(pricing.artistPricePaise, "marketplace", version.rates).net,
+    artistNetPaise: pricing && version ? artistSettlementOf(pricing.artistPricePaise, "marketplace", version.rates).net : 0,
   };
 }

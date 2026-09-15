@@ -1,16 +1,40 @@
 // Order listing reads — Firestore version.
 
 import type { Firestore } from "firebase-admin/firestore";
-import { Collections, artworkPricingCol, type ArtworkDoc, type ArtworkPricingDoc, type OrderDoc } from "./collections.ts";
+import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkDoc, type ArtworkPricingDoc, type OrderDoc, type OrderStatusEventDoc, type PaymentDoc } from "./collections.ts";
 
-export async function listCustomerOrders(db: Firestore, customerId: string): Promise<(OrderDoc & { id: string })[]> {
-  const snap = await db.collection(Collections.orders).where("customerId", "==", customerId).orderBy("createdAt", "desc").get();
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as OrderDoc) }));
+export interface OrderView extends OrderDoc {
+  id: string;
+  /** Latest capture attempt, if any — never the gateway's raw payload. */
+  payment: { method: string | null; providerPaymentId: string | null; status: string } | null;
+  statusHistory: { status: string; changedAt: string }[];
 }
 
-export async function getOrder(db: Firestore, orderId: string): Promise<(OrderDoc & { id: string }) | null> {
+async function decorate(db: Firestore, id: string, order: OrderDoc): Promise<OrderView> {
+  const [paySnap, eventsSnap] = await Promise.all([
+    db.collection(Collections.payments).where("orderId", "==", id).limit(1).get(),
+    db.collection(orderStatusEventsCol(id)).orderBy("changedAt", "asc").get(),
+  ]);
+  const pay = paySnap.docs[0]?.data() as PaymentDoc | undefined;
+  return {
+    id,
+    ...order,
+    payment: pay ? { method: pay.method, providerPaymentId: pay.providerPaymentId, status: pay.status } : null,
+    statusHistory: eventsSnap.docs.map((d) => {
+      const e = d.data() as OrderStatusEventDoc;
+      return { status: e.status, changedAt: e.changedAt?.toDate().toISOString() ?? new Date(0).toISOString() };
+    }),
+  };
+}
+
+export async function listCustomerOrders(db: Firestore, customerId: string): Promise<OrderView[]> {
+  const snap = await db.collection(Collections.orders).where("customerId", "==", customerId).orderBy("createdAt", "desc").get();
+  return Promise.all(snap.docs.map((d) => decorate(db, d.id, d.data() as OrderDoc)));
+}
+
+export async function getOrder(db: Firestore, orderId: string): Promise<OrderView | null> {
   const snap = await db.collection(Collections.orders).doc(orderId).get();
-  return snap.exists ? { id: snap.id, ...(snap.data() as OrderDoc) } : null;
+  return snap.exists ? decorate(db, snap.id, snap.data() as OrderDoc) : null;
 }
 
 export async function listArtistArtworks(db: Firestore, artistId: string): Promise<((ArtworkDoc & { id: string; artistPricePaise: number }))[]> {

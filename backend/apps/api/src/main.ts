@@ -11,7 +11,8 @@ import { HttpExceptionFilter } from "./http-exception.filter.ts";
 // its own edge, so the client IP is the first X-Forwarded-For hop.
 async function bootstrap() {
   const env = loadEnv();
-  const app = await NestFactory.create(AppModule);
+  // rawBody: the Razorpay webhook signature is over the exact bytes received.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
   app.useGlobalFilters(new HttpExceptionFilter());
   // Bearer tokens, not cookies, so no credentials — keeps the allowlist the only CORS decision.

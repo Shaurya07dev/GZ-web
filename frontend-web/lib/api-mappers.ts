@@ -180,6 +180,8 @@ export interface OrderDto {
   status: OrderStatus;
   rateConfigVersionId: string;
   createdAt: FirestoreTimestampLike | string;
+  payment?: { method: string | null; providerPaymentId: string | null; status: string } | null;
+  statusHistory?: { status: OrderStatus; changedAt: string }[];
 }
 
 export interface FirestoreTimestampLike {
@@ -204,9 +206,16 @@ export function toOrder(dto: OrderDto): Order {
     deliveryCharge: paiseToRupees(dto.deliveryChargePaise),
     status: dto.status,
     createdAt,
-    // Status events live in a subcollection the listing doesn't join yet.
-    statusHistory: [{ status: dto.status, changedAt: createdAt }],
-    payment: dto.status === "pending" ? null : { provider: "razorpay", paymentId: "", method: "simulated", simulated: true },
+    statusHistory: dto.statusHistory?.length ? dto.statusHistory : [{ status: dto.status, changedAt: createdAt }],
+    payment:
+      dto.payment && dto.payment.status === "captured"
+        ? {
+            provider: "razorpay",
+            paymentId: dto.payment.providerPaymentId ?? "",
+            method: dto.payment.method ?? "razorpay",
+            simulated: dto.payment.method === "simulated",
+          }
+        : null,
   };
 }
 

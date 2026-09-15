@@ -1,6 +1,7 @@
 import type { Order } from "@/types/order";
 import { http, isApiError } from "@/lib/api";
 import { toOrder, type OrderDto } from "@/lib/api-mappers";
+import { openRazorpayCheckout, type RazorpaySession } from "@/lib/razorpay-checkout";
 
 // Real checkout against the API. Money is computed server-side from the
 // artwork's pricing doc and the active rate config (packages/domain) — the
@@ -11,8 +12,6 @@ import { toOrder, type OrderDto } from "@/lib/api-mappers";
 export interface CreateOrderPayload {
   artworkId: string;
   addressId: string;
-  /** Gateway result. Simulated for now; ignored by the API until Razorpay lands. */
-  payment?: Order["payment"];
 }
 
 export const orderService = {
@@ -30,11 +29,12 @@ export const orderService = {
     }
   },
 
-  // Two calls: create (pending) then confirm. While Razorpay is deferred the
-  // confirmation is the backend's simulated capture, which the order's own
-  // customer may trigger (PAYMENTS_MODE=simulated). When the real gateway
-  // lands, the second call becomes the gateway checkout + webhook and this
-  // function's shape doesn't change.
+  // 1. create the order (pending)  2. ask the API for a payment session
+  // 3a. Razorpay: open Checkout.js, then hand the signed result back to the
+  //     API, which verifies the HMAC and marks the order paid (the webhook
+  //     does the same independently, idempotently)
+  // 3b. simulated (PAYMENTS_MODE=simulated on the API): the customer's own
+  //     simulate-payment call — no money moves
   create: async (payload: CreateOrderPayload): Promise<Order> => {
     const { orderId } = await http.post<{ orderId: string; totalPaise: number }>("/v1/orders", {
       artworkId: payload.artworkId,
@@ -43,7 +43,18 @@ export const orderService = {
       // create two orders (the API enforces uniqueness).
       idempotencyKey: crypto.randomUUID(),
     });
-    await http.post(`/v1/orders/${encodeURIComponent(orderId)}/simulate-payment`);
+    const base = `/v1/orders/${encodeURIComponent(orderId)}`;
+    const session = await http.post<{ mode: "simulated" } | RazorpaySession>(`${base}/payment/session`);
+    if (session.mode === "razorpay") {
+      const paid = await openRazorpayCheckout(session);
+      await http.post(`${base}/payment/verify`, {
+        razorpayOrderId: paid.razorpay_order_id,
+        razorpayPaymentId: paid.razorpay_payment_id,
+        signature: paid.razorpay_signature,
+      });
+    } else {
+      await http.post(`${base}/simulate-payment`);
+    }
     const order = await orderService.get(orderId);
     if (!order) throw new Error("Order was created but could not be read back");
     return order;

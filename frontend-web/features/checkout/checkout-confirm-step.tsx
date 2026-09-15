@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
+import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import { checkoutTotal } from "@/lib/pricing";
-import { RazorpaySimulation } from "./razorpay-simulation";
 import { PayeeDetails } from "@/components/shared/payee-details";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
@@ -22,12 +21,9 @@ interface CheckoutConfirmStepProps {
   placedOrder: Order | null;
 }
 
-// Step 3 of checkout: a single "Place Order" action against
-// useCreateOrderMutation. There is no simulated-conflict/error toggle here
-// (unlike e.g. the Aggregator reserve flow) because checkout has no
-// specified failure case in the source docs — a plain try/catch-shaped
-// mutate() + toast covers the mock service's one real failure mode
-// (artwork not found).
+// Step 3 of checkout: one action. The service creates the order, opens
+// the Razorpay checkout and confirms the payment with the API; closing
+// the payment window leaves the order pending and the buyer here.
 export function CheckoutConfirmStep({
   artwork,
   address,
@@ -36,21 +32,21 @@ export function CheckoutConfirmStep({
   placedOrder,
 }: CheckoutConfirmStepProps) {
   const createOrderMutation = useCreateOrderMutation();
-  const [payOpen, setPayOpen] = useState(false);
 
   const total = checkoutTotal(artwork.customerPrice).total;
 
-  // Payment first, order second: an order only exists once the gateway has
-  // returned a reference, so there is never a paid-but-orderless state or an
-  // order with no payment against it.
-  function handlePaid(payment: NonNullable<Order["payment"]>) {
+  function handlePay() {
     createOrderMutation.mutate(
-      { artworkId: artwork.id, addressId: address.id, payment },
+      { artworkId: artwork.id, addressId: address.id },
       {
         onSuccess: (order) => {
           onOrderPlaced(order);
         },
         onError: (error) => {
+          if (error instanceof PaymentDismissedError) {
+            toast.info("Payment cancelled — nothing was charged.");
+            return;
+          }
           toast.error(
             error instanceof Error ? error.message : "Could not place order",
           );
@@ -119,8 +115,8 @@ export function CheckoutConfirmStep({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           You&rsquo;re buying &ldquo;{artwork.title}&rdquo;, delivered to{" "}
-          {address.line1}, {address.city}. Paying opens a stand-in for the
-          Razorpay checkout — no money moves until live keys are connected.
+          {address.line1}, {address.city}. Paying opens the secure Razorpay
+          checkout — UPI, cards and net banking.
         </p>
       </div>
 
@@ -134,14 +130,14 @@ export function CheckoutConfirmStep({
           Back
         </Button>
         <Button
-          onClick={() => setPayOpen(true)}
+          onClick={handlePay}
           disabled={createOrderMutation.isPending}
         >
           {createOrderMutation.isPending && (
             <Loader2 className="size-4 animate-spin" strokeWidth={2} />
           )}
           {createOrderMutation.isPending
-            ? "Placing order…"
+            ? "Waiting for payment…"
             : `Pay ${formatINR(total)}`}
         </Button>
       </div>
@@ -154,13 +150,6 @@ export function CheckoutConfirmStep({
         note={`GZ ${artwork.title.slice(0, 24)}`}
       />
 
-      <RazorpaySimulation
-        open={payOpen}
-        onOpenChange={setPayOpen}
-        amount={total}
-        artworkTitle={artwork.title}
-        onPaid={handlePaid}
-      />
     </div>
   );
 }

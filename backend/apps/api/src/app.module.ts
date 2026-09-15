@@ -33,6 +33,8 @@ import { Storage } from "./storage.ts";
 import { ListingBackfill } from "./listing-backfill.ts";
 import { Mailer } from "./mail/mailer.ts";
 import { Emails } from "./mail/emails.ts";
+import { PaymentsController } from "./payments/payments.controller.ts";
+import { Razorpay } from "./payments/razorpay.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
 import { requestIdMiddleware } from "./request-id.middleware.ts";
 import { DbModule } from "./db.module.ts";
@@ -81,6 +83,7 @@ import { DbModule } from "./db.module.ts";
     OwnershipController,
     MouController,
     ImagesController,
+    PaymentsController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
@@ -89,6 +92,7 @@ import { DbModule } from "./db.module.ts";
     ListingBackfill,
     Mailer,
     Emails,
+    Razorpay,
   ],
 })
 export class AppModule implements NestModule {

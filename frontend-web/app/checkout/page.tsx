@@ -4,17 +4,32 @@ import { ArrowRight, ShoppingBag } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CheckoutFlow } from "@/features/checkout/checkout-flow";
-import { getArtworkById } from "@/lib/mock-data/helpers";
+import { API_URL } from "@/lib/api";
+import { toArtwork, type ArtworkDto } from "@/lib/api-mappers";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+// Server-side read of the public artwork (no auth needed). A piece that is
+// not on the marketplace any more falls through to the empty state.
+async function loadArtwork(id: string | undefined) {
+  if (!id) return null;
+  try {
+    const res = await fetch(`${API_URL}/v1/artworks/${encodeURIComponent(id)}`, { next: { revalidate: 30 } });
+    if (!res.ok) return null;
+    const artwork = toArtwork((await res.json()) as ArtworkDto);
+    return artwork.status === "marketplace" ? artwork : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateMetadata(
   props: PageProps<"/checkout">,
 ): Promise<Metadata> {
   const { artworkId } = await props.searchParams;
-  const artwork = getArtworkById(firstParam(artworkId) ?? "");
+  const artwork = await loadArtwork(firstParam(artworkId));
 
   return {
     title: artwork
@@ -31,7 +46,7 @@ export async function generateMetadata(
 // §5), the same shape as the old "coming soon" stub this page replaces.
 export default async function CheckoutPage(props: PageProps<"/checkout">) {
   const { artworkId } = await props.searchParams;
-  const artwork = getArtworkById(firstParam(artworkId) ?? "");
+  const artwork = await loadArtwork(firstParam(artworkId));
 
   if (!artwork) {
     return (
