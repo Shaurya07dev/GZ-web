@@ -1,11 +1,14 @@
-import { REVENUE_SERIES } from "./dashboard-data";
+"use client";
+
+import { useArtistRevenueSeries } from "@/hooks/useArtistRevenue";
 
 const WIDTH = 480;
 const HEIGHT = 140;
 const GAP = 14;
 
 export function RevenueChart() {
-  const max = Math.max(...REVENUE_SERIES.map((point) => point.amount));
+  const { series: REVENUE_SERIES } = useArtistRevenueSeries();
+  const max = Math.max(1, ...REVENUE_SERIES.map((point) => point.amount));
   const barWidth =
     (WIDTH - GAP * (REVENUE_SERIES.length - 1)) / REVENUE_SERIES.length;
 

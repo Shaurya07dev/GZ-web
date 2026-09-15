@@ -17,16 +17,11 @@ import {
 export const artistRatingService = {
   // --- Ratings -------------------------------------------------------------
 
-  getRating: (artistId: string): Promise<ArtistRating> =>
-    mockDelay(summarizeRating(artistId, artistReviewsCol.get())),
+  // Reviews aren't collected on the API yet, so every artist has an honest
+  // zero — never a fixture score.
+  getRating: async (artistId: string): Promise<ArtistRating> => summarizeRating(artistId, []),
 
-  listReviews: (artistId: string): Promise<ArtistReview[]> =>
-    mockDelay(
-      artistReviewsCol
-        .get()
-        .filter((r) => r.artistId === artistId)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    ),
+  listReviews: async (_artistId: string): Promise<ArtistReview[]> => [],
 
   // Admin's view: one summary per artist, keyed by the AdminUser id it will
   // be joined against, so the table does not have to know how ids map.

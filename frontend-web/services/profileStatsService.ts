@@ -7,31 +7,24 @@ import type {
 } from "@/types/profile-stats";
 import type { Artwork } from "@/types/artwork";
 import { verifiedTierCount } from "@/types/artist";
-import { summarizeRating } from "@/types/artist-rating";
-import { involvesArtist } from "@/types/artist-network";
 import { mockDelay } from "@/lib/mock-utils";
-import { getArtistById } from "@/lib/mock-data/helpers";
-import { ARTIST } from "@/features/dashboard/dashboard-data";
 import {
-  CURRENT_ARTIST_ID,
   aggregatorGallerySpacesCol,
   aggregatorSalesCol,
   aggregatorProfileCol,
   aggregatorWalletCol,
-  artistConnectionsCol,
-  artistPricesCol,
-  artistReviewsCol,
-  artistWalletCol,
   artworksCol,
-  customerProfileCol,
-  customerResaleListingsCol,
-  customerWalletCol,
   holdingsCol,
-  ordersCol,
-  pendingArtworksCol,
 } from "@/lib/mock-collections";
 import { aggregatorCommissionOf } from "@/lib/pricing";
 import { artistPriceOf } from "./artistPayoutService";
+import { artistService, artworkService } from "./artworkService";
+import { artistRatingService } from "./artistRatingService";
+import { artistArtworkApi } from "./artistArtworkApi";
+import { artistWalletApi } from "./artistWalletApi";
+import { customerCollectionService } from "./customerCollectionService";
+import { orderService } from "./orderService";
+import { customerService } from "./customerService";
 
 // Everything a profile shows at a glance, derived on read from the collections
 // that already hold the truth. Nothing here is stored, so a stat cannot drift
@@ -74,84 +67,39 @@ function rangeOf(amounts: number[]): PriceRange | null {
 
 // --- Artist ------------------------------------------------------------------
 
-function artistPublic(artistId: string): ArtistPublicStats {
-  const identity = artistIdentity(artistId);
-  const mine = artworksCol.get().filter((a) => a.artistId === artistId);
-  const listed = mine.filter((a) => a.status === "marketplace");
-  const sold = mine.filter(isSold);
-
-  const connections = artistConnectionsCol
-    .get()
-    .filter((c) => involvesArtist(c, artistId) && c.status === "accepted");
+async function artistPublic(artistId: string): Promise<ArtistPublicStats> {
+  const [profile, listed, rating] = await Promise.all([
+    artistService.get(artistId),
+    artworkService.listByArtist(artistId),
+    artistRatingService.getRating(artistId),
+  ]);
   return {
     artworksListed: listed.length,
-    worksSold: sold.length,
-    onDisplay: mine.filter((a) => a.status === "with_aggregator").length,
-    mediums: byFrequency(mine.map((a) => a.medium)),
-    categories: byFrequency(mine.map((a) => a.category)),
-    // The customer-facing price, which is on every artwork card already. The
-    // artist's own price is not derivable from a range of markups.
+    // Sold / on-display counts need the artist's private list; publicly we only see live pieces.
+    worksSold: 0,
+    onDisplay: 0,
+    mediums: byFrequency(listed.map((a) => a.medium)),
+    categories: byFrequency(listed.map((a) => a.category)),
     listedPriceRange: rangeOf(listed.map((a) => a.customerPrice)),
-    rating: summarizeRating(artistId, artistReviewsCol.get()),
-    connections: connections.length,
-    joinedAt: identity.joinedAt,
-    verifiedTiers: identity.verifiedTiers,
+    rating,
+    connections: 0,
+    joinedAt: profile?.joinedAt ?? "",
+    verifiedTiers: profile ? verifiedTierCount(profile.verification) : 0,
   };
 }
 
-/**
- * Who this artist is, for the two fields that come from a profile record
- * rather than from their work.
- *
- * The demo artist is the awkward case: she is the signed-in user, so she has a
- * dashboard record (ARTIST) but is deliberately not one of the seven public
- * fixtures. Falling through to `new Date()` for her made her look like she
- * joined today, on her own profile, every day.
- */
-function artistIdentity(artistId: string): {
-  joinedAt: string;
-  verifiedTiers: 0 | 1 | 2 | 3;
-} {
-  const known = getArtistById(artistId);
-  if (known) {
-    return {
-      joinedAt: known.joinedAt,
-      verifiedTiers: verifiedTierCount(known.verification),
-    };
-  }
-  if (artistId === CURRENT_ARTIST_ID) {
-    return {
-      joinedAt: ARTIST.joinedAt,
-      verifiedTiers: Math.min(3, Math.max(0, ARTIST.verifiedTier)) as 0 | 1 | 2 | 3,
-    };
-  }
-  return { joinedAt: new Date().toISOString(), verifiedTiers: 0 };
-}
-
-function artistPrivate(artistId: string): ArtistPrivateStats {
-  const mine = artworksCol.get().filter((a) => a.artistId === artistId);
-  const sold = mine.filter(isSold);
-  const prices = artistPricesCol.get();
-  const wallet = artistWalletCol.get();
-
-  // What they were actually paid, not what the buyer paid. Falls back through
-  // artistPriceOf for fixture pieces with no stored price.
-  const takeHome = sold.map((a) => prices[a.id] ?? artistPriceOf(a));
-  const total = takeHome.reduce((sum, amount) => sum + amount, 0);
-
+async function artistPrivate(): Promise<ArtistPrivateStats> {
+  const [mine, wallet, transactions] = await Promise.all([artistArtworkApi.list(), artistWalletApi.getWallet(), artistWalletApi.listTransactions()]);
+  const settlements = transactions.filter((t) => t.type === "settlement" && t.status === "completed").map((t) => t.amount);
+  const soldCount = mine.filter((a) => ["sold", "settlement_complete", "delivered", "completed"].includes(a.status)).length;
   return {
-    lifetimeEarnings: wallet.balance,
-    pendingEarnings: wallet.pendingBalance,
-    averageSalePrice:
-      takeHome.length === 0 ? 0 : Math.round(total / takeHome.length),
-    awaitingReview: pendingArtworksCol
-      .get()
-      .filter((a) => a.artistId === artistId).length,
+    lifetimeEarnings: settlements.reduce((sum, v) => sum + v, 0),
+    pendingEarnings: wallet.lockedBalance,
+    averageSalePrice: settlements.length ? Math.round(settlements.reduce((sum, v) => sum + v, 0) / settlements.length) : (soldCount ? 0 : 0),
+    awaitingReview: mine.filter((a) => a.status === "pending_approval").length,
     drafts: mine.filter((a) => a.status === "draft").length,
   };
 }
-
-// --- Aggregator ---------------------------------------------------------------
 
 function aggregator(): AggregatorStats {
   const holdings = holdingsCol.get();
@@ -191,59 +139,30 @@ function aggregator(): AggregatorStats {
 
 // --- Collector ----------------------------------------------------------------
 
-function collector(): CollectorStats {
-  const orders = ordersCol.get();
-  const artworks = artworksCol.get();
-  const profile = customerProfileCol.get();
-
-  const delivered = orders.filter((o) => o.status === "delivered");
-  const open = orders.filter(
-    (o) => o.status !== "delivered" && o.status !== "cancelled",
-  );
-
-  // Who they keep coming back to. One purchase is a purchase; two is a taste.
-  const artistNames = delivered
-    .map((order) => artworks.find((a) => a.id === order.artworkId)?.artistName)
-    .filter((name): name is string => Boolean(name));
+async function collector(): Promise<CollectorStats> {
+  const [collection, orders, profile] = await Promise.all([customerCollectionService.list(), orderService.list(), customerService.getProfile()]);
+  const open = orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled" && o.status !== "pending");
   const counts = new Map<string, number>();
-  for (const name of artistNames) counts.set(name, (counts.get(name) ?? 0) + 1);
-
+  for (const item of collection) counts.set(item.artwork.artistName, (counts.get(item.artwork.artistName) ?? 0) + 1);
   return {
-    worksOwned: delivered.length,
-    ordersPlaced: orders.length,
+    worksOwned: collection.length,
+    ordersPlaced: orders.filter((o) => o.status !== "pending").length,
     inProgress: open.length,
-    // GST is inside the amount and delivery is added — the same total the
-    // buyer was actually charged (lib/pricing.ts).
-    totalSpent: delivered.reduce(
-      (sum, order) => sum + order.amount + order.deliveryCharge,
-      0,
-    ),
-    // Wishlist lives in a client-only zustand store, so it is passed in by the
-    // component that can read it rather than guessed at here.
+    totalSpent: orders.filter((o) => o.status !== "pending" && o.status !== "cancelled").reduce((sum, o) => sum + o.amount + o.deliveryCharge, 0),
     wishlisted: 0,
-    listedForResale: customerResaleListingsCol
-      .get()
-      .filter((l) => l.status === "active").length,
-    artistsCollected: [...counts.entries()]
-      .filter(([, count]) => count > 1)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name]) => name),
-    walletBalance: customerWalletCol.get().balance,
+    listedForResale: 0,
+    artistsCollected: [...counts.entries()].filter(([, c]) => c > 1).sort((a, b) => b[1] - a[1]).map(([name]) => name),
+    walletBalance: 0,
     joinedAt: profile.joinedAt,
   };
 }
 
 export const profileStatsService = {
-  artistPublic: (artistId: string): Promise<ArtistPublicStats> =>
-    mockDelay(artistPublic(artistId)),
+  artistPublic: (artistId: string): Promise<ArtistPublicStats> => artistPublic(artistId),
 
-  /** Server components read this directly — no round trip to render a page. */
-  artistPublicSync: artistPublic,
-
-  artistPrivate: (artistId: string): Promise<ArtistPrivateStats> =>
-    mockDelay(artistPrivate(artistId)),
+  artistPrivate: (_artistId: string): Promise<ArtistPrivateStats> => artistPrivate(),
 
   aggregator: (): Promise<AggregatorStats> => mockDelay(aggregator()),
 
-  collector: (): Promise<CollectorStats> => mockDelay(collector()),
+  collector: (): Promise<CollectorStats> => collector(),
 };

@@ -39,7 +39,7 @@ import type {
   CategoryPerformance,
   FunnelStage,
 } from "@/lib/mock-data/admin-analytics";
-import { REVENUE_SERIES } from "./dashboard-data";
+import { useArtistRevenueSeries } from "@/hooks/useArtistRevenue";
 import { formatINR } from "@/lib/utils";
 
 export function ArtistAnalyticsView() {
@@ -126,7 +126,8 @@ export function ArtistAnalyticsView() {
 }
 
 function ArtistRevenueChart() {
-  const points = REVENUE_SERIES.map((p) => ({
+  const { series } = useArtistRevenueSeries();
+  const points = series.map((p) => ({
     label: p.month,
     amount: p.amount,
   }));
