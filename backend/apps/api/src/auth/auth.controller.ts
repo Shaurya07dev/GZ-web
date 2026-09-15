@@ -63,6 +63,11 @@ const emailOnlySchema = z.object({ email: z.string().email() }).strict();
 type EmailOnlyBody = z.infer<typeof emailOnlySchema>;
 
 const SITE = () => (process.env.PUBLIC_SITE_URL || "https://www.galleryzone.art").replace(/\/$/, "");
+// Firebase only accepts a continue URL on one of the project's authorised
+// domains. We never send that link — we lift the oobCode out of it and
+// build our own — so the project's own firebaseapp.com host is the safe
+// constant here, independent of which site domains are registered.
+const FIREBASE_CONTINUE = () => `https://${process.env.FIREBASE_PROJECT_ID}.firebaseapp.com/`;
 
 function problem(status: number, title: string, code: string, detail?: string) {
   return { type: "about:blank", title, status, code, ...(detail ? { detail } : {}) };
@@ -82,7 +87,7 @@ export class AuthController {
 
   /** Welcome mail with an email-verification link that lands on OUR /verify-email page. Never fails the request. */
   private sendWelcome(uid: string, email: string) {
-    void generateEmailVerificationLink(email, `${SITE()}/login`)
+    void generateEmailVerificationLink(email, FIREBASE_CONTINUE())
       .then((link) => {
         const code = oobCodeOf(link);
         return this.emails.welcome(uid, code ? `${SITE()}/verify-email?token=${encodeURIComponent(code)}` : null);
@@ -154,7 +159,7 @@ export class AuthController {
     void (async () => {
       const record = await userRecordByEmail(body.email);
       if (!record) return;
-      const link = await generatePasswordResetLink(body.email, `${SITE()}/login`);
+      const link = await generatePasswordResetLink(body.email, FIREBASE_CONTINUE());
       const code = oobCodeOf(link);
       if (!code) return;
       await this.emails.passwordReset(body.email, record.displayName, `${SITE()}/reset-password?token=${encodeURIComponent(code)}`);
