@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
-import { listAllArtworksAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, type Db } from "@galleryzone/db";
+import { NotFoundException } from "@nestjs/common";
+import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, type Db } from "@galleryzone/db";
+import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
@@ -19,8 +21,18 @@ export class AdminArtworksController {
 
   @Roles("admin")
   @Get("artworks")
-  list() {
-    return listAllArtworksAdmin(this.db);
+  async list() {
+    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+    return { artworks: await listArtworksForAdmin(this.db, rates) };
+  }
+
+  @Roles("admin")
+  @Get("artworks/:id")
+  async one(@Param("id") id: string) {
+    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+    const artwork = await getArtworkForAdmin(this.db, id, rates);
+    if (!artwork) throw new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
+    return artwork;
   }
 
   @Roles("admin")

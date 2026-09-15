@@ -39,6 +39,7 @@ import {
   mockWithdrawals,
 } from "@/lib/mock-data/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
+import { adminApi } from "@/services/adminApi";
 import { ADMIN } from "@/features/admin/admin-data";
 import { aggregatorService } from "@/services/aggregatorService";
 import {
@@ -125,158 +126,57 @@ export const adminService = {
   // deriving them from the handful of live orders would require hundreds of
   // fabricated rows). The four queue-sized counters are recomputed live so
   // every KPI tile agrees with the table/queue it links to.
-  getKpis: (): Promise<AdminKpis> => {
-    const pendingArtworks = pendingArtworksCol.get();
-    const adminUsers = adminUsersCol.get();
-    return mockDelay({
-      ...mockAdminKpis,
-      activeArtworks: artworksCol
-        .get()
-        .filter((a) => a.status === "marketplace").length,
-      totalUsers: adminUsers.length,
-      pendingArtworkApprovals: pendingArtworks.filter(
-        (a) => a.status === "pending_approval",
-      ).length,
-      pendingKyc: adminUsers.filter(isInKycQueue).length,
-      pendingWithdrawals: mockWithdrawals.filter((w) => w.status === "pending")
-        .length,
-    });
-  },
+  getKpis: (): Promise<AdminKpis> => adminApi.getKpis(),
 
   getActivity: (): Promise<AdminActivityEvent[]> =>
     mockDelay(mockAdminActivity),
 
   // --- moderation ----------------------------------------------------------
-  listPendingArtworks: (): Promise<Artwork[]> =>
-    mockDelay(
-      pendingArtworksCol.get().filter((a) => a.status === "pending_approval"),
-    ),
+  listPendingArtworks: (): Promise<Artwork[]> => adminApi.listPendingArtworks(),
 
-  // Resolves undefined (rather than rejecting) for an unknown id so the review
-  // page can call notFound() on it, matching customerService.getProfile's shape.
-  getPendingArtwork: (id: string): Promise<Artwork | undefined> =>
-    mockDelay(pendingArtworksCol.get().find((a) => a.id === id)),
+  getPendingArtwork: (id: string): Promise<Artwork | undefined> => adminApi.getArtwork(id),
 
-  approveArtwork: (
-    id: string,
-  ): Promise<{ id: string; status: "marketplace" }> => {
-    const pending = pendingArtworksCol.get();
-    const artwork = pending.find((a) => a.id === id);
-    if (!artwork || artwork.status !== "pending_approval") {
-      return mockError(`Artwork "${id}" is not awaiting approval`);
-    }
-    const now = new Date().toISOString();
-    const approved: Artwork = {
-      ...artwork,
-      status: "marketplace",
-      statusHistory: [
-        ...artwork.statusHistory,
-        { status: "marketplace" as const, changedAt: now },
-      ],
-    };
-    pendingArtworksCol.set(pending.filter((a) => a.id !== id));
-    artworksCol.set([...artworksCol.get(), approved]);
-    return mockDelay({ id, status: "marketplace" as const });
+  approveArtwork: (id: string): Promise<{ id: string; status: "marketplace" }> => adminApi.approveArtwork(id),
+
+  rejectArtwork: (id: string, reason: string): Promise<{ id: string; status: "returned"; reason: string }> => {
+    if (!reason.trim()) return Promise.reject(new Error("A rejection reason is required"));
+    return adminApi.rejectArtwork(id, reason);
   },
 
-  rejectArtwork: (
-    id: string,
-    reason: string,
-  ): Promise<{ id: string; status: "returned"; reason: string }> => {
-    const pending = pendingArtworksCol.get();
-    const artwork = pending.find((a) => a.id === id);
-    if (!artwork || artwork.status !== "pending_approval") {
-      return mockError(`Artwork "${id}" is not awaiting approval`);
-    }
-    if (!reason.trim()) return mockError("A rejection reason is required");
-    const now = new Date().toISOString();
-    const updated: Artwork = {
-      ...artwork,
-      status: "returned",
-      statusHistory: [
-        ...artwork.statusHistory,
-        { status: "returned" as const, changedAt: now },
-      ],
-    };
-    pendingArtworksCol.set(pending.map((a) => (a.id === id ? updated : a)));
-    return mockDelay({ id, status: "returned" as const, reason });
+  listKycQueue: (): Promise<AdminUser[]> => adminApi.listKycQueue(),
+
+  approveKyc: async (userId: string): Promise<{ userId: string; kycStatus: "approved" }> => {
+    await adminApi.decideKyc(userId, "approve");
+    return { userId, kycStatus: "approved" as const };
   },
 
-  // The queue definition (artists sitting in submitted / under_review) lives in
-  // the fixture module so the table, the nav badge and the KPI tile can't drift.
-  listKycQueue: (): Promise<AdminUser[]> =>
-    mockDelay(adminUsersCol.get().filter(isInKycQueue)),
-
-  approveKyc: (
-    userId: string,
-  ): Promise<{ userId: string; kycStatus: "approved" }> => {
-    if (!adminUsersCol.get().some((u) => u.id === userId))
-      return mockError(`User "${userId}" not found`);
-    return mockDelay({ userId, kycStatus: "approved" as const });
+  rejectKyc: async (userId: string, reason: string): Promise<{ userId: string; kycStatus: "rejected"; reason: string }> => {
+    if (!reason.trim()) throw new Error("A rejection reason is required");
+    await adminApi.decideKyc(userId, "reject", reason);
+    return { userId, kycStatus: "rejected" as const, reason };
   },
 
-  rejectKyc: (
-    userId: string,
-    reason: string,
-  ): Promise<{ userId: string; kycStatus: "rejected"; reason: string }> => {
-    if (!adminUsersCol.get().some((u) => u.id === userId))
-      return mockError(`User "${userId}" not found`);
-    if (!reason.trim()) return mockError("A rejection reason is required");
-    return mockDelay({ userId, kycStatus: "rejected" as const, reason });
+  listGstQueue: (): Promise<AdminUser[]> => adminApi.listGstQueue(),
+
+  approveGst: async (userId: string): Promise<{ userId: string; gstStatus: "approved" }> => {
+    await adminApi.decideGst(userId, "approve");
+    return { userId, gstStatus: "approved" as const };
   },
 
-  // GST is an artist-only requirement — see profile-kyc-form.tsx and
-  // lib/mock-data/admin.ts's isInGstQueue for the queue definition.
-  listGstQueue: (): Promise<AdminUser[]> =>
-    mockDelay(adminUsersCol.get().filter(isInGstQueue)),
-
-  approveGst: (
-    userId: string,
-  ): Promise<{ userId: string; gstStatus: "approved" }> => {
-    if (!adminUsersCol.get().some((u) => u.id === userId))
-      return mockError(`User "${userId}" not found`);
-    return mockDelay({ userId, gstStatus: "approved" as const });
+  rejectGst: async (userId: string, reason: string): Promise<{ userId: string; gstStatus: "rejected"; reason: string }> => {
+    if (!reason.trim()) throw new Error("A rejection reason is required");
+    await adminApi.decideGst(userId, "reject", reason);
+    return { userId, gstStatus: "rejected" as const, reason };
   },
 
-  rejectGst: (
-    userId: string,
-    reason: string,
-  ): Promise<{ userId: string; gstStatus: "rejected"; reason: string }> => {
-    if (!adminUsersCol.get().some((u) => u.id === userId))
-      return mockError(`User "${userId}" not found`);
-    if (!reason.trim()) return mockError("A rejection reason is required");
-    return mockDelay({ userId, gstStatus: "rejected" as const, reason });
+  listWithdrawals: (): Promise<WithdrawalRequest[]> => adminApi.listWithdrawals(),
+
+  approveWithdrawal: (id: string): Promise<{ id: string; status: "completed" }> => adminApi.approveWithdrawal(id),
+
+  rejectWithdrawal: (id: string, reason: string): Promise<{ id: string; status: "rejected"; reason: string }> => {
+    if (!reason.trim()) return Promise.reject(new Error("A rejection reason is required"));
+    return adminApi.rejectWithdrawal(id, reason);
   },
-
-  listWithdrawals: (): Promise<WithdrawalRequest[]> =>
-    mockDelay(mockWithdrawals),
-
-  approveWithdrawal: (
-    id: string,
-  ): Promise<{ id: string; status: "completed" }> => {
-    const withdrawal = mockWithdrawals.find((w) => w.id === id);
-    if (!withdrawal) return mockError(`Withdrawal "${id}" not found`);
-    if (withdrawal.status !== "pending")
-      return mockError("Only pending withdrawals can be approved");
-    return mockDelay({ id, status: "completed" as const });
-  },
-
-  rejectWithdrawal: (
-    id: string,
-    reason: string,
-  ): Promise<{ id: string; status: "rejected"; reason: string }> => {
-    const withdrawal = mockWithdrawals.find((w) => w.id === id);
-    if (!withdrawal) return mockError(`Withdrawal "${id}" not found`);
-    if (withdrawal.status !== "pending")
-      return mockError("Only pending withdrawals can be rejected");
-    if (!reason.trim()) return mockError("A rejection reason is required");
-    return mockDelay({ id, status: "rejected" as const, reason });
-  },
-
-  // --- off-platform sale fees ----------------------------------------------
-  // The 1% fee is proposed by the system and decided by a person. Selling
-  // elsewhere is not automatically bad faith, so nothing is charged until this
-  // runs; artistDashboardService only collects fees marked approved.
 
   listExternalSaleFees: (): Promise<ExternalSalePenalty[]> =>
     mockDelay(
@@ -353,21 +253,12 @@ export const adminService = {
   // --- catalog -------------------------------------------------------------
   // Public + admin-only sets combined: admin is the one view that sees every
   // artwork regardless of status.
-  listAllArtworks: (): Promise<Artwork[]> =>
-    mockDelay([...artworksCol.get(), ...pendingArtworksCol.get()]),
+  listAllArtworks: (): Promise<Artwork[]> => adminApi.listAllArtworks(),
 
-  getArtworkAdmin: (id: string): Promise<Artwork | undefined> =>
-    mockDelay(findArtwork(id)),
+  getArtworkAdmin: (id: string): Promise<Artwork | undefined> => adminApi.getArtwork(id),
 
-  delistArtwork: (id: string): Promise<{ id: string; status: "returned" }> => {
-    const artwork = findArtwork(id);
-    if (!artwork) return mockError(`Artwork "${id}" not found`);
-    return mockDelay({ id, status: "returned" as const });
-  },
+  delistArtwork: (id: string): Promise<{ id: string; status: "returned" }> => adminApi.delistArtwork(id),
 
-  // The live placement for a piece, if it has one. Returned holdings are kept
-  // for the cycle counter, so "with an aggregator right now" is specifically
-  // the reserved one.
   activeHoldingFor: (
     artworkId: string,
   ): Promise<AggregatorHolding | null> =>
@@ -467,112 +358,27 @@ export const adminService = {
   // to whichever collection actually holds the piece — a work still awaiting
   // approval lives in pendingArtworksCol, and ranking it there is the point:
   // an admin reviewing a submission is exactly when they judge it.
-  setArtworkRarity: (
-    id: string,
-    rarity: ArtworkRarity | null,
-  ): Promise<Artwork> => {
-    const artwork = findArtwork(id);
-    if (!artwork) return mockError(`Artwork "${id}" not found`);
+  setArtworkRarity: (id: string, rarity: ArtworkRarity | null): Promise<Artwork> => adminApi.setArtworkRarity(id, rarity),
 
-    const updated: Artwork = { ...artwork, rarityType: rarity };
-    const replace = (list: Artwork[]) =>
-      list.map((a) => (a.id === id ? updated : a));
-
-    if (artworksCol.get().some((a) => a.id === id)) {
-      artworksCol.set(replace(artworksCol.get()));
-    }
-    if (pendingArtworksCol.get().some((a) => a.id === id)) {
-      pendingArtworksCol.set(replace(pendingArtworksCol.get()));
-    }
-    return mockDelay(updated);
+  setArtworkInsuranceStatus: (id: string, insuranceStatus: NonNullable<Artwork["insuranceStatus"]>): Promise<Artwork> => {
+    if (insuranceStatus !== "approved" && insuranceStatus !== "rejected") return Promise.reject(new Error("Only approve or reject can be recorded"));
+    return adminApi.setArtworkInsuranceStatus(id, insuranceStatus);
   },
 
-  // Same read/write shape as setArtworkRarity — an artist's submitted policy
-  // number sits with an admin until they mark it approved or rejected.
-  setArtworkInsuranceStatus: (
-    id: string,
-    insuranceStatus: NonNullable<Artwork["insuranceStatus"]>,
-  ): Promise<Artwork> => {
-    const artwork = findArtwork(id);
-    if (!artwork) return mockError(`Artwork "${id}" not found`);
+  listCategories: (): Promise<Category[]> => adminApi.listCategories(),
 
-    const updated: Artwork = { ...artwork, insuranceStatus };
-    const replace = (list: Artwork[]) =>
-      list.map((a) => (a.id === id ? updated : a));
+  createCategory: (name: string): Promise<Category> => adminApi.createCategory(name),
 
-    if (artworksCol.get().some((a) => a.id === id)) {
-      artworksCol.set(replace(artworksCol.get()));
-    }
-    if (pendingArtworksCol.get().some((a) => a.id === id)) {
-      pendingArtworksCol.set(replace(pendingArtworksCol.get()));
-    }
-    return mockDelay(updated);
-  },
+  updateCategory: (id: string, name: string): Promise<Category> => adminApi.updateCategory(id, name),
 
-  listCategories: (): Promise<Category[]> => mockDelay(mockCategories),
+  deleteCategory: (id: string): Promise<{ id: string }> => adminApi.deleteCategory(id),
 
-  createCategory: (name: string): Promise<Category> => {
-    const slug = slugify(name);
-    if (!slug) return mockError("A category name is required");
-    if (mockCategories.some((c) => c.slug === slug)) {
-      return mockError(`A category with the slug "${slug}" already exists`);
-    }
-    return mockDelay({
-      id: `cat-${slug}`,
-      name: name.trim(),
-      slug,
-      artworkCount: 0,
-    });
-  },
+  listUsers: (role?: UserRole): Promise<AdminUser[]> => adminApi.listUsers(role),
 
-  updateCategory: (id: string, name: string): Promise<Category> => {
-    const existing = mockCategories.find((c) => c.id === id);
-    if (!existing) return mockError(`Category "${id}" not found`);
-    const slug = slugify(name);
-    if (!slug) return mockError("A category name is required");
-    if (mockCategories.some((c) => c.id !== id && c.slug === slug)) {
-      return mockError(`A category with the slug "${slug}" already exists`);
-    }
-    return mockDelay({ ...existing, name: name.trim(), slug });
-  },
+  getUser: (id: string): Promise<AdminUser | undefined> => adminApi.getUser(id),
 
-  // Guarded exactly as the spec requires: a category still holding artworks
-  // cannot be deleted, and the rejection carries an explanation the UI can
-  // surface inline rather than a bare failure.
-  deleteCategory: (id: string): Promise<{ id: string }> => {
-    const existing = mockCategories.find((c) => c.id === id);
-    if (!existing) return mockError(`Category "${id}" not found`);
-    if (existing.artworkCount > 0) {
-      return mockError(
-        `"${existing.name}" still has ${existing.artworkCount} artwork${existing.artworkCount === 1 ? "" : "s"}. Move or delist them before deleting the category.`,
-      );
-    }
-    return mockDelay({ id });
-  },
+  setUserStatus: (id: string, status: UserStatus): Promise<{ id: string; status: UserStatus }> => adminApi.setUserStatus(id, status),
 
-  // --- people --------------------------------------------------------------
-  listUsers: (role?: UserRole): Promise<AdminUser[]> =>
-    mockDelay(
-      role
-        ? adminUsersCol.get().filter((u) => u.role === role)
-        : adminUsersCol.get(),
-    ),
-
-  getUser: (id: string): Promise<AdminUser | undefined> =>
-    mockDelay(adminUsersCol.get().find((u) => u.id === id)),
-
-  setUserStatus: (
-    id: string,
-    status: UserStatus,
-  ): Promise<{ id: string; status: UserStatus }> => {
-    if (!adminUsersCol.get().some((u) => u.id === id))
-      return mockError(`User "${id}" not found`);
-    return mockDelay({ id, status });
-  },
-
-  // Person-detail pages need more than the bare AdminUser row. These three
-  // bundle exactly what each detail page renders, through the service layer
-  // instead of the page importing lib/mock-data/* fixtures directly.
   getArtistPortfolio: (
     userId: string,
   ): Promise<
@@ -636,13 +442,11 @@ export const adminService = {
   },
 
   // --- commerce ------------------------------------------------------------
-  listOrders: (): Promise<Order[]> => mockDelay(ordersCol.get()),
+  listOrders: (): Promise<Order[]> => adminApi.listOrders(),
 
-  getOrderAdmin: (id: string): Promise<Order | undefined> =>
-    mockDelay(ordersCol.get().find((o) => o.id === id)),
+  getOrderAdmin: (id: string): Promise<Order | undefined> => adminApi.getOrder(id),
 
-  getAddressAdmin: (id: string): Promise<Address | undefined> =>
-    mockDelay(addressesCol.get().find((a) => a.id === id)),
+  getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),
 
   getSettlementByOrder: (orderId: string): Promise<Settlement | undefined> =>
     mockDelay(mockSettlements.find((s) => s.orderId === orderId)),
@@ -660,7 +464,7 @@ export const adminService = {
   },
 
   // --- system --------------------------------------------------------------
-  listAuditLog: (): Promise<AuditLogEntry[]> => mockDelay(mockAuditLog),
+  listAuditLog: (): Promise<AuditLogEntry[]> => adminApi.listAuditLog(),
 
   getSettings: (): Promise<PlatformSettings> =>
     mockDelay(defaultPlatformSettings),

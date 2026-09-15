@@ -98,7 +98,6 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/settlements/:id/retry", authRole: "admin", summary: "Retry a failed settlement", replaces: "adminService.retrySettlement" },
 
   // --- Trust / KYC / Insurance ---------------------------------------------------
-  { method: "GET", path: "/v1/admin/moderation/kyc", authRole: "admin", summary: "KYC review queue", replaces: "adminService.listKycQueue" },
   { method: "POST", path: "/v1/admin/moderation/kyc/:userId/approve", authRole: "admin", summary: "Approve KYC", replaces: "adminService.approveKyc" },
   { method: "POST", path: "/v1/admin/moderation/kyc/:userId/reject", authRole: "admin", summary: "Reject KYC, reason required", replaces: "adminService.rejectKyc" },
   { method: "POST", path: "/v1/artist/deactivation", authRole: "artist", summary: "Request account deactivation", replaces: "artistDashboardService.requestDeactivation" },
@@ -106,7 +105,6 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/deactivation/:userId/reject", authRole: "admin", summary: "Reject deactivation, note optional", replaces: "adminService.decideDeactivation" },
   { method: "GET", path: "/v1/admin/external-fees", authRole: "admin", summary: "External-sale penalty queue", replaces: "adminService.listExternalSaleFees" },
   { method: "POST", path: "/v1/admin/external-fees/:id/decide", authRole: "admin", summary: "Approve or waive a penalty", replaces: "adminService.decideExternalSaleFee" },
-  { method: "GET", path: "/v1/admin/moderation/gst", authRole: "admin", summary: "GST review queue", replaces: "adminService.listGstQueue" },
   { method: "POST", path: "/v1/admin/moderation/gst/:userId/approve", authRole: "admin", summary: "Approve GST", replaces: "adminService.approveGst" },
   { method: "POST", path: "/v1/admin/moderation/gst/:userId/reject", authRole: "admin", summary: "Reject GST, reason required", replaces: "adminService.rejectGst" },
   { method: "POST", path: "/v1/admin/artworks/:id/insurance/approve", authRole: "admin", summary: "Verify insurance number", replaces: "adminService.setArtworkInsuranceStatus" },
@@ -129,6 +127,10 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "DELETE", path: "/v1/artist/artworks/:id/images/:imageId", authRole: "artist", summary: "Remove an image (bucket object too)", replaces: "n/a — new" },
   { method: "PUT", path: "/v1/artist/artworks/:id/images/order", authRole: "artist", summary: "Reorder images", replaces: "n/a — new" },
   { method: "GET", path: "/v1/images/artworks/:artworkId/:file", authRole: "public", summary: "Serve an image from the private bucket, immutable-cached", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/admin/artworks/:id", authRole: "admin", summary: "One artwork, admin view", replaces: "adminService.getArtworkAdmin" },
+  { method: "GET", path: "/v1/admin/users/:id", authRole: "admin", summary: "One user with profile facts", replaces: "adminService.getUser" },
+  { method: "GET", path: "/v1/admin/moderation/gst", authRole: "admin", summary: "GST review queue", replaces: "adminService.listGstQueue" },
+  { method: "GET", path: "/v1/admin/moderation/kyc", authRole: "admin", summary: "KYC review queue", replaces: "adminService.listKycQueue" },
   { method: "GET", path: "/v1/artists", authRole: "public", summary: "Artist directory (artists with a live listing)", replaces: "mockArtists" },
   { method: "GET", path: "/v1/stats/public", authRole: "public", summary: "Headline platform numbers for the About page", replaces: "about-stats-section fixtures" },
   { method: "POST", path: "/v1/orders/:id/payment/session", authRole: "customer", summary: "Open a gateway checkout session (Razorpay order) or learn payments are simulated", replaces: "n/a — new" },

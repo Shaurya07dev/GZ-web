@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
-import { getAdminKpis, listCategories, createCategory, updateCategory, deleteCategory, listUsers, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
+import { NotFoundException } from "@nestjs/common";
+import { adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
@@ -18,7 +19,25 @@ export class AdminController {
   @Roles("admin")
   @Get("kpis")
   kpis() {
-    return getAdminKpis(this.db);
+    return adminKpis(this.db);
+  }
+
+  @Roles("admin")
+  @Get("withdrawals")
+  async withdrawals() {
+    return { withdrawals: await listWithdrawalsForAdmin(this.db) };
+  }
+
+  @Roles("admin")
+  @Get("moderation/gst")
+  async gstQueue() {
+    return { users: await listModerationQueue(this.db, "gst") };
+  }
+
+  @Roles("admin")
+  @Get("moderation/kyc")
+  async kycQueue() {
+    return { users: await listModerationQueue(this.db, "kyc") };
   }
 
   @Roles("admin")
@@ -47,9 +66,17 @@ export class AdminController {
 
   @Roles("admin")
   @Get("users")
-  users(@Query("role") role?: string) {
+  async users(@Query("role") role?: string) {
     const parsedRole = role && (userRoleValues as readonly string[]).includes(role) ? (role as UserRole) : undefined;
-    return listUsers(this.db, parsedRole);
+    return { users: await listUsersForAdmin(this.db, parsedRole) };
+  }
+
+  @Roles("admin")
+  @Get("users/:id")
+  async user(@Param("id") id: string) {
+    const user = await getUserForAdmin(this.db, id);
+    if (!user) throw new NotFoundException({ type: "about:blank", title: "User not found", status: 404, code: "not_found" });
+    return user;
   }
 
   @Roles("admin")
