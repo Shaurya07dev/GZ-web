@@ -32,7 +32,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
-import { initials, mockCustomer } from "@/features/account/account-data";
+import { initials } from "@/features/account/account-data";
 import { readSessionRole, subscribeToSession } from "@/lib/session";
 import { authService } from "@/services/authService";
 

@@ -28,7 +28,6 @@ import {
   useCompleteResaleMutation,
   useWithdrawResaleListingMutation,
 } from "@/hooks/useCustomerResale";
-import { getArtworkById } from "@/lib/mock-data/helpers";
 import type { CollectionItem } from "@/services/customerCollectionService";
 
 const listingSchema = z.object({
@@ -136,7 +135,7 @@ export function ResaleView() {
         ) : (
           <div className="mt-4 flex flex-col gap-3">
             {listings.map((l) => {
-              const artwork = getArtworkById(l.artworkId);
+              const artwork = collection?.find((c) => c.artwork.id === l.artworkId)?.artwork;
               return (
                 <div
                   key={l.id}

@@ -20,7 +20,6 @@ import { useCollection } from "@/hooks/useCollection";
 import { useCustomerWallet } from "@/hooks/useCustomerWallet";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { useWishlistStore } from "@/store/useWishlistStore";
-import { mockCustomer } from "./account-data";
 import { CollectorProfileCard } from "./collector-profile-card";
 
 export function CollectorDashboard() {

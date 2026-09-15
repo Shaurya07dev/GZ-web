@@ -34,7 +34,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
-import { mockCustomer, initials } from "./account-data";
+import { initials } from "./account-data";
 
 // A third independent copy-and-adapt of the DashboardShell/AggregatorShell
 // structural pattern (same reasoning as AggregatorShell's own header

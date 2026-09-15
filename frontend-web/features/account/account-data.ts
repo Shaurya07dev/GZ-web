@@ -12,7 +12,6 @@
 // card renders initials in a circle instead of an <Image>. That's the more
 // honest treatment for a field that doesn't exist in the real data model,
 // not a missing asset.
-export { mockCustomer } from "@/lib/mock-data/customer";
 
 export function initials(name: string): string {
   return name

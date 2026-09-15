@@ -1,5 +1,9 @@
 "use client";
 
+import { useAdminUser } from "@/hooks/useAdminUsers";
+
+import { useAdminArtworks } from "@/hooks/useAdminCatalog";
+
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { useState } from "react";
@@ -22,8 +26,6 @@ import {
   useRejectArtworkMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { getArtistById, getArtworksByArtist } from "@/lib/mock-data/helpers";
-import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
 import { LISTING_TYPE_LABEL, type Artwork } from "@/types/artwork";
 
@@ -51,9 +53,12 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
   const allCleared = ELIGIBILITY_CRITERIA.every((c) => checked[c.id]);
   const isBusy = approveMutation.isPending || rejectMutation.isPending;
 
-  const artist = getArtistById(artwork.artistId);
-  const artistTier = artist ? verifiedTierCount(artist.verification) : 0;
-  const artistPriorWorks = getArtworksByArtist(artwork.artistId).length;
+  // The artist's other work and profile, from the admin catalogue.
+  const { data: allArtworks } = useAdminArtworks();
+  const { data: artistUser } = useAdminUser(artwork.artistId);
+  const artistPriorWorks = (allArtworks ?? []).filter((a) => a.artistId === artwork.artistId && a.id !== artwork.id).length;
+  // Tier 1 = a public handle on the profile; higher tiers come from the MOU + first sale, which the admin view does not carry yet.
+  const artistTier = artistUser?.instagramHandle ? 1 : 0;
 
   const submittedAt =
     artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
