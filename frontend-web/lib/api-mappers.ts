@@ -182,6 +182,8 @@ export interface OrderDto {
   createdAt: FirestoreTimestampLike | string;
   payment?: { method: string | null; providerPaymentId: string | null; status: string } | null;
   statusHistory?: { status: OrderStatus; changedAt: string }[];
+  artwork?: { title: string; artistName: string; artistId: string; thumbnailUrl: string | null; productCode: string } | null;
+  artistNetPaise?: number;
 }
 
 export interface FirestoreTimestampLike {
@@ -207,6 +209,7 @@ export function toOrder(dto: OrderDto): Order {
     status: dto.status,
     createdAt,
     statusHistory: dto.statusHistory?.length ? dto.statusHistory : [{ status: dto.status, changedAt: createdAt }],
+    artwork: dto.artwork ? { ...dto.artwork, thumbnailUrl: dto.artwork.thumbnailUrl ?? ARTWORK_PLACEHOLDER_IMAGE } : null,
     payment:
       dto.payment && dto.payment.status === "captured"
         ? {

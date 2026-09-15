@@ -20,7 +20,6 @@ import { useCollection } from "@/hooks/useCollection";
 import { useCustomerWallet } from "@/hooks/useCustomerWallet";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { useWishlistStore } from "@/store/useWishlistStore";
-import { getArtworkById } from "@/lib/mock-data/helpers";
 import { mockCustomer } from "./account-data";
 import { CollectorProfileCard } from "./collector-profile-card";
 
@@ -96,7 +95,7 @@ export function CollectorDashboard() {
         ) : (
           <div className="mt-3 flex flex-col gap-3">
             {recentOrders.map((order) => {
-              const artwork = getArtworkById(order.artworkId);
+              const artwork = order.artwork;
               return (
                 <Link
                   key={order.id}

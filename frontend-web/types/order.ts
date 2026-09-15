@@ -21,6 +21,8 @@ export interface Order {
   deliveryCharge: number;
   status: OrderStatus;
   createdAt: string; // ISO date
+  /** Snapshot of what was bought, joined by the API. Null if the artwork was removed. */
+  artwork?: { title: string; artistName: string; artistId: string; thumbnailUrl: string; productCode: string } | null;
   statusHistory: OrderStatusEvent[];
   // Payment reference from the gateway. Simulated for now (see
   // features/checkout/razorpay-simulation.tsx) — the shape matches what

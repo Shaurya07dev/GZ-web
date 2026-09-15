@@ -9,6 +9,7 @@ import {
   FirestoreRateConfigStore,
   approveArtwork,
   getArtistArtwork,
+  listArtistOrders,
   listArtistArtworksOwned,
   rejectArtwork,
   submitArtwork,
@@ -92,6 +93,12 @@ export class ArtistArtworksController {
   @Get("artist/artworks")
   async mine(@Req() req: AuthenticatedRequest) {
     return { artworks: await listArtistArtworksOwned(this.db, req.authUser.uid, await this.rates()) };
+  }
+
+  @Roles("artist")
+  @Get("artist/orders")
+  async orders(@Req() req: AuthenticatedRequest) {
+    return { orders: await listArtistOrders(this.db, req.authUser.uid) };
   }
 
   @Roles("artist")

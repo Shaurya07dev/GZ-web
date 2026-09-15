@@ -18,7 +18,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { useOrders } from "@/hooks/useOrders";
-import { getArtworkById } from "@/lib/mock-data/helpers";
 import type { OrderStatus } from "@/types/order";
 
 const STATUS_CONFIG: Record<
@@ -118,7 +117,7 @@ export function OrderList() {
   return (
     <div className="flex flex-col gap-3">
       {sorted.map((order) => {
-        const artwork = getArtworkById(order.artworkId);
+        const artwork = order.artwork;
         const total = order.amount + order.gstAmount + order.deliveryCharge;
         const status = STATUS_CONFIG[order.status];
 

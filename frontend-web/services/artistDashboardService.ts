@@ -14,6 +14,7 @@ import type { Order } from "@/types/order";
 import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { mockDelay, mockError } from "@/lib/mock-utils";
 import { http } from "@/lib/api";
+import { paiseToRupees, toOrder, type OrderDto } from "@/lib/api-mappers";
 import { artistArtworkApi, type SubmitImage } from "@/services/artistArtworkApi";
 import { artistWalletApi } from "@/services/artistWalletApi";
 import { authService } from "@/services/authService";
@@ -408,18 +409,9 @@ export const artistDashboardService = {
     return mockDelay(updated);
   },
 
-  listOrders: (): Promise<Array<Order & { artistPayout: number }>> => {
-    const artistArtworkIds = new Set(artistArtworks().map((a) => a.id));
-    const prices = artistPricesCol.get();
-    return mockDelay(
-      ordersCol
-        .get()
-        .filter((order) => artistArtworkIds.has(order.artworkId))
-        .map((order) => ({
-          ...order,
-          artistPayout: Math.round((prices[order.artworkId] ?? 0) * 0.98),
-        })),
-    );
+  listOrders: async (): Promise<Array<Order & { artistPayout: number }>> => {
+    const { orders } = await http.get<{ orders: (OrderDto & { artistNetPaise: number })[] }>("/v1/artist/orders");
+    return orders.map((o) => ({ ...toOrder(o), artistPayout: paiseToRupees(o.artistNetPaise) }));
   },
 
   listSettlements: (): Promise<Settlement[]> =>

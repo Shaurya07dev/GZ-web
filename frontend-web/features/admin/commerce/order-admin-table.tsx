@@ -10,7 +10,6 @@ import {
   adminStatusLabel,
 } from "@/features/admin/admin-status-badge";
 import { useAdminOrders } from "@/hooks/useAdminCommerce";
-import { getArtworkById } from "@/lib/mock-data/helpers";
 import { formatINR } from "@/lib/utils";
 import type { Order, OrderStatus } from "@/types/order";
 
@@ -36,7 +35,7 @@ export function OrderAdminTable() {
       key: "artwork",
       header: "Artwork",
       render: (row) => {
-        const artwork = getArtworkById(row.artworkId);
+        const artwork = row.artwork;
         return (
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">
@@ -49,7 +48,7 @@ export function OrderAdminTable() {
         );
       },
       sortable: true,
-      sortValue: (row) => getArtworkById(row.artworkId)?.title ?? row.artworkId,
+      sortValue: (row) => row.artwork?.title ?? row.artworkId,
     },
     {
       key: "status",
@@ -96,7 +95,7 @@ export function OrderAdminTable() {
       getRowLabel={(row) => `Open order ${row.id}`}
       searchPlaceholder="Search by artwork or order id"
       searchValue={(row) =>
-        `${row.id} ${getArtworkById(row.artworkId)?.title ?? ""}`
+        `${row.id} ${row.artwork?.title ?? ""}`
       }
       filters={[
         {

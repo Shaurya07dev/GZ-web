@@ -3,17 +3,18 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { orderStateMachine, type OrderStatus } from "@galleryzone/domain";
 import { Collections, orderStatusEventsCol, type AddressDoc, type OrderDoc } from "./collections.ts";
+import { decorate, type OrderView } from "./order-listings.ts";
 
 export class AdminOrderError extends Error {}
 
-export async function listOrdersAdmin(db: Firestore): Promise<(OrderDoc & { id: string })[]> {
-  const snap = await db.collection(Collections.orders).get();
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as OrderDoc) }));
+export async function listOrdersAdmin(db: Firestore): Promise<OrderView[]> {
+  const snap = await db.collection(Collections.orders).orderBy("createdAt", "desc").get();
+  return Promise.all(snap.docs.map((d) => decorate(db, d.id, d.data() as OrderDoc)));
 }
 
-export async function getOrderAdmin(db: Firestore, orderId: string): Promise<(OrderDoc & { id: string }) | null> {
+export async function getOrderAdmin(db: Firestore, orderId: string): Promise<OrderView | null> {
   const snap = await db.collection(Collections.orders).doc(orderId).get();
-  return snap.exists ? { id: snap.id, ...(snap.data() as OrderDoc) } : null;
+  return snap.exists ? decorate(db, snap.id, snap.data() as OrderDoc) : null;
 }
 
 export async function getAddressAdmin(db: Firestore, addressId: string): Promise<(AddressDoc & { id: string }) | null> {
