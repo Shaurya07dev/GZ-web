@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +23,6 @@ import {
   useUpdateSettingsMutation,
 } from "@/hooks/useAdminSystem";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
 import type { PlatformSettings } from "@/types/admin";
 
@@ -100,6 +101,7 @@ export function SettingsForm() {
 }
 
 function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const updateMutation = useUpdateSettingsMutation();
@@ -124,7 +126,7 @@ function SettingsFormBody({ settings }: { settings: PlatformSettings }) {
       const updated = await updateMutation.mutateAsync(values);
       queryClient.setQueryData<PlatformSettings>(["admin-settings"], updated);
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "settings.updated",
         entityType: "settings",
         entityId: "platform",

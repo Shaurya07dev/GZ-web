@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -23,7 +25,6 @@ import {
   useRejectKycMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN, ADMIN_TODAY } from "@/features/admin/admin-data";
 import type { AdminUser } from "@/types/admin";
 
 const REJECT_PRESETS = [
@@ -37,7 +38,7 @@ function waitingDays(user: AdminUser): number {
   return Math.max(
     0,
     Math.round(
-      (ADMIN_TODAY.getTime() - new Date(user.createdAt).getTime()) / 86_400_000,
+      (Date.now() - new Date(user.createdAt).getTime()) / 86_400_000,
     ),
   );
 }
@@ -135,6 +136,7 @@ function KycReviewDialog({
   user: AdminUser | null;
   onClose: () => void;
 }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const approveMutation = useApproveKycMutation();
@@ -155,7 +157,7 @@ function KycReviewDialog({
       await approveMutation.mutateAsync(user.id);
       dropFromQueue(user.id);
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "kyc.approved",
         entityType: "user",
         entityId: user.id,
@@ -176,7 +178,7 @@ function KycReviewDialog({
       await rejectMutation.mutateAsync({ userId: user.id, reason });
       dropFromQueue(user.id);
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "kyc.rejected",
         entityType: "user",
         entityId: user.id,

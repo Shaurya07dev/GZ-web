@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -50,6 +52,7 @@ function statusLabel(status: string): string {
 // pieces, not fifty, so a dedicated sub-nav per artwork would be more
 // clicking than reading.
 export function CollectionBoard() {
+  const { data: me } = useCurrentUser();
   const { data, isPending } = useCollection();
   const [viewing, setViewing] = useState<CollectionItem | null>(null);
   const [transferring, setTransferring] = useState<CollectionItem | null>(null);
@@ -133,7 +136,7 @@ export function CollectionBoard() {
           onOpenChange={(open) => !open && setTransferring(null)}
           artworkId={transferring.artwork.id}
           artworkTitle={transferring.artwork.title}
-          fromName={mockCustomer.name}
+          fromName={me?.name ?? ""}
         />
       )}
     </>

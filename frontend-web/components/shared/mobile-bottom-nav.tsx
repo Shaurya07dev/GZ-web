@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore, useEffect, useState } from "react";
@@ -122,6 +124,7 @@ function NavLink({
 }
 
 export function MobileBottomNav() {
+  const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -131,7 +134,7 @@ export function MobileBottomNav() {
     () => null,
   );
   const { data: profile } = useCustomerProfile();
-  const customer = profile ?? mockCustomer;
+  const customer = profile ?? { name: me?.name ?? "", email: me?.email ?? "" };
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {

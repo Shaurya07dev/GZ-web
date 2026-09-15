@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -20,7 +22,6 @@ import {
   useRejectArtworkMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN, ADMIN_TODAY } from "@/features/admin/admin-data";
 import { getArtistById, getArtworksByArtist } from "@/lib/mock-data/helpers";
 import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
@@ -35,6 +36,7 @@ const REJECT_PRESETS = [
 ];
 
 export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const router = useRouter();
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
@@ -55,11 +57,10 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
 
   const submittedAt =
     artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
+  const [now] = useState(() => Date.now());
   const waitingDays = Math.max(
     0,
-    Math.round(
-      (ADMIN_TODAY.getTime() - new Date(submittedAt).getTime()) / 86_400_000,
-    ),
+    Math.round((now - new Date(submittedAt).getTime()) / 86_400_000),
   );
 
   // The mock services never mutate the shared fixture arrays, so the call site
@@ -76,7 +77,7 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
       await approveMutation.mutateAsync(artwork.id);
       dropFromQueue();
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "artwork.approved",
         entityType: "artwork",
         entityId: artwork.id,
@@ -96,7 +97,7 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
       await rejectMutation.mutateAsync({ artworkId: artwork.id, reason });
       dropFromQueue();
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "artwork.rejected",
         entityType: "artwork",
         entityId: artwork.id,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Check, ChevronRight, UserPlus, Users, X } from "lucide-react";
@@ -7,7 +9,6 @@ import {
   useArtistConnections,
   useRespondToConnectionMutation,
 } from "@/hooks/useArtistNetwork";
-import { CURRENT_ARTIST_ID } from "@/lib/mock-collections";
 import {
   connectionDirection,
   connectionPeer,
@@ -30,18 +31,19 @@ function errorMessage(error: unknown): string | null {
 }
 
 export function ArtistNetworkPanel() {
-  const { data: connections } = useArtistConnections(CURRENT_ARTIST_ID);
+  const artistId = useCurrentUser().data?.uid ?? "";
+  const { data: connections } = useArtistConnections(artistId);
   const rows = connections ?? [];
 
   const incoming = rows.filter(
     (c) =>
       c.status === "pending" &&
-      connectionDirection(c, CURRENT_ARTIST_ID) === "incoming",
+      connectionDirection(c, artistId) === "incoming",
   );
   const outgoing = rows.filter(
     (c) =>
       c.status === "pending" &&
-      connectionDirection(c, CURRENT_ARTIST_ID) === "outgoing",
+      connectionDirection(c, artistId) === "outgoing",
   );
   const accepted = rows.filter((c) => c.status === "accepted");
 
@@ -67,6 +69,7 @@ function ConnectionsSection({
   outgoing: ArtistConnection[];
   accepted: ArtistConnection[];
 }) {
+  const artistId = useCurrentUser().data?.uid ?? "";
   const respond = useRespondToConnectionMutation();
 
   return (
@@ -105,7 +108,7 @@ function ConnectionsSection({
             Requests
           </p>
           {incoming.map((connection) => {
-            const peer = connectionPeer(connection, CURRENT_ARTIST_ID);
+            const peer = connectionPeer(connection, artistId);
             return (
               <div
                 key={connection.id}
@@ -141,7 +144,7 @@ function ConnectionsSection({
                     onClick={() =>
                       respond.mutate({
                         connectionId: connection.id,
-                        viewerId: CURRENT_ARTIST_ID,
+                        viewerId: artistId,
                         accept: true,
                       })
                     }
@@ -156,7 +159,7 @@ function ConnectionsSection({
                     onClick={() =>
                       respond.mutate({
                         connectionId: connection.id,
-                        viewerId: CURRENT_ARTIST_ID,
+                        viewerId: artistId,
                         accept: false,
                       })
                     }
@@ -179,7 +182,7 @@ function ConnectionsSection({
           </p>
           <div className="grid gap-2.5 sm:grid-cols-2">
             {accepted.map((connection) => {
-              const peer = connectionPeer(connection, CURRENT_ARTIST_ID);
+              const peer = connectionPeer(connection, artistId);
               return (
                 <Link
                   key={connection.id}
@@ -220,7 +223,7 @@ function ConnectionsSection({
         <p className="text-xs text-muted-foreground">
           Waiting on{" "}
           {outgoing
-            .map((c) => connectionPeer(c, CURRENT_ARTIST_ID).name)
+            .map((c) => connectionPeer(c, artistId).name)
             .join(", ")}
           .
         </p>

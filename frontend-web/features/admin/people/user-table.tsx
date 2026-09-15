@@ -12,7 +12,7 @@ import {
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useArtistRatingsByUserId } from "@/hooks/useArtistRating";
 import { StarRating } from "@/components/shared/star-rating";
-import { ADMIN_TODAY } from "@/features/admin/admin-data";
+
 import type { AdminUser, UserRole, UserStatus } from "@/types/admin";
 
 // ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ function joinedDays(user: AdminUser): number {
   return Math.max(
     0,
     Math.round(
-      (ADMIN_TODAY.getTime() - new Date(user.createdAt).getTime()) / 86_400_000,
+      (Date.now() - new Date(user.createdAt).getTime()) / 86_400_000,
     ),
   );
 }

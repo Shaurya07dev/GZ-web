@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,7 +28,6 @@ import {
   useRejectWithdrawalMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN, ADMIN_TODAY } from "@/features/admin/admin-data";
 import { defaultPlatformSettings } from "@/lib/mock-data/admin";
 import { formatINR } from "@/lib/utils";
 import type { WithdrawalRequest, WithdrawalStatus } from "@/types/admin";
@@ -49,7 +50,7 @@ function waitingDays(row: WithdrawalRequest): number {
   return Math.max(
     0,
     Math.round(
-      (ADMIN_TODAY.getTime() - new Date(row.requestedAt).getTime()) /
+      (Date.now() - new Date(row.requestedAt).getTime()) /
         86_400_000,
     ),
   );
@@ -189,6 +190,7 @@ function WithdrawalReviewDialog({
   request: WithdrawalRequest | null;
   onClose: () => void;
 }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const approveMutation = useApproveWithdrawalMutation();
@@ -219,7 +221,7 @@ function WithdrawalReviewDialog({
       await approveMutation.mutateAsync(request.id);
       patchStatus(request.id, "completed");
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "withdrawal.approved",
         entityType: "withdrawal",
         entityId: request.id,
@@ -240,7 +242,7 @@ function WithdrawalReviewDialog({
       await rejectMutation.mutateAsync({ withdrawalId: request.id, reason });
       patchStatus(request.id, "rejected");
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "withdrawal.rejected",
         entityType: "withdrawal",
         entityId: request.id,

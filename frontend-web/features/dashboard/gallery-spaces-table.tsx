@@ -15,7 +15,6 @@ import { PriceTag } from "@/components/shared/price-tag";
 import { ExpiryCountdown } from "@/features/aggregator/expiry-countdown";
 import { useArtistGallerySpaces } from "@/hooks/useArtistGallerySpaces";
 import type { AggregatorHolding } from "@/types/aggregator";
-import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
 
 const STATUS_CONFIG: Record<
   AggregatorHolding["status"],
@@ -141,7 +140,7 @@ export function GallerySpacesTable() {
                           strokeWidth={1.75}
                         />
                         <span className="text-foreground">
-                          {AGGREGATOR.companyName}
+                          Partner gallery
                         </span>
                       </div>
                     </td>

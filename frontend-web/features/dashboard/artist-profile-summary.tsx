@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import Link from "next/link";
 import {
   ChevronRight,
@@ -14,7 +16,6 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatINR } from "@/lib/utils";
-import { CURRENT_ARTIST_ID } from "@/lib/mock-collections";
 import {
   useArtistPrivateStats,
   useArtistPublicStats,
@@ -36,8 +37,9 @@ function joinedLabel(iso: string): string {
 }
 
 export function ArtistProfileSummary({ location }: { location?: string }) {
-  const { data: pub, isPending: pubPending } = useArtistPublicStats(CURRENT_ARTIST_ID);
-  const { data: mine, isPending: minePending } = useArtistPrivateStats(CURRENT_ARTIST_ID);
+  const artistId = useCurrentUser().data?.uid ?? "";
+  const { data: pub, isPending: pubPending } = useArtistPublicStats(artistId);
+  const { data: mine, isPending: minePending } = useArtistPrivateStats(artistId);
 
   if (pubPending || minePending || !pub || !mine) {
     return <Skeleton className="h-56 w-full rounded-lg lg:col-span-2" />;
@@ -121,7 +123,7 @@ export function ArtistProfileSummary({ location }: { location?: string }) {
             ))}
           </dl>
           <Link
-            href={`/artists/${CURRENT_ARTIST_ID}`}
+            href={`/artists/${artistId}`}
             className="mt-3 inline-block text-xs text-gold-bright underline-offset-4 hover:underline"
           >
             View your public profile

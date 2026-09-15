@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -23,7 +25,6 @@ import {
   useRejectGstMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN } from "@/features/admin/admin-data";
 import type { AdminUser } from "@/types/admin";
 
 const REJECT_PRESETS = [
@@ -109,6 +110,7 @@ function GstReviewDialog({
   user: AdminUser | null;
   onClose: () => void;
 }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const approveMutation = useApproveGstMutation();
@@ -129,7 +131,7 @@ function GstReviewDialog({
       await approveMutation.mutateAsync(user.id);
       dropFromQueue(user.id);
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "gst.approved",
         entityType: "user",
         entityId: user.id,
@@ -150,7 +152,7 @@ function GstReviewDialog({
       await rejectMutation.mutateAsync({ userId: user.id, reason });
       dropFromQueue(user.id);
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "gst.rejected",
         entityType: "user",
         entityId: user.id,

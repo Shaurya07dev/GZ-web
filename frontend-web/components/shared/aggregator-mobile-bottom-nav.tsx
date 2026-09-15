@@ -1,5 +1,9 @@
 "use client";
 
+import { UserAvatar } from "@/components/shared/user-avatar";
+
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -25,7 +29,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { AGGREGATOR } from "@/features/aggregator/aggregator-data";
 import { authService } from "@/services/authService";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
 
@@ -83,6 +86,7 @@ function isMoreActive(pathname: string) {
 }
 
 export function AggregatorMobileBottomNav() {
+  const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -155,11 +159,9 @@ export function AggregatorMobileBottomNav() {
       >
         <div className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-3">
-            <div className="relative size-10 overflow-hidden rounded-full border border-gold/40">
-              <Image src={AGGREGATOR.avatar} alt={AGGREGATOR.companyName} fill sizes="40px" className="object-cover" />
-            </div>
+            <UserAvatar name={me?.name} className="size-10" />
             <div>
-              <p className="text-sm font-semibold text-sidebar-foreground leading-tight">{AGGREGATOR.companyName}</p>
+              <p className="text-sm font-semibold text-sidebar-foreground leading-tight">{me?.name ?? "Aggregator"}</p>
               <p className="text-[11px] text-muted-foreground">Aggregator</p>
             </div>
           </div>

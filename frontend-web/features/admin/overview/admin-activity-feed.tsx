@@ -10,7 +10,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminActivity } from "@/hooks/useAdminDashboard";
-import { ADMIN_TODAY } from "@/features/admin/admin-data";
+
 import type { AdminActivityEvent } from "@/types/admin";
 
 const KIND_ICON: Record<AdminActivityEvent["kind"], LucideIcon> = {
@@ -25,7 +25,7 @@ const KIND_ICON: Record<AdminActivityEvent["kind"], LucideIcon> = {
 // features/admin/admin-data.ts's ADMIN_TODAY for why.
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
-  const diffMs = ADMIN_TODAY.getTime() - then;
+  const diffMs = Date.now() - then;
   const minutes = Math.round(diffMs / 60000);
 
   if (minutes < 1) return "just now";

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { Printer, Clock3, PackageCheck } from "lucide-react";
 import {
   useArtworkCoaRequests,
@@ -18,6 +20,7 @@ export function PhysicalCoaRequest({
   artworkId: string;
   artworkTitle: string;
 }) {
+  const { data: me } = useCurrentUser();
   const { data: requests } = useArtworkCoaRequests(artworkId);
   const { data: addresses } = useAddresses();
   const requestMutation = useRequestPhysicalCoaMutation();
@@ -58,7 +61,7 @@ export function PhysicalCoaRequest({
           address &&
           requestMutation.mutate({
             artworkId,
-            requestedByName: mockCustomer.name,
+            requestedByName: me?.name ?? "",
             deliveryAddress: {
               line1: address.line1,
               city: address.city,

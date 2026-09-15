@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,7 +35,6 @@ import {
   useDeleteCategoryMutation,
 } from "@/hooks/useAdminCatalog";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN } from "@/features/admin/admin-data";
 import type { Category } from "@/types/admin";
 
 const categorySchema = z.object({
@@ -54,6 +55,7 @@ function slugPreview(name: string): string {
 }
 
 export function CategoryManager() {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const { data: categories, isPending } = useAdminCategories();
   const [editing, setEditing] = useState<Category | null>(null);
   const [creating, setCreating] = useState(false);
@@ -73,7 +75,7 @@ export function CategoryManager() {
         (prev ?? []).filter((c) => c.id !== deleting.id),
       );
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "category.deleted",
         entityType: "category",
         entityId: deleting.id,
@@ -230,6 +232,7 @@ function CategoryFormDialog({
   mode: "create" | "edit";
   category: Category | null;
 }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const createMutation = useCreateCategoryMutation();
@@ -255,7 +258,7 @@ function CategoryFormDialog({
           created,
         ]);
         appendAudit({
-          adminName: ADMIN.name,
+          adminName: adminName,
           action: "category.created",
           entityType: "category",
           entityId: created.id,
@@ -271,7 +274,7 @@ function CategoryFormDialog({
           (prev ?? []).map((c) => (c.id === category.id ? updated : c)),
         );
         appendAudit({
-          adminName: ADMIN.name,
+          adminName: adminName,
           action: "category.updated",
           entityType: "category",
           entityId: updated.id,

@@ -1,5 +1,9 @@
 "use client";
 
+import { UserAvatar } from "@/components/shared/user-avatar";
+
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,7 +34,6 @@ import {
   useArtistAccountProfile,
   useSaveArtistProfileMutation,
 } from "@/hooks/useArtistAccount";
-import { ARTIST } from "./dashboard-data";
 import { ArtistNetworkPanel } from "./artist-network-panel";
 import { ArtistProfileSummary } from "./artist-profile-summary";
 import { MouAgreement } from "./mou-agreement";
@@ -115,6 +118,7 @@ export function ProfileKycForm() {
 }
 
 function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
+  const { data: me } = useCurrentUser();
   const saveProfileMutation = useSaveArtistProfileMutation();
 
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
@@ -218,7 +222,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
 
       {/* Both halves of their profile, side by side and labelled — the one
           place the public and private figures legitimately appear together. */}
-      <ArtistProfileSummary location={ARTIST.location} />
+      <ArtistProfileSummary location={[profile.pickupCity, profile.pickupState].filter(Boolean).join(", ") || undefined} />
 
       <Link
         href="/dashboard/verification"
@@ -244,13 +248,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </p>
           </div>
           <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-gold/40">
-            <Image
-              src={ARTIST.avatar}
-              alt=""
-              fill
-              sizes="64px"
-              className="object-cover"
-            />
+            <UserAvatar name={me?.name} className="size-full text-base" />
             <button
               type="button"
               aria-label="Change photo"

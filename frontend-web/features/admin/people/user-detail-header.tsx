@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -9,7 +11,6 @@ import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import { useSetUserStatusMutation } from "@/hooks/useAdminUsers";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN } from "@/features/admin/admin-data";
 import type { AdminUser, UserStatus } from "@/types/admin";
 
 function initials(name: string): string {
@@ -30,6 +31,7 @@ function formatDate(iso: string | null): string {
 }
 
 export function UserDetailHeader({ user }: { user: AdminUser }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const setStatusMutation = useSetUserStatusMutation();
@@ -56,7 +58,7 @@ export function UserDetailHeader({ user }: { user: AdminUser }) {
           ),
       );
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: isSuspended ? "user.activated" : "user.suspended",
         entityType: "user",
         entityId: user.id,

@@ -1,5 +1,9 @@
 "use client";
 
+import { UserAvatar } from "@/components/shared/user-avatar";
+
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -32,7 +36,6 @@ import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { SidebarBrand } from "@/components/shared/sidebar-brand";
 import { useArtistMessages } from "@/hooks/useArtistMessages";
-import { ARTIST } from "./dashboard-data";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -163,6 +166,7 @@ function SidebarBody({
   onNavigate: () => void;
   showGroups: boolean;
 }) {
+  const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const { data: messages } = useArtistMessages();
   const unreadMessages = messages?.filter((m) => m.unread).length ?? 0;
@@ -250,21 +254,13 @@ function SidebarBody({
           collapsed && "lg:justify-center lg:px-2",
         )}
       >
-        <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gold/40">
-          <Image
-            src={ARTIST.avatar}
-            alt=""
-            fill
-            sizes="36px"
-            className="object-cover"
-          />
-        </div>
+        <UserAvatar name={me?.name} className="size-9" />
         <div className={cn("min-w-0", collapsed && "lg:hidden")}>
           <p className="truncate text-sm font-medium text-sidebar-foreground">
-            {ARTIST.name}
+            {me?.name ?? "Artist"}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Tier {ARTIST.verifiedTier} of 3 verified
+          <p className="truncate text-xs text-muted-foreground">
+            {me?.email ?? ""}
           </p>
         </div>
       </Link>

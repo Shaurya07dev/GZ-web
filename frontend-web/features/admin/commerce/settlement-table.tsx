@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,7 +28,6 @@ import {
   useRetrySettlementMutation,
 } from "@/hooks/useAdminCommerce";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
 import type { Settlement, SettlementStatus } from "@/types/admin";
 
@@ -145,6 +146,7 @@ function SettlementDetailDrawer({
   settlement: Settlement | null;
   onClose: () => void;
 }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const retryMutation = useRetrySettlementMutation();
@@ -166,7 +168,7 @@ function SettlementDetailDrawer({
         ),
       );
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "settlement.retried",
         entityType: "settlement",
         entityId: settlement.id,

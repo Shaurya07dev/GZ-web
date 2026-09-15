@@ -8,7 +8,7 @@ import {
 } from "@/features/admin/admin-data-table";
 import { useAdminAuditLog } from "@/hooks/useAdminSystem";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN_TODAY } from "@/features/admin/admin-data";
+
 import type { AuditAction, AuditLogEntry } from "@/types/admin";
 
 // ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ const ENTITY_TYPES = [
 
 function formatWhen(iso: string): string {
   const date = new Date(iso);
-  const sameDay = date.toDateString() === ADMIN_TODAY.toDateString();
+  const sameDay = date.toDateString() === new Date().toDateString();
   return date.toLocaleString("en-IN", {
     day: sameDay ? undefined : "numeric",
     month: sameDay ? undefined : "short",

@@ -13,7 +13,7 @@ import {
   useAdminDeactivationRequests,
   useDecideDeactivationMutation,
 } from "@/hooks/useAdminModeration";
-import { ADMIN_TODAY } from "@/features/admin/admin-data";
+
 import type { DeactivationRequest, DeactivationStatus } from "@/types/admin";
 
 // The deciding end of an artist's account closure. Approving suspends the
@@ -39,7 +39,7 @@ function waitingDays(row: DeactivationRequest): number {
   return Math.max(
     0,
     Math.round(
-      (ADMIN_TODAY.getTime() - new Date(row.requestedAt).getTime()) /
+      (Date.now() - new Date(row.requestedAt).getTime()) /
         86_400_000,
     ),
   );

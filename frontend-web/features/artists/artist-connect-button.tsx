@@ -1,12 +1,13 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState, useSyncExternalStore } from "react";
 import { Check, Clock, UserPlus } from "lucide-react";
 import {
   useConnectionWith,
   useSendConnectionRequestMutation,
 } from "@/hooks/useArtistNetwork";
-import { CURRENT_ARTIST_ID } from "@/lib/mock-collections";
 import { readSessionRole, subscribeToSession } from "@/lib/session";
 
 // The LinkedIn-shaped half of artist connections: one button on another
@@ -15,16 +16,16 @@ import { readSessionRole, subscribeToSession } from "@/lib/session";
 //
 // Only a signed-in artist sees this at all. Collectors and aggregators have no
 // use for it, and showing a dead button to a signed-out visitor is worse than
-// showing nothing. There is one demo artist account, so "who am I" is that
-// artist's id whenever the session says artist.
+// showing nothing.
 
 export function ArtistConnectButton({ artistId }: { artistId: string }) {
+  const viewerUid = useCurrentUser().data?.uid ?? "";
   const sessionRole = useSyncExternalStore(
     subscribeToSession,
     readSessionRole,
     () => null,
   );
-  const viewerId = sessionRole === "artist" ? CURRENT_ARTIST_ID : null;
+  const viewerId = sessionRole === "artist" ? viewerUid : null;
 
   const { data: connection } = useConnectionWith(viewerId, artistId);
   const send = useSendConnectionRequestMutation();

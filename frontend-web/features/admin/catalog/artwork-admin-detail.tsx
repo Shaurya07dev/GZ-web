@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,7 +22,6 @@ import { RarityBadge } from "@/components/shared/rarity-badge";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PullBackHoldingDialog } from "./pull-back-holding-dialog";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { ADMIN } from "@/features/admin/admin-data";
 import { formatINR } from "@/lib/utils";
 import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import {
@@ -51,6 +52,7 @@ const STATUS_LABEL: Record<ArtworkStatus, string> = {
 };
 
 export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
+  const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const delistMutation = useDelistArtworkMutation();
@@ -90,7 +92,7 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
       {
         onSuccess: () => {
           appendAudit({
-            adminName: ADMIN.name,
+            adminName: adminName,
             action: rarity ? "artwork.ranked" : "artwork.rank_cleared",
             entityType: "artwork",
             entityId: artwork.id,
@@ -115,7 +117,7 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
       {
         onSuccess: () => {
           appendAudit({
-            adminName: ADMIN.name,
+            adminName: adminName,
             action:
               decision === "approved"
                 ? "insurance.approved"
@@ -145,7 +147,7 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
         ),
       );
       appendAudit({
-        adminName: ADMIN.name,
+        adminName: adminName,
         action: "artwork.delisted",
         entityType: "artwork",
         entityId: artwork.id,

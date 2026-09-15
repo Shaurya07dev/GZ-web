@@ -1,6 +1,6 @@
 import { useArtistDashboardArtworks } from "./useArtistArtworks";
 import { usePendingSettlements } from "./useArtistWallet";
-import { VERIFICATION_TIERS } from "@/features/dashboard/dashboard-data";
+import { useVerificationTiers } from "./useVerificationTiers";
 
 export interface AttentionItem {
   id: string;
@@ -24,7 +24,7 @@ export function useArtistAttentionItems(): {
   const draftCount = artworks?.filter((a) => a.status === "draft").length ?? 0;
   const reviewCount =
     artworks?.filter((a) => a.status === "pending_approval").length ?? 0;
-  const tier3 = VERIFICATION_TIERS.find((t) => t.tier === 3);
+  const tier3 = useVerificationTiers().tiers.find((t) => t.tier === 3);
 
   const items: AttentionItem[] = [];
 

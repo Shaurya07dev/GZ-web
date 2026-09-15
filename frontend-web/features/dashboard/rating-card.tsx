@@ -1,11 +1,12 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { Star } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { useArtistRating } from "@/hooks/useArtistRating";
 import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
-import { CURRENT_ARTIST_ID } from "@/lib/mock-collections";
 import {
   STAR_VALUES,
   artworkCountScore,
@@ -27,7 +28,8 @@ import {
 // itself is untouched in mock data, just not surfaced here.
 
 export function RatingCard() {
-  const { data: rating } = useArtistRating(CURRENT_ARTIST_ID);
+  const artistId = useCurrentUser().data?.uid ?? "";
+  const { data: rating } = useArtistRating(artistId);
   const { data: profile } = useArtistAccountProfile();
   const { data: artworks } = useArtistDashboardArtworks();
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -161,9 +163,10 @@ function NavLink({
 }
 
 function Sidebar() {
+  const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const { data: profile } = useCustomerProfile();
-  const customer = profile ?? mockCustomer;
+  const customer = profile ?? { name: me?.name ?? "", email: me?.email ?? "" };
   const [collapsed, setCollapsed] = useState(false);
   // All groups open by default — see AggregatorShell's identical note on
   // why a collapsed group doesn't auto-reopen when you land on its page.

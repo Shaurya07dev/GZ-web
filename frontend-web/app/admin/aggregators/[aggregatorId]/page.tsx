@@ -7,7 +7,7 @@ import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { UserDetailHeader } from "@/features/admin/people/user-detail-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { useAdminAggregatorPortfolio } from "@/hooks/useAdminUsers";
-import { ADMIN_TODAY } from "@/features/admin/admin-data";
+
 import { formatINR } from "@/lib/utils";
 
 export default function AdminAggregatorDetailPage(
@@ -70,7 +70,7 @@ export default function AdminAggregatorDetailPage(
                 0,
                 Math.round(
                   (new Date(holding.expiresAt).getTime() -
-                    ADMIN_TODAY.getTime()) /
+                    Date.now()) /
                     86_400_000,
                 ),
               );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -23,13 +25,14 @@ import { mockCustomer } from "./account-data";
 import { CollectorProfileCard } from "./collector-profile-card";
 
 export function CollectorDashboard() {
+  const { data: me } = useCurrentUser();
   const { data: profile } = useCustomerProfile();
   const { data: orders, isPending: ordersPending } = useOrders();
   const { data: collection } = useCollection();
   const { data: wallet } = useCustomerWallet();
   const wishlistCount = useWishlistStore((s) => s.ids.length);
 
-  const customer = profile ?? mockCustomer;
+  const customer = profile ?? { name: me?.name ?? "", email: me?.email ?? "" };
   const recentOrders = [...(orders ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 3);

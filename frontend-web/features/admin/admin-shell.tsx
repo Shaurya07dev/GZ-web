@@ -1,8 +1,10 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { UserAvatar } from "@/components/shared/user-avatar";
+
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -35,7 +37,6 @@ import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { useAdminKpis } from "@/hooks/useAdminDashboard";
-import { ADMIN } from "./admin-data";
 
 // The fourth independent copy-and-adapt of the shell pattern established by
 // features/dashboard/dashboard-shell.tsx and repeated by AggregatorShell and
@@ -194,6 +195,7 @@ function Sidebar({
   mobileOpen: boolean;
   onClose: () => void;
 }) {
+  const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const { data: kpis } = useAdminKpis();
   const [collapsed, setCollapsed] = useState(false);
@@ -375,21 +377,13 @@ function Sidebar({
             collapsed && "lg:justify-center lg:px-2",
           )}
         >
-          <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gold/40">
-            <Image
-              src={ADMIN.avatar}
-              alt=""
-              fill
-              sizes="36px"
-              className="object-cover"
-            />
-          </div>
+          <UserAvatar name={me?.name} className="size-9" />
           <div className={cn("min-w-0", collapsed && "lg:hidden")}>
             <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {ADMIN.name}
+              {me?.name ?? "Admin"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {ADMIN.email}
+              {me?.email ?? ""}
             </p>
           </div>
         </div>

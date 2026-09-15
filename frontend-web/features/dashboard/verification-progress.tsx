@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { CircleCheckBig, Circle } from "lucide-react";
-import { VERIFICATION_TIERS } from "./dashboard-data";
+import { useVerificationTiers } from "@/hooks/useVerificationTiers";
 
 export function VerificationProgress() {
+  const { tiers } = useVerificationTiers();
   return (
     <div className="rounded-lg border border-gold/25 bg-card p-5">
       <div className="flex items-baseline justify-between">
@@ -15,7 +18,7 @@ export function VerificationProgress() {
       </div>
 
       <ul className="mt-4 flex flex-col gap-3">
-        {VERIFICATION_TIERS.map((tier) => (
+        {tiers.map((tier) => (
           <li key={tier.tier} className="flex items-start gap-3">
             {tier.status === "complete" ? (
               <CircleCheckBig className="mt-0.5 size-4 shrink-0 text-gold-bright" />

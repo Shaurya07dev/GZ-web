@@ -1,5 +1,9 @@
 "use client";
 
+import { UserAvatar } from "@/components/shared/user-avatar";
+
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -43,7 +47,6 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
-import { AGGREGATOR, AGGREGATOR_NOTIFICATION_GROUPS } from "./aggregator-data";
 import { authService } from "@/services/authService";
 
 // Deliberately a parallel sibling to features/dashboard/dashboard-shell.tsx,
@@ -337,6 +340,7 @@ function Sidebar({
 }
 
 function AccountMenu({ collapsed }: { collapsed: boolean }) {
+  const { data: me } = useCurrentUser();
   const [open, setOpen] = useState(false);
 
   function handleSignOut() {
@@ -352,18 +356,10 @@ function AccountMenu({ collapsed }: { collapsed: boolean }) {
           collapsed && "lg:justify-center lg:px-2",
         )}
       >
-        <div className="relative size-9 shrink-0 overflow-hidden rounded-full border border-gold/40">
-          <Image
-            src={AGGREGATOR.avatar}
-            alt=""
-            fill
-            sizes="36px"
-            className="object-cover"
-          />
-        </div>
+        <UserAvatar name={me?.name} className="size-9" />
         <div className={cn("min-w-0 flex-1", collapsed && "lg:hidden")}>
           <p className="truncate text-sm font-medium text-sidebar-foreground">
-            {AGGREGATOR.companyName}
+            {me?.name ?? "Aggregator"}
           </p>
           <p className="truncate text-xs text-muted-foreground">Aggregator</p>
         </div>
@@ -410,6 +406,7 @@ const PAGE_TITLES: Record<string, string> = Object.fromEntries(
 );
 
 function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+  const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const title = PAGE_TITLES[pathname] ?? "Aggregator Portal";
 
@@ -428,9 +425,9 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           <span className="font-display text-xs font-bold uppercase tracking-widest text-gold-bright leading-none">GZ GalleryZone</span>
           <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Aggregator Portal</span>
         </div>
-        <NotificationsPopover groups={AGGREGATOR_NOTIFICATION_GROUPS} />
+        <NotificationsPopover groups={[]} />
         <Link href="/aggregator/profile" className="relative size-8 overflow-hidden rounded-full border border-gold/40 shrink-0">
-          <Image src={AGGREGATOR.avatar} alt={AGGREGATOR.companyName} fill sizes="32px" className="object-cover" />
+          <UserAvatar name={me?.name} className="size-8" />
         </Link>
       </div>
 
@@ -441,7 +438,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </h1>
       </div>
       <div className="hidden lg:flex lg:items-center lg:gap-2">
-        <NotificationsPopover groups={AGGREGATOR_NOTIFICATION_GROUPS} />
+        <NotificationsPopover groups={[]} />
         <SwitchMode />
       </div>
     </header>

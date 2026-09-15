@@ -1,5 +1,7 @@
 "use client";
 
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
 import { useState } from "react";
 import Image from "next/image";
 import {
@@ -22,13 +24,13 @@ import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaQueue } from "./physical-coa-queue";
 import { DownloadCoaButton } from "@/features/coa/download-coa-button";
 import { ArtworkHistory } from "./artwork-history";
-import { ARTIST } from "./dashboard-data";
 
 type ArtistArtwork = NonNullable<
   ReturnType<typeof useArtistDashboardArtworks>["data"]
 >[number];
 
 export function CoaNfcBoard() {
+  const { data: me } = useCurrentUser();
   const { data: artworks } = useArtistDashboardArtworks();
   const [previewing, setPreviewing] = useState<ArtistArtwork | null>(null);
   const [transferring, setTransferring] = useState<ArtistArtwork | null>(null);
@@ -133,7 +135,7 @@ export function CoaNfcBoard() {
           artworkId={transferring.id}
           artworkTitle={transferring.title}
           fromName={
-            resolveCustody(transferring).legalOwnerName ?? ARTIST.name
+            resolveCustody(transferring).legalOwnerName ?? me?.name ?? ""
           }
         />
       )}

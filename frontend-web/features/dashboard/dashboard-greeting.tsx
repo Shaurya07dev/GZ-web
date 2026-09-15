@@ -1,6 +1,8 @@
+"use client";
+
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import Link from "next/link";
 import { Store } from "lucide-react";
-import { ARTIST } from "./dashboard-data";
 
 function timeOfDayGreeting(): string {
   const hour = new Date().getHours();
@@ -12,7 +14,8 @@ function timeOfDayGreeting(): string {
 // The Topbar already renders the page's <h1> ("Dashboard"), so this is an
 // <h2> — a second <h1> here would be a duplicate top-level heading.
 export function DashboardGreeting() {
-  const firstName = ARTIST.name.split(" ")[0];
+  const { data: me } = useCurrentUser();
+  const firstName = me?.name.split(" ")[0] ?? "there";
 
   return (
     <div className="flex items-start justify-between gap-4">

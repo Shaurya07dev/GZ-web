@@ -5,15 +5,13 @@ import { motion } from "framer-motion";
 import { CircleCheckBig, Circle, Sparkles, ArrowRight } from "lucide-react";
 import { InstagramGlyph } from "@/components/social-icons";
 import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
-import { VERIFICATION_TIERS, ARTIST } from "./dashboard-data";
+import { useVerificationTiers } from "@/hooks/useVerificationTiers";
 
-const TOTAL_TIERS = VERIFICATION_TIERS.length;
-const completedCount = VERIFICATION_TIERS.filter(
-  (t) => t.status === "complete",
-).length;
+const TOTAL_TIERS = 3;
 
 export function VerificationDetail() {
   const { data: profile } = useArtistAccountProfile();
+  const { tiers, completed: verifiedTier } = useVerificationTiers();
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,7 +31,7 @@ export function VerificationDetail() {
             </span>
             <div>
               <h2 className="font-display text-lg font-semibold text-foreground">
-                Tier {ARTIST.verifiedTier} of {TOTAL_TIERS} verified
+                Tier {verifiedTier} of {TOTAL_TIERS} verified
               </h2>
               <p className="text-sm text-muted-foreground">
                 Complete Tier 3 to unlock the Gold ✦ Verified badge.
@@ -41,7 +39,7 @@ export function VerificationDetail() {
             </div>
           </div>
           <span className="font-mono text-sm text-muted-foreground">
-            {completedCount} / {TOTAL_TIERS} complete
+            {verifiedTier} / {TOTAL_TIERS} complete
           </span>
         </div>
 
@@ -49,14 +47,14 @@ export function VerificationDetail() {
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-gold-deep via-gold to-gold-bright"
             initial={{ width: 0 }}
-            animate={{ width: `${(completedCount / TOTAL_TIERS) * 100}%` }}
+            animate={{ width: `${(verifiedTier / TOTAL_TIERS) * 100}%` }}
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.15 }}
           />
         </div>
       </motion.div>
 
       <div className="flex flex-col gap-4">
-        {VERIFICATION_TIERS.map((tier, i) => (
+        {tiers.map((tier, i) => (
           <motion.div
             key={tier.tier}
             initial={{ opacity: 0, y: 12 }}

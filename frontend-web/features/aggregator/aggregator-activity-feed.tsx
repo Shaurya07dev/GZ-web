@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { mockAggregatorHoldings } from "@/lib/mock-data/aggregator-holdings";
 import { getArtworkById } from "@/lib/mock-data/helpers";
 import { formatINR } from "@/lib/utils";
-import { MOCK_TODAY } from "./aggregator-data";
+
 
 // A fork of features/dashboard/recent-activity-feed.tsx's visual pattern
 // (adapt, don't import -- see aggregator-shell.tsx's identical reasoning),
@@ -20,7 +20,7 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function relativeTime(iso: string): string {
   const days = Math.round(
-    (MOCK_TODAY.getTime() - new Date(iso).getTime()) / ONE_DAY_MS,
+    (Date.now() - new Date(iso).getTime()) / ONE_DAY_MS,
   );
   if (days <= 0) return "Today";
   if (days === 1) return "Yesterday";

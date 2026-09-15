@@ -7,13 +7,13 @@ import {
   type AdminDataTableColumn,
 } from "@/features/admin/admin-data-table";
 import { useAdminPendingArtworks } from "@/hooks/useAdminModeration";
-import { ADMIN_TODAY } from "@/features/admin/admin-data";
+
 import { LISTING_TYPE_LABEL, type Artwork } from "@/types/artwork";
 
 function waitingDays(artwork: Artwork): number {
   const submitted =
     artwork.statusHistory.at(-1)?.changedAt ?? artwork.coaIssueDate;
-  const diff = ADMIN_TODAY.getTime() - new Date(submitted).getTime();
+  const diff = Date.now() - new Date(submitted).getTime();
   return Math.max(0, Math.round(diff / 86_400_000));
 }
 
