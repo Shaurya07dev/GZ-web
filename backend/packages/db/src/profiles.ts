@@ -173,6 +173,10 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
   if (patch.bankAccountNumber !== undefined) {
     const acct = clean(patch.bankAccountNumber)?.replace(/\s/g, "") ?? null;
     if (acct && !/^\d{9,18}$/.test(acct)) throw new ProfileUpdateError("Bank account number should be 9–18 digits");
+    // The same guards the form applies, enforced here too: repeated digits or a straight run are test entries, not accounts.
+    if (acct && (/^(\d)\1+$/.test(acct) || "01234567890123456789".includes(acct) || "98765432109876543210".includes(acct))) {
+      throw new ProfileUpdateError("That doesn't look like a real account number");
+    }
     financialUpdate = { bankAccountEncrypted: acct };
     set("bankAccountMasked", acct ? `•••• ${acct.slice(-4)}` : null);
   }

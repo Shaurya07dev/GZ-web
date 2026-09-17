@@ -1,3 +1,4 @@
+import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { artistDashboardService } from "@/services/artistDashboardService";
 
@@ -29,6 +30,7 @@ export function useSimulateDeliveryMutation() {
   return useMutation({
     mutationFn: (settlementId: string) =>
       artistDashboardService.simulateDelivery(settlementId),
+    onError: notify.error("Not available"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["artist-wallet"] });
       queryClient.invalidateQueries({
@@ -47,7 +49,9 @@ export function useRequestWithdrawalMutation() {
   return useMutation({
     mutationFn: (amount: number) =>
       artistDashboardService.requestWithdrawal(amount),
-    onSuccess: () => {
+    onError: notify.error("Withdrawal not requested"),
+    onSuccess: (tx) => {
+      notify.success("Withdrawal requested", `₹${Math.abs(tx.amount).toLocaleString("en-IN")} is with GalleryZone for approval — usually within 2 working days.`);
       queryClient.invalidateQueries({ queryKey: ["artist-wallet"] });
       queryClient.invalidateQueries({
         queryKey: ["artist-wallet-transactions"],

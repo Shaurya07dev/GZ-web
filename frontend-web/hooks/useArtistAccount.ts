@@ -1,3 +1,4 @@
+import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { artistDashboardService } from "@/services/artistDashboardService";
 
@@ -18,7 +19,11 @@ export function useSaveArtistProfileMutation() {
     mutationFn: (
       patch: Parameters<typeof artistDashboardService.updateProfile>[0],
     ) => artistDashboardService.updateProfile(patch),
-    onSuccess: () => {
+    onError: notify.error("Profile not saved"),
+    onSuccess: (_profile, patch) => {
+      notify.success(
+        "bankAccountNumber" in patch || "ifsc" in patch ? "Payout account saved" : "pickupLine1" in patch ? "Pickup address saved" : "Profile saved",
+      );
       queryClient.invalidateQueries({ queryKey: ["artist-account-profile"] });
     },
   });
@@ -30,7 +35,9 @@ export function useAcceptMouMutation() {
     mutationFn: (
       input: Parameters<typeof artistDashboardService.acceptMou>[0],
     ) => artistDashboardService.acceptMou(input),
-    onSuccess: () => {
+    onError: notify.error("The agreement wasn't signed"),
+    onSuccess: (profile) => {
+      notify.success("Agreement signed", profile.mouAcceptance ? `Signed ${new Date(profile.mouAcceptance.acceptedAt).toLocaleString("en-IN")} — a copy is on your profile.` : undefined);
       queryClient.invalidateQueries({ queryKey: ["artist-account-profile"] });
       queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
     },
@@ -52,7 +59,9 @@ function useDeactivationMutation<TInput>(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
+    onError: notify.error("That didn't go through"),
     onSuccess: () => {
+      notify.success("Request recorded", "An admin will review it and you'll get an email.");
       queryClient.invalidateQueries({
         queryKey: ["artist-deactivation-request"],
       });

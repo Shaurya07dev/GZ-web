@@ -1,3 +1,4 @@
+import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { physicalCoaService } from "@/services/physicalCoaService";
 
@@ -21,8 +22,11 @@ export function useRequestPhysicalCoaMutation() {
   return useMutation({
     mutationFn: (input: Parameters<typeof physicalCoaService.request>[0]) =>
       physicalCoaService.request(input),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["physical-coa"] }),
+    onError: notify.error("Certificate request not sent"),
+    onSuccess: () => {
+      notify.success("Certificate requested", "The artist has been notified and will dispatch it.");
+      queryClient.invalidateQueries({ queryKey: ["physical-coa"] });
+    },
   });
 }
 
@@ -32,7 +36,10 @@ export function useMarkCoaDispatchedMutation() {
     mutationFn: (
       input: Parameters<typeof physicalCoaService.markDispatched>[0],
     ) => physicalCoaService.markDispatched(input),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["physical-coa"] }),
+    onError: notify.error("Couldn't mark as dispatched"),
+    onSuccess: () => {
+      notify.success("Marked as dispatched", "The collector can see the courier reference.");
+      queryClient.invalidateQueries({ queryKey: ["physical-coa"] });
+    },
   });
 }

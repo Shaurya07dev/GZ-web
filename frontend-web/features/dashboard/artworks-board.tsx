@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Plus, Pencil, Lock, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
@@ -57,16 +56,8 @@ export function ArtworksBoard() {
     const artwork = soldElsewhereTarget;
     if (!artwork) return;
     markSoldMutation.mutate(artwork.id, {
-      onSuccess: () => {
-        toast.success(`"${artwork.title}" marked as sold elsewhere.`);
-        setSoldElsewhereTarget(null);
-      },
-      onError: (error) => {
-        toast.error(
-          error instanceof Error ? error.message : "Something went wrong.",
-        );
-        setSoldElsewhereTarget(null);
-      },
+      // The hook shows the success/failure box; here we only close the dialog.
+      onSettled: () => setSoldElsewhereTarget(null),
     });
   }
 

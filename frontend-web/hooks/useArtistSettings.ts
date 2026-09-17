@@ -1,3 +1,4 @@
+import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { artistDashboardService } from "@/services/artistDashboardService";
 
@@ -14,7 +15,10 @@ export function useUpdateArtistSettingsMutation() {
     mutationFn: (
       patch: Partial<Awaited<ReturnType<typeof artistDashboardService.getSettings>>>,
     ) => artistDashboardService.updateSettings(patch),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["artist-settings"] }),
+    onError: notify.error("Settings not saved"),
+    onSuccess: () => {
+      notify.success("Settings saved");
+      queryClient.invalidateQueries({ queryKey: ["artist-settings"] });
+    },
   });
 }

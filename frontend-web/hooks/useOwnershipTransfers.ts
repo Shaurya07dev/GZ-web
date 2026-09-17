@@ -1,3 +1,4 @@
+import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ownershipService } from "@/services/ownershipService";
 
@@ -38,7 +39,11 @@ export function useInitiateTransferMutation() {
   return useMutation({
     mutationFn: (input: Parameters<typeof ownershipService.initiate>[0]) =>
       ownershipService.initiate(input),
-    onSuccess: () => invalidateOwnership(queryClient),
+    onError: notify.error("Transfer not started"),
+    onSuccess: () => {
+      notify.success("Transfer invitation sent", "They'll get an email and can accept from their account.");
+      invalidateOwnership(queryClient);
+    },
   });
 }
 
@@ -46,7 +51,11 @@ export function useAcceptTransferMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (transferId: string) => ownershipService.accept(transferId),
-    onSuccess: () => invalidateOwnership(queryClient),
+    onError: notify.error("Couldn't accept the transfer"),
+    onSuccess: () => {
+      notify.success("Transfer accepted", "The provenance passport now shows you as the owner.");
+      invalidateOwnership(queryClient);
+    },
   });
 }
 
@@ -54,7 +63,11 @@ export function useEndDisplayMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (transferId: string) => ownershipService.endDisplay(transferId),
-    onSuccess: () => invalidateOwnership(queryClient),
+    onError: notify.error("Couldn't end the display"),
+    onSuccess: () => {
+      notify.success("Display ended");
+      invalidateOwnership(queryClient);
+    },
   });
 }
 
@@ -62,6 +75,10 @@ export function useCancelTransferMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (transferId: string) => ownershipService.cancel(transferId),
-    onSuccess: () => invalidateOwnership(queryClient),
+    onError: notify.error("Couldn't cancel the transfer"),
+    onSuccess: () => {
+      notify.success("Transfer cancelled");
+      invalidateOwnership(queryClient);
+    },
   });
 }

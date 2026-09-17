@@ -33,7 +33,7 @@ export function SignaturePad({
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "currentColor";
+    ctx.strokeStyle = "#1a1410";
   }, []);
 
   function pointFromEvent(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -85,7 +85,7 @@ export function SignaturePad({
   return (
     <div className="flex flex-col gap-2">
       <div
-        className={`relative overflow-hidden rounded-md border bg-background/60 text-foreground ${
+        className={`relative overflow-hidden rounded-md border bg-white text-[#1a1410] ${
           disabled ? "opacity-50" : "border-border"
         }`}
       >
@@ -95,7 +95,7 @@ export function SignaturePad({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
-          className="h-36 w-full touch-none"
+          className="h-36 w-full touch-none bg-white"
           style={{ cursor: disabled ? "default" : "crosshair" }}
         />
         {isEmpty && (

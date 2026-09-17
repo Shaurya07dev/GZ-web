@@ -1,3 +1,4 @@
+import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   artistDashboardService,
@@ -21,7 +22,12 @@ export function useSubmitArtworkMutation() {
   return useMutation({
     mutationFn: (input: SubmitArtworkInput) =>
       artistDashboardService.submitArtwork(input),
-    onSuccess: () => {
+    onError: notify.error("Couldn't save the artwork"),
+    onSuccess: (artwork, input) => {
+      notify.success(
+        input.mode === "draft" ? "Draft saved" : "Submitted for review",
+        input.mode === "draft" ? `"${artwork.title}" is in your drafts.` : `"${artwork.title}" is with the curation team — you'll get an email when it's decided.`,
+      );
       queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
       queryClient.invalidateQueries({ queryKey: ["artist-kpis"] });
       queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
@@ -38,7 +44,9 @@ export function useUpdateArtworkMutation() {
   return useMutation({
     mutationFn: (input: Parameters<typeof artistDashboardService.updateArtwork>[0]) =>
       artistDashboardService.updateArtwork(input),
-    onSuccess: () => {
+    onError: notify.error("Couldn't save your changes"),
+    onSuccess: (artwork) => {
+      notify.success("Changes saved", `"${artwork.title}" has been updated.`);
       queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
       queryClient.invalidateQueries({ queryKey: ["artist-activity"] });
       queryClient.invalidateQueries({ queryKey: ["artwork"] });
@@ -64,7 +72,9 @@ export function useMarkSoldElsewhereMutation() {
   return useMutation({
     mutationFn: (artworkId: string) =>
       artistDashboardService.markSoldElsewhere(artworkId),
-    onSuccess: () => {
+    onError: notify.error("Couldn't mark this artwork as sold elsewhere"),
+    onSuccess: (artwork) => {
+      notify.success("Marked as sold elsewhere", `"${artwork.title}" has left every GalleryZone channel; the off-platform fee goes to admin review.`);
       queryClient.invalidateQueries({ queryKey: ["artist-artworks"] });
       queryClient.invalidateQueries({ queryKey: ["artist-kpis"] });
       queryClient.invalidateQueries({ queryKey: ["artist-activity"] });

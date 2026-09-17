@@ -173,19 +173,28 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
 
   // Payout account. The number is write-only: the API stores it where no
   // read route reaches and returns only the last four digits.
-  const [bankForm, setBankForm] = useState({ bankAccountNumber: "", ifsc: profile.ifsc ?? "" });
+  const [bankForm, setBankForm] = useState({ bankAccountNumber: "", bankAccountNumberConfirm: "", ifsc: profile.ifsc ?? "" });
   const [bankSaved, setBankSaved] = useState(false);
-  const bankNumberInvalid = bankForm.bankAccountNumber !== "" && !/^\d{9,18}$/.test(bankForm.bankAccountNumber);
+  // Account numbers are typed twice and can never be pasted between the
+  // two fields, so a slip in one shows up as a mismatch instead of a
+  // payout to a stranger. 9–18 digits, not all the same digit, not a
+  // straight run (1234567890…), which is what a test entry looks like.
+  const acct = bankForm.bankAccountNumber;
+  const bankNumberInvalid =
+    acct !== "" &&
+    (!/^\d{9,18}$/.test(acct) || /^(\d)\1+$/.test(acct) || "01234567890123456789".includes(acct) || "98765432109876543210".includes(acct));
+  const bankNumberMismatch = bankForm.bankAccountNumberConfirm !== "" && bankForm.bankAccountNumberConfirm !== acct;
+  const bankNumberUnconfirmed = acct !== "" && bankForm.bankAccountNumberConfirm === "";
   const ifscInvalid = bankForm.ifsc !== "" && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankForm.ifsc.toUpperCase());
   function handleBankSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (bankNumberInvalid || ifscInvalid) return;
+    if (bankNumberInvalid || bankNumberMismatch || bankNumberUnconfirmed || ifscInvalid) return;
     saveProfileMutation.mutate(
       { ...(bankForm.bankAccountNumber ? { bankAccountNumber: bankForm.bankAccountNumber } : {}), ifsc: bankForm.ifsc.toUpperCase() },
       {
         onSuccess: () => {
           setBankSaved(true);
-          setBankForm((prev) => ({ ...prev, bankAccountNumber: "" }));
+          setBankForm((prev) => ({ ...prev, bankAccountNumber: "", bankAccountNumberConfirm: "" }));
         },
       },
     );
@@ -753,7 +762,21 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               onChange={(e) => { setBankForm((p) => ({ ...p, bankAccountNumber: e.target.value.replace(/\s/g, "") })); setBankSaved(false); }}
               className="h-10"
             />
-            {bankNumberInvalid && <p className="text-xs text-destructive">Account numbers are 9–18 digits.</p>}
+            {bankNumberInvalid && <p className="text-xs text-destructive">Enter the real 9–18 digit account number printed on your passbook or cheque.</p>}
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="bankAccountNumberConfirm">Re-enter account number</Label>
+            <Input
+              id="bankAccountNumberConfirm"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="Type it again — pasting is disabled"
+              value={bankForm.bankAccountNumberConfirm}
+              onPaste={(e) => e.preventDefault()}
+              onChange={(e) => { setBankForm((p) => ({ ...p, bankAccountNumberConfirm: e.target.value.replace(/\s/g, "") })); setBankSaved(false); }}
+              className="h-10"
+            />
+            {bankNumberMismatch && <p className="text-xs text-destructive">The two account numbers don&rsquo;t match.</p>}
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="ifsc">IFSC</Label>
@@ -771,7 +794,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={saveProfileMutation.isPending || bankNumberInvalid || ifscInvalid || (!bankForm.bankAccountNumber && !bankForm.ifsc)}
+            disabled={saveProfileMutation.isPending || bankNumberInvalid || bankNumberMismatch || bankNumberUnconfirmed || ifscInvalid || (!bankForm.bankAccountNumber && !bankForm.ifsc)}
             className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
           >
             Save payout account
