@@ -97,6 +97,34 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "aggregatorHoldings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "artworkId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "aggregatorHoldings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "artworkId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "assignedAt",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

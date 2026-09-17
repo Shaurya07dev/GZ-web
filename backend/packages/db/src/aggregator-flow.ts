@@ -19,6 +19,8 @@ import {
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkPricingDoc } from "./collections.ts";
+import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
+import { artworkStateMachine } from "@galleryzone/domain";
 
 export class AggregatorFlowError extends Error {}
 
@@ -50,6 +52,12 @@ export async function reserveHolding({
   const pricing = pricingSnap.data() as ArtworkPricingDoc;
 
   const rates = await requireActiveRates(db);
+
+  // Only a live piece can leave for a gallery; someone else's hold wins.
+  const artworkStatus = await latestStatusOf(db, artworkId);
+  if (artworkStatus !== "marketplace") throw new AggregatorFlowError("This artwork is no longer available to reserve");
+  const activeSnap = await db.collection(Collections.aggregatorHoldings).where("artworkId", "==", artworkId).where("status", "==", "reserved").limit(1).get();
+  if (!activeSnap.empty) throw new AggregatorFlowError("Another gallery has already reserved this artwork");
 
   const priorSnap = await db.collection(Collections.aggregatorHoldings).where("artworkId", "==", artworkId).orderBy("assignedAt").get();
   const priorHoldings = priorSnap.docs.map((d) => d.data() as AggregatorHoldingDoc);
@@ -86,6 +94,10 @@ export async function reserveHolding({
     idempotencyPrefix: `holding:${holdingRef.id}:advance`,
     relatedHoldingId: holdingRef.id,
   });
+
+  artworkStateMachine.assertTransition("marketplace", "with_aggregator");
+  await appendArtworkStatus(db, artworkId, { status: "with_aggregator", changedBy: aggregatorId, reason: `holding:${holdingRef.id}` });
+  await refreshListing(db, artworkId, rates);
 
   return { holdingId: holdingRef.id, advanceAmountPaise: advance.advance, displayPricePaise, expiresAt: window.expiresAt };
 }
@@ -152,6 +164,11 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
   });
 
   await holdingRef.update({ status: "sold_pending_settlement" });
+  const artworkStatus = await latestStatusOf(db, holding.artworkId);
+  if (artworkStatus === "with_aggregator") {
+    await appendArtworkStatus(db, holding.artworkId, { status: "sold", changedBy: holding.aggregatorId, reason: `sale:${saleRef.id}` });
+    await refreshListing(db, holding.artworkId, rates);
+  }
 
   return { saleId: saleRef.id, transactionId };
 }
