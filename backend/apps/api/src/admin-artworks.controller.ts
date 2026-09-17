@@ -3,6 +3,8 @@ import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
 import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, type Db } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
+import { activeHoldingForArtwork, adminPullBackHolding, listAggregatorHoldings, AggregatorReadError } from "@galleryzone/db";
+import { BadRequestException } from "@nestjs/common";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
@@ -66,6 +68,34 @@ export class AdminArtworksController {
     const listing = await refreshListing(this.db, id);
     this.cache.clear();
     return { reindexed: listing ? 1 : 0 };
+  }
+
+  @Roles("admin")
+  @Get("aggregators/:id/holdings")
+  async aggregatorHoldings(@Param("id") id: string) {
+    return { holdings: await listAggregatorHoldings(this.db, id) };
+  }
+
+  @Roles("admin")
+  @Get("artworks/:id/holding")
+  async activeHolding(@Param("id") id: string) {
+    return { holding: await activeHoldingForArtwork(this.db, id) };
+  }
+
+  @Roles("admin")
+  @Post("holdings/:id/pull-back")
+  async pullBack(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    try {
+      const holding = await adminPullBackHolding(this.db, id, req.authUser.uid);
+      this.cache.clear();
+      return { holding };
+    } catch (error) {
+      if (error instanceof AggregatorReadError) {
+        if (error.message.startsWith("No ")) throw new NotFoundException({ type: "about:blank", title: "Holding not found", status: 404, code: "not_found" });
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "conflict" });
+      }
+      throw error;
+    }
   }
 
   @Roles("admin")

@@ -134,6 +134,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "GET", path: "/v1/aggregator/holdings/:id", authRole: "aggregator", summary: "One holding", replaces: "aggregatorService.getHolding" },
   { method: "POST", path: "/v1/aggregator/holdings/:id/price", authRole: "aggregator", summary: "The one allowed selling-price change", replaces: "aggregatorService.setDisplayPrice" },
   { method: "POST", path: "/v1/aggregator/holdings/:id/return", authRole: "aggregator", summary: "Unsold return — advance refunded, piece back on the marketplace", replaces: "aggregatorService.releaseHolding" },
+  { method: "GET", path: "/v1/admin/aggregators/:id/holdings", authRole: "admin", summary: "One aggregator's holdings", replaces: "adminService.getAggregatorPortfolio" },
+  { method: "GET", path: "/v1/admin/artworks/:id/holding", authRole: "admin", summary: "Active holding on a piece, if any", replaces: "adminService.activeHoldingFor" },
   { method: "GET", path: "/v1/account/collection", authRole: "customer", summary: "Artworks I currently own, from the ownership ledger", replaces: "customerCollectionService.list" },
   { method: "GET", path: "/v1/me/profile", authRole: "customer", summary: "My identity, private facts and compliance states (all roles)", replaces: "artistDashboardService.getProfile, customerService.getProfile, aggregatorProfileService" },
   { method: "PATCH", path: "/v1/me/profile", authRole: "customer", summary: "Edit my profile (name, phone, bio, socials, PAN, GSTIN, bank, pickup address)", replaces: "artistDashboardService.updateProfile, customerService.updateProfile" },

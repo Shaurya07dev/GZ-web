@@ -137,6 +137,22 @@ async function toHoldingView(db: Firestore, id: string, h: AggregatorHoldingDoc)
   };
 }
 
+/** Admin: the active holding on a piece, if any. */
+export async function activeHoldingForArtwork(db: Firestore, artworkId: string): Promise<AggregatorHoldingView | null> {
+  const snap = await db.collection(Collections.aggregatorHoldings).where("artworkId", "==", artworkId).where("status", "==", "reserved").limit(1).get();
+  const d = snap.docs[0];
+  return d ? toHoldingView(db, d.id, d.data() as AggregatorHoldingDoc) : null;
+}
+
+/** Admin pull-back: same as an unsold return, initiated by GalleryZone. */
+export async function adminPullBackHolding(db: Firestore, holdingId: string, adminId: string): Promise<AggregatorHoldingView | null> {
+  const h = (await db.collection(Collections.aggregatorHoldings).doc(holdingId).get()).data() as AggregatorHoldingDoc | undefined;
+  if (!h) throw new AggregatorReadError(`No holding ${holdingId}`);
+  await returnHolding(db, h.aggregatorId, holdingId);
+  await db.collection(Collections.auditLog).add({ adminId, action: "holding.pulled_back", entityType: "holding", entityId: holdingId, entityLabel: null, detail: null, createdAt: FieldValue.serverTimestamp() });
+  return getAggregatorHolding(db, h.aggregatorId, holdingId);
+}
+
 export async function listAggregatorHoldings(db: Firestore, aggregatorId: string): Promise<AggregatorHoldingView[]> {
   const snap = await db.collection(Collections.aggregatorHoldings).where("aggregatorId", "==", aggregatorId).get();
   const views = await Promise.all(snap.docs.map((d) => toHoldingView(db, d.id, d.data() as AggregatorHoldingDoc)));
