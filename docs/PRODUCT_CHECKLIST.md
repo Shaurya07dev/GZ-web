@@ -1,6 +1,6 @@
 # GalleryZone — from deployed prototype to product
 
-Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-16 (commit `2dc3925`). Testing walkthrough: `docs/TESTING_GUIDE.md`. Rule for "done": **nothing on a
+Audited 2026-09-14 against commit `bc2e686`; progress marked 2026-09-17 (commit `8ab60c8`). Testing walkthrough: `docs/TESTING_GUIDE.md`. Rule for "done": **nothing on a
 web page is hardcoded** — every number, name, list and status comes from the
 API (or from a CMS/config the API serves). Tick items only when verified live.
 
@@ -9,8 +9,9 @@ Real end-to-end: auth (email/password, Google), marketplace listing + detail,
 artist page, orders/addresses, CoA numbering + physical requests + PDF,
 ownership transfers + public passport + QR, MOU signing (server-timed).
 
-Still mock: 21 of 26 `services/*.ts`; 62 pages/components import fixture
-files directly (`lib/mock-data/*`, `features/**/…-data.ts`, `mock-collections`).
+**2026-09-17: the mock layer is gone.** `lib/mock-data`, `lib/mock-collections`,
+`lib/mock-utils`, `lib/mock-db` are deleted; every service is on the API or an
+honest empty state (artist network, reviews, buyer invites — no routes yet).
 
 ---
 
@@ -30,8 +31,8 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [x] Artist portal components no longer import fixture values (only type/label constants).
 
 **Aggregator portal** (`features/aggregator/*`, `aggregator-data.ts`)
-- [ ] `aggregatorService` (inventory ✅, reserve ✅, release ✅, recordSale ✅, collection ✅), `aggregatorSalesService` (sales ✅, remittances ✅, shipment ✅, wallet ✅, gallery spaces ✅), `aggregatorProfileService` (MOU ✅; profile/GSTIN/settings **no route yet**), `aggregatorMessagesService`, `aggregatorSupportService`, `aggregatorSettingsService`.
-- [ ] Components: aggregator-shell, activity-feed, analytics-view, expiry-countdown, gallery-spaces-board, sales-table, shipping-table, wallet-overview, aggregator-mobile-bottom-nav.
+- [x] Aggregator portal on the API: inventory with server-computed offer terms, reserve (MOU-gated), holdings, price change, return, record sale, sales/shipments/remittances, gallery spaces, wallet (ledger + advances held), profile via `/v1/me/profile`, support/messages. Open: Razorpay top-up for advances (settled by bank transfer for now), commission settlement to the aggregator wallet.
+- [x] Aggregator components read the live holdings query.
 
 **Admin portal** (`features/admin/*`, `admin-data.ts`)
 - [x] `adminService` on API: everything except the aggregator portfolio / holding pull-back. Analytics charts computed from real orders/artworks/users.
@@ -48,10 +49,10 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [x] Support tickets + inbox on the API for all portals.
 - [ ] Content pages (landing journey/ecosystem/FAQ, about, contact, terms, FAQ) — keep as versioned content but serve from one `content/` source or a CMS, not scattered `*-data.ts`; remove placeholder copy/figures.
 - [ ] `verifiedArtist`, `socialProofLinks`, `joinedAt`, artist verification tiers: currently defaulted in `lib/api-mappers.ts` — add to the backend DTOs.
-- [ ] Delete `lib/mock-collections.ts`, `lib/mock-db.ts`, `lib/mock-utils.ts`, `lib/mock-data/*`, `features/**/*-data.ts` fixtures, `*.check.ts` that test mocks. CI should fail on any import of them.
+- [x] `lib/mock-*` deleted (2026-09-17). Remaining `features/**/*-data.ts` hold only copy/labels/types.
 
 ## 2. Backend features that don't exist yet (3–4 weeks)
-- [x] **Images**: Railway bucket `artwork-images` (sin), presigned PUT → confirm → `artworks/{id}/images`, served via `GET /v1/images/...` immutable. Still to do: admin image moderation, derivatives (next/image covers resizing).
+- [x] **Images**: Railway bucket, presigned PUT (bucket CORS set at API boot) with a through-the-API fallback, immutable serve route; verified end-to-end 2026-09-17. Still to do: admin image moderation.
 - [x] **Payments**: Razorpay order + Checkout.js + signed verify + signed webhook, `PAYMENTS_MODE=razorpay` live in test mode. Still open: refunds/cancellation flow, live-mode keys after KYC.
 - [ ] **Payouts**: RazorpayX (or manual bank) settlement to artists/aggregators; today the ledger records, nobody is paid.
 - [ ] **Profiles**: artist/aggregator/customer profile write routes; KYC/PAN/GST document upload + review.
