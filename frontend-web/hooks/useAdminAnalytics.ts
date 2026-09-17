@@ -10,7 +10,7 @@ import type {
   TopPerformer,
   UserGrowthPoint,
   VolumePoint,
-} from "@/lib/mock-data/admin-analytics";
+} from "@/types/admin-analytics";
 
 // Every admin analytics series, computed from real orders, artworks and
 // users. Buckets with no activity are zero — a fresh platform shows flat

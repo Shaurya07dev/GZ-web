@@ -1,5 +1,7 @@
 "use client";
 
+import { UserAvatar } from "@/components/shared/user-avatar";
+
 import { useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useForm, Controller } from "react-hook-form";
@@ -297,13 +299,11 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
 
         <div className="flex items-center gap-4">
           <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-gold/40">
-            <Image
-              src={profile.avatar}
-              alt=""
-              fill
-              sizes="64px"
-              className="object-cover"
-            />
+            {profile.avatar ? (
+              <Image src={profile.avatar} alt="" fill sizes="64px" className="object-cover" />
+            ) : (
+              <UserAvatar name={profile.contactPerson} className="size-full text-base" />
+            )}
             <button
               type="button"
               aria-label="Change photo"

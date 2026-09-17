@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Bar, BarChart, LabelList, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { CategoryPerformance } from "@/lib/mock-data/admin-analytics";
+import type { CategoryPerformance } from "@/types/admin-analytics";
 import { formatINR } from "@/lib/utils";
 
 import { ChartCard, ChartTooltipContent } from "./chart-card";

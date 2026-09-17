@@ -1,6 +1,6 @@
 "use client";
 
-import type { TopPerformer } from "@/lib/mock-data/admin-analytics";
+import type { TopPerformer } from "@/types/admin-analytics";
 import { formatINR } from "@/lib/utils";
 
 // Two compact ranked lists side by side. A bar chart of eight names would

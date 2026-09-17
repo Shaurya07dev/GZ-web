@@ -11,7 +11,7 @@ import { GrowthLineChart } from "@/features/admin/charts/growth-line-chart";
 import { TierDonutChart } from "@/features/admin/charts/tier-donut-chart";
 import {
   type RangeKey,
-} from "@/lib/mock-data/admin-analytics";
+} from "@/types/admin-analytics";
 import { useAdminAnalytics } from "@/hooks/useAdminAnalytics";
 import { formatINR } from "@/lib/utils";
 

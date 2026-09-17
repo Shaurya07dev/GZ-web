@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { FunnelStage } from "@/lib/mock-data/admin-analytics";
+import type { FunnelStage } from "@/types/admin-analytics";
 
 import { ChartCard, ChartTooltipContent } from "./chart-card";
 import {

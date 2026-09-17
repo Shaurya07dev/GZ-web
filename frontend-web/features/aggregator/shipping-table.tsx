@@ -1,12 +1,12 @@
 "use client";
 
+import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+
 import Image from "next/image";
 import { Truck, PackageCheck, PackageSearch } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
-import { getArtworkById } from "@/lib/mock-data/helpers";
-import { holdingsCol } from "@/lib/mock-collections";
 import {
   useAggregatorShipments,
   useAdvanceShipmentMutation,
@@ -55,10 +55,8 @@ export function ShippingTable() {
 // holdings as a stand-in for "due for pickup", not a fabricated tracking
 // state machine.
 function InboundSection() {
-  const inbound = holdingsCol
-    .get()
-    .filter((h) => h.status === "reserved")
-    .slice(0, 3);
+  const { data: holdings } = useAggregatorCollection();
+  const inbound = (holdings ?? []).filter((h) => h.status === "reserved").slice(0, 3);
 
   return (
     <div>
@@ -81,7 +79,7 @@ function InboundSection() {
       ) : (
         <div className="mt-4 flex flex-col gap-2">
           {inbound.map((holding) => {
-            const artwork = getArtworkById(holding.artworkId);
+            const artwork = holding.artwork;
             if (!artwork) return null;
             return (
               <div
@@ -115,6 +113,7 @@ function InboundSection() {
 
 function OutboundList() {
   const { data: shipments, isPending } = useAggregatorShipments();
+  const { data: holdings } = useAggregatorCollection();
   const advanceMutation = useAdvanceShipmentMutation();
 
   if (isPending) {
@@ -151,7 +150,7 @@ function OutboundList() {
         </thead>
         <tbody>
           {shipments.map((shipment) => {
-            const artwork = getArtworkById(shipment.artworkId);
+            const artwork = holdings?.find((h) => h.artworkId === shipment.artworkId)?.artwork;
             const nextAction = NEXT_ACTION[shipment.shipmentStatus];
             return (
               <tr key={shipment.id} className="border-b border-border last:border-0">

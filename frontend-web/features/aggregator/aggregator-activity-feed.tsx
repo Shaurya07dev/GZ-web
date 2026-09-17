@@ -1,21 +1,16 @@
+"use client";
+
+import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+import type { AggregatorHolding } from "@/types/aggregator";
+import type { ArtworkSummary } from "@/types/artwork";
 import Link from "next/link";
 import { BookmarkCheck, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mockAggregatorHoldings } from "@/lib/mock-data/aggregator-holdings";
-import { getArtworkById } from "@/lib/mock-data/helpers";
 import { formatINR } from "@/lib/utils";
 
 
-// A fork of features/dashboard/recent-activity-feed.tsx's visual pattern
-// (adapt, don't import -- see aggregator-shell.tsx's identical reasoning),
-// sourced directly from the seeded mockAggregatorHoldings fixture rather
-// than the live useAggregatorCollection() query. This is a deliberate
-// choice, not an oversight: like the artist dashboard's own ACTIVITY_FEED,
-// this reads as a "how you got here" history rail, not a live event log --
-// mirroring the plan's Task 22 spec ("recent-activity list ... from
-// mockAggregatorHoldings"). A session's own reserve/sale actions still show
-// up correctly in the KPI cards and Collection table (both backed by the
-// live query), just not retroactively rewritten into this seeded history.
+// Recent activity is derived from the live holdings: the newest five
+// reservations and sales, no stored feed.
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function relativeTime(iso: string): string {
@@ -27,10 +22,10 @@ function relativeTime(iso: string): string {
   return `${days} days ago`;
 }
 
-const activityItems = mockAggregatorHoldings
+function activityItemsFrom(holdings: Array<AggregatorHolding & { artwork: ArtworkSummary }>) {
+  return holdings
   .map((holding) => {
-    const artwork = getArtworkById(holding.artworkId);
-    if (!artwork) return null;
+    const artwork = holding.artwork;
     const sold = holding.status === "sold_pending_settlement";
     return {
       id: holding.id,
@@ -46,8 +41,11 @@ const activityItems = mockAggregatorHoldings
   .filter((item): item is NonNullable<typeof item> => item !== null)
   .sort((a, b) => b.sortKey.localeCompare(a.sortKey))
   .slice(0, 5);
+}
 
 export function AggregatorActivityFeed() {
+  const { data: holdings } = useAggregatorCollection();
+  const activityItems = activityItemsFrom(holdings ?? []);
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <h2 className="font-display text-base font-semibold text-foreground">

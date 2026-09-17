@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
@@ -13,6 +13,7 @@ import { formatINR } from "@/lib/utils";
 export default function AdminAggregatorDetailPage(
   props: PageProps<"/admin/aggregators/[aggregatorId]">,
 ) {
+  const [now] = useState(() => Date.now());
   const { aggregatorId } = use(props.params);
   const { data, isLoading } = useAdminAggregatorPortfolio(aggregatorId);
 
@@ -69,8 +70,7 @@ export default function AdminAggregatorDetailPage(
               const daysLeft = Math.max(
                 0,
                 Math.round(
-                  (new Date(holding.expiresAt).getTime() -
-                    Date.now()) /
+                  (new Date(holding.expiresAt).getTime() - now) /
                     86_400_000,
                 ),
               );

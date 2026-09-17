@@ -88,7 +88,7 @@ export default function Notification4({
         <CardContent className="space-y-2 px-2">
           {groups.length === 0 && (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              You're all caught up — nothing new right now.
+              You&rsquo;re all caught up — nothing new right now.
             </p>
           )}
           {groups.map((group) => (

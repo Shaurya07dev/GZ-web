@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Cell, Pie, PieChart, Tooltip } from "recharts";
 
-import type { TierDistribution } from "@/lib/mock-data/admin-analytics";
+import type { TierDistribution } from "@/types/admin-analytics";
 
 import { ChartCard, ChartLegend, ChartTooltipContent } from "./chart-card";
 import {

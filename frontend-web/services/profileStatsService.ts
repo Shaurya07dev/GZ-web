@@ -7,17 +7,9 @@ import type {
 } from "@/types/profile-stats";
 import type { Artwork } from "@/types/artwork";
 import { verifiedTierCount } from "@/types/artist";
-import { mockDelay } from "@/lib/mock-utils";
-import {
-  aggregatorGallerySpacesCol,
-  aggregatorSalesCol,
-  aggregatorProfileCol,
-  aggregatorWalletCol,
-  artworksCol,
-  holdingsCol,
-} from "@/lib/mock-collections";
-import { aggregatorCommissionOf } from "@/lib/pricing";
-import { artistPriceOf } from "./artistPayoutService";
+import { aggregatorService } from "./aggregatorService";
+import { aggregatorSalesService } from "./aggregatorSalesService";
+import { aggregatorProfileService } from "./aggregatorProfileService";
 import { artistService, artworkService } from "./artworkService";
 import { artistRatingService } from "./artistRatingService";
 import { artistArtworkApi } from "./artistArtworkApi";
@@ -101,34 +93,22 @@ async function artistPrivate(): Promise<ArtistPrivateStats> {
   };
 }
 
-function aggregator(): AggregatorStats {
-  const holdings = holdingsCol.get();
-  const sales = aggregatorSalesCol.get();
-  const spaces = aggregatorGallerySpacesCol.get();
-  const wallet = aggregatorWalletCol.get();
-  const profile = aggregatorProfileCol.get();
-  const artworks = artworksCol.get();
-
-  const commissionEarned = holdings
-    .filter((h) => h.status === "sold_pending_settlement")
-    .reduce((sum, holding) => {
-      const artwork = artworks.find((a) => a.id === holding.artworkId);
-      if (!artwork) return sum;
-      return sum + aggregatorCommissionOf(holding.displayPrice, artistPriceOf(artwork));
-    }, 0);
-
+async function aggregator(): Promise<AggregatorStats> {
+  const [holdings, sales, spaces, wallet, profile] = await Promise.all([
+    aggregatorService.listCollection(),
+    aggregatorSalesService.listSales(),
+    aggregatorSalesService.listGallerySpaces(),
+    aggregatorSalesService.listWallet(),
+    aggregatorProfileService.getProfile(),
+  ]);
+  const sold = holdings.filter((h) => h.status === "sold_pending_settlement");
   return {
     onDisplay: holdings.filter((h) => h.status === "reserved").length,
-    piecesSold: holdings.filter((h) => h.status === "sold_pending_settlement")
-      .length,
+    piecesSold: sold.length,
     returned: holdings.filter((h) => h.status === "returned").length,
-    commissionEarned: Math.round(commissionEarned),
+    commissionEarned: 0,
     heldAgainstReservations: wallet.lockedBalance,
-    // The whole sale price, never the sale less commission — the aggregator
-    // collects on GalleryZone's behalf and settles their cut separately.
-    owedToGalleryZone: sales
-      .filter((s) => s.paymentRoute === "cash_at_premises" && !s.remittedAt)
-      .reduce((sum, sale) => sum + sale.soldPrice, 0),
+    owedToGalleryZone: sales.filter((s) => s.paymentRoute === "cash_at_premises" && !s.remittedAt).reduce((sum, s) => sum + s.soldPrice, 0),
     gallerySpaces: spaces.length,
     displayCapacity: spaces.reduce((sum, space) => sum + space.capacity, 0),
     cities: byFrequency(spaces.map((space) => space.city)),
@@ -162,7 +142,7 @@ export const profileStatsService = {
 
   artistPrivate: (_artistId: string): Promise<ArtistPrivateStats> => artistPrivate(),
 
-  aggregator: (): Promise<AggregatorStats> => mockDelay(aggregator()),
+  aggregator: (): Promise<AggregatorStats> => aggregator(),
 
   collector: (): Promise<CollectorStats> => collector(),
 };

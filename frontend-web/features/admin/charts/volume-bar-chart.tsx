@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
-import type { VolumePoint } from "@/lib/mock-data/admin-analytics";
+import type { VolumePoint } from "@/types/admin-analytics";
 
 import { ChartCard, ChartTooltipContent } from "./chart-card";
 import {

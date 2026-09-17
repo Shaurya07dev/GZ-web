@@ -28,7 +28,7 @@ import {
   useRejectWithdrawalMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { defaultPlatformSettings } from "@/lib/mock-data/admin";
+import { useAdminSettings } from "@/hooks/useAdminSystem";
 import { formatINR } from "@/lib/utils";
 import type { WithdrawalRequest, WithdrawalStatus } from "@/types/admin";
 
@@ -57,6 +57,7 @@ function waitingDays(row: WithdrawalRequest): number {
 }
 
 export function WithdrawalQueueTable() {
+  const minWithdrawal = useAdminSettings().data?.minWithdrawalAmount ?? 1000;
   const { data: withdrawals, isPending } = useAdminWithdrawals();
   const [active, setActive] = useState<WithdrawalRequest | null>(null);
 
@@ -190,6 +191,7 @@ function WithdrawalReviewDialog({
   request: WithdrawalRequest | null;
   onClose: () => void;
 }) {
+  const minWithdrawal = useAdminSettings().data?.minWithdrawalAmount ?? 1000;
   const adminName = useCurrentUser().data?.name ?? "Admin";
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
@@ -200,7 +202,7 @@ function WithdrawalReviewDialog({
   const isBusy = approveMutation.isPending || rejectMutation.isPending;
   const insufficient = request ? request.amount > request.walletBalance : false;
   const belowMinimum = request
-    ? request.amount < defaultPlatformSettings.minWithdrawalAmount
+    ? request.amount < minWithdrawal
     : false;
 
   function patchStatus(id: string, status: WithdrawalStatus) {
@@ -298,7 +300,7 @@ function WithdrawalReviewDialog({
                 />
                 <Field
                   label="Minimum payout"
-                  value={formatINR(defaultPlatformSettings.minWithdrawalAmount)}
+                  value={formatINR(minWithdrawal)}
                 />
               </dl>
 

@@ -1,19 +1,13 @@
+// Sales, shipments, remittances, wallet, gallery spaces and analytics for
+// the aggregator portal — on the API. Timestamps arrive as Firestore
+// {_seconds} objects or ISO strings; money as paise.
+
 import type { AggregatorSale, GallerySpace } from "@/types/aggregator";
 import type { Settlement } from "@/types/admin";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
-import { getArtworkById } from "@/lib/mock-data/helpers";
-import { aggregatorCommissionOf } from "@/lib/pricing";
-import { artistPriceOf } from "./artistPayoutService";
-import { mockDelay, mockError } from "@/lib/mock-utils";
-import {
-  aggregatorSalesCol,
-  aggregatorGallerySpacesCol,
-  aggregatorWalletCol,
-  aggregatorWalletTransactionsCol,
-  aggregatorSettlementsCol,
-  aggregatorProfileCol,
-  holdingsCol,
-} from "@/lib/mock-collections";
+import { http } from "@/lib/api";
+import { paiseToRupees } from "@/lib/api-mappers";
+import { aggregatorService } from "./aggregatorService";
 
 export interface AggregatorCustomer {
   buyerName: string;
@@ -23,8 +17,7 @@ export interface AggregatorCustomer {
   totalSpend: number;
 }
 
-// Shipment-relevant projection of AggregatorSale — same rows, fewer fields
-// for the Shipping & Logistics outbound table.
+/** Shipment-relevant projection of AggregatorSale for the outbound table. */
 export interface AggregatorShipment {
   id: string;
   artworkId: string;
@@ -40,8 +33,6 @@ export interface AggregatorShipment {
 }
 
 export interface AggregatorAnalyticsSummary {
-  // Derived from live sales/holdings — Task 7's analytics page may overlay
-  // pre-baked demo series on top; this summary stays honest to fixture data.
   salesCount: number;
   totalRevenue: number;
   totalCommissionPending: number;
@@ -52,294 +43,204 @@ export interface AggregatorAnalyticsSummary {
   averageDisplayMarkup: number;
 }
 
-function toShipment(sale: AggregatorSale): AggregatorShipment {
+type Ts = { _seconds: number } | string | null | undefined;
+const iso = (t: Ts): string | null => (typeof t === "string" ? t : t ? new Date(t._seconds * 1000).toISOString() : null);
+
+interface SaleDto {
+  id: string;
+  holdingId: string;
+  artworkId: string;
+  soldPricePaise: number;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string | null;
+  deliveryAddress: string | null;
+  deliveryMode: "courier" | "self_pickup";
+  paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
+  remittedAt: Ts;
+  shipmentStatus: "preparing" | "dispatched" | "delivered";
+  dispatchedAt: Ts;
+  deliveredAt: Ts;
+  courierRef: string | null;
+  soldAt: Ts;
+}
+
+function parseAddress(line: string | null): AggregatorSale["deliveryAddress"] {
+  const parts = (line ?? "").split(",").map((p) => p.trim()).filter(Boolean);
+  return { line1: parts[0] ?? "", city: parts[1] ?? "", state: parts[2] ?? "", pincode: parts[3] ?? "" };
+}
+
+function toSale(s: SaleDto): AggregatorSale {
   return {
-    id: sale.id,
-    artworkId: sale.artworkId,
-    holdingId: sale.holdingId,
-    buyerName: sale.buyerName,
-    deliveryMode: sale.deliveryMode,
-    deliveryAddress: sale.deliveryAddress,
-    shipmentStatus: sale.shipmentStatus,
-    soldAt: sale.soldAt,
-    dispatchedAt: sale.dispatchedAt,
-    deliveredAt: sale.deliveredAt,
-    courierRef: sale.courierRef,
+    id: s.id,
+    holdingId: s.holdingId,
+    artworkId: s.artworkId,
+    soldPrice: paiseToRupees(s.soldPricePaise),
+    buyerName: s.buyerName,
+    buyerEmail: s.buyerEmail,
+    buyerPhone: s.buyerPhone ?? "",
+    deliveryAddress: parseAddress(s.deliveryAddress),
+    deliveryMode: s.deliveryMode,
+    paymentRoute: s.paymentRoute,
+    remittedAt: iso(s.remittedAt),
+    soldAt: iso(s.soldAt) ?? new Date(0).toISOString(),
+    shipmentStatus: s.shipmentStatus,
+    dispatchedAt: iso(s.dispatchedAt),
+    deliveredAt: iso(s.deliveredAt),
+    courierRef: s.courierRef,
   };
 }
 
-// MOU §8: 20% x (selling price - ARTIST price). Must stay identical to what
-// aggregatorService.recordSale() credited, or processSettlement() will fail to
-// find the pending row it is meant to settle.
-function commissionForSale(sale: AggregatorSale): number {
-  const holding = holdingsCol.get().find((h) => h.id === sale.holdingId);
-  const artwork = getArtworkById(sale.artworkId);
-  if (!holding || !artwork) return 0;
-  return aggregatorCommissionOf(holding.displayPrice, artistPriceOf(artwork));
+const toShipment = (s: AggregatorSale): AggregatorShipment => ({
+  id: s.id,
+  artworkId: s.artworkId,
+  holdingId: s.holdingId,
+  buyerName: s.buyerName,
+  deliveryMode: s.deliveryMode,
+  deliveryAddress: s.deliveryAddress,
+  shipmentStatus: s.shipmentStatus,
+  soldAt: s.soldAt,
+  dispatchedAt: s.dispatchedAt ?? null,
+  deliveredAt: s.deliveredAt ?? null,
+  courierRef: s.courierRef ?? null,
+});
+
+async function sales(): Promise<AggregatorSale[]> {
+  const rows = await http.get<SaleDto[]>("/v1/aggregator/sales");
+  return rows.map(toSale).sort((a, b) => b.soldAt.localeCompare(a.soldAt));
 }
 
 export const aggregatorSalesService = {
-  listSales: (): Promise<AggregatorSale[]> =>
-    mockDelay(aggregatorSalesCol.get()),
+  listSales: (): Promise<AggregatorSale[]> => sales(),
 
-  listCustomers: (): Promise<AggregatorCustomer[]> => {
+  listCustomers: async (): Promise<AggregatorCustomer[]> => {
     const byEmail = new Map<string, AggregatorCustomer>();
-    for (const sale of aggregatorSalesCol.get()) {
-      const existing = byEmail.get(sale.buyerEmail);
-      if (existing) {
-        existing.orderCount += 1;
-        existing.totalSpend += sale.soldPrice;
-        // Keep the most recent name/phone if the buyer updates details later.
-        existing.buyerName = sale.buyerName;
-        existing.buyerPhone = sale.buyerPhone;
-      } else {
-        byEmail.set(sale.buyerEmail, {
-          buyerName: sale.buyerName,
-          buyerEmail: sale.buyerEmail,
-          buyerPhone: sale.buyerPhone,
-          orderCount: 1,
-          totalSpend: sale.soldPrice,
-        });
-      }
+    for (const s of await sales()) {
+      const row = byEmail.get(s.buyerEmail) ?? { buyerName: s.buyerName, buyerEmail: s.buyerEmail, buyerPhone: s.buyerPhone, orderCount: 0, totalSpend: 0 };
+      row.orderCount += 1;
+      row.totalSpend += s.soldPrice;
+      byEmail.set(s.buyerEmail, row);
     }
-    return mockDelay([...byEmail.values()]);
+    return [...byEmail.values()].sort((a, b) => b.totalSpend - a.totalSpend);
   },
 
-  listShipments: (): Promise<AggregatorShipment[]> =>
-    mockDelay(aggregatorSalesCol.get().map(toShipment)),
+  listShipments: async (): Promise<AggregatorShipment[]> => (await sales()).map(toShipment),
 
-  advanceShipment: (saleId: string): Promise<AggregatorSale> => {
-    const sales = aggregatorSalesCol.get();
-    const index = sales.findIndex((s) => s.id === saleId);
-    if (index === -1) return mockError("Sale not found");
-
-    const sale = sales[index];
-    const now = new Date().toISOString();
-    let updated: AggregatorSale;
-
-    if (sale.shipmentStatus === "preparing") {
-      updated = { ...sale, shipmentStatus: "dispatched", dispatchedAt: now };
-    } else if (sale.shipmentStatus === "dispatched") {
-      updated = { ...sale, shipmentStatus: "delivered", deliveredAt: now };
-    } else {
-      return mockError("Shipment is already delivered");
-    }
-
-    aggregatorSalesCol.set(sales.map((s, i) => (i === index ? updated : s)));
-    return mockDelay(updated);
+  advanceShipment: async (saleId: string, courierRef?: string): Promise<AggregatorSale> => {
+    const current = (await sales()).find((s) => s.id === saleId);
+    if (!current) throw new Error("Sale not found");
+    const to = current.shipmentStatus === "preparing" ? "dispatched" : current.shipmentStatus === "dispatched" ? "delivered" : null;
+    if (!to) throw new Error("Shipment is already delivered");
+    await http.patch(`/v1/aggregator/sales/${encodeURIComponent(saleId)}/shipment`, { saleId, to, ...(courierRef ? { courierRef } : {}) });
+    const updated = (await sales()).find((s) => s.id === saleId);
+    if (!updated) throw new Error("Sale not found");
+    return updated;
   },
 
-  listGallerySpaces: (): Promise<GallerySpace[]> =>
-    mockDelay(aggregatorGallerySpacesCol.get()),
-
-  listWallet: (): Promise<{
-    balance: number;
-    pendingBalance: number;
-    lockedBalance: number;
-  }> => mockDelay(aggregatorWalletCol.get()),
-
-  listWalletTransactions: (): Promise<WalletTransaction[]> =>
-    mockDelay(aggregatorWalletTransactionsCol.get()),
-
-  // Reserving artwork LOCKS money from this wallet rather than charging a
-  // fresh payment each time, so the aggregator tops it up once and every
-  // placement holds what it needs. Simulated, like the Razorpay checkout.
-  addFunds: (amount: number): Promise<WalletTransaction> => {
-    if (amount <= 0) return mockError("Enter an amount to add");
-
-    const wallet = aggregatorWalletCol.get();
-    aggregatorWalletCol.set({ ...wallet, balance: wallet.balance + amount });
-
-    const transaction: WalletTransaction = {
-      id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-      type: "adjustment",
-      label: "Wallet top-up",
-      amount,
-      date: new Date().toISOString().slice(0, 10),
-      status: "completed",
-    };
-    aggregatorWalletTransactionsCol.set([
-      transaction,
-      ...aggregatorWalletTransactionsCol.get(),
-    ]);
-    return mockDelay(transaction);
+  listGallerySpaces: async (): Promise<GallerySpace[]> => {
+    const rows = await http.get<(GallerySpace & { capacity: number | null; coordinatorName: string | null })[]>("/v1/aggregator/gallery-spaces");
+    return rows.map((r) => ({ ...r, capacity: r.capacity ?? 0, coordinatorName: r.coordinatorName ?? "" }));
   },
 
-  requestWithdrawal: (amount: number): Promise<WalletTransaction> => {
-    const wallet = aggregatorWalletCol.get();
-    const free = wallet.balance - wallet.lockedBalance;
-    if (amount < 1000) return mockError("Minimum withdrawal is ₹1,000");
-    // Money held against an active reservation is not yours to take out.
-    if (amount > free)
-      return mockError(
-        `Only ₹${Math.max(0, free).toLocaleString("en-IN")} is free — the rest is held against artwork you have reserved`,
-      );
-
-    aggregatorWalletCol.set({ ...wallet, balance: wallet.balance - amount });
-
-    const transaction: WalletTransaction = {
-      id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-      type: "withdrawal",
-      label: `Withdrawal to bank ${aggregatorProfileCol.get().bankAccountMasked.slice(-4)}`,
-      amount: -amount,
-      date: new Date().toISOString().slice(0, 10),
-      status: "completed",
-    };
-    aggregatorWalletTransactionsCol.set([
-      transaction,
-      ...aggregatorWalletTransactionsCol.get(),
-    ]);
-
-    return mockDelay(transaction);
-  },
-
-  // Cash the aggregator took at the counter is GalleryZone's money, and the
-  // whole of it is owed — not the sale less their commission. The commission
-  // settles separately through processSettlement() below, which is what stops
-  // an aggregator netting off at the till and everyone arguing later.
-  listRemittancesDue: (): Promise<AggregatorSale[]> =>
-    mockDelay(
-      aggregatorSalesCol
-        .get()
-        .filter(
-          (sale) =>
-            sale.paymentRoute === "cash_at_premises" && !sale.remittedAt,
-        ),
-    ),
-
-  markRemitted: (saleId: string): Promise<AggregatorSale> => {
-    const sales = aggregatorSalesCol.get();
-    const sale = sales.find((s) => s.id === saleId);
-    if (!sale) return mockError("Sale not found");
-    if (sale.remittedAt) return mockError("Already marked as transferred");
-
-    const updated: AggregatorSale = {
-      ...sale,
-      remittedAt: new Date().toISOString(),
-    };
-    aggregatorSalesCol.set(sales.map((s) => (s.id === saleId ? updated : s)));
-
-    aggregatorWalletTransactionsCol.set([
-      {
-        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-        type: "adjustment",
-        label: `Transferred to GalleryZone — sale ${sale.id.slice(0, 12)}`,
-        amount: -sale.soldPrice,
-        date: updated.remittedAt!.slice(0, 10),
-        status: "completed",
-      },
-      ...aggregatorWalletTransactionsCol.get(),
-    ]);
-
-    return mockDelay(updated);
-  },
-
-  listSettlements: (): Promise<Settlement[]> =>
-    mockDelay(aggregatorSettlementsCol.get()),
-
-  // Manual "simulate settlement": pending commission → available balance,
-  // and append a Settlement row. No automatic timer — same honesty posture
-  // as Admin's retry-on-failed-settlements action.
-  processSettlement: (saleId: string): Promise<Settlement> => {
-    const sale = aggregatorSalesCol.get().find((s) => s.id === saleId);
-    if (!sale) return mockError("Sale not found");
-
-    const alreadySettled = aggregatorSettlementsCol
-      .get()
-      .some((s) => s.orderId === saleId);
-    if (alreadySettled) return mockError("Settlement already processed");
-
-    const commission = commissionForSale(sale);
-    if (commission <= 0) {
-      return mockError("No commission to settle for this sale");
-    }
-
-    const transactions = aggregatorWalletTransactionsCol.get();
-    const artwork = getArtworkById(sale.artworkId);
-    const txIndex = transactions.findIndex(
-      (t) =>
-        t.type === "commission" &&
-        t.status === "pending" &&
-        t.amount === commission &&
-        (artwork ? t.label.includes(artwork.title) : true),
-    );
-    if (txIndex === -1) {
-      return mockError("No pending commission found for this sale");
-    }
-
-    const wallet = aggregatorWalletCol.get();
-    if (wallet.pendingBalance < commission) {
-      return mockError("Insufficient pending balance to settle");
-    }
-
-    aggregatorWalletCol.set({
-      ...wallet,
-      pendingBalance: wallet.pendingBalance - commission,
-      balance: wallet.balance + commission,
+  addGallerySpace: async (input: Omit<GallerySpace, "id">): Promise<GallerySpace> => {
+    const { id } = await http.post<{ id: string }>("/v1/aggregator/gallery-spaces", {
+      name: input.name,
+      addressLine1: input.addressLine1,
+      city: input.city,
+      state: input.state,
+      pincode: input.pincode,
+      ...(input.capacity ? { capacity: input.capacity } : {}),
+      ...(input.coordinatorName ? { coordinatorName: input.coordinatorName } : {}),
     });
-
-    const updatedTx: WalletTransaction = {
-      ...transactions[txIndex],
-      status: "completed",
-      type: "settlement",
-      label: artwork
-        ? `Settlement: "${artwork.title}"`
-        : transactions[txIndex].label,
-    };
-    aggregatorWalletTransactionsCol.set(
-      transactions.map((t, i) => (i === txIndex ? updatedTx : t)),
-    );
-
-    const now = new Date().toISOString();
-    const settlement: Settlement = {
-      id: `settle-${crypto.randomUUID().slice(0, 8)}`,
-      orderId: saleId,
-      artworkTitle: artwork?.title ?? sale.artworkId,
-      artistName: artwork?.artistName ?? "—",
-      artistAmount: 0,
-      aggregatorCommission: commission,
-      platformRevenue: 0,
-      status: "processed",
-      createdAt: sale.soldAt,
-      processedAt: now,
-    };
-    aggregatorSettlementsCol.set([
-      settlement,
-      ...aggregatorSettlementsCol.get(),
-    ]);
-
-    return mockDelay(settlement);
+    return { id, ...input };
   },
 
-  getAnalytics: (): Promise<AggregatorAnalyticsSummary> => {
-    const sales = aggregatorSalesCol.get();
-    const holdings = holdingsCol.get();
-    const wallet = aggregatorWalletCol.get();
-    const customers = new Set(sales.map((s) => s.buyerEmail));
+  // The aggregator's ledger balance. Advances are held against reservations
+  // (a liability on this account) and refunded on return; commission is
+  // credited on settlement. Negative available = advances owed to GalleryZone.
+  listWallet: async (): Promise<{ balance: number; pendingBalance: number; lockedBalance: number }> => {
+    const [w, holdings] = await Promise.all([http.get<{ balancePaise: number }>("/v1/aggregator/wallet"), aggregatorService.listCollection()]);
+    const locked = holdings.filter((h) => h.status === "reserved").reduce((sum, h) => sum + h.advanceAmount + (h.deliveryDeposit ?? 0), 0);
+    return { balance: paiseToRupees(w.balancePaise), pendingBalance: 0, lockedBalance: locked };
+  },
 
-    const totalRevenue = sales.reduce((sum, s) => sum + s.soldPrice, 0);
-    const markups = sales.map((sale) => {
-      const holding = holdings.find((h) => h.id === sale.holdingId);
-      const artwork = getArtworkById(sale.artworkId);
-      if (!holding || !artwork) return 0;
-      return Math.max(0, holding.displayPrice - artwork.customerPrice);
-    });
-    const averageDisplayMarkup =
-      markups.length > 0
-        ? Math.round(markups.reduce((a, b) => a + b, 0) / markups.length)
-        : 0;
+  listWalletTransactions: async (): Promise<WalletTransaction[]> => {
+    const holdings = await aggregatorService.listCollection();
+    return holdings
+      .flatMap((h) => {
+        const rows: WalletTransaction[] = [
+          { id: `adv:${h.id}`, type: "adjustment", label: `Advance held · ${h.artwork.title}`, amount: -h.advanceAmount, date: h.assignedAt.slice(0, 10), status: "completed" },
+        ];
+        if (h.status === "returned" && h.returnedAt) rows.push({ id: `ref:${h.id}`, type: "refund", label: `Advance refunded · ${h.artwork.title}`, amount: h.advanceAmount, date: h.returnedAt.slice(0, 10), status: "completed" });
+        return rows;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+  },
 
-    return mockDelay({
-      salesCount: sales.length,
-      totalRevenue,
-      totalCommissionPending: wallet.pendingBalance,
-      totalCommissionAvailable: wallet.balance,
-      customerCount: customers.size,
-      activeReservations: holdings.filter((h) => h.status === "reserved")
-        .length,
-      averageSoldPrice:
-        sales.length > 0 ? Math.round(totalRevenue / sales.length) : 0,
-      averageDisplayMarkup,
+  // Advances are settled by invoice/bank transfer with GalleryZone for now;
+  // a Razorpay top-up is a follow-up. Refused clearly, never simulated.
+  addFunds: async (_amount: number): Promise<WalletTransaction> => {
+    throw new Error("Wallet top-ups are settled with GalleryZone by bank transfer for now — contact your coordinator.");
+  },
+
+  // Aggregators are agents, not principals: no withdrawal route by design (plan §3.4).
+  requestWithdrawal: async (_amount: number): Promise<WalletTransaction> => {
+    throw new Error("Commission is paid out by GalleryZone on settlement; there is nothing to withdraw from this wallet.");
+  },
+
+  listRemittancesDue: async (): Promise<AggregatorSale[]> => {
+    const rows = await http.get<SaleDto[]>("/v1/aggregator/sales/remittances-due");
+    return rows.map(toSale);
+  },
+
+  markRemitted: async (saleId: string): Promise<AggregatorSale> => {
+    await http.post(`/v1/aggregator/sales/${encodeURIComponent(saleId)}/remit`);
+    const updated = (await sales()).find((s) => s.id === saleId);
+    if (!updated) throw new Error("Sale not found");
+    return updated;
+  },
+
+  // Settlements are run by GalleryZone (admin console); this view derives
+  // them from sold holdings so the aggregator sees what is owed.
+  listSettlements: async (): Promise<Settlement[]> => {
+    const [all, holdings] = await Promise.all([sales(), aggregatorService.listCollection()]);
+    return all.map((s) => {
+      const h = holdings.find((x) => x.id === s.holdingId);
+      return {
+        id: `stl-${s.id}`,
+        orderId: s.id,
+        artworkTitle: h?.artwork.title ?? s.artworkId,
+        artistName: h?.artwork.artistName ?? "",
+        artistAmount: 0,
+        aggregatorCommission: Math.max(0, s.soldPrice - (h?.displayPrice ?? s.soldPrice)),
+        platformRevenue: 0,
+        status: s.remittedAt || s.paymentRoute === "direct_to_galleryzone" ? "processed" : "pending",
+        createdAt: s.soldAt,
+        processedAt: s.remittedAt ?? null,
+      } satisfies Settlement;
     });
+  },
+
+  processSettlement: async (_saleId: string): Promise<Settlement> => {
+    throw new Error("Settlements are processed by GalleryZone after delivery.");
+  },
+
+  getAnalytics: async (): Promise<AggregatorAnalyticsSummary> => {
+    const [all, holdings] = await Promise.all([sales(), aggregatorService.listCollection()]);
+    const revenue = all.reduce((sum, s) => sum + s.soldPrice, 0);
+    const markups = all.map((s) => {
+      const h = holdings.find((x) => x.id === s.holdingId);
+      return h && h.displayPrice > 0 ? (s.soldPrice - h.displayPrice) / h.displayPrice : 0;
+    });
+    return {
+      salesCount: all.length,
+      totalRevenue: revenue,
+      totalCommissionPending: 0,
+      totalCommissionAvailable: 0,
+      customerCount: new Set(all.map((s) => s.buyerEmail)).size,
+      activeReservations: holdings.filter((h) => h.status === "reserved").length,
+      averageSoldPrice: all.length ? Math.round(revenue / all.length) : 0,
+      averageDisplayMarkup: markups.length ? markups.reduce((a, b) => a + b, 0) / markups.length : 0,
+    };
   },
 };

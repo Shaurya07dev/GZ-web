@@ -1,5 +1,9 @@
 "use client";
 
+import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+import type { AggregatorHolding } from "@/types/aggregator";
+import type { ArtworkSummary } from "@/types/artwork";
+
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,8 +21,6 @@ import {
   type AdminDataTableColumn,
 } from "@/features/admin/admin-data-table";
 import { PriceTag } from "@/components/shared/price-tag";
-import { getArtworkById } from "@/lib/mock-data/helpers";
-import { holdingsCol } from "@/lib/mock-collections";
 import { formatINR } from "@/lib/utils";
 import { useAggregatorSales } from "@/hooks/useAggregatorSales";
 import type { AggregatorSale } from "@/types/aggregator";
@@ -44,9 +46,10 @@ const SHIPMENT_CLASS: Record<AggregatorSale["shipmentStatus"], string> = {
 // Mirrors aggregatorSalesService's internal commissionForSale (not exported,
 // UI-only concern) — 20% of the markup the display price carries over the
 // customer-price floor, same formula the Dashboard KPI and recordSale() use.
-function commissionForSale(sale: AggregatorSale): number {
-  const holding = holdingsCol.get().find((h) => h.id === sale.holdingId);
-  const artwork = getArtworkById(sale.artworkId);
+type HoldingRow = AggregatorHolding & { artwork: ArtworkSummary };
+function commissionForSale(sale: AggregatorSale, holdings: HoldingRow[]): number {
+  const holding = holdings.find((h) => h.id === sale.holdingId);
+  const artwork = holding?.artwork;
   if (!holding || !artwork) return 0;
   return Math.round(
     0.2 * Math.max(0, holding.displayPrice - artwork.customerPrice),
@@ -55,6 +58,8 @@ function commissionForSale(sale: AggregatorSale): number {
 
 export function SalesTable() {
   const { data: sales, isPending } = useAggregatorSales();
+  const { data: holdings } = useAggregatorCollection();
+  const artworkOf = (artworkId: string) => holdings?.find((h) => h.artworkId === artworkId)?.artwork;
   const [active, setActive] = useState<AggregatorSale | null>(null);
 
   const columns: AdminDataTableColumn<AggregatorSale>[] = [
@@ -62,7 +67,7 @@ export function SalesTable() {
       key: "artwork",
       header: "Artwork",
       render: (row) => {
-        const artwork = getArtworkById(row.artworkId);
+        const artwork = artworkOf(row.artworkId);
         return (
           <div className="flex min-w-0 items-center gap-3">
             {artwork && (
@@ -83,7 +88,7 @@ export function SalesTable() {
         );
       },
       sortable: true,
-      sortValue: (row) => getArtworkById(row.artworkId)?.title ?? row.artworkId,
+      sortValue: (row) => artworkOf(row.artworkId)?.title ?? row.artworkId,
     },
     {
       key: "buyer",
@@ -111,11 +116,11 @@ export function SalesTable() {
       header: "Commission",
       render: (row) => (
         <span className="text-sm tabular-nums text-gold-bright">
-          {formatINR(commissionForSale(row))}
+          {formatINR(commissionForSale(row, holdings ?? []))}
         </span>
       ),
       sortable: true,
-      sortValue: (row) => commissionForSale(row),
+      sortValue: (row) => commissionForSale(row, holdings ?? []),
     },
     {
       key: "shipmentStatus",
@@ -247,7 +252,7 @@ export function SalesTable() {
           getRowLabel={(row) => `Open sale for ${row.buyerName}`}
           searchPlaceholder="Search by buyer or artwork"
           searchValue={(row) =>
-            `${row.buyerName} ${row.buyerEmail} ${getArtworkById(row.artworkId)?.title ?? ""}`
+            `${row.buyerName} ${row.buyerEmail} ${artworkOf(row.artworkId)?.title ?? ""}`
           }
           filters={[
             {
@@ -278,7 +283,8 @@ function SaleDetailDialog({
   sale: AggregatorSale | null;
   onClose: () => void;
 }) {
-  const artwork = sale ? getArtworkById(sale.artworkId) : undefined;
+  const { data: holdings } = useAggregatorCollection();
+  const artwork = sale ? holdings?.find((h) => h.artworkId === sale.artworkId)?.artwork : undefined;
 
   return (
     <Dialog open={Boolean(sale)} onOpenChange={(open) => !open && onClose()}>
@@ -301,7 +307,7 @@ function SaleDetailDialog({
               />
               <Detail
                 label="Commission"
-                value={formatINR(commissionForSale(sale))}
+                value={formatINR(commissionForSale(sale, holdings ?? []))}
               />
               <div className="col-span-2 min-w-0">
                 <dt className="text-xs text-muted-foreground">Delivery address</dt>

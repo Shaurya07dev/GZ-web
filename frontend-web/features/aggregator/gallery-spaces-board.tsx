@@ -1,9 +1,10 @@
 "use client";
 
+import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+
 import { Building2, MapPin, UserRound, PackageCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { holdingsCol } from "@/lib/mock-collections";
 import { useAggregatorGallerySpaces } from "@/hooks/useAggregatorGallerySpaces";
 
 // The aggregator's OWN physical premises/display locations — not to be
@@ -14,9 +15,8 @@ export function GallerySpacesBoard() {
   const { data: spaces, isPending } = useAggregatorGallerySpaces();
   // Occupancy = currently reserved holdings (there is only one premises
   // concept modeled today, so every active holding counts against it).
-  const occupancy = holdingsCol
-    .get()
-    .filter((h) => h.status === "reserved").length;
+  const { data: holdings } = useAggregatorCollection();
+  const occupancy = (holdings ?? []).filter((h) => h.status === "reserved").length;
 
   if (isPending) {
     return (

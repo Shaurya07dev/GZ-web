@@ -1,10 +1,11 @@
 "use client";
 
+import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+
 import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { useAggregatorAnalytics } from "@/hooks/useAggregatorAnalytics";
 import { useAggregatorSales } from "@/hooks/useAggregatorSales";
-import { getArtworkById } from "@/lib/mock-data/helpers";
 import { ChartCard, ChartTooltipContent } from "@/features/admin/charts/chart-card";
 import { CategoryBarChart } from "@/features/admin/charts/category-bar-chart";
 import {
@@ -16,7 +17,7 @@ import {
   rampVar,
   tickInterval,
 } from "@/features/admin/charts/chart-theme";
-import type { CategoryPerformance } from "@/lib/mock-data/admin-analytics";
+import type { CategoryPerformance } from "@/types/admin-analytics";
 import { formatINR } from "@/lib/utils";
 
 // Pre-baked demonstration series, same honest posture as
@@ -36,11 +37,12 @@ const SELL_THROUGH_DEMO_SERIES = [
 export function AnalyticsView() {
   const { data: summary, isPending } = useAggregatorAnalytics();
   const { data: sales } = useAggregatorSales();
+  const { data: holdings } = useAggregatorCollection();
 
   const categoryData = useMemo<CategoryPerformance[]>(() => {
     const byCategory = new Map<string, { revenue: number; orders: number }>();
     for (const sale of sales ?? []) {
-      const artwork = getArtworkById(sale.artworkId);
+      const artwork = holdings?.find((h) => h.artworkId === sale.artworkId)?.artwork;
       if (!artwork) continue;
       const entry = byCategory.get(artwork.category) ?? {
         revenue: 0,

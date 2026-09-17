@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { UserGrowthPoint } from "@/lib/mock-data/admin-analytics";
+import type { UserGrowthPoint } from "@/types/admin-analytics";
 
 import { ChartCard, ChartLegend, ChartTooltipContent } from "./chart-card";
 import {

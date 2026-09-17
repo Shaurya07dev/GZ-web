@@ -3,6 +3,7 @@ import {
   type Artwork,
   type ArtworkRarity,
   type ExternalSalePenalty,
+  type ArtworkSummary,
 } from "@/types/artwork";
 import type { Order } from "@/types/order";
 import type { ArtistProfile } from "@/types/artist";
@@ -24,39 +25,12 @@ import type {
 } from "@/types/admin";
 import type { Address } from "@/types/customer";
 import type { AggregatorHolding } from "@/types/aggregator";
-import { mockArtists } from "@/lib/mock-data/artists";
-import { getArtworksByArtist } from "@/lib/mock-data/helpers";
-import {
-  defaultPlatformSettings,
-  isInKycQueue,
-  isInGstQueue,
-  mockAdminActivity,
-  mockAdminKpis,
-  mockAuditLog,
-  mockCategories,
-  mockReports,
-  mockSettlements,
-  mockWithdrawals,
-} from "@/lib/mock-data/admin";
-import { mockDelay, mockError } from "@/lib/mock-utils";
 import { adminApi } from "@/services/adminApi";
 import { artistService } from "@/services/artworkService";
 import { http } from "@/lib/api";
-import { paiseToRupees } from "@/lib/api-mappers";
-import { ADMIN } from "@/features/admin/admin-data";
+import { paiseToRupees, toArtwork, type ArtworkDto } from "@/lib/api-mappers";
+import { toSummary } from "@/lib/artwork-summary";
 import { aggregatorService } from "@/services/aggregatorService";
-import {
-  addressesCol,
-  adminUsersCol,
-  aggregatorWalletCol,
-  aggregatorWalletTransactionsCol,
-  artistPenaltiesCol,
-  deactivationRequestsCol,
-  artworksCol,
-  holdingsCol,
-  ordersCol,
-  pendingArtworksCol,
-} from "@/lib/mock-collections";
 
 // ---------------------------------------------------------------------------
 // Mock admin service. Reads/writes for the moderation → catalog pipeline
@@ -74,21 +48,6 @@ import {
 //
 // Swapping any of this for a real axios call later is a same-shape change.
 // ---------------------------------------------------------------------------
-
-function findArtwork(id: string): Artwork | undefined {
-  return (
-    artworksCol.get().find((a) => a.id === id) ??
-    pendingArtworksCol.get().find((a) => a.id === id)
-  );
-}
-
-function slugify(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = {
   sales: "Marketplace sales",
@@ -109,19 +68,6 @@ function formatReportRange(from: string, to: string): string {
   };
   return `${new Date(from).toLocaleDateString("en-IN", options)} – ${new Date(to).toLocaleDateString("en-IN", options)}`;
 }
-
-// An approved closure suspends the account. The request stores the artist id
-// ("devika-rao"); admin records key on the user id ("user-artist-devika-rao"),
-// so match on the suffix rather than assuming one prefix.
-function deactivateUser(artistId: string): void {
-  const users = adminUsersCol.get();
-  adminUsersCol.set(
-    users.map((user) =>
-      user.id.endsWith(artistId) ? { ...user, status: "suspended" } : user,
-    ),
-  );
-}
-
 
 interface PenaltyDto {
   id: string;
@@ -167,6 +113,41 @@ interface SettlementDto {
   processedAt: string | null;
 }
 let sessionReports: GeneratedReport[] = [];
+
+interface AdminHoldingDto {
+  id: string;
+  artworkId: string;
+  artwork: ArtworkDto | null;
+  cycleMonth: number;
+  advancePercent: number;
+  advancePaise: number;
+  deliveryDepositPaise: number | null;
+  displayPricePaise: number;
+  assignmentSource: "self_reserved" | "gz_assigned";
+  assignedAt: string;
+  expiresAt: string;
+  windowExtended: boolean;
+  status: AggregatorHolding["status"];
+  returnedAt: string | null;
+}
+function toAdminHolding(h: AdminHoldingDto): AggregatorHolding & { artwork: ArtworkSummary } {
+  return {
+    id: h.id,
+    artworkId: h.artworkId,
+    advancePercent: (h.advancePercent === 3 ? 3 : 5) as 5 | 3,
+    advanceAmount: paiseToRupees(h.advancePaise),
+    deliveryDeposit: h.deliveryDepositPaise === null ? undefined : paiseToRupees(h.deliveryDepositPaise),
+    displayPrice: paiseToRupees(h.displayPricePaise),
+    assignedAt: h.assignedAt,
+    expiresAt: h.expiresAt,
+    status: h.status,
+    cycleMonth: h.cycleMonth,
+    returnedAt: h.returnedAt,
+    windowExtended: h.windowExtended,
+    assignmentSource: h.assignmentSource,
+    artwork: h.artwork ? toSummary(toArtwork(h.artwork)) : { id: h.artworkId, title: "Artwork", artistId: "", artistName: "", verifiedArtist: false, category: "", medium: "", customerPrice: 0, thumbnailUrl: "/artworks/framed-painting.png", insured: false, status: "marketplace", listingType: "marketplace_and_aggregator" },
+  };
+}
 
 export const adminService = {
   // --- overview + analytics ------------------------------------------------
@@ -281,14 +262,10 @@ export const adminService = {
 
   delistArtwork: (id: string): Promise<{ id: string; status: "returned" }> => adminApi.delistArtwork(id),
 
-  activeHoldingFor: (
-    artworkId: string,
-  ): Promise<AggregatorHolding | null> =>
-    mockDelay(
-      holdingsCol.get().find(
-        (h) => h.artworkId === artworkId && h.status === "reserved",
-      ) ?? null,
-    ),
+  activeHoldingFor: async (artworkId: string): Promise<AggregatorHolding | null> => {
+    const { holding } = await http.get<{ holding: AdminHoldingDto | null }>(`/v1/admin/artworks/${encodeURIComponent(artworkId)}/holding`);
+    return holding ? toAdminHolding(holding) : null;
+  },
 
   // GalleryZone reclaiming a piece from an aggregator mid-placement. Distinct
   // from the aggregator returning it themselves: same end state for the
@@ -301,79 +278,10 @@ export const adminService = {
   // reads it, the admin decides per case, the same way they already decide an
   // off-platform sale fee. `reason` is required: an aggregator whose stock
   // disappears is owed an explanation.
-  pullBackHolding: (input: {
-    holdingId: string;
-    reason: string;
-    refundDelivery: boolean;
-  }): Promise<{ released: number; deliveryCharged: number }> => {
-    const holdings = holdingsCol.get();
-    const holding = holdings.find((h) => h.id === input.holdingId);
-    if (!holding) return mockError("That placement no longer exists");
-    if (holding.status !== "reserved")
-      return mockError(
-        holding.status === "returned"
-          ? "This piece has already come back"
-          : "This piece has sold — it cannot be pulled back",
-      );
-    if (!input.reason.trim())
-      return mockError("Say why the piece is being pulled back");
-
-    const artwork = findArtwork(holding.artworkId);
-    const title = artwork?.title ?? "Artwork";
-    const delivery = holding.deliveryDeposit ?? 0;
-    const deliveryCharged = input.refundDelivery ? 0 : delivery;
-    const held = holding.advanceAmount + delivery;
-    const now = new Date().toISOString();
-
-    // The advance and delivery were LOCKED from the aggregator's wallet, never
-    // taken, so the whole hold is released here and only the forfeited portion
-    // actually leaves the balance.
-    const wallet = aggregatorWalletCol.get();
-    aggregatorWalletCol.set({
-      ...wallet,
-      lockedBalance: Math.max(0, wallet.lockedBalance - held),
-      balance: wallet.balance - deliveryCharged,
-    });
-
-    aggregatorWalletTransactionsCol.set([
-      {
-        id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-        type: "refund" as const,
-        label: `Advance released: "${title}" pulled back by GalleryZone`,
-        amount: holding.advanceAmount,
-        date: now.slice(0, 10),
-        status: "completed" as const,
-      },
-      ...(deliveryCharged > 0
-        ? [
-            {
-              id: `wt-${crypto.randomUUID().slice(0, 8)}`,
-              type: "adjustment" as const,
-              label: `Delivery charged — "${title}" pulled back`,
-              amount: -deliveryCharged,
-              date: now.slice(0, 10),
-              status: "completed" as const,
-            },
-          ]
-        : []),
-      ...aggregatorWalletTransactionsCol.get(),
-    ]);
-
-    // Kept rather than deleted, like every other return: the next aggregator's
-    // price and advance are counted off how many placements this piece has
-    // already been through, and a pull-back is one of them.
-    holdingsCol.set(
-      holdings.map((h) =>
-        h.id === input.holdingId
-          ? { ...h, status: "returned" as const, returnedAt: now }
-          : h,
-      ),
-    );
-
-    return mockDelay({
-      released: holding.advanceAmount + (delivery - deliveryCharged),
-      deliveryCharged,
-    });
+  pullBackHolding: async (input: { holdingId: string; reason: string }): Promise<{ released: number; deliveryCharged: number }> => {
+    if (!input.reason.trim()) throw new Error("Give the gallery a reason for the pull-back");
+    const { holding } = await http.post<{ holding: AdminHoldingDto | null }>(`/v1/admin/holdings/${encodeURIComponent(input.holdingId)}/pull-back`);
+    return { released: holding ? paiseToRupees(holding.advancePaise) : 0, deliveryCharged: holding?.deliveryDepositPaise ? paiseToRupees(holding.deliveryDepositPaise) : 0 };
   },
 
   // GalleryZone ranks the work, the artist does not. The rank is written back
@@ -411,26 +319,14 @@ export const adminService = {
   // Holdings aren't partitioned per aggregator in this mock (same shortcut
   // the original page took) — every current holding is shown against
   // whichever aggregator's detail page is open.
-  getAggregatorPortfolio: async (
-    userId: string,
-  ): Promise<
-    | {
-        user: AdminUser;
-        holdings: Awaited<ReturnType<typeof aggregatorService.listCollection>>;
-        commissionPercent: number;
-      }
-    | undefined
-  > => {
-    const user = adminUsersCol
-      .get()
-      .find((u) => u.id === userId && u.role === "aggregator");
-    if (!user) return undefined;
-    const holdings = await aggregatorService.listCollection();
-    return {
-      user,
-      holdings,
-      commissionPercent: defaultPlatformSettings.aggregatorCommissionPercent,
-    };
+  getAggregatorPortfolio: async (userId: string): Promise<{ user: AdminUser; holdings: Awaited<ReturnType<typeof aggregatorService.listCollection>>; commissionPercent: number } | undefined> => {
+    const user = await adminApi.getUser(userId);
+    if (!user || user.role !== "aggregator") return undefined;
+    const [{ holdings }, settings] = await Promise.all([
+      http.get<{ holdings: AdminHoldingDto[] }>(`/v1/admin/aggregators/${encodeURIComponent(userId)}/holdings`),
+      adminService.getSettings(),
+    ]);
+    return { user, holdings: holdings.map(toAdminHolding), commissionPercent: settings.aggregatorCommissionPercent };
   },
 
   // Orders aren't partitioned per customer in this mock either (mockOrders is
@@ -488,7 +384,8 @@ export const adminService = {
       markupPercent: Math.round((rates.platformMarkup ?? 0) * 100),
       gstPercent: Math.round((rates.gstRate ?? 0) * 100),
       minWithdrawalAmount: paiseToRupees(rates.minWithdrawalPaise ?? 0),
-      insuranceThreshold: defaultPlatformSettings.insuranceThreshold,
+      // Insurance is recommended above this display price (MOU §10); a policy constant, not a rate.
+      insuranceThreshold: 20000,
       aggregatorCommissionPercent: Math.round((rates.aggregatorCommissionRate ?? 0) * 100),
     };
   },

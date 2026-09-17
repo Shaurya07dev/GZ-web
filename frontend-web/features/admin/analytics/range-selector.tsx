@@ -1,6 +1,6 @@
 "use client";
 
-import type { RangeKey } from "@/lib/mock-data/admin-analytics";
+import type { RangeKey } from "@/types/admin-analytics";
 import { cn } from "@/lib/utils";
 
 const RANGES: Array<{ value: RangeKey; label: string }> = [

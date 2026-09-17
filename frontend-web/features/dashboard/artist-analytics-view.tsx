@@ -38,7 +38,7 @@ import { FunnelChart } from "@/features/admin/charts/funnel-chart";
 import type {
   CategoryPerformance,
   FunnelStage,
-} from "@/lib/mock-data/admin-analytics";
+} from "@/types/admin-analytics";
 import { useArtistRevenueSeries } from "@/hooks/useArtistRevenue";
 import { formatINR } from "@/lib/utils";
 

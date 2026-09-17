@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { RevenuePoint } from "@/lib/mock-data/admin-analytics";
+import type { RevenuePoint } from "@/types/admin-analytics";
 import { formatINR } from "@/lib/utils";
 
 import { ChartCard, ChartLegend, ChartTooltipContent } from "./chart-card";
