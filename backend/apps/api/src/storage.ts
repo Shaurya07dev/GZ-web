@@ -4,8 +4,8 @@
 // through GET /v1/images/* (images.controller.ts) with immutable cache
 // headers so Vercel's image optimiser and browsers keep them.
 
-import { Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { Inject, Injectable, Logger, ServiceUnavailableException, type OnModuleInit } from "@nestjs/common";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutBucketCorsCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { AppEnv } from "@galleryzone/config";
 import { ENV } from "./db.module.ts";
@@ -18,12 +18,14 @@ export interface StoredObject {
 }
 
 @Injectable()
-export class Storage {
+export class Storage implements OnModuleInit {
   private readonly logger = new Logger(Storage.name);
   private readonly client: S3Client | null;
   private readonly bucket: string;
+  private readonly origins: string[];
 
   constructor(@Inject(ENV) env: AppEnv) {
+    this.origins = env.corsOrigins;
     if (!env.s3) {
       this.client = null;
       this.bucket = "";
@@ -42,6 +44,31 @@ export class Storage {
     return this.client !== null;
   }
 
+  /**
+   * Browsers PUT straight to the bucket, so the BUCKET must answer the
+   * preflight: allow PUT from the site origins with any header. Applied on
+   * every boot (idempotent) so a new origin in CORS_ORIGINS is picked up
+   * without a manual step. A failure here is logged, never fatal.
+   */
+  async onModuleInit(): Promise<void> {
+    if (!this.client) return;
+    try {
+      await this.client.send(
+        new PutBucketCorsCommand({
+          Bucket: this.bucket,
+          CORSConfiguration: {
+            CORSRules: [
+              { AllowedOrigins: this.origins, AllowedMethods: ["PUT", "GET", "HEAD"], AllowedHeaders: ["*"], ExposeHeaders: ["ETag"], MaxAgeSeconds: 3600 },
+            ],
+          },
+        }),
+      );
+      this.logger.log(`bucket CORS set for ${this.origins.join(", ")}`);
+    } catch (error) {
+      this.logger.error(`could not set bucket CORS: ${String(error)}`);
+    }
+  }
+
   private s3(): S3Client {
     if (!this.client) {
       throw new ServiceUnavailableException({ type: "about:blank", title: "Image storage is not configured", status: 503, code: "storage_unavailable" });
@@ -56,6 +83,11 @@ export class Storage {
       new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType, ContentLength: contentLength }),
       { expiresIn: 10 * 60 },
     );
+  }
+
+  /** Server-side put — the fallback when a browser can't reach the bucket directly. */
+  async put(key: string, body: Buffer, contentType: string): Promise<void> {
+    await this.s3().send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType, ContentLength: body.length }));
   }
 
   /** What actually landed in the bucket, or null if nothing did. */

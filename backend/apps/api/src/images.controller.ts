@@ -118,6 +118,33 @@ export class ImagesController {
     }
   }
 
+  /**
+   * Fallback upload THROUGH the API: raw image bytes in the body
+   * (Content-Type = the image type). Used when the browser can't PUT to the
+   * bucket directly; costs API egress, so the presigned path stays primary.
+   */
+  @Roles("artist")
+  @Post("artist/artworks/:id/images/upload")
+  async uploadDirect(@Req() req: AuthenticatedRequest & { rawBody?: Buffer; body?: unknown; headers: Record<string, string | string[] | undefined> }, @Param("id") artworkId: string) {
+    const contentType = (req.headers["content-type"] ?? "").split(";")[0]!.trim();
+    if (!(IMAGE_CONTENT_TYPES as readonly string[]).includes(contentType)) {
+      throw new BadRequestException({ type: "about:blank", title: "Only JPEG, PNG or WebP images are accepted", status: 400, code: "image_rejected" });
+    }
+    const body = Buffer.isBuffer(req.body) ? (req.body as Buffer) : req.rawBody;
+    if (!body || !body.length) throw new BadRequestException({ type: "about:blank", title: "Empty upload", status: 400, code: "image_rejected" });
+    if (body.length > MAX_IMAGE_BYTES) throw new BadRequestException({ type: "about:blank", title: "Images must be 15 MB or smaller", status: 400, code: "image_rejected" });
+    try {
+      const { key } = await reserveImageSlot(this.db, { artworkId, artistId: req.authUser.uid, contentType: contentType as (typeof IMAGE_CONTENT_TYPES)[number] });
+      await this.storage.put(key, body, contentType);
+      const altText = typeof req.headers["x-alt-text"] === "string" ? decodeURIComponent(req.headers["x-alt-text"]).slice(0, 200) : undefined;
+      const image = await confirmImage(this.db, { artworkId, artistId: req.authUser.uid, key, url: imageUrlFor(this.env.publicApiUrl, key), altText });
+      this.bust(artworkId);
+      return image;
+    } catch (error) {
+      rethrow(error);
+    }
+  }
+
   @Roles("artist")
   @Post("artist/artworks/:id/images/confirm")
   async confirm(@Req() req: AuthenticatedRequest, @Param("id") artworkId: string, @Body(new ZodValidationPipe(confirmSchema)) body: ConfirmBody) {

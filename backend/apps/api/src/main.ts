@@ -1,5 +1,6 @@
 import "./instrument.ts";
 import "reflect-metadata";
+import express from "express";
 import { NestFactory } from "@nestjs/core";
 import { loadEnv } from "@galleryzone/config";
 import { AppModule } from "./app.module.ts";
@@ -13,7 +14,9 @@ import { HttpExceptionFilter } from "./http-exception.filter.ts";
 async function bootstrap() {
   const env = loadEnv();
   // rawBody: the Razorpay webhook signature is over the exact bytes received.
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create(AppModule, { rawBody: true, bodyParser: true });
+  // Image bytes for the fallback upload route arrive as the raw body.
+  app.use(express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "16mb" }));
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
   app.useGlobalFilters(new HttpExceptionFilter());
   // Bearer tokens, not cookies, so no credentials — keeps the allowlist the only CORS decision.
