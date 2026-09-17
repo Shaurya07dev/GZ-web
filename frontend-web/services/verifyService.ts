@@ -1,5 +1,6 @@
 import { http, isApiError, API_URL } from "@/lib/api";
 import type { OwnershipTransfer, TransferKind, TransferStatus } from "@/types/artwork";
+import { artworksCol, ownershipTransfersCol } from "@/lib/mock-collections";
 
 // The public artwork passport (GET /v1/verify/:artworkId) — what a printed
 // QR / NFC tag resolves to. No auth; carries name snapshots only, never a
@@ -64,6 +65,44 @@ export function passportEventToTransfer(
 
 export const verifyService = {
   get: async (artworkId: string): Promise<VerifyPassport | undefined> => {
+    // ---- DEMO MOCK ----
+    if (artworkId === "aw-5" || artworkId === "aw-1") {
+      const art = artworksCol.get().find((a) => a.id === artworkId);
+      if (art) {
+        const transfers = ownershipTransfersCol.get().filter((t) => t.artworkId === artworkId);
+        return {
+          artworkId: art.id,
+          productCode: "GZ-" + art.id.toUpperCase(),
+          title: art.title,
+          artistId: art.artistId,
+          artistName: art.artistName,
+          category: art.category,
+          medium: art.medium,
+          dimensions: art.dimensions,
+          yearCreated: art.yearCreated,
+          images: art.images,
+          status: art.status,
+          coaCertificateNumber: art.coaCertificateNumber,
+          coaIssuedAt: art.coaIssueDate,
+          listedAt: art.statusHistory[0]?.changedAt || new Date().toISOString(),
+          owner: { kind: "collector", displayName: transfers[transfers.length - 1]?.toName || "Arun Mehra" },
+          events: transfers.map(t => ({
+            id: t.id,
+            kind: t.kind || "ownership",
+            status: t.status,
+            fromName: t.fromName,
+            toName: t.toName,
+            viaSale: true,
+            initiatedAt: t.initiatedAt,
+            acceptedAt: t.acceptedAt,
+            cancelledAt: t.cancelledAt,
+            displayEndsAt: t.displayEndsAt || null,
+            displayEndedAt: t.displayEndedAt || null,
+          })),
+        };
+      }
+    }
+    // -------------------
     try {
       return await http.get<VerifyPassport>(`/v1/verify/${encodeURIComponent(artworkId)}`);
     } catch (error) {

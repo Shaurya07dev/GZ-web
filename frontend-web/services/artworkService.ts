@@ -43,6 +43,13 @@ export const artworkService = {
   // Full Artwork for the detail page; undefined when no artwork matches,
   // which callers (the Artwork Detail page) turn into notFound().
   async get(id: string): Promise<Artwork | undefined> {
+    // ---- DEMO MOCK ----
+    if (id === "aw-5" || id === "aw-1") {
+      const { artworksCol } = await import("@/lib/mock-collections");
+      const art = artworksCol.get().find((a) => a.id === id);
+      if (art) return art;
+    }
+    // -------------------
     try {
       return toArtwork(await http.get<ArtworkDto>(`/v1/artworks/${encodeURIComponent(id)}`));
     } catch (error) {

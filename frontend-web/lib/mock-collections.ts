@@ -67,6 +67,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
   status: ArtworkStatus;
   submittedDaysAgo: number;
   rarity: ArtworkRarity;
+  nfcTagId?: string;
 }> = [
   {
     id: "aw-1",
@@ -79,6 +80,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     status: "marketplace",
     submittedDaysAgo: 34,
     rarity: "O",
+    nfcTagId: "NFC-7F8A-9B0C-1D2E",
   },
   {
     id: "aw-2",
@@ -127,6 +129,7 @@ const ARTIST_SEED_ARTWORKS: Array<{
     status: "sold",
     submittedDaysAgo: 119,
     rarity: "R",
+    nfcTagId: "NFC-4X9P-1L2M-8Q7Z",
   },
   {
     id: "aw-6",
@@ -187,7 +190,7 @@ function buildArtistSeedArtworks(): Artwork[] {
       coaIssueDate: submittedAt,
       socialProofLinks: [],
       statusHistory: [{ status: seed.status, changedAt: submittedAt }],
-      nfcTagId: null,
+      nfcTagId: seed.nfcTagId ?? null,
       rarityType: seed.rarity,
     };
   });
@@ -391,7 +394,21 @@ export const aggregatorProfileCol = collection("aggregatorProfile", () => ({
 // every later resale appends to it.
 export const ownershipTransfersCol = collection<OwnershipTransfer[]>(
   "ownershipTransfers",
-  () => [],
+  () => [
+    {
+      id: "trans-aw5-1",
+      artworkId: "aw-5",
+      artworkTitle: "Whispers in Bronze",
+      fromName: "Devika Rao",
+      toName: "Arun Mehra",
+      toEmail: "arun.m@example.com",
+      initiatedAt: "2026-06-15T10:00:00.000Z",
+      acceptedAt: "2026-06-15T14:30:00.000Z",
+      cancelledAt: null,
+      status: "accepted",
+      kind: "ownership",
+    }
+  ],
 );
 
 // Paper-COA requests (MOU §12), empty until a buyer asks for one.

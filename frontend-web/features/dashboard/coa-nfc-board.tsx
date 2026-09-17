@@ -10,6 +10,8 @@ import {
   History,
   ScanLine,
   UserRoundCheck,
+  Link2,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Dialog,
@@ -24,6 +26,8 @@ import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaQueue } from "./physical-coa-queue";
 import { DownloadCoaButton } from "@/features/coa/download-coa-button";
 import { ArtworkHistory } from "./artwork-history";
+import { NfcArtworkPassportView } from "@/features/verify/nfc-artwork-passport-view";
+import { LinkNfcDialog } from "./link-nfc-dialog";
 
 type ArtistArtwork = NonNullable<
   ReturnType<typeof useArtistDashboardArtworks>["data"]
@@ -34,9 +38,7 @@ export function CoaNfcBoard() {
   const { data: artworks } = useArtistDashboardArtworks();
   const [previewing, setPreviewing] = useState<ArtistArtwork | null>(null);
   const [transferring, setTransferring] = useState<ArtistArtwork | null>(null);
-  // History used to be reachable only by opening the certificate. It answers a
-  // different question from "is this piece authentic" — where has it been — so
-  // it gets its own button.
+  const [linkingNfc, setLinkingNfc] = useState<ArtistArtwork | null>(null);
   const [viewingHistory, setViewingHistory] = useState<ArtistArtwork | null>(
     null,
   );
@@ -90,8 +92,37 @@ export function CoaNfcBoard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 sm:shrink-0">
+              <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                {artwork.nfcTagId && (
+                  <div className="mr-3 hidden flex-col items-end sm:flex">
+                    <p className="text-[10px] tracking-wider text-muted-foreground uppercase">
+                      Public verify URL (written to tag)
+                    </p>
+                    <a
+                      href={`/verify/${artwork.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-0.5 text-xs font-medium text-gold-bright transition-colors hover:text-gold hover:underline"
+                    >
+                      localhost:3001/verify/{artwork.id}
+                    </a>
+                  </div>
+                )}
+
                 <NfcPill tagged={Boolean(artwork.nfcTagId)} />
+
+                {!artwork.nfcTagId && (
+                  <button
+                    id={`link-nfc-${artwork.id}`}
+                    type="button"
+                    onClick={() => setLinkingNfc(artwork)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:border-emerald-400 hover:bg-emerald-500/20"
+                  >
+                    <Link2 className="size-3.5" />
+                    Link Tag
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setPreviewing(artwork)}
@@ -112,6 +143,17 @@ export function CoaNfcBoard() {
             </div>
           ))}
         </div>
+      )}
+
+      {linkingNfc && (
+        <LinkNfcDialog
+          open={Boolean(linkingNfc)}
+          onOpenChange={(open) => {
+            if (!open) setLinkingNfc(null);
+          }}
+          artworkId={linkingNfc.id}
+          artworkTitle={linkingNfc.title}
+        />
       )}
 
       <CertificateDialog
@@ -175,12 +217,16 @@ function NfcPill({ tagged }: { tagged: boolean }) {
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap",
         tagged
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+          ? "border-gold/40 bg-gold/10 text-gold-bright"
           : "border-border bg-secondary text-muted-foreground",
       )}
     >
-      <ScanLine className="size-3" strokeWidth={2} />
-      {tagged ? "NFC tagged" : "Not yet tagged"}
+      {tagged ? (
+        <ShieldCheck className="size-3" strokeWidth={2} />
+      ) : (
+        <ScanLine className="size-3" strokeWidth={2} />
+      )}
+      {tagged ? "NFC Tagged" : "Not yet tagged"}
     </span>
   );
 }
@@ -199,100 +245,12 @@ function CertificateDialog({
       open={Boolean(artwork)}
       onOpenChange={(open) => !open && onClose()}
     >
-      <DialogContent className="max-h-[85dvh] flex flex-col overflow-hidden sm:max-w-3xl">
+      <DialogContent className="max-h-[90dvh] flex flex-col overflow-y-auto overflow-x-hidden p-0 sm:max-w-[440px] bg-background border-gold/20">
+        <DialogTitle className="sr-only">Certificate of Authenticity</DialogTitle>
         {artwork ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>Certificate of Authenticity</DialogTitle>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto pr-2 -mr-2 flex flex-col gap-4 pb-2">
-              <div className="flex flex-col items-center gap-3 rounded-lg border border-gold/30 bg-gold/5 p-6 text-center">
-                <Fingerprint className="size-8 text-gold-bright" strokeWidth={1.5} />
-                <p className="font-display text-lg font-semibold text-foreground">
-                  {artwork.title}
-                </p>
-                <p className="font-mono text-xs text-muted-foreground">
-                  {artwork.coaCertificateNumber || "Number issued on approval"}
-                </p>
-              </div>
-
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-4">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Issued</dt>
-                  <dd className="text-foreground">
-                    {artwork.coaIssueDate
-                      ? new Date(artwork.coaIssueDate).toLocaleDateString(
-                          "en-IN",
-                          { day: "numeric", month: "short", year: "numeric" },
-                        )
-                      : "Pending approval"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">NFC tag</dt>
-                  <dd className="text-foreground">
-                    {artwork.nfcTagId ?? "Not yet attached"}
-                  </dd>
-                </div>
-                {/* Owner, custodian and location are tracked separately — a
-                    piece can be owned by one party while physically held by
-                    another somewhere else again. */}
-                <div>
-                  <dt className="text-xs text-muted-foreground">Legal owner</dt>
-                  <dd className="text-foreground">
-                    {resolveCustody(artwork).legalOwnerName ??
-                      CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner]}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    Physical custodian
-                  </dt>
-                  <dd className="text-foreground">
-                    {CUSTODY_PARTY_LABEL[resolveCustody(artwork).custodian]}
-                  </dd>
-                </div>
-                <div className="col-span-2 sm:col-span-4">
-                  <dt className="text-xs text-muted-foreground">Location</dt>
-                  <dd className="text-foreground">
-                    {resolveCustody(artwork).locationLabel}
-                  </dd>
-                </div>
-              </dl>
-
-              <DownloadCoaButton
-                certificate={{
-                  artworkId: artwork.id,
-                  title: artwork.title,
-                  artistName: artwork.artistName,
-                  category: artwork.category,
-                  medium: artwork.medium,
-                  dimensions: artwork.dimensions,
-                  yearCreated: artwork.yearCreated,
-                  coaCertificateNumber: artwork.coaCertificateNumber,
-                  coaIssueDate: artwork.coaIssueDate,
-                  ownerName:
-                    resolveCustody(artwork).legalOwnerName ??
-                    CUSTODY_PARTY_LABEL[resolveCustody(artwork).legalOwner],
-                }}
-                className="self-start"
-              />
-
-              <ArtworkHistory artwork={artwork} />
-
-              {/* First hand-over of the passport: artist to buyer. The buyer can
-                  pass it on again later from their own collection. */}
-              <button
-                type="button"
-                onClick={() => onTransfer(artwork)}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 mt-2"
-              >
-                <UserRoundCheck className="size-3.5" />
-                Transfer rights
-              </button>
-            </div>
-          </>
+          <div className="relative w-full">
+            <NfcArtworkPassportView artworkId={artwork.id} />
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>

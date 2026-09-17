@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { ArtworkPassportView } from "@/features/verify/artwork-passport-view";
+import { NfcArtworkPassportView } from "@/features/verify/nfc-artwork-passport-view";
 import { verifyService } from "@/services/verifyService";
 
 export async function generateMetadata(
@@ -17,30 +15,29 @@ export async function generateMetadata(
   return {
     title: `Artwork Passport | ${artwork.title} | GalleryZone`,
     description: `Verify the authenticity and provenance of "${artwork.title}" on GalleryZone.`,
+    // Optimise for the mobile card share preview when someone screenshots and
+    // shares the verification page after tapping the physical NFC tag.
+    openGraph: {
+      title: `${artwork.title} — Authenticated by GalleryZone`,
+      description: `One tag. One artwork. One unbroken record.`,
+      images: artwork.images[0]
+        ? [{ url: artwork.images[0].url, width: 1200, height: 630 }]
+        : undefined,
+    },
   };
 }
 
-// Public, unauthenticated page a physical NFC/QR tag resolves to (backed by
-// GET /v1/verify/:artworkId). Metadata is fetched server-side; the body is
-// a client component so the owner/chain re-fetch as transfers happen.
+// Public, unauthenticated page that an NFC/QR tag resolves to.
+// Rendered as a full-bleed mobile-first experience — no site chrome —
+// because 95 %+ of visitors arrive via a phone tap, not a desktop browser.
 export default async function ArtworkPassportPage(
   props: PageProps<"/verify/[artworkId]">,
 ) {
   const { artworkId } = await props.params;
 
   return (
-    <>
-      <SiteHeader />
-      <main className="relative flex flex-1 flex-col overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-[480px] bg-[radial-gradient(ellipse_at_top,_rgba(201,154,74,0.12),_transparent_65%)]"
-          aria-hidden="true"
-        />
-        <div className="relative z-10">
-          <ArtworkPassportView artworkId={artworkId} />
-        </div>
-      </main>
-      <SiteFooter />
-    </>
+    <main className="relative min-h-dvh">
+      <NfcArtworkPassportView artworkId={artworkId} />
+    </main>
   );
 }
