@@ -1,5 +1,6 @@
 "use client";
 
+import { usePricingRules } from "@/hooks/usePricingRules";
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -66,14 +67,11 @@ import {
 import { PAINTING_ART_FORMS } from "./painting-art-forms";
 import { InsuranceFaqChat } from "./insurance-faq-chat";
 import {
+  ARTIST_LISTING_FEE_RATE,
   GST_RATE,
+  PLATFORM_MARKUP,
   SERVICE_GST_RATE,
   NFC_TAG_CHARGE,
-  basePriceOf,
-  displayPriceOf,
-  listingFeeOf,
-  listingFeeGstOf,
-  nfcChargeGstOf,
 } from "@/lib/pricing";
 import {
   useArtistPenalties,
@@ -389,20 +387,36 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   const aggregatorReady = missingForAggregator.length === 0;
   // The whole ladder, so the artist can see where every rupee of the
   // difference between their rate and the listed price goes.
+  // The whole ladder is quoted from the rules an admin approved
+  // (GET /v1/pricing-rules), never from constants baked into this bundle, so
+  // a rate change reaches this form the moment it goes live. The bundled
+  // constants are only the fallback for the first paint.
+  const { data: rules } = usePricingRules();
+  const markupRate = (rules?.platformMarkup as number | undefined) ?? PLATFORM_MARKUP;
+  const gstRate = (rules?.gstRate as number | undefined) ?? GST_RATE;
+  const serviceGstRate = (rules?.serviceGstRate as number | undefined) ?? SERVICE_GST_RATE;
+  const listingFeeRate = (rules?.artistListingFeeRate as number | undefined) ?? ARTIST_LISTING_FEE_RATE;
+  const nfcCharge = rules?.nfcTagChargePaise === undefined ? NFC_TAG_CHARGE : (rules.nfcTagChargePaise as number) / 100;
+  const insuranceThreshold =
+    rules?.insuranceThresholdPaise === undefined
+      ? INSURANCE_RECOMMENDED_THRESHOLD
+      : (rules.insuranceThresholdPaise as number) / 100;
+
   const basePrice = useMemo(
-    () => basePriceOf(artistPriceNumber),
-    [artistPriceNumber],
+    () => Math.round(artistPriceNumber * (1 + markupRate)),
+    [artistPriceNumber, markupRate],
   );
   const customerPrice = useMemo(
-    () => displayPriceOf(artistPriceNumber),
-    [artistPriceNumber],
+    () => Math.round(basePrice * (1 + gstRate)),
+    [basePrice, gstRate],
   );
   const gstIncluded = customerPrice - basePrice;
-  const listingFee = listingFeeOf(artistPriceNumber);
-  const listingFeeGst = listingFeeGstOf(artistPriceNumber);
-  const gstPercent = GST_RATE * 100;
-  const serviceGstPercent = SERVICE_GST_RATE * 100;
-  const nfcChargeGst = nfcChargeGstOf();
+  const listingFee = Math.round(artistPriceNumber * listingFeeRate);
+  const listingFeeGst = Math.round(listingFee * serviceGstRate);
+  const gstPercent = +(gstRate * 100).toFixed(2);
+  const serviceGstPercent = +(serviceGstRate * 100).toFixed(2);
+  const listingFeePercent = +(listingFeeRate * 100).toFixed(2);
+  const nfcChargeGst = Math.round(nfcCharge * serviceGstRate);
 
   function updateField<K extends keyof FormState>(
     field: K,
@@ -1134,7 +1148,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             {artistPriceNumber > 0 && (
               <dl className="flex flex-col gap-1.5 rounded-md border border-gold/25 bg-gold/5 px-3 py-2.5 text-xs">
                 <PriceRow label="You receive" amount={artistPriceNumber} />
-                <PriceRow label="Listing fee (1%)" amount={listingFee} free />
+                <PriceRow label={`Listing fee (${listingFeePercent}%)`} amount={listingFee} free />
                 <PriceRow
                   label={`GST on listing fee (${serviceGstPercent}%)`}
                   amount={listingFeeGst}
@@ -1179,7 +1193,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             <p className="text-xs text-muted-foreground">
               Links this piece&rsquo;s physical tag to its digital passport.
               Leave blank if you haven&rsquo;t attached one yet. Generating a
-              tag costs ₹{NFC_TAG_CHARGE.toLocaleString("en-IN")} + ₹
+              tag costs ₹{nfcCharge.toLocaleString("en-IN")} + ₹
               {nfcChargeGst.toLocaleString("en-IN")} GST.
             </p>
           </div>
@@ -1454,7 +1468,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             <p className="mt-1 text-xs text-muted-foreground">
               {insuranceRequired
                 ? `Mandatory for aggregator listings — the piece leaves your studio and is held by a partner while on display. Cover is arranged with ${INSURANCE_PARTNER}; the premium is deducted from your settlement.`
-                : artistPriceNumber > INSURANCE_RECOMMENDED_THRESHOLD
+                : artistPriceNumber > insuranceThreshold
                   ? `Strongly recommended for a piece at this price (${INSURANCE_PARTNER}). Decline it and theft, fire, transit damage and loss are yours alone.`
                   : `Optional, arranged with ${INSURANCE_PARTNER}. Uninsured artworks carry no platform liability in transit.`}
             </p>

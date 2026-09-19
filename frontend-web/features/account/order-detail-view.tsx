@@ -125,6 +125,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             amount={order.amount}
             gstAmount={order.gstAmount}
             deliveryCharge={order.deliveryCharge}
+            convenienceFee={order.convenienceFee}
+            convenienceGst={order.convenienceGst}
           />
         </div>
       </div>

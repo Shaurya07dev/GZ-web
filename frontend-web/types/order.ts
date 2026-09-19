@@ -21,6 +21,9 @@ export interface Order {
   amount: number; // artwork's customerPrice at time of purchase
   gstAmount: number;
   deliveryCharge: number;
+  /** Customer convenience fee, and the 18% service GST on it. Both 0 today. */
+  convenienceFee: number;
+  convenienceGst: number;
   status: OrderStatus;
   createdAt: string; // ISO date
   /** Snapshot of what was bought, joined by the API. Null if the artwork was removed. */

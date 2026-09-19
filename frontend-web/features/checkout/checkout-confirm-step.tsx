@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
 import { PaymentDismissedError } from "@/lib/razorpay-checkout";
-import { checkoutTotal } from "@/lib/pricing";
+import { useCheckoutQuote } from "@/hooks/useCheckoutQuote";
 import { PayeeDetails } from "@/components/shared/payee-details";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
@@ -33,7 +33,8 @@ export function CheckoutConfirmStep({
 }: CheckoutConfirmStepProps) {
   const createOrderMutation = useCreateOrderMutation();
 
-  const total = checkoutTotal(artwork.customerPrice).total;
+  const { data: quote } = useCheckoutQuote(artwork.id);
+  const total = quote?.total ?? 0;
 
   function handlePay() {
     createOrderMutation.mutate(
@@ -131,14 +132,16 @@ export function CheckoutConfirmStep({
         </Button>
         <Button
           onClick={handlePay}
-          disabled={createOrderMutation.isPending}
+          disabled={createOrderMutation.isPending || !quote}
         >
           {createOrderMutation.isPending && (
             <Loader2 className="size-4 animate-spin" strokeWidth={2} />
           )}
           {createOrderMutation.isPending
             ? "Waiting for payment…"
-            : `Pay ${formatINR(total)}`}
+            : quote
+              ? `Pay ${formatINR(total)}`
+              : "Working out your total…"}
         </Button>
       </div>
 

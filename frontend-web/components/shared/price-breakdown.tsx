@@ -1,5 +1,4 @@
 import { cn, formatINR } from "@/lib/utils";
-import { GST_RATE } from "@/lib/pricing";
 
 // The one price breakdown, used by both checkout steps and the receipt on a
 // past order. It was three near-identical copies, and the drift they were
@@ -16,7 +15,11 @@ export interface PriceBreakdownProps {
   gstIncluded: number;
   deliveryCharge: number;
   convenienceFee?: number;
+  /** 18% service GST on the convenience fee — shown only when that fee exists. */
+  convenienceGst?: number;
   platformFee?: number;
+  /** The artwork GST rate in force, as a fraction. Comes from the API quote. */
+  gstRate?: number;
   /** "Total" while deciding, "Total paid" on a completed order. */
   totalLabel?: string;
   className?: string;
@@ -27,12 +30,13 @@ export function PriceBreakdown({
   gstIncluded,
   deliveryCharge,
   convenienceFee = 0,
+  convenienceGst = 0,
   platformFee = 0,
+  gstRate,
   totalLabel = "Total",
   className,
 }: PriceBreakdownProps) {
-  const total = displayPrice + deliveryCharge + convenienceFee + platformFee;
-  const gstPercent = Math.round(GST_RATE * 100);
+  const total = displayPrice + deliveryCharge + convenienceFee + convenienceGst + platformFee;
 
   return (
     <dl
@@ -43,11 +47,17 @@ export function PriceBreakdown({
     >
       <Row label="Artwork price" amount={displayPrice} />
       <div className="-mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-        <dt>Includes GST ({gstPercent}%)</dt>
+        <dt>Includes GST{gstRate === undefined ? "" : ` (${+(gstRate * 100).toFixed(2)}%)`}</dt>
         <dd className="tabular-nums">{formatINR(gstIncluded)}</dd>
       </div>
       <Row label="Platform fee" amount={platformFee} freeWhenZero />
       <Row label="Convenience fee" amount={convenienceFee} freeWhenZero />
+      {convenienceGst > 0 && (
+        <div className="-mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
+          <dt>GST on convenience fee (18%)</dt>
+          <dd className="tabular-nums">{formatINR(convenienceGst)}</dd>
+        </div>
+      )}
       <Row label="Delivery" amount={deliveryCharge} />
       <div className="my-0.5 h-px bg-border" aria-hidden="true" />
       <Row label={totalLabel} amount={total} emphasized />

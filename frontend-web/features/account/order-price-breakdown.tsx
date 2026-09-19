@@ -13,12 +13,16 @@ interface OrderPriceBreakdownProps {
   amount: number;
   gstAmount: number;
   deliveryCharge: number;
+  convenienceFee?: number;
+  convenienceGst?: number;
 }
 
 export function OrderPriceBreakdown({
   amount,
   gstAmount,
   deliveryCharge,
+  convenienceFee = 0,
+  convenienceGst = 0,
 }: OrderPriceBreakdownProps) {
   return (
     <div>
@@ -30,6 +34,8 @@ export function OrderPriceBreakdown({
         displayPrice={amount}
         gstIncluded={gstAmount}
         deliveryCharge={deliveryCharge}
+        convenienceFee={convenienceFee}
+        convenienceGst={convenienceGst}
         totalLabel="Total paid"
       />
     </div>

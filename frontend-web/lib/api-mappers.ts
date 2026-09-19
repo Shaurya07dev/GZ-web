@@ -176,6 +176,7 @@ export interface OrderDto {
   gstPaise: number;
   deliveryChargePaise: number;
   convenienceFeePaise: number;
+  convenienceGstPaise?: number;
   totalPaise: number;
   status: OrderStatus;
   rateConfigVersionId: string;
@@ -207,6 +208,8 @@ export function toOrder(dto: OrderDto): Order {
     amount: paiseToRupees(dto.displayPricePaise),
     gstAmount: paiseToRupees(dto.gstPaise),
     deliveryCharge: paiseToRupees(dto.deliveryChargePaise),
+    convenienceFee: paiseToRupees(dto.convenienceFeePaise),
+    convenienceGst: paiseToRupees(dto.convenienceGstPaise ?? 0),
     status: dto.status,
     createdAt,
     statusHistory: dto.statusHistory?.length ? dto.statusHistory : [{ status: dto.status, changedAt: createdAt }],

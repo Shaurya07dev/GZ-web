@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Clock3, Pencil, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { http, isApiError } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { RATE_GROUPS, formatRate, ungroupedKeys } from "./rate-field-groups";
+import { RateEditor } from "./rate-editor";
 
 // The platform's pricing rules (GST, markup, commissions, delivery, payout
 // timing) live on the API as versioned "rate config". A version is
@@ -26,37 +28,11 @@ interface RateVersion {
   reason: string | null;
 }
 
-const PERCENT_KEYS = new Set([
-  "gstRate",
-  "platformMarkup",
-  "artistListingFeeRate",
-  "aggregatorAdvanceRate",
-  "aggregatorCommissionRate",
-  "artistConvenienceRate",
-  "externalSalePenaltyRate",
-]);
-const PAISE_KEYS = new Set(["customerConvenienceFee", "deliveryCharge", "minWithdrawalPaise", "minCustomerWithdrawalPaise"]);
-
-function describe(key: string, value: unknown): string {
-  if (typeof value === "number") {
-    if (PERCENT_KEYS.has(key)) return `${(value * 100).toFixed(value * 100 % 1 === 0 ? 0 : 2)}%`;
-    if (PAISE_KEYS.has(key)) return `₹${(value / 100).toLocaleString("en-IN")}`;
-    return String(value);
-  }
-  if (Array.isArray(value)) return value.length > 8 ? `${value.length} entries` : value.join(", ");
-  if (value && typeof value === "object") return `${Object.keys(value).length} zones`;
-  return String(value);
-}
-
-function label(key: string): string {
-  return key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()).replace(" Paise", "");
-}
-
 export function PricingRulesPanel() {
   const queryClient = useQueryClient();
   const { data: me } = useCurrentUser();
   const isPlatformAdmin = me?.roleGrants.includes("platform_admin") ?? false;
-  const [reason, setReason] = useState("Launch pricing rules");
+  const [editing, setEditing] = useState(false);
 
   const active = useQuery({
     queryKey: ["rate-config", "active"],
@@ -77,14 +53,15 @@ export function PricingRulesPanel() {
   };
 
   const propose = useMutation({
-    mutationFn: () =>
+    mutationFn: (input: { rates: Record<string, unknown>; reason: string }) =>
       http.post<{ versionId: string }>("/v1/admin/rate-config/propose", {
-        rates: defaults.data?.rates,
+        rates: input.rates,
         effectiveFrom: new Date().toISOString(),
-        reason,
+        reason: input.reason,
       }),
     onSuccess: () => {
       toast.success("Proposed — a second platform admin must approve it");
+      setEditing(false);
       invalidate();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not propose"),
@@ -123,15 +100,35 @@ export function PricingRulesPanel() {
         ) : null}
       </div>
 
-      {rates && (
-        <dl className="mt-5 grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-          {Object.entries(rates).map(([key, value]) => (
-            <div key={key} className="flex items-baseline justify-between gap-3 border-b border-border/60 py-1.5 text-sm">
-              <dt className="text-muted-foreground">{label(key)}</dt>
-              <dd className="font-mono text-foreground tabular-nums">{describe(key, value)}</dd>
+      {rates && !editing && (
+        <div className="mt-5 flex flex-col gap-5">
+          {RATE_GROUPS.map((group) => (
+            <div key={group.title}>
+              <p className="text-xs font-semibold tracking-wide text-foreground uppercase">{group.title}</p>
+              <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+                {group.fields.map((field) => (
+                  <div key={field.key} className="flex items-baseline justify-between gap-3 border-b border-border/60 py-1.5 text-sm">
+                    <dt className="text-muted-foreground" title={field.hint}>{field.label}</dt>
+                    <dd className="font-mono text-foreground tabular-nums">{formatRate(field.key, rates[field.key])}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           ))}
-        </dl>
+          {ungroupedKeys(rates).length > 0 && (
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-foreground uppercase">Other</p>
+              <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+                {ungroupedKeys(rates).map((key) => (
+                  <div key={key} className="flex items-baseline justify-between gap-3 border-b border-border/60 py-1.5 text-sm">
+                    <dt className="text-muted-foreground">{key}</dt>
+                    <dd className="font-mono text-foreground tabular-nums">{formatRate(key, rates[key])}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </div>
       )}
 
       {pending.length > 0 && (
@@ -157,19 +154,30 @@ export function PricingRulesPanel() {
         </div>
       )}
 
-      <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-end">
-        <label className="flex flex-1 flex-col gap-1.5 text-xs text-muted-foreground">
-          Reason for the new version
-          <input
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground"
-          />
-        </label>
-        <Button variant="outline" disabled={!isPlatformAdmin || !defaults.data || propose.isPending || reason.trim().length < 10} onClick={() => propose.mutate()}>
-          {propose.isPending ? "Proposing…" : "Propose default rules"}
-        </Button>
-      </div>
+      {editing ? (
+        <RateEditor
+          initial={(rates ?? defaults.data?.rates ?? {}) as Record<string, unknown>}
+          onCancel={() => setEditing(false)}
+          submitting={propose.isPending}
+          onSubmit={(nextRates, reason) => propose.mutate({ rates: nextRates, reason })}
+        />
+      ) : (
+        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+          <Button
+            variant="outline"
+            disabled={!isPlatformAdmin || (!rates && !defaults.data)}
+            onClick={() => setEditing(true)}
+          >
+            <Pencil className="size-4" /> {rates ? "Propose a change" : "Set up pricing rules"}
+          </Button>
+          {!rates && defaults.data && (
+            <p className="text-xs text-muted-foreground">
+              Nothing is in force yet — the form opens pre-filled with the standard rules.
+            </p>
+          )}
+        </div>
+      )}
+
       {!isPlatformAdmin && (
         <p className="mt-2 text-xs text-muted-foreground">Only accounts with the platform_admin grant can propose or approve.</p>
       )}

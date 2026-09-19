@@ -4,7 +4,7 @@ import Image from "next/image";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PriceBreakdown } from "@/components/shared/price-breakdown";
-import { checkoutTotal } from "@/lib/pricing";
+import { useCheckoutQuote } from "@/hooks/useCheckoutQuote";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
 
@@ -16,16 +16,16 @@ interface CheckoutReviewStepProps {
 }
 
 // Step 2 of checkout: a read-only summary before the customer commits.
-// The totals come from checkoutTotal() in lib/pricing.ts — the same function
-// orderService.create() uses to build the order — so this preview cannot drift
-// from what "Place Order" actually charges.
+// The totals are quoted by the API from the pricing rules in force
+// (GET /v1/artworks/:id/quote) — the same rates the order is built from —
+// so this preview cannot drift from what "Place Order" actually charges.
 export function CheckoutReviewStep({
   artwork,
   address,
   onBack,
   onContinue,
 }: CheckoutReviewStepProps) {
-  const totals = checkoutTotal(artwork.customerPrice);
+  const { data: quote, isPending: quotePending } = useCheckoutQuote(artwork.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,19 +71,27 @@ export function CheckoutReviewStep({
         </p>
       </div>
 
-      <PriceBreakdown
-        displayPrice={totals.displayPrice}
-        gstIncluded={totals.gstIncluded}
-        deliveryCharge={totals.deliveryCharge}
-        convenienceFee={totals.convenienceFee}
-      />
+      {quote ? (
+        <PriceBreakdown
+          displayPrice={quote.displayPrice}
+          gstIncluded={quote.gstIncluded}
+          gstRate={quote.gstRate}
+          deliveryCharge={quote.deliveryCharge}
+          convenienceFee={quote.convenienceFee}
+          convenienceGst={quote.convenienceGst}
+        />
+      ) : (
+        <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+          {quotePending ? "Working out your total…" : "We couldn't price this order just now. Please try again in a moment."}
+        </p>
+      )}
 
       <div className="flex items-center justify-between border-t border-border pt-5">
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="size-4" strokeWidth={1.75} />
           Back
         </Button>
-        <Button onClick={onContinue}>Continue to confirm</Button>
+        <Button onClick={onContinue} disabled={!quote}>Continue to confirm</Button>
       </div>
     </div>
   );
