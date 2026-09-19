@@ -5,7 +5,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Plus, Pencil, Lock, ExternalLink } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
   artworkEditState,
@@ -24,28 +23,44 @@ import {
 import { RarityBadge } from "@/components/shared/rarity-badge";
 import { ArtworkStatusPill } from "./artwork-status-pill";
 
-const FILTERS: { value: ArtworkStatus | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "draft", label: "Draft" },
-  { value: "pending_approval", label: "Pending" },
-  { value: "marketplace", label: "Live" },
-  { value: "with_aggregator", label: "With aggregator" },
-  { value: "sold", label: "Sold" },
-  { value: "sold_externally", label: "Sold elsewhere" },
+// Each tab is a bucket of statuses, not one status: a piece that is
+// "reserved" by an aggregator belongs under "With aggregator", and one
+// that is "delivered" or "completed" is still a sale. Every status the
+// API can return lands in exactly one bucket, so nothing is reachable
+// only through "All".
+type FilterKey = "all" | "draft" | "pending" | "live" | "aggregator" | "sold" | "sold_externally" | "returned";
+
+const FILTERS: { value: FilterKey; label: string; statuses: readonly ArtworkStatus[] | null }[] = [
+  { value: "all", label: "All", statuses: null },
+  { value: "draft", label: "Draft", statuses: ["draft"] },
+  { value: "pending", label: "Pending", statuses: ["pending_approval"] },
+  { value: "live", label: "Live", statuses: ["marketplace"] },
+  { value: "aggregator", label: "With aggregator", statuses: ["reserved", "with_aggregator"] },
+  { value: "sold", label: "Sold", statuses: ["sold", "settlement_complete", "delivered", "completed"] },
+  { value: "sold_externally", label: "Sold elsewhere", statuses: ["sold_externally"] },
+  { value: "returned", label: "Returned", statuses: ["returned"] },
 ];
 
 type ArtistArtwork = Artwork & { artistPrice: number };
 
 export function ArtworksBoard() {
   const { data: artworks } = useArtistDashboardArtworks();
-  const [filter, setFilter] = useState<ArtworkStatus | "all">("all");
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [soldElsewhereTarget, setSoldElsewhereTarget] =
     useState<ArtistArtwork | null>(null);
   const markSoldMutation = useMarkSoldElsewhereMutation();
 
+  const counts = useMemo(() => {
+    const all = artworks ?? [];
+    return Object.fromEntries(
+      FILTERS.map((f) => [f.value, f.statuses ? all.filter((a) => f.statuses!.includes(a.status)).length : all.length]),
+    ) as Record<FilterKey, number>;
+  }, [artworks]);
+
   const filtered = useMemo(() => {
     const all = artworks ?? [];
-    return filter === "all" ? all : all.filter((a) => a.status === filter);
+    const bucket = FILTERS.find((f) => f.value === filter)?.statuses;
+    return bucket ? all.filter((a) => bucket.includes(a.status)) : all;
   }, [artworks, filter]);
 
   const penaltyAmount = soldElsewhereTarget
@@ -81,28 +96,52 @@ export function ArtworksBoard() {
         </Link>
       </div>
 
-      <Tabs
-        value={filter}
-        onValueChange={(v) => setFilter(v as ArtworkStatus | "all")}
-      >
-        <TabsList className="h-auto group-data-horizontal/tabs:h-auto flex-wrap justify-start gap-x-1 gap-y-2 bg-transparent p-0">
-          {FILTERS.map((f) => (
-            <TabsTrigger
+      <div role="group" aria-label="Filter artworks by status" className="flex flex-wrap gap-x-1 gap-y-2">
+        {FILTERS.map((f) => {
+          const active = filter === f.value;
+          // Empty buckets stay visible so the artist learns the vocabulary,
+          // but only "All" is worth a click when there is nothing in it.
+          return (
+            <button
               key={f.value}
-              value={f.value}
-              className="rounded-md border border-border px-3.5 py-1.5 text-sm text-muted-foreground data-active:border-gold/50 data-active:bg-gold/10 data-active:text-gold-bright after:hidden"
+              type="button"
+              aria-pressed={active}
+              onClick={() => setFilter(f.value)}
+              className={`inline-flex items-center gap-1.5 rounded-md border px-3.5 py-1.5 text-sm transition-colors ${
+                active
+                  ? "border-gold/50 bg-gold/10 text-gold-bright"
+                  : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+              }`}
             >
               {f.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+              <span
+                className={`rounded-full px-1.5 text-[11px] tabular-nums ${
+                  active ? "bg-gold/20 text-gold-bright" : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {counts[f.value]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center">
           <p className="text-sm text-muted-foreground">
-            No artworks in this status yet.
+            {filter === "all"
+              ? "You haven’t listed anything yet."
+              : `Nothing under “${FILTERS.find((f) => f.value === filter)?.label}” right now.`}
           </p>
+          {filter !== "all" && (artworks ?? []).length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilter("all")}
+              className="mt-2 text-xs font-medium text-gold-bright hover:underline"
+            >
+              Show all {(artworks ?? []).length}
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
