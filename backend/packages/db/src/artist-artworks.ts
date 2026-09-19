@@ -6,7 +6,8 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { artistSettlementOf, artworkStateMachine, editWindowExpiresAt, externalSalePenaltyOf, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
+import { isArtistGstRegistered } from "./profiles.ts";
+import { artistSettlementOf, artworkStateMachine, editWindowExpiresAt, externalSalePenaltyOf, type ArtistSettlement, type ArtworkStatus, type PricingRates } from "@galleryzone/domain";
 import { Collections, artworkPricingCol, artworkStatusEventsCol, type ArtworkDoc, type ArtworkPhysical, type ArtworkPricingDoc, type ArtworkStatusEventDoc, type ExternalSalePenaltyDoc, type ListingType } from "./collections.ts";
 import { listArtworkImages, type ArtworkImage } from "./artwork-images.ts";
 import { getPublicArtwork, type PublicArtworkView } from "./public-artworks.ts";
@@ -179,7 +180,17 @@ export async function updateArtwork(
 /** Everything the public sees plus what only the owner may: the artist's price, net, full images, status history, insurance. */
 export interface OwnerArtworkView extends PublicArtworkView {
   artistPricePaise: number;
-  artistNet: { marketplace: number; aggregatorEstimate: number };
+  /**
+   * What the artist is actually paid, line by line, on each channel — the
+   * payout sheets' own breakdown, not just a net figure. TDS reflects this
+   * artist's real GST-registration status.
+   */
+  artistNet: {
+    marketplace: number;
+    aggregatorEstimate: number;
+    isGstRegistered: boolean;
+    breakdown: { marketplace: ArtistSettlement; aggregator: ArtistSettlement };
+  };
   images: ArtworkImage[];
   statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
   insuranceOpted: boolean;
@@ -201,13 +212,18 @@ async function toOwnerView(db: Firestore, artworkId: string, artwork: ArtworkDoc
     db.collection(artworkStatusEventsCol(artworkId)).orderBy("changedAt", "asc").get(),
   ]);
   const artistPricePaise = (pricingSnap.data() as ArtworkPricingDoc | undefined)?.artistPricePaise ?? 0;
+  const isGstRegistered = await isArtistGstRegistered(db, artwork.artistId);
+  const marketplaceSettlement = artistSettlementOf(artistPricePaise, "marketplace", rates, { isGstRegistered });
+  const aggregatorSettlement = artistSettlementOf(artistPricePaise, "aggregator", rates, { isGstRegistered });
   return {
     ...pub,
     images,
     artistPricePaise,
     artistNet: {
-      marketplace: artistSettlementOf(artistPricePaise, "marketplace", rates).net,
-      aggregatorEstimate: artistSettlementOf(artistPricePaise, "aggregator", rates).net,
+      marketplace: marketplaceSettlement.net,
+      aggregatorEstimate: aggregatorSettlement.net,
+      isGstRegistered,
+      breakdown: { marketplace: marketplaceSettlement, aggregator: aggregatorSettlement },
     },
     statusHistory: eventsSnap.docs.map((d) => {
       const e = d.data() as ArtworkStatusEventDoc;

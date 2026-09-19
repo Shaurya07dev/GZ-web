@@ -17,6 +17,7 @@ import {
   artworkStateMachine,
   type PricingRates, artistSettlementOf } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
+import { isArtistGstRegistered } from "./profiles.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf } from "./listing-projection.ts";
@@ -64,6 +65,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     gstPaise,
     deliveryChargePaise: checkout.deliveryCharge,
     convenienceFeePaise: checkout.convenienceFee,
+    convenienceGstPaise: checkout.convenienceGst,
     totalPaise: checkout.total,
     status: "pending",
     rateConfigVersionId: activeVersion.id,
@@ -164,6 +166,7 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
     artistId: pricing.artistId,
     artistPricePaise: pricing.artistPricePaise,
     rates: version.rates,
+    isGstRegistered: await isArtistGstRegistered(db, pricing.artistId),
   });
 
   const { transactionId } = await postLedgerEntries(db, {
@@ -215,6 +218,11 @@ async function confirmationFor(db: Firestore, orderId: string, order: OrderDoc, 
     artworkId: order.artworkId,
     artworkTitle,
     totalPaise: order.totalPaise,
-    artistNetPaise: pricing && version ? artistSettlementOf(pricing.artistPricePaise, "marketplace", version.rates).net : 0,
+    artistNetPaise:
+      pricing && version
+        ? artistSettlementOf(pricing.artistPricePaise, "marketplace", version.rates, {
+            isGstRegistered: await isArtistGstRegistered(db, pricing.artistId),
+          }).net
+        : 0,
   };
 }

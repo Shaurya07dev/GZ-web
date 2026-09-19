@@ -3,7 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { HealthController } from "./health.controller.ts";
 import { AuthController } from "./auth/auth.controller.ts";
-import { RateConfigController } from "./rate-config.controller.ts";
+import { PublicPricingRulesController, RateConfigController } from "./rate-config.controller.ts";
 import { ArtworksController } from "./artworks.controller.ts";
 import { OrdersController } from "./orders.controller.ts";
 import { AggregatorController } from "./aggregator.controller.ts";
@@ -57,6 +57,7 @@ import { DbModule } from "./db.module.ts";
     HealthController,
     AuthController,
     RateConfigController,
+    PublicPricingRulesController,
     ArtworksController,
     OrdersController,
     AggregatorController,

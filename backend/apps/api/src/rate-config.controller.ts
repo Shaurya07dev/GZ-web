@@ -5,17 +5,36 @@
 // ID token is now verified and the caller's role re-derived from
 // Firestore on every request, not the 501 stub from before.
 
-import { Body, Controller, Get, Inject, Param, Post, Req, UsePipes } from "@nestjs/common";
+import { Body, Controller, Get, Header, Inject, Param, Post, Req, UsePipes } from "@nestjs/common";
 import { loadActiveRates } from "@galleryzone/config";
 import { Collections, FirestoreRateConfigStore, reindexAllListings, type Db, type RateConfigVersionDoc } from "@galleryzone/db";
 import { DEFAULT_RATE_SEED } from "@galleryzone/domain";
 import { proposeRateChangeSchema, type ProposeRateChangeInput } from "@galleryzone/contracts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
-import { Roles } from "./auth/roles.decorator.ts";
+import { Public, Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
 
+
+// The same rates, readable by anyone. The artist's upload form quotes the
+// markup, GST and listing fee from here rather than from constants compiled
+// into the bundle, so an approved rate change moves every screen at once.
+// Nothing in PricingRates is confidential — it is the published commercial
+// terms, and no artist-specific or customer-specific figure appears in it.
+@Controller("v1/pricing-rules")
+export class PublicPricingRulesController {
+  constructor(@Inject(DB) private readonly db: Db) {}
+
+  @Public()
+  @Get()
+  @Header("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600")
+  async active() {
+    const store = new FirestoreRateConfigStore(this.db);
+    const version = await store.getActiveVersion(new Date());
+    return { rates: version?.rates ?? null, rateConfigVersionId: version?.id ?? null };
+  }
+}
 
 @Controller("v1/admin/rate-config")
 export class RateConfigController {

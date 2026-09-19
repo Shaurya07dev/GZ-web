@@ -7,7 +7,7 @@
 
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { RateConfigStore, RateConfigVersion } from "@galleryzone/config";
-import type { PricingRates } from "@galleryzone/domain";
+import { normalizeRates, type PricingRates } from "@galleryzone/domain";
 import { Collections, type RateConfigVersionDoc } from "./collections.ts";
 
 export class FirestoreRateConfigStore implements RateConfigStore {
@@ -73,7 +73,9 @@ export class FirestoreRateConfigStore implements RateConfigStore {
     return {
       id: doc.id,
       effectiveFrom: data.effectiveFrom.toDate(),
-      rates: data.rates as PricingRates,
+      // Normalized on the way out: a version approved before a rate existed
+      // must not hand `undefined` to a money calculation.
+      rates: normalizeRates(data.rates as Partial<PricingRates>),
       approvedBy: data.approvedBy,
       reason: data.reason,
     };

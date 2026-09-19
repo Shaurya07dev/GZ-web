@@ -288,6 +288,8 @@ export interface OrderDoc {
   gstPaise: number;
   deliveryChargePaise: number;
   convenienceFeePaise: number;
+  /** 18% service GST on the convenience fee — zero while that fee is zero. */
+  convenienceGstPaise: number;
   totalPaise: number;
   status: OrderStatus;
   rateConfigVersionId: string;

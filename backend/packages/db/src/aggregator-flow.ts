@@ -17,6 +17,7 @@ import {
   type PricingRates,
 } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
+import { isArtistGstRegistered } from "./profiles.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkPricingDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
@@ -135,6 +136,10 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
     artistPricePaise: pricing.artistPricePaise,
     advanceAlreadyHeldPaise: holding.advanceAmountPaise,
     rates,
+    isGstRegistered: await isArtistGstRegistered(db, pricing.artistId),
+    // The delivery leg the aggregator was actually charged at reservation is
+    // what comes off the artist, not the flat fallback.
+    ...(holding.deliveryDepositPaise === null ? {} : { deliveryChargePaise: holding.deliveryDepositPaise }),
   });
 
   const saleRef = db.collection(Collections.aggregatorSales).doc();

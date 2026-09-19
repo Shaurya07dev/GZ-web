@@ -8,7 +8,7 @@
 // loadActiveRates() with a real RateConfigStore — never import
 // DEFAULT_RATE_SEED directly for a business calculation.
 
-import { DEFAULT_RATE_SEED, type PricingRates } from "@galleryzone/domain";
+import { DEFAULT_RATE_SEED, normalizeRates, type PricingRates } from "@galleryzone/domain";
 
 export interface RateConfigVersion {
   id: string;
@@ -42,5 +42,5 @@ export async function loadActiveRates(
 ): Promise<PricingRates> {
   if (!store) return DEFAULT_RATE_SEED;
   const active = await store.getActiveVersion(asOf);
-  return active?.rates ?? DEFAULT_RATE_SEED;
+  return active ? normalizeRates({ ...active.rates }) : DEFAULT_RATE_SEED;
 }

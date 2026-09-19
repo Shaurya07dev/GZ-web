@@ -6,7 +6,8 @@
 
 import { Controller, Get, Header, Inject, NotFoundException, Param, Query } from "@nestjs/common";
 import { z } from "zod";
-import { getPublicArtwork, loadMarketplace, queryMarketplace, type Db, type MarketplacePage } from "@galleryzone/db";
+import { FirestoreRateConfigStore, getPublicArtwork, loadMarketplace, queryMarketplace, type Db, type MarketplacePage } from "@galleryzone/db";
+import { checkoutTotal } from "@galleryzone/domain";
 import type { CustomerArtworkDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
@@ -49,6 +50,36 @@ export class ArtworksController {
   async list(@Query(new ZodValidationPipe(listQuerySchema)) query: ListQuery): Promise<MarketplacePage> {
     const all = await this.cache.getOrFill(CacheKeys.marketplace, TTL.marketplace, () => loadMarketplace(this.db));
     return queryMarketplace(all, query);
+  }
+
+  /**
+   * What this artwork would actually cost at checkout, line by line, from
+   * the rates in force right now. The checkout screens render this rather
+   * than recomputing the ladder client-side, so a preview can never quote a
+   * different number from the order the API then creates.
+   */
+  @Public()
+  @Get(":id/quote")
+  @Header("Cache-Control", PUBLIC_CACHE)
+  async quote(@Param("id") id: string) {
+    const artwork = await this.cache.getOrFill(CacheKeys.artwork(id), TTL.artwork, () => getPublicArtwork(this.db, id));
+    if (!artwork) throw new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
+    const version = await new FirestoreRateConfigStore(this.db).getActiveVersion(new Date());
+    if (!version) {
+      throw new NotFoundException({ type: "about:blank", title: "Pricing rules are not configured yet", status: 404, code: "no_active_rates" });
+    }
+    const total = checkoutTotal(artwork.displayPricePaise, version.rates);
+    return {
+      artworkId: id,
+      displayPricePaise: total.displayPrice,
+      gstPaise: total.gstIncluded,
+      gstRate: version.rates.gstRate,
+      convenienceFeePaise: total.convenienceFee,
+      convenienceGstPaise: total.convenienceGst,
+      deliveryChargePaise: total.deliveryCharge,
+      totalPaise: total.total,
+      rateConfigVersionId: version.id,
+    };
   }
 
   /** Any status — a passport/COA link must still resolve after a sale. */

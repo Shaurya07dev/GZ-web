@@ -25,18 +25,44 @@ export interface PricingRates {
   gstRate: number;
   /** GalleryZone's margin over the artist's price, before GST. */
   platformMarkup: number;
-  /** Free to list today; kept as a rate so switching it on is a value change. */
+  /** Listing charge, as a fraction of the artist's price. Service sheet: 1% (+18% GST). */
   artistListingFeeRate: number;
+  /**
+   * GST on GalleryZone's own SERVICE charges — the convenience fee, the
+   * listing fee, tech/NFC, subscription, exhibition and advertising. Always
+   * 18%, and never mixed with `gstRate`, which taxes the artwork itself.
+   */
+  serviceGstRate: number;
+  /**
+   * Income-tax TDS on the artist's own price (§194-O). Deducted only once
+   * the artist is GST-registered; an unregistered artist is outside scope
+   * and has nothing withheld. Separate from GST in every direction.
+   */
+  artistTdsRate: number;
   /** Aggregator MOU §7 — security deposit paid before taking possession. */
   aggregatorAdvanceRate: number;
   /** Aggregator MOU §8 — 20% of (selling price − artist price). */
   aggregatorCommissionRate: number;
   /** Deducted from the artist's settlement on aggregator sales only. */
   artistConvenienceRate: number;
-  /** Charged to the customer at checkout. Zero during the launch period. */
-  customerConvenienceFee: number;
+  /**
+   * The payout sheet's "other charges (if incurred) — example tech" line.
+   * Default charge applied to an aggregator settlement when the caller does
+   * not pass a real, per-sale figure. Zero until a real trigger exists.
+   */
+  artistOtherChargePaise: number;
+  /**
+   * Customer convenience fee, as a fraction of the pre-GST order value, plus
+   * `serviceGstRate` on the fee itself. The invoice sheet carries it at 0.1%
+   * marked "for future — no applicability now", so it ships at zero.
+   */
+  customerConvenienceRate: number;
+  /** One-off charge when an NFC tag is issued for a piece (+ service GST). */
+  nfcTagChargePaise: number;
+  /** Artist subscription, per billing period (+ service GST). */
+  subscriptionFeePaise: number;
   /** Flat fallback delivery charge when weight/pincode data is missing. */
-  deliveryCharge: number;
+  deliveryChargePaise: number;
   /** Days after delivery before the artist's settlement is released. */
   artistPayoutDaysAfterDelivery: number;
   /** How many aggregators a piece can rotate through in one listing cycle. */
@@ -70,28 +96,36 @@ export interface PricingRates {
 // Seed values for the `rate_config` table's first migration only. Not
 // imported by any pricing function above — every function takes `rates`
 // explicitly, so this object is data, not logic. Values match the client's
-// "How the money flows" sheet (21 Aug 2026), confirmed 25 Aug 2026, and
-// frontend-web/lib/pricing.ts's current constants exactly.
+// "How the money flows" sheets (21 Aug 2026, confirmed 25 Aug), the payout
+// sheet "How pay out looks as per Govt guidelines" (9 Sep), the service-GST
+// sheet and the customer invoice sheet (19 Sep 2026).
+//
+// EVERY absolute amount here is in PAISE. The rate fields are fractions.
 export const DEFAULT_RATE_SEED: PricingRates = {
   gstRate: 0.05,
   platformMarkup: 0.3,
-  artistListingFeeRate: 0,
+  artistListingFeeRate: 0.01,
+  serviceGstRate: 0.18,
+  artistTdsRate: 0.001,
   aggregatorAdvanceRate: 0.05,
   aggregatorCommissionRate: 0.2,
   artistConvenienceRate: 0.02,
-  customerConvenienceFee: 0,
-  deliveryCharge: 2500,
+  artistOtherChargePaise: 0,
+  customerConvenienceRate: 0,
+  nfcTagChargePaise: 10_000, // ₹100
+  subscriptionFeePaise: 120_000, // ₹1,200
+  deliveryChargePaise: 250_000, // ₹2,500
   artistPayoutDaysAfterDelivery: 7,
   aggregatorCycleMonths: 5,
   aggregatorListingDays: 180,
   aggregatorPlacementDays: 30,
   aggregatorMonthlyDiscountRates: [0, 0.02, 0.04, 0.06, 0.08],
   deliveryZoneRates: {
-    local: { base: 400, perExtraKg: 55 },
-    regional: { base: 620, perExtraKg: 80 },
-    metro: { base: 780, perExtraKg: 95 },
-    national: { base: 950, perExtraKg: 120 },
-    remote: { base: 1400, perExtraKg: 175 },
+    local: { base: 40_000, perExtraKg: 5_500 },
+    regional: { base: 62_000, perExtraKg: 8_000 },
+    metro: { base: 78_000, perExtraKg: 9_500 },
+    national: { base: 95_000, perExtraKg: 12_000 },
+    remote: { base: 140_000, perExtraKg: 17_500 },
   },
   deliveryBaseSlabKg: 5,
   remotePincodePrefixes: ["18", "19", "78", "79"],
@@ -102,6 +136,29 @@ export const DEFAULT_RATE_SEED: PricingRates = {
   insuranceThresholdPaise: 2_000_000, // ₹20,000, matches PlatformSettings.insuranceThreshold
   earningsAbove5LThresholdPaise: 50_000_000, // ₹5,00,000
 };
+
+/**
+ * A stored rate version was written against whatever PricingRates looked
+ * like on the day it was approved. When a new rate is introduced, older rows
+ * carry no value for it — and a missing rate must never reach a calculation
+ * as `undefined`, which would silently produce NaN money. Anything absent
+ * falls back to the seed, and `deliveryCharge` (the pre-19-Sep-2026 name for
+ * the same paise figure) is read as `deliveryChargePaise`.
+ *
+ * A read-time shim, not a migration: the stored document is left exactly as
+ * approved, so the record of what was in force still holds.
+ */
+export function normalizeRates(stored: Partial<PricingRates> & Record<string, unknown>): PricingRates {
+  const defined = Object.fromEntries(
+    Object.entries(stored).filter(([, value]) => value !== undefined && value !== null),
+  ) as Partial<PricingRates>;
+  const legacyDelivery = (stored as { deliveryCharge?: number }).deliveryCharge;
+  return {
+    ...DEFAULT_RATE_SEED,
+    ...(legacyDelivery === undefined ? {} : { deliveryChargePaise: legacyDelivery }),
+    ...defined,
+  };
+}
 
 export const DELIVERY_ZONE_LABEL: Record<DeliveryZone, string> = {
   local: "Same city",
@@ -143,29 +200,82 @@ export function artistPriceFrom(displayPrice: number, rates: PricingRates): numb
   return Math.round(exGst(displayPrice, rates) / (1 + rates.platformMarkup));
 }
 
-/** The listing fee an artist owes for putting a piece up. ₹0 today. */
+/** The listing fee an artist owes for putting a piece up: 1% of their price. */
 export function listingFeeOf(artistPrice: number, rates: PricingRates): number {
   return Math.round(artistPrice * rates.artistListingFeeRate);
+}
+
+// --- Service charges --------------------------------------------------------
+//
+// Everything GalleryZone charges for a SERVICE rather than for the artwork —
+// subscription, listing, technology/NFC, aggregator-style commission billed
+// as a fee, exhibition and advertising. All of them carry 18% GST on the fee
+// itself (never the 5% artwork rate), which is the whole content of the
+// client's service-GST sheet.
+
+export interface ServiceCharge {
+  /** The fee itself, before GST. */
+  amountPaise: number;
+  gstPaise: number;
+  /** What the invoice for this line actually comes to. */
+  totalPaise: number;
+}
+
+export function serviceChargeOf(amountPaise: number, rates: PricingRates): ServiceCharge {
+  const gstPaise = Math.round(amountPaise * rates.serviceGstRate);
+  return { amountPaise, gstPaise, totalPaise: amountPaise + gstPaise };
+}
+
+/** Listing fee + its 18% GST. Sheet: ₹1,00,000 → ₹1,000 + ₹180 = ₹1,180. */
+export function listingChargeOf(artistPrice: number, rates: PricingRates): ServiceCharge {
+  return serviceChargeOf(listingFeeOf(artistPrice, rates), rates);
+}
+
+/** NFC/technology charge + its 18% GST. Sheet: ₹100 + ₹18 = ₹118. */
+export function nfcChargeOf(rates: PricingRates): ServiceCharge {
+  return serviceChargeOf(rates.nfcTagChargePaise, rates);
+}
+
+/** Subscription + its 18% GST. Sheet: ₹1,200 + ₹216 = ₹1,416. */
+export function subscriptionChargeOf(rates: PricingRates): ServiceCharge {
+  return serviceChargeOf(rates.subscriptionFeePaise, rates);
 }
 
 // --- Checkout ---------------------------------------------------------------
 
 export interface CheckoutTotal {
+  /** The artwork's price with the 5% artwork GST already inside it. */
   displayPrice: number;
+  /** The artwork GST portion of `displayPrice` — shown, never added again. */
   gstIncluded: number;
-  deliveryCharge: number;
+  /** Convenience fee on the pre-GST order value (0 during launch). */
   convenienceFee: number;
+  /** 18% service GST on the convenience fee itself. */
+  convenienceGst: number;
+  deliveryCharge: number;
+  /** What the customer actually pays. */
   total: number;
 }
 
-// Never add gstIncluded to the total — it is already part of displayPrice.
-export function checkoutTotal(displayPrice: number, rates: PricingRates): CheckoutTotal {
+// The customer invoice sheet, top to bottom: artwork (artist price + every
+// appreciation) with 5% GST inside it, then the convenience fee, then 18%
+// GST on that fee, then delivery. Never add gstIncluded to the total — it is
+// already part of displayPrice.
+export function checkoutTotal(
+  displayPrice: number,
+  rates: PricingRates,
+  deliveryChargePaise?: number,
+): CheckoutTotal {
+  const delivery = deliveryChargePaise ?? rates.deliveryChargePaise;
+  const convenienceFee = Math.round(exGst(displayPrice, rates) * rates.customerConvenienceRate);
+  const convenienceGst = Math.round(convenienceFee * rates.serviceGstRate);
   return {
     displayPrice,
     gstIncluded: gstIncludedIn(displayPrice, rates),
-    deliveryCharge: rates.deliveryCharge,
-    convenienceFee: rates.customerConvenienceFee,
-    total: displayPrice + rates.deliveryCharge + rates.customerConvenienceFee,
+    convenienceFee,
+    convenienceGst,
+    deliveryCharge: delivery,
+    total: displayPrice + convenienceFee + convenienceGst + delivery,
   };
 }
 
@@ -174,26 +284,94 @@ export function checkoutTotal(displayPrice: number, rates: PricingRates): Checko
 export type SaleChannel = "marketplace" | "aggregator";
 
 export interface ArtistSettlement {
+  /** The artist's own price — GalleryZone's markup is never theirs. */
   gross: number;
-  deliveryDeduction: number;
+  /** §194-O income-tax TDS, 0 unless the artist is GST-registered. */
+  tdsDeduction: number;
   convenienceDeduction: number;
+  otherChargesDeduction: number;
+  /** 18% GST on (convenience + other charges) — a service, not the artwork. */
+  serviceGstDeduction: number;
+  /** The sheet's "Total of charges" line. */
+  chargesTotal: number;
+  /** The sheet's "Payment before delivery" line. */
+  paymentBeforeDelivery: number;
+  deliveryDeduction: number;
+  /** The sheet's "Final Bank Payout" line. */
   net: number;
 }
 
+export interface ArtistSettlementOptions {
+  /** TDS applies only once the artist is GST-registered (gstStatus approved). */
+  isGstRegistered?: boolean;
+  /** Real "other charges (if incurred)" for this sale; defaults to the configured rate. */
+  otherChargesPaise?: number;
+  /** The actual artist→aggregator delivery leg, when it has been quoted. */
+  deliveryChargePaise?: number;
+}
+
+// The client's payout sheets, reproduced line for line.
+//
+//   MARKETPLACE            unregistered   GST-registered
+//   Artist price              1,00,000        1,00,000
+//   0.1% TDS                         0             100
+//   convenience / other / service GST 0               0
+//   delivery                         0               0
+//   Final bank payout         1,00,000          99,900
+//
+//   AGGREGATOR             unregistered   GST-registered
+//   Artist price              1,00,000        1,00,000
+//   0.1% TDS                         0             100
+//   2% convenience               2,000           2,000
+//   other charges (e.g. tech)      500             500
+//   18% GST on those charges       450             450
+//   Total of charges             2,950           3,050
+//   Payment before delivery     97,050          96,950
+//   delivery                     2,000           2,000
+//   Final bank payout           95,050          94,950
+//
+// Marketplace takes nothing off the artist's price ("in the marketplace we
+// pay 100% of the artist quoted price", 25 Aug) — TDS is the one exception,
+// and it is money withheld for the government, not GalleryZone's margin.
 export function artistSettlementOf(
   artistPrice: number,
   channel: SaleChannel,
   rates: PricingRates,
+  options: ArtistSettlementOptions = {},
 ): ArtistSettlement {
+  const tdsDeduction = options.isGstRegistered ? Math.round(artistPrice * rates.artistTdsRate) : 0;
+
   if (channel === "marketplace") {
-    return { gross: artistPrice, deliveryDeduction: 0, convenienceDeduction: 0, net: artistPrice };
+    return {
+      gross: artistPrice,
+      tdsDeduction,
+      convenienceDeduction: 0,
+      otherChargesDeduction: 0,
+      serviceGstDeduction: 0,
+      chargesTotal: tdsDeduction,
+      paymentBeforeDelivery: artistPrice - tdsDeduction,
+      deliveryDeduction: 0,
+      net: artistPrice - tdsDeduction,
+    };
   }
+
   const convenienceDeduction = Math.round(artistPrice * rates.artistConvenienceRate);
+  const otherChargesDeduction = options.otherChargesPaise ?? rates.artistOtherChargePaise;
+  const serviceGstDeduction = Math.round((convenienceDeduction + otherChargesDeduction) * rates.serviceGstRate);
+  const deliveryDeduction = options.deliveryChargePaise ?? rates.deliveryChargePaise;
+  const chargesTotal = tdsDeduction + convenienceDeduction + otherChargesDeduction + serviceGstDeduction;
+  const paymentBeforeDelivery = artistPrice - chargesTotal;
+
   return {
     gross: artistPrice,
-    deliveryDeduction: rates.deliveryCharge,
+    tdsDeduction,
     convenienceDeduction,
-    net: artistPrice - rates.deliveryCharge - convenienceDeduction,
+    otherChargesDeduction,
+    serviceGstDeduction,
+    chargesTotal,
+    paymentBeforeDelivery,
+    deliveryDeduction,
+    net: paymentBeforeDelivery - deliveryDeduction,
   };
 }
 
@@ -331,7 +509,7 @@ export function aggregatorAdvanceForMonth({
   previousAggregatorChangedPrice?: boolean;
   deliveryCharge?: number;
 }): AggregatorAdvance {
-  const resolvedDeliveryCharge = deliveryCharge ?? rates.deliveryCharge;
+  const resolvedDeliveryCharge = deliveryCharge ?? rates.deliveryChargePaise;
   const firstMonth = month <= 1;
   const rate =
     firstMonth || (month === 2 && previousAggregatorChangedPrice)
@@ -412,13 +590,14 @@ export function estimateDelivery({
   rates: PricingRates;
 }): DeliveryEstimate {
   if (!billableKg || billableKg <= 0 || !fromPincode || !toPincode) {
-    return { zone: "national", billableKg: billableKg ?? 0, charge: rates.deliveryCharge, estimated: false };
+    return { zone: "national", billableKg: billableKg ?? 0, charge: rates.deliveryChargePaise, estimated: false };
   }
 
   const zone = deliveryZoneBetween(fromPincode, toPincode, rates);
   const { base, perExtraKg } = rates.deliveryZoneRates[zone];
   const extraKg = Math.max(0, Math.ceil(billableKg - rates.deliveryBaseSlabKg));
-  const charge = Math.round((base + extraKg * perExtraKg) / 10) * 10;
+  // Rounded to the nearest rupee, the way a courier quotes.
+  const charge = Math.round((base + extraKg * perExtraKg) / 100) * 100;
 
   return { zone, billableKg, charge, estimated: true };
 }

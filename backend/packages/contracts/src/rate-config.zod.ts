@@ -26,11 +26,19 @@ export const pricingRatesSchema = z
     gstRate: percent(0.28), // GST slabs in India top out at 28%
     platformMarkup: percent(2), // 200% ceiling — a sanity bound, not a target
     artistListingFeeRate: percent(0.2),
+    // GST on services is a statutory slab — bounded like gstRate, not like a
+    // commission an admin might tune.
+    serviceGstRate: percent(0.28),
+    // §194-O is 0.1%; the ceiling only guards a typo, it is not a target.
+    artistTdsRate: percent(0.05),
     aggregatorAdvanceRate: percent(0.5),
     aggregatorCommissionRate: percent(0.5),
     artistConvenienceRate: percent(0.2),
-    customerConvenienceFee: z.number().int().min(0),
-    deliveryCharge: z.number().int().min(0),
+    artistOtherChargePaise: z.number().int().min(0),
+    customerConvenienceRate: percent(0.05),
+    nfcTagChargePaise: z.number().int().min(0),
+    subscriptionFeePaise: z.number().int().min(0),
+    deliveryChargePaise: z.number().int().min(0),
     artistPayoutDaysAfterDelivery: z.number().int().min(0).max(90),
     aggregatorCycleMonths: z.number().int().min(1).max(24),
     aggregatorListingDays: z.number().int().min(1).max(730),

@@ -57,24 +57,32 @@ export function marketplaceCheckoutPostings({
   artistId,
   artistPricePaise,
   rates,
+  isGstRegistered = false,
 }: {
   artistId: string;
   artistPricePaise: number;
   rates: PricingRates;
+  /** Drives the §194-O TDS leg — see artistSettlementOf. */
+  isGstRegistered?: boolean;
 }): Posting[] {
   const displayPrice = Math.round(artistPricePaise * (1 + rates.platformMarkup) * (1 + rates.gstRate));
   const checkout = checkoutTotal(displayPrice, rates);
-  const settlement = artistSettlementOf(artistPricePaise, "marketplace", rates);
+  const settlement = artistSettlementOf(artistPricePaise, "marketplace", rates, { isGstRegistered });
   // Residual, same reasoning as aggregatorSalePostings below: balances by
   // construction, and also carries the delivery-courier pass-through
   // (checkout.deliveryCharge is customer-paid, not artist-deducted, on
   // marketplace sales, but GalleryZone still owes it to the courier).
-  const platformResidual = checkout.total - checkout.gstIncluded - settlement.net;
+  // GST owed to the government: the 5% inside the artwork price, plus 18%
+  // on the customer's convenience fee. Both are statutory liabilities, never
+  // GalleryZone's revenue, so they leave escrow on the same leg.
+  const gstLiability = checkout.gstIncluded + checkout.convenienceGst;
+  const platformResidual = checkout.total - gstLiability - settlement.tdsDeduction - settlement.net;
 
   return assertBalanced(
     [
       { accountType: "razorpay_escrow", amountPaise: checkout.total, reason: "checkout_capture" },
-      { accountType: "gst_payable", amountPaise: -checkout.gstIncluded, reason: "gst_liability" },
+      { accountType: "gst_payable", amountPaise: -gstLiability, reason: "gst_liability" },
+      { accountType: "tds_payable", amountPaise: -settlement.tdsDeduction, reason: "artist_tds_withheld" },
       { accountType: "artist_payable", ownerId: artistId, amountPaise: -settlement.net, reason: "marketplace_settlement" },
       { accountType: "platform_revenue", amountPaise: -platformResidual, reason: "margin_and_delivery_passthrough" },
     ],
@@ -98,6 +106,9 @@ export function aggregatorSalePostings({
   artistPricePaise,
   advanceAlreadyHeldPaise,
   rates,
+  isGstRegistered = false,
+  otherChargesPaise,
+  deliveryChargePaise,
 }: {
   artistId: string;
   aggregatorId: string;
@@ -105,9 +116,18 @@ export function aggregatorSalePostings({
   artistPricePaise: number;
   advanceAlreadyHeldPaise: number;
   rates: PricingRates;
+  isGstRegistered?: boolean;
+  /** "Other charges (if incurred)" actually billed on this sale. */
+  otherChargesPaise?: number;
+  /** The real artist→aggregator delivery leg, when it has been quoted. */
+  deliveryChargePaise?: number;
 }): Posting[] {
   const gstIncluded = displayPricePaise - exGst(displayPricePaise, rates);
-  const settlement = artistSettlementOf(artistPricePaise, "aggregator", rates);
+  const settlement = artistSettlementOf(artistPricePaise, "aggregator", rates, {
+    isGstRegistered,
+    ...(otherChargesPaise === undefined ? {} : { otherChargesPaise }),
+    ...(deliveryChargePaise === undefined ? {} : { deliveryChargePaise }),
+  });
   const commission = aggregatorCommissionOf(displayPricePaise, artistPricePaise, rates);
 
   // platform_revenue is the RESIDUAL of the capture — displayPrice minus
@@ -123,7 +143,12 @@ export function aggregatorSalePostings({
   // separate ledger account (this scaffold has no dedicated
   // courier_payable account type yet — Phase 2 can split it out once the
   // real Shiprocket/courier billing integration exists).
-  const platformResidual = displayPricePaise - gstIncluded - settlement.net - commission;
+  // The 18% service GST withheld from the artist is owed to the government
+  // too, so it joins the artwork GST on the gst_payable leg rather than
+  // sitting in GalleryZone's margin.
+  const gstLiability = gstIncluded + settlement.serviceGstDeduction;
+  const platformResidual =
+    displayPricePaise - gstLiability - settlement.tdsDeduction - settlement.net - commission;
 
   return assertBalanced(
     [
@@ -133,7 +158,8 @@ export function aggregatorSalePostings({
       { accountType: "razorpay_escrow", amountPaise: -advanceAlreadyHeldPaise, reason: "advance_applied_to_sale" },
       { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: advanceAlreadyHeldPaise, reason: "advance_released" },
       { accountType: "razorpay_escrow", amountPaise: displayPricePaise, reason: "aggregator_sale_capture" },
-      { accountType: "gst_payable", amountPaise: -gstIncluded, reason: "gst_liability" },
+      { accountType: "gst_payable", amountPaise: -gstLiability, reason: "gst_liability" },
+      { accountType: "tds_payable", amountPaise: -settlement.tdsDeduction, reason: "artist_tds_withheld" },
       { accountType: "artist_payable", ownerId: artistId, amountPaise: -settlement.net, reason: "aggregator_settlement" },
       { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: -commission, reason: "aggregator_commission" },
       { accountType: "platform_revenue", amountPaise: -platformResidual, reason: "margin_and_delivery_passthrough" },
