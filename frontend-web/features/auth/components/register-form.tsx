@@ -36,7 +36,14 @@ import {
   type Role,
 } from "@/features/auth/schemas/auth-schemas";
 import { ROLE_OPTIONS } from "@/features/auth/data/role-options";
-import { ROLE_SECTION_HOME } from "@/lib/session";
+import { ROLE_SECTION_HOME, type SessionRole } from "@/lib/session";
+
+// A brand-new artist account still needs KYC/bank/Instagram filled in before
+// anything else is useful, so land there instead of the (empty) dashboard.
+// Every other role keeps its normal section home.
+function landingAfterRegister(role: SessionRole): string {
+  return role === "artist" ? "/dashboard/profile" : ROLE_SECTION_HOME[role];
+}
 import { buyerInviteService } from "@/services/buyerInviteService";
 
 interface RegisterFormProps {
@@ -101,7 +108,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
         }
         // authService.register signs the new account in and writes the
         // role cookie, so land straight in the portal.
-        router.push(ROLE_SECTION_HOME[grantedRole]);
+        router.push(landingAfterRegister(grantedRole));
       },
       onError: (error) => {
         toast.error(
@@ -269,7 +276,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             role={role}
             name={name || undefined}
             onSignedIn={(grantedRole) =>
-              router.push(ROLE_SECTION_HOME[grantedRole])
+              router.push(landingAfterRegister(grantedRole))
             }
           />
         </div>

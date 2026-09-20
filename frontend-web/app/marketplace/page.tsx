@@ -48,7 +48,7 @@ function MarketplacePageContent() {
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<ArtworkFilters>(() => ({
     ...DEFAULT_MARKETPLACE_FILTERS,
-    category: searchParams.get("category") ?? undefined,
+    category: searchParams.get("category") ? [searchParams.get("category")!] : undefined,
     query: searchParams.get("q") ?? undefined,
   }));
   const [showFilters, setShowFilters] = useState(true);
@@ -110,15 +110,17 @@ function MarketplacePageContent() {
                     key={cat.value}
                     type="button"
                     onClick={() =>
-                      setFilters((f) => ({
-                        ...f,
-                        category:
-                          f.category === cat.value ? undefined : cat.value,
-                      }))
+                      setFilters((f) => {
+                        const selected = f.category ?? [];
+                        const next = selected.includes(cat.value)
+                          ? selected.filter((c) => c !== cat.value)
+                          : [...selected, cat.value];
+                        return { ...f, category: next.length ? next : undefined };
+                      })
                     }
                     className={cn(
                       "flex shrink-0 flex-col items-center gap-2 rounded-xl border p-1.5 transition-all",
-                      filters.category === cat.value
+                      filters.category?.includes(cat.value)
                         ? "border-gold bg-gold/20"
                         : "border-white/10 bg-white/5",
                     )}
@@ -137,7 +139,7 @@ function MarketplacePageContent() {
                     <span
                       className={cn(
                         "text-[10px] font-medium",
-                        filters.category === cat.value
+                        filters.category?.includes(cat.value)
                           ? "text-gold-bright"
                           : "text-white/70",
                       )}
@@ -270,6 +272,7 @@ function MarketplaceMobileFilterSheet({
             filters={filters}
             onChange={onChange}
             className="border-0 bg-transparent p-0 shadow-none"
+            bare
           />
         </div>
         {/* Pinned footer */}

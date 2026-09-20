@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GSTIN_PATTERN } from "@/components/shared/gst-number-card";
+import { UniSwapDialog, type Country } from "@/components/shared/uniswap-dialog";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
   Select,
@@ -48,6 +49,11 @@ const DESIGNATION_PRESETS = [
 const DESIGNATION_OTHER = "__other__";
 
 const EMAIL_DOMAIN_SUGGESTIONS = ["gmail.com", "yahoo.com"];
+
+// The business-address country picker (UniSwapDialog) speaks {name, code};
+// reuse the same curated list the phone dial-code field already has rather
+// than inventing a second country list.
+const COUNTRY_OPTIONS: Country[] = COUNTRY_CODES.map((c) => ({ name: c.label, code: c.iso }));
 
 // A number's local part (dial code stripped off) has to fall in this range
 // regardless of which country it's from -- E.164 caps the whole number at 15
@@ -414,23 +420,13 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
 
           <Field data-invalid={Boolean(errors.country)}>
             <FieldLabel htmlFor="country">Country</FieldLabel>
-            <Select
-              value={watch("country")}
-              onValueChange={(value) =>
-                value && setValue("country", value, { shouldValidate: true })
+            <UniSwapDialog
+              value={COUNTRY_OPTIONS.find((c) => c.code === watch("country")) ?? COUNTRY_OPTIONS[0]}
+              onChange={(country: Country) =>
+                setValue("country", country.code, { shouldValidate: true })
               }
-            >
-              <SelectTrigger id="country" className="h-10 w-full">
-                <SelectValue placeholder="Select a country" />
-              </SelectTrigger>
-              <SelectContent>
-                {COUNTRY_CODES.map((country) => (
-                  <SelectItem key={country.iso} value={country.iso}>
-                    {country.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              countries={COUNTRY_OPTIONS}
+            />
             <FieldError errors={[errors.country]} />
           </Field>
 

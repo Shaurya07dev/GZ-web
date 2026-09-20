@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { MultiSelectCombobox, type MultiSelectOption } from "@/components/shared/multi-select-combobox";
 import { cn } from "@/lib/utils";
 import { useMarketplaceFacets } from "@/hooks/useArtworks";
 import {
@@ -78,8 +79,8 @@ function titleCase(value: string): string {
 // governs whether "Clear All" shows up.
 function hasActiveStructuredFilters(filters: ArtworkFilters): boolean {
   return Boolean(
-    filters.category ||
-    filters.medium ||
+    filters.category?.length ||
+    filters.medium?.length ||
     filters.rarity ||
     filters.artistId ||
     filters.location ||
@@ -93,12 +94,15 @@ interface MarketplaceFiltersProps {
   filters: ArtworkFilters;
   onChange: (filters: ArtworkFilters) => void;
   className?: string;
+  /** The mobile sheet already has its own "Filters" title/close and Reset/Apply footer. */
+  bare?: boolean;
 }
 
 export function MarketplaceFilters({
   filters,
   onChange,
   className,
+  bare = false,
 }: MarketplaceFiltersProps) {
   const minId = useId();
   const maxId = useId();
@@ -134,60 +138,46 @@ export function MarketplaceFilters({
         className,
       )}
     >
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
-          <Filter className="size-4 text-gold-bright" strokeWidth={1.75} />
-          Filters
-        </h2>
-        {hasActiveStructuredFilters(filters) && (
-          <button
-            type="button"
-            onClick={() =>
-              onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
-            }
-            className="text-xs font-medium text-gold-bright hover:underline"
-          >
-            Clear All
-          </button>
-        )}
-      </div>
+      {!bare && (
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-foreground">
+            <Filter className="size-4 text-gold-bright" strokeWidth={1.75} />
+            Filters
+          </h2>
+          {hasActiveStructuredFilters(filters) && (
+            <button
+              type="button"
+              onClick={() =>
+                onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
+              }
+              className="text-xs font-medium text-gold-bright hover:underline"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+      )}
 
       <Accordion className="gap-0">
-        <SelectFilterGroup
+        <MultiSelectFilterGroup
           value="type"
           icon={Shapes}
           label="Art Type"
           allLabel="All Art Types"
-          current={filters.category ? titleCase(filters.category) : null}
-          selectValue={filters.category ?? ALL_VALUE}
-          onSelectChange={(value) =>
-            update({ category: value !== ALL_VALUE ? value : undefined })
-          }
-        >
-          {CATEGORY_OPTIONS.map((category) => (
-            <SelectItem key={category} value={category}>
-              {titleCase(category)}
-            </SelectItem>
-          ))}
-        </SelectFilterGroup>
+          selected={filters.category ?? []}
+          options={CATEGORY_OPTIONS.map((category) => ({ value: category, label: titleCase(category) }))}
+          onSelectedChange={(next) => update({ category: next.length ? next : undefined })}
+        />
 
-        <SelectFilterGroup
+        <MultiSelectFilterGroup
           value="medium"
           icon={Palette}
           label="Medium"
           allLabel="All Mediums"
-          current={filters.medium}
-          selectValue={filters.medium ?? ALL_VALUE}
-          onSelectChange={(value) =>
-            update({ medium: value !== ALL_VALUE ? value : undefined })
-          }
-        >
-          {MEDIUM_OPTIONS.map((medium) => (
-            <SelectItem key={medium} value={medium}>
-              {medium}
-            </SelectItem>
-          ))}
-        </SelectFilterGroup>
+          selected={filters.medium ?? []}
+          options={MEDIUM_OPTIONS.map((medium) => ({ value: medium, label: medium }))}
+          onSelectedChange={(next) => update({ medium: next.length ? next : undefined })}
+        />
 
         <AccordionItem value="rank">
           <AccordionTrigger>
@@ -399,16 +389,18 @@ export function MarketplaceFilters({
         </SelectFilterGroup>
       </Accordion>
 
-      <button
-        type="button"
-        onClick={() =>
-          onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
-        }
-        className="mt-1 inline-flex items-center justify-center gap-2 rounded-full border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-gold/50 hover:text-gold-bright"
-      >
-        <RotateCcw className="size-3.5" strokeWidth={1.75} />
-        Reset Filters
-      </button>
+      {!bare && (
+        <button
+          type="button"
+          onClick={() =>
+            onChange({ ...DEFAULT_MARKETPLACE_FILTERS, query: filters.query })
+          }
+          className="mt-1 inline-flex items-center justify-center gap-2 rounded-full border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-gold/50 hover:text-gold-bright"
+        >
+          <RotateCcw className="size-3.5" strokeWidth={1.75} />
+          Reset Filters
+        </button>
+      )}
     </aside>
   );
 }
@@ -463,6 +455,59 @@ function SelectFilterGroup({
             {children}
           </SelectContent>
         </Select>
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+// Art Type and Medium can each match more than one value at once — same
+// trigger/subtitle shape as SelectFilterGroup above, but the panel is a
+// MultiSelectCombobox (badges) instead of a single-value Select.
+function MultiSelectFilterGroup({
+  value,
+  icon: Icon,
+  label,
+  allLabel,
+  selected,
+  options,
+  onSelectedChange,
+}: {
+  value: string;
+  icon: typeof Shapes;
+  label: string;
+  allLabel: string;
+  selected: string[];
+  options: MultiSelectOption[];
+  onSelectedChange: (next: string[]) => void;
+}) {
+  const current =
+    selected.length === 0
+      ? null
+      : selected.length === 1
+        ? (options.find((o) => o.value === selected[0])?.label ?? selected[0])
+        : `${selected.length} selected`;
+
+  return (
+    <AccordionItem value={value}>
+      <AccordionTrigger>
+        <span className="flex flex-col items-start gap-0.5">
+          <span className="flex items-center gap-2">
+            <Icon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+            {label}
+          </span>
+          <span className="pl-6 text-xs font-normal text-muted-foreground">
+            {current || allLabel}
+          </span>
+        </span>
+      </AccordionTrigger>
+      <AccordionContent>
+        <MultiSelectCombobox
+          options={options}
+          value={selected}
+          onChange={onSelectedChange}
+          placeholder={allLabel}
+          searchPlaceholder={`Search ${label.toLowerCase()}...`}
+        />
       </AccordionContent>
     </AccordionItem>
   );

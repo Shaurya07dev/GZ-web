@@ -6,6 +6,13 @@ import Link from "next/link";
 import { ShieldCheck, PackageSearch, FileSignature, Heart, LayoutGrid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
@@ -105,14 +112,22 @@ export function ReservableInventoryGrid() {
           {data.length} artworks available
         </p>
         <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-2 text-[13px] text-muted-foreground flex-1 sm:flex-none">
-            Sort by
-            <select className="rounded-md border border-border bg-muted/20 py-1.5 pl-2 pr-6 text-[13px] font-medium text-foreground outline-none w-full sm:w-auto">
-              <option>Newest</option>
-              <option>Price: Low to High</option>
-              <option>Price: High to Low</option>
-            </select>
-          </div>
+          <Select defaultValue="newest">
+            <SelectTrigger
+              aria-label="Sort artworks"
+              className="h-9 flex-1 gap-2 border-border bg-muted/20 px-3 text-[13px] font-medium shadow-none hover:bg-muted focus:ring-0 sm:w-auto sm:min-w-[170px] sm:flex-none"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="font-normal text-muted-foreground">Sort:</span>
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="price_asc">Price: Low to High</SelectItem>
+              <SelectItem value="price_desc">Price: High to Low</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* View toggle */}
           <div className="flex items-center rounded-lg border border-border bg-card p-0.5 shrink-0">

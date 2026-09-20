@@ -133,6 +133,11 @@ export function ArtworksBoard() {
               ? "You haven’t listed anything yet."
               : `Nothing under “${FILTERS.find((f) => f.value === filter)?.label}” right now.`}
           </p>
+          {filter === "all" && (
+            <p className="mt-1 text-xs text-muted-foreground/70">
+              Add your paintings here to get them listed on the marketplace.
+            </p>
+          )}
           {filter !== "all" && (artworks ?? []).length > 0 && (
             <button
               type="button"

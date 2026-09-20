@@ -14,9 +14,20 @@ import { DB } from "./db.module.ts";
 import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
+// "Painting,Sculpture" -> ["Painting", "Sculpture"] — lets the marketplace
+// filter sidebar's multi-select combobox pick more than one value per facet
+// without a second query param shape.
+const csvList = (maxLen: number) =>
+  z
+    .string()
+    .trim()
+    .max(maxLen)
+    .optional()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : undefined));
+
 const listQuerySchema = z.object({
-    category: z.string().trim().min(1).max(80).optional(),
-    medium: z.string().trim().min(1).max(80).optional(),
+    category: csvList(400),
+    medium: csvList(400),
     rarity: z.string().trim().min(1).max(20).optional(),
     artistId: z.string().trim().min(1).max(200).optional(),
     location: z.string().trim().min(1).max(80).optional(),

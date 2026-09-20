@@ -20,8 +20,8 @@ export const PAGE_SIZE = 24;
 
 function toQuery(filters: ArtworkFilters): Record<string, string> {
   const q: Record<string, string> = { pageSize: String(PAGE_SIZE) };
-  if (filters.category) q.category = filters.category;
-  if (filters.medium) q.medium = filters.medium;
+  if (filters.category?.length) q.category = filters.category.join(",");
+  if (filters.medium?.length) q.medium = filters.medium.join(",");
   if (filters.rarity) q.rarity = filters.rarity;
   if (filters.artistId) q.artistId = filters.artistId;
   if (filters.location) q.location = filters.location;

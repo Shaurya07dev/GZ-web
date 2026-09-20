@@ -17,7 +17,14 @@ import { AuthFormHeader } from "./auth-form-header";
 import { AuthTextField } from "./auth-text-field";
 import { GoogleAuthButton } from "./google-auth-button";
 import { useLoginMutation } from "@/hooks/useAuth";
-import { ROLE_SECTION_HOME } from "@/lib/session";
+import { ROLE_SECTION_HOME, type SessionRole } from "@/lib/session";
+
+// An artist signing back in has already done onboarding — send them to the
+// marketplace like any other visitor rather than straight to the dashboard.
+// Every other role keeps its normal section home.
+function landingAfterLogin(role: SessionRole): string {
+  return role === "artist" ? "/marketplace" : ROLE_SECTION_HOME[role];
+}
 import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth-schemas";
 
 // `rememberMe`'s `.default(false)` in the schema makes it optional on the
@@ -68,7 +75,7 @@ export function LoginForm() {
         onSuccess: ({ role }) => {
           // authService already wrote the role cookie proxy.ts guards on
           // (session-only when "Keep me signed in" is unticked).
-          router.push(ROLE_SECTION_HOME[role]);
+          router.push(landingAfterLogin(role));
         },
         onError: (error) => {
           setFormError(
@@ -180,7 +187,7 @@ export function LoginForm() {
         </div>
         <div className="grid grid-cols-1 gap-3">
           <GoogleAuthButton
-            onSignedIn={(role) => router.push(ROLE_SECTION_HOME[role])}
+            onSignedIn={(role) => router.push(landingAfterLogin(role))}
           />
         </div>
       </motion.div>
