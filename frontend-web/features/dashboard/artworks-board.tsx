@@ -44,7 +44,7 @@ const FILTERS: { value: FilterKey; label: string; statuses: readonly ArtworkStat
 type ArtistArtwork = Artwork & { artistPrice: number };
 
 export function ArtworksBoard() {
-  const { data: artworks } = useArtistDashboardArtworks();
+  const { data: artworks, isPending, isError, refetch } = useArtistDashboardArtworks();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [soldElsewhereTarget, setSoldElsewhereTarget] =
     useState<ArtistArtwork | null>(null);
@@ -81,7 +81,7 @@ export function ArtworksBoard() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-xl font-semibold text-foreground">
-            {(artworks ?? []).length} artworks
+            {isPending || isError ? "My artworks" : `${(artworks ?? []).length} artworks`}
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Manage submissions, track status, and see what&rsquo;s live.
@@ -126,7 +126,24 @@ export function ArtworksBoard() {
         })}
       </div>
 
-      {filtered.length === 0 ? (
+      {isError ? (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 py-12 text-center">
+          <p className="text-sm text-foreground">Your artworks couldn&rsquo;t be loaded just now.</p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="mt-2 text-xs font-medium text-gold-bright hover:underline"
+          >
+            Try again
+          </button>
+        </div>
+      ) : isPending ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-72 animate-pulse rounded-lg border border-border bg-card" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center">
           <p className="text-sm text-muted-foreground">
             {filter === "all"

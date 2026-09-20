@@ -12,6 +12,9 @@ export function useArtistPublicStats(artistId: string) {
   return useQuery({
     queryKey: ["profile-stats", "artist", artistId],
     queryFn: () => profileStatsService.artistPublic(artistId),
+    // No request until the signed-in user is known — an empty id is not a
+    // stats lookup, it's a pending one.
+    enabled: artistId.length > 0,
   });
 }
 
@@ -20,6 +23,7 @@ export function useArtistPrivateStats(artistId: string) {
   return useQuery({
     queryKey: ["profile-stats", "artist-private", artistId],
     queryFn: () => profileStatsService.artistPrivate(artistId),
+    enabled: artistId.length > 0,
   });
 }
 

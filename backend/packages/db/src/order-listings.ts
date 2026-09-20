@@ -72,9 +72,13 @@ export async function getOrder(db: Firestore, orderId: string): Promise<OrderVie
 }
 
 export async function listArtistArtworks(db: Firestore, artistId: string): Promise<((ArtworkDoc & { id: string; artistPricePaise: number }))[]> {
-  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).orderBy("createdAt", "desc").get();
+  // Sorted in memory for the same reason as listArtistArtworksOwned — see artist-artworks.ts.
+  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).get();
+  const docs = [...snap.docs].sort(
+    (a, b) => ((b.data() as ArtworkDoc).createdAt?.toMillis?.() ?? 0) - ((a.data() as ArtworkDoc).createdAt?.toMillis?.() ?? 0),
+  );
   return Promise.all(
-    snap.docs.map(async (d) => {
+    docs.map(async (d) => {
       const pricingSnap = await db.collection(artworkPricingCol(d.id)).doc("data").get();
       const pricing = pricingSnap.data() as ArtworkPricingDoc | undefined;
       return { id: d.id, ...(d.data() as ArtworkDoc), artistPricePaise: pricing?.artistPricePaise ?? 0 };

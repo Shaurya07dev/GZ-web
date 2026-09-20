@@ -248,12 +248,22 @@ export async function getArtistArtwork(db: Firestore, artistId: string, artworkI
   return toOwnerView(db, artworkId, artwork, rates);
 }
 
-/** All of the artist's artworks, newest first. */
+/**
+ * All of the artist's artworks, newest first. Sorted here rather than by
+ * Firestore: an equality filter plus orderBy on another field needs a
+ * composite index, and a missing one fails the whole request with
+ * FAILED_PRECONDITION — which is exactly how the artist's "My artworks"
+ * page went blank in production on 20 Sep 2026. One artist's list is
+ * small; the index (firestore.indexes.json) is still declared for scale.
+ */
 export async function listArtistArtworksOwned(db: Firestore, artistId: string, rates: PricingRates): Promise<OwnerArtworkView[]> {
-  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).orderBy("createdAt", "desc").get();
-  const views = await Promise.all(snap.docs.map((d) => toOwnerView(db, d.id, d.data() as ArtworkDoc, rates)));
+  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).get();
+  const docs = [...snap.docs].sort((a, b) => createdMillis(b.data() as ArtworkDoc) - createdMillis(a.data() as ArtworkDoc));
+  const views = await Promise.all(docs.map((d) => toOwnerView(db, d.id, d.data() as ArtworkDoc, rates)));
   return views.filter((v): v is OwnerArtworkView => v !== null);
 }
+
+const createdMillis = (doc: ArtworkDoc): number => doc.createdAt?.toMillis?.() ?? 0;
 
 export async function approveArtwork(db: Firestore, artworkId: string): Promise<void> {
   const current = await latestStatusOf(db, artworkId);

@@ -38,8 +38,28 @@ function joinedLabel(iso: string): string {
 
 export function ArtistProfileSummary({ location }: { location?: string }) {
   const artistId = useCurrentUser().data?.uid ?? "";
-  const { data: pub, isPending: pubPending } = useArtistPublicStats(artistId);
-  const { data: mine, isPending: minePending } = useArtistPrivateStats(artistId);
+  const { data: pub, isPending: pubPending, isError: pubError, refetch: refetchPub } = useArtistPublicStats(artistId);
+  const { data: mine, isPending: minePending, isError: mineError, refetch: refetchMine } = useArtistPrivateStats(artistId);
+
+  // A failed request must not leave a skeleton on the page indefinitely —
+  // that reads as a blank gap. Say so, and offer a retry.
+  if (pubError || mineError) {
+    return (
+      <div className="flex flex-col items-start gap-2 rounded-lg border border-border bg-card p-5 text-sm sm:p-6 lg:col-span-2">
+        <p className="text-foreground">Your profile figures couldn&rsquo;t be loaded just now.</p>
+        <button
+          type="button"
+          onClick={() => {
+            void refetchPub();
+            void refetchMine();
+          }}
+          className="text-xs font-medium text-gold-bright hover:underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   if (pubPending || minePending || !pub || !mine) {
     return <Skeleton className="h-56 w-full rounded-lg lg:col-span-2" />;

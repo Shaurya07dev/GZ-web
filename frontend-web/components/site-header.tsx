@@ -243,7 +243,7 @@ export function SiteHeader() {
                   className="hidden size-10 sm:inline-flex"
                   nativeButton={false}
                   render={
-                    <Link href="/account/wishlist" aria-label="Wishlist" />
+                    <Link href="/wishlist" aria-label="Wishlist" />
                   }
                 >
                   <Heart className="size-4" strokeWidth={1.75} />
@@ -344,7 +344,7 @@ export function SiteHeader() {
             {!isLandingPage && (
               <div className="mt-4 flex items-center gap-2 border-t border-border/60 pt-4">
                 <Link
-                  href="/account/wishlist"
+                  href="/wishlist"
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
                 >
