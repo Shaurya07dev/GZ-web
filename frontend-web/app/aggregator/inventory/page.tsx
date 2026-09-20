@@ -45,20 +45,27 @@ export default function AggregatorInventoryPage() {
           </button>
         </div>
 
-        {/* Category Chips - Horizontally scrollable */}
-        <div className="flex overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pb-0 hide-scrollbar items-center gap-2">
-          {CATEGORIES.map((cat, i) => (
-            <button
-              key={cat}
-              className={`shrink-0 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                i === 0
-                  ? "border-gold bg-gold/90 text-gold-950"
-                  : "border-border bg-muted/20 text-foreground hover:bg-muted/50"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* Category Chips - Horizontally scrollable, with a fade so the row
+            reads as scrollable instead of just cut off mid-word on mobile. */}
+        <div className="relative -mx-4 sm:mx-0">
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar px-4 pb-2 sm:px-0 sm:pb-0">
+            {CATEGORIES.map((cat, i) => (
+              <button
+                key={cat}
+                className={`shrink-0 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                  i === 0
+                    ? "border-gold bg-gold/90 text-gold-950"
+                    : "border-border bg-muted/20 text-foreground hover:bg-muted/50"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+          />
         </div>
       </div>
 

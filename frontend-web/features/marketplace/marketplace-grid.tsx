@@ -23,6 +23,7 @@ import {
 import { ArtworkCard, ArtworkListRow } from "@/components/shared/artwork-card";
 import { ArtworkCardSkeleton } from "@/components/shared/artwork-card-skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ContinuousPagination } from "@/components/shared/continuous-pagination";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useArtworks } from "@/hooks/useArtworks";
@@ -72,11 +73,25 @@ export function MarketplaceGrid({
 
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string; onRemove: () => void }[] = [];
-    if (filters.category) {
-      chips.push({ key: "category", label: titleCase(filters.category), onRemove: () => onChange({ ...filters, category: undefined }) });
+    for (const value of filters.category ?? []) {
+      chips.push({
+        key: `category-${value}`,
+        label: titleCase(value),
+        onRemove: () => {
+          const next = (filters.category ?? []).filter((c) => c !== value);
+          onChange({ ...filters, category: next.length ? next : undefined });
+        },
+      });
     }
-    if (filters.medium) {
-      chips.push({ key: "medium", label: titleCase(filters.medium), onRemove: () => onChange({ ...filters, medium: undefined }) });
+    for (const value of filters.medium ?? []) {
+      chips.push({
+        key: `medium-${value}`,
+        label: titleCase(value),
+        onRemove: () => {
+          const next = (filters.medium ?? []).filter((m) => m !== value);
+          onChange({ ...filters, medium: next.length ? next : undefined });
+        },
+      });
     }
     if (filters.size) {
       chips.push({ key: "size", label: titleCase(filters.size), onRemove: () => onChange({ ...filters, size: undefined }) });
@@ -305,7 +320,7 @@ export function MarketplaceGrid({
         ))}
       </div>
 
-      <Pagination
+      <ContinuousPagination
         page={page.page}
         pageCount={Math.max(1, Math.ceil(page.total / page.pageSize))}
         onPage={(next) => {
@@ -325,36 +340,6 @@ export function MarketplaceGrid({
         }}
       />
     </div>
-  );
-}
-
-function Pagination({
-  page,
-  pageCount,
-  onPage,
-}: {
-  page: number;
-  pageCount: number;
-  onPage: (page: number) => void;
-}) {
-  if (pageCount <= 1) return null;
-  const buttonClass =
-    "inline-flex h-9 items-center rounded-lg border border-border bg-card px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40";
-  return (
-    <nav
-      aria-label="Marketplace pages"
-      className="mt-8 flex items-center justify-center gap-3"
-    >
-      <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        Previous
-      </button>
-      <span className="text-sm text-muted-foreground" aria-current="page">
-        Page <strong className="font-semibold text-foreground">{page}</strong> of {pageCount}
-      </span>
-      <button type="button" className={buttonClass} disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
-        Next
-      </button>
-    </nav>
   );
 }
 

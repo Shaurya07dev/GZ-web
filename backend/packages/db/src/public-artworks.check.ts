@@ -38,8 +38,10 @@ const ids = (page: { artworks: PublicArtworkView[] }) => page.artworks.map((a) =
 assert.deepEqual(ids(queryMarketplace(all, {})), ["a", "c", "b"], "newest first by default");
 assert.deepEqual(ids(queryMarketplace(all, { sort: "price_asc" })), ["b", "c", "a"]);
 assert.deepEqual(ids(queryMarketplace(all, { sort: "price_desc" })), ["a", "c", "b"]);
-assert.deepEqual(ids(queryMarketplace(all, { category: "Sculpture" })), ["b"]);
-assert.deepEqual(ids(queryMarketplace(all, { medium: "Oil", artistId: "art2" })), ["c"]);
+assert.deepEqual(ids(queryMarketplace(all, { category: ["Sculpture"] })), ["b"]);
+assert.deepEqual(ids(queryMarketplace(all, { medium: ["Oil"], artistId: "art2" })), ["c"]);
+assert.deepEqual(ids(queryMarketplace(all, { category: ["Sculpture", "nonexistent"] })), ["b"], "multiple categories OR together");
+assert.deepEqual(ids(queryMarketplace(all, { category: [] })), ["a", "c", "b"], "empty category list is no filter, not zero matches");
 assert.deepEqual(ids(queryMarketplace(all, { rarity: "R" })), ["b"]);
 assert.deepEqual(ids(queryMarketplace(all, { minPricePaise: 150_00, maxPricePaise: 250_00 })), ["c"]);
 assert.deepEqual(ids(queryMarketplace(all, { q: "ravi" })), ["c"], "search matches artist name");
@@ -50,7 +52,7 @@ assert.equal(page2.total, 3);
 assert.deepEqual(ids(page2), ["b"]);
 assert.equal(queryMarketplace(all, { pageSize: 10_000 }).pageSize, 60, "page size is capped");
 
-const facets = queryMarketplace(all, { category: "Sculpture" }).facets;
+const facets = queryMarketplace(all, { category: ["Sculpture"] }).facets;
 assert.deepEqual(facets.categories, ["Painting", "Sculpture"], "facets span the whole marketplace, not the filtered page");
 assert.deepEqual(facets.mediums, ["Bronze", "Oil"]);
 assert.deepEqual(facets.rarities, ["R"]);

@@ -500,10 +500,12 @@ export interface PhysicalCoaRequest {
 export type ArtworkSizeBand = "small" | "medium" | "large";
 
 export interface ArtworkFilters {
-  category?: string;
+  /** Any of these categories match (OR) — empty/absent means no category filter. */
+  category?: string[];
   minPrice?: number;
   maxPrice?: number;
-  medium?: string;
+  /** Any of these mediums match (OR) — empty/absent means no medium filter. */
+  medium?: string[];
   /** GalleryZone's rank — R / U / O / N. */
   rarity?: ArtworkRarity;
   query?: string;

@@ -36,6 +36,7 @@ import { NotificationsPopover } from "@/components/notifications-popover";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { SidebarBrand } from "@/components/shared/sidebar-brand";
 import { useArtistMessages } from "@/hooks/useArtistMessages";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -96,7 +97,7 @@ function Sidebar({
           collapsed ? "lg:w-20" : "lg:w-64",
         )}
       >
-        <div className="flex h-16 items-center justify-between px-5">
+        <div className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between bg-sidebar px-5">
           <SidebarBrand collapsed={collapsed} />
           <button
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -157,6 +158,45 @@ const GROUP_LABEL_BEFORE: Partial<Record<string, string>> = {
   "/dashboard/gallery-spaces": "More",
 };
 
+// A nav link that shows its label inline when expanded, or as a hover
+// tooltip when the sidebar is collapsed to an icon rail — collapsed is only
+// ever true in the desktop aside (the mobile drawer always passes false), so
+// this never adds tooltips to the mobile nav.
+function CollapsibleNavLink({
+  href,
+  label,
+  collapsed,
+  onClick,
+  className,
+  children,
+}: {
+  href: string;
+  label: string;
+  collapsed: boolean;
+  onClick: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const link = (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(className, collapsed && "lg:justify-center lg:px-2")}
+    >
+      {children}
+    </Link>
+  );
+
+  if (!collapsed) return link;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={link} />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function SidebarBody({
   collapsed,
   onNavigate,
@@ -175,19 +215,18 @@ function SidebarBody({
     <>
       {/* View site — pinned at the top so the artist can jump straight
           to the public marketplace from anywhere in the dashboard. */}
-      <Link
+      <CollapsibleNavLink
         href="/marketplace"
+        label="View site"
+        collapsed={collapsed}
         onClick={onNavigate}
-        className={cn(
-          "mx-3 mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-          collapsed && "lg:justify-center lg:px-2",
-        )}
+        className="mx-3 mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
       >
         <Store className="size-4 shrink-0" strokeWidth={1.75} />
         <span className={cn("flex-1 truncate", collapsed && "lg:hidden")}>
           View site
         </span>
-      </Link>
+      </CollapsibleNavLink>
 
       <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
         {NAV_ITEMS.map((item) => {
@@ -205,13 +244,13 @@ function SidebarBody({
                   {groupLabel}
                 </p>
               )}
-              <Link
+              <CollapsibleNavLink
                 href={item.href}
+                label={item.label}
+                collapsed={collapsed}
                 onClick={onNavigate}
-                title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
-                  collapsed && "lg:justify-center lg:px-2",
                   active
                     ? "bg-sidebar-accent text-sidebar-accent-foreground"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
@@ -239,20 +278,19 @@ function SidebarBody({
                     {unreadMessages}
                   </span>
                 )}
-              </Link>
+              </CollapsibleNavLink>
             </div>
           );
         })}
       </nav>
 
 
-      <Link
+      <CollapsibleNavLink
         href="/dashboard/profile"
+        label={me?.name ?? "My Profile"}
+        collapsed={collapsed}
         onClick={onNavigate}
-        className={cn(
-          "mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 transition-colors hover:bg-sidebar-accent",
-          collapsed && "lg:justify-center lg:px-2",
-        )}
+        className="mx-3 mb-4 flex items-center gap-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-3 transition-colors hover:bg-sidebar-accent"
       >
         <UserAvatar name={me?.name} className="size-9" />
         <div className={cn("min-w-0", collapsed && "lg:hidden")}>
@@ -263,7 +301,7 @@ function SidebarBody({
             {me?.email ?? ""}
           </p>
         </div>
-      </Link>
+      </CollapsibleNavLink>
     </>
   );
 }
