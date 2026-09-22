@@ -35,9 +35,17 @@ export async function listWalletTransactions(db: Firestore, accountType: WalletA
   if (accountSnap.empty) return [];
   const accountId = accountSnap.docs[0]!.id;
 
-  const entriesSnap = await db.collection(Collections.ledgerEntries).where("accountId", "==", accountId).orderBy("createdAt").get();
-  return entriesSnap.docs.map((doc) => {
-    const data = doc.data() as LedgerEntryDoc;
-    return { id: doc.id, amountPaise: -data.amountPaise, reason: data.reason, createdAt: data.createdAt.toDate() };
-  });
+  // Sorted in memory: where(accountId) + orderBy(createdAt) needs a composite
+  // index that is declared but not created in production, so this query would
+  // have thrown FAILED_PRECONDITION and 500'd the wallet page for the first
+  // artist to actually have transactions. It reads clean today only because
+  // an account with no entries returns above. One account's entries is a
+  // small read; the page must not wait on an index deploy.
+  const entriesSnap = await db.collection(Collections.ledgerEntries).where("accountId", "==", accountId).get();
+  return entriesSnap.docs
+    .map((doc) => {
+      const data = doc.data() as LedgerEntryDoc;
+      return { id: doc.id, amountPaise: -data.amountPaise, reason: data.reason, createdAt: data.createdAt?.toDate() ?? new Date(0) };
+    })
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 }
