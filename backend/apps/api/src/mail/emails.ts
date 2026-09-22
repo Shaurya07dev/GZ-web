@@ -9,12 +9,20 @@
 
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Collections, type Db, type UserDoc } from "@galleryzone/db";
+import type { OrderStatus } from "@galleryzone/domain";
 import type { AppEnv } from "@galleryzone/config";
 import { DB, ENV } from "../db.module.ts";
 import { Mailer } from "./mailer.ts";
 
 const BRAND = "GalleryZone";
 const GOLD = "#b8892b";
+
+// Support lives under each role's own section — there is no shared /support.
+const SUPPORT_PATH: Record<string, string> = {
+  artist: "/dashboard/support",
+  aggregator: "/aggregator/support",
+  customer: "/account/support",
+};
 
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -175,22 +183,67 @@ export class Emails {
     }
   }
 
-  async orderStatus(input: { orderId: string; customerId: string; title: string; status: string }) {
-    const buyer = await this.user(input.customerId);
-    if (!buyer) return;
-    const copy: Record<string, { subject: string; heading: string; body: string }> = {
-      shipped: { subject: `“${input.title}” has shipped`, heading: "Your artwork is on its way", body: "The piece has been dispatched. We'll let you know when it's delivered." },
-      delivered: { subject: `“${input.title}” was delivered`, heading: "Delivered", body: "Your artwork has been delivered. Its certificate and provenance passport are in your account." },
-      cancelled: { subject: `Order cancelled — “${input.title}”`, heading: "Your order was cancelled", body: "This order has been cancelled. If you were charged, the refund is on its way to the original payment method." },
-      refunded: { subject: `Refund issued — “${input.title}”`, heading: "Refund issued", body: "Your refund has been issued to the original payment method. It can take 5–7 working days to appear." },
+  /**
+   * Keyed to the real OrderStatus values from @galleryzone/contracts. It used
+   * to be keyed to "shipped" and "refunded", which are not order statuses, so
+   * nothing ever matched except delivered and cancelled. "pending" and "paid"
+   * are deliberately absent — orderPaid() already covers that moment.
+   */
+  async orderStatus(input: { orderId: string; customerId: string; artistId: string | null; title: string; status: OrderStatus }) {
+    const copy: Partial<Record<OrderStatus, { subject: string; heading: string; buyer: string; artist?: string }>> = {
+      confirmed: {
+        subject: `Order confirmed — “${input.title}”`,
+        heading: "Your order is confirmed",
+        buyer: "We've confirmed your order with the artist. The next step is packing — we'll email you when it's on its way.",
+        artist: "Please pack the piece to the standard in your agreement and mark it packed in your dashboard.",
+      },
+      packed: {
+        subject: `“${input.title}” is packed and ready`,
+        heading: "Packed and ready to ship",
+        buyer: "The artist has packed your piece. It hands over to the courier next, and you'll get a note the moment it moves.",
+      },
+      transit: {
+        subject: `“${input.title}” is on its way`,
+        heading: "Your artwork is in transit",
+        buyer: "The piece has been dispatched and is on its way to you. We'll confirm once it's delivered.",
+        artist: "The piece you sold is in transit to its new owner.",
+      },
+      delivered: {
+        subject: `“${input.title}” was delivered`,
+        heading: "Delivered",
+        buyer: "Your artwork has been delivered. Its certificate and provenance passport are in your account.",
+        artist: "The piece has been delivered. Your settlement is released to your wallet after the return window closes.",
+      },
+      cancelled: {
+        subject: `Order cancelled — “${input.title}”`,
+        heading: "Your order was cancelled",
+        buyer: "This order has been cancelled. If you were charged, the refund is on its way to the original payment method.",
+        artist: "This order was cancelled, so the piece returns to the marketplace.",
+      },
     };
     const c = copy[input.status];
     if (!c) return;
-    await this.deliver(`order-${input.status}/${input.orderId}`, buyer.email, c.subject, {
-      heading: c.heading,
-      paragraphs: [c.body],
-      cta: { label: "View my order", url: `${this.site}/account/orders/${input.orderId}` },
-    });
+
+    const buyer = await this.user(input.customerId);
+    if (buyer) {
+      await this.deliver(`order-${input.status}-buyer/${input.orderId}`, buyer.email, c.subject, {
+        heading: c.heading,
+        paragraphs: [c.buyer],
+        cta: { label: "View my order", url: `${this.site}/account/orders/${input.orderId}` },
+      });
+    }
+    // The artist could not see where their own piece was either. Only the
+    // stages that are actually theirs to act on carry artist copy.
+    if (c.artist && input.artistId) {
+      const artist = await this.user(input.artistId);
+      if (artist) {
+        await this.deliver(`order-${input.status}-artist/${input.orderId}`, artist.email, `${c.subject} — your sale`, {
+          heading: c.heading,
+          paragraphs: [`“${esc(input.title)}” — ${c.artist}`],
+          cta: { label: "Open my orders", url: `${this.site}/dashboard/orders` },
+        });
+      }
+    }
   }
 
   // ── Ownership / CoA ──────────────────────────────────────────────────
@@ -210,8 +263,109 @@ export class Emails {
     await this.deliver(`coa-request/${input.requestId}`, artist.email, `Physical certificate requested for “${input.title}”`, {
       heading: "A collector wants the printed certificate",
       paragraphs: [`${esc(input.requestedByName)} has requested the physical Certificate of Authenticity for “${esc(input.title)}”. Print it from your dashboard, sign it, and mark it dispatched with the courier reference.`],
-      cta: { label: "Open certificate requests", url: `${this.site}/dashboard/coa` },
+      cta: { label: "Open certificate requests", url: `${this.site}/dashboard/coa-nfc` },
     });
+  }
+
+  // ── Compliance ───────────────────────────────────────────────────────
+
+  /**
+   * GST and KYC decisions both gate money — KYC blocks payouts outright, and
+   * an approved GSTIN switches on TDS withholding, which changes what lands
+   * in the artist's wallet. Deciding these silently left the artist guessing.
+   */
+  async complianceDecided(input: { userId: string; kind: "gst" | "kyc"; approved: boolean; reason?: string | undefined }) {
+    const user = await this.user(input.userId);
+    if (!user) return;
+    const label = input.kind === "gst" ? "GSTIN" : "KYC";
+    const approvedBody =
+      input.kind === "gst"
+        ? "Your GSTIN is verified. Invoices now carry it, and TDS is withheld on your settlements at the statutory rate — you'll see it itemised on every payout."
+        : "Your KYC is verified. Withdrawals from your wallet are now open.";
+    const rejectedBody =
+      input.kind === "gst"
+        ? "We couldn't verify your GSTIN. Correct the details in your profile and resubmit — settlements continue in the meantime, without TDS."
+        : "We couldn't verify your KYC documents. Withdrawals stay on hold until this is resolved. Re-upload from your profile and we'll review again.";
+    await this.deliver(`${input.kind}-${input.approved ? "approved" : "rejected"}/${input.userId}`, user.email, input.approved ? `${label} verified` : `${label} needs another look`, {
+      heading: input.approved ? `Your ${label} is verified` : `We couldn't verify your ${label}`,
+      paragraphs: [input.approved ? approvedBody : rejectedBody],
+      ...(input.reason ? { footnote: `Reviewer's note: ${esc(input.reason)}` } : {}),
+      cta: { label: "Open my profile", url: `${this.site}/dashboard/profile` },
+    });
+  }
+
+  async insuranceDecided(input: { artworkId: string; approved: boolean; reason?: string | undefined }) {
+    const snap = await this.db.collection(Collections.artworks).doc(input.artworkId).get();
+    const artwork = snap.data() as { title?: string; artistId?: string } | undefined;
+    if (!artwork?.artistId) return;
+    const artist = await this.user(artwork.artistId);
+    if (!artist) return;
+    const title = artwork.title ?? "your artwork";
+    await this.deliver(`insurance-${input.approved ? "approved" : "rejected"}/${input.artworkId}`, artist.email, input.approved ? `Insurance approved — “${title}”` : `Insurance not approved — “${title}”`, {
+      heading: input.approved ? "This piece is insured" : "We couldn't approve insurance on this piece",
+      paragraphs: [
+        input.approved
+          ? `“${esc(title)}” is covered in transit and on display under the platform policy.`
+          : `“${esc(title)}” isn't covered. It can still be listed and sold, but it travels uninsured — check the valuation and documents on the piece and resubmit if you'd like it reviewed again.`,
+      ],
+      ...(input.reason ? { footnote: `Reviewer's note: ${esc(input.reason)}` } : {}),
+      cta: { label: "Open this artwork", url: `${this.site}/dashboard/artworks` },
+    });
+  }
+
+  /** An admin pulling a live piece off the marketplace was entirely silent. */
+  async artworkDelisted(input: { artworkId: string; artistId: string; title: string; reason?: string | undefined }) {
+    const artist = await this.user(input.artistId);
+    if (!artist) return;
+    await this.deliver(`artwork-delisted/${input.artworkId}`, artist.email, `“${input.title}” has been delisted`, {
+      heading: "Your artwork was removed from the marketplace",
+      paragraphs: [`“${esc(input.title)}” is no longer visible to buyers. It stays in your dashboard, and nothing about your certificate or provenance record changes.`],
+      ...(input.reason ? { footnote: `Reason given: ${esc(input.reason)}` } : {}),
+      cta: { label: "Open my artworks", url: `${this.site}/dashboard/artworks` },
+    });
+  }
+
+  // ── Aggregators ──────────────────────────────────────────────────────
+
+  /**
+   * A physical artwork leaves the artist's studio for a partner gallery.
+   * Both sides need this in writing: the artist because their work is
+   * moving, the aggregator because it is the record of the terms and the
+   * advance they just committed to.
+   */
+  async aggregatorReserved(input: { holdingId: string; artworkId: string; aggregatorId: string; advanceAmountPaise: number; displayPricePaise: number; expiresAt: Date }) {
+    const artworkSnap = await this.db.collection(Collections.artworks).doc(input.artworkId).get();
+    const artwork = artworkSnap.data() as { title?: string; artistId?: string } | undefined;
+    if (!artwork?.artistId) return;
+
+    const [artist, aggregator] = await Promise.all([this.user(artwork.artistId), this.user(input.aggregatorId)]);
+    const title = artwork.title ?? "your artwork";
+    const until = input.expiresAt.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const gallery = aggregator?.name ?? "a partner gallery";
+
+    if (artist) {
+      await this.deliver(`holding-reserved-artist/${input.holdingId}`, artist.email, `“${title}” has been reserved by a gallery`, {
+        preheader: `${gallery} will display it until ${until}.`,
+        heading: "A gallery has reserved your artwork",
+        paragraphs: [
+          `<strong>${esc(gallery)}</strong> has reserved “${esc(title)}” for display until <strong>${esc(until)}</strong>.`,
+          "Pack the piece to the standard in your agreement and wait for pickup instructions. If it doesn't sell within the placement window it comes back to you and returns to the marketplace automatically.",
+        ],
+        cta: { label: "See this piece", url: `${this.site}/dashboard/artworks` },
+      });
+    }
+
+    if (aggregator) {
+      await this.deliver(`holding-reserved-aggregator/${input.holdingId}`, aggregator.email, `Reserved: “${title}”`, {
+        heading: "Your reservation is confirmed",
+        paragraphs: [
+          `“${esc(title)}” is reserved for you until <strong>${esc(until)}</strong>.`,
+          `Advance committed: <strong>${inr(input.advanceAmountPaise)}</strong>. Display price: <strong>${inr(input.displayPricePaise)}</strong>.`,
+          "Record the sale in your dashboard the moment it sells — a cash sale has to be remitted in full, never netted against your commission.",
+        ],
+        cta: { label: "Open my holdings", url: `${this.site}/aggregator/collection` },
+      });
+    }
   }
 
   // ── Money ────────────────────────────────────────────────────────────
@@ -228,7 +382,7 @@ export class Emails {
     await this.deliver(`withdrawal-requested-admin/${input.withdrawalId}`, admins, `Withdrawal to approve: ${inr(input.amountPaise)} for ${user?.name ?? input.userId}`, {
       heading: "Withdrawal awaiting approval",
       paragraphs: [`<strong>${esc(user?.name ?? input.userId)}</strong> requested <strong>${inr(input.amountPaise)}</strong>.`],
-      cta: { label: "Open withdrawals", url: `${this.site}/admin/withdrawals` },
+      cta: { label: "Open withdrawals", url: `${this.site}/admin/moderation/withdrawals` },
     });
   }
 
@@ -244,6 +398,36 @@ export class Emails {
       ],
       cta: { label: "View my wallet", url: `${this.site}/dashboard/wallet` },
     });
+  }
+
+  // ── Support ──────────────────────────────────────────────────────────
+
+  /**
+   * A ticket used to vanish into a queue: the person who raised it got no
+   * acknowledgement, and admins only saw it if they happened to open the
+   * queue. Replies go to the requester's own address, so support can just
+   * hit reply.
+   */
+  async supportTicketRaised(input: { ticketId: string; userId: string; subject: string; message: string }) {
+    const [user, admins] = await Promise.all([this.user(input.userId), this.admins()]);
+    if (user) {
+      await this.deliver(`support-ack/${input.ticketId}`, user.email, `We've got your message — ${input.subject}`, {
+        heading: "Thanks — we've got it",
+        paragraphs: [
+          `We've received your message about <strong>${esc(input.subject)}</strong> and someone will come back to you, usually within one working day.`,
+          "You can reply to this email to add anything else.",
+        ],
+        cta: { label: "View my messages", url: `${this.site}${SUPPORT_PATH[user.role] ?? "/account/support"}` },
+      });
+    }
+    await this.deliver(`support-new-admin/${input.ticketId}`, admins, `Support: ${input.subject}`, {
+      heading: "New support ticket",
+      paragraphs: [
+        `<strong>${esc(user?.name ?? input.userId)}</strong>${user ? ` (${esc(user.email)}, ${esc(user.role)})` : ""} wrote:`,
+        esc(input.message),
+      ],
+      footnote: "Reply to this email to answer them directly.",
+    }, user?.email);
   }
 
   /** Any unexpected failure in a mail hook is logged here — never propagated. */

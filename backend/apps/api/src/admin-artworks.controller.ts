@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
-import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, type Db } from "@galleryzone/db";
+import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { activeHoldingForArtwork, adminPullBackHolding, listAggregatorHoldings, AggregatorReadError } from "@galleryzone/db";
 import { BadRequestException } from "@nestjs/common";
@@ -10,6 +10,7 @@ import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
+import { Emails } from "./mail/emails.ts";
 
 const raritySchema = z.object({ rarity: z.enum([...artworkRarityValues]).nullable() }).strict();
 type RarityBody = z.infer<typeof raritySchema>;

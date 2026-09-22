@@ -29,6 +29,7 @@ import { loadActiveRates } from "@galleryzone/config";
 import { IllegalTransitionError } from "@galleryzone/domain";
 import { reserveHoldingInputSchema, recordAggregatorSaleInputSchema, type ReserveHoldingInput, type RecordAggregatorSaleInput } from "@galleryzone/contracts";
 import { Roles } from "./auth/roles.decorator.ts";
+import { Emails } from "./mail/emails.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
@@ -53,6 +54,7 @@ export class AggregatorController {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
+    private readonly emails: Emails,
   ) {}
 
   private rates() {
@@ -87,6 +89,17 @@ export class AggregatorController {
     try {
       const result = await reserveHolding({ db: this.db, aggregatorId: req.authUser.uid, artworkId: body.artworkId });
       this.cache.clear();
+      // The artist's work is leaving their studio — until now nobody told them.
+      void this.emails
+        .aggregatorReserved({
+          holdingId: result.holdingId,
+          artworkId: body.artworkId,
+          aggregatorId: req.authUser.uid,
+          advanceAmountPaise: result.advanceAmountPaise,
+          displayPricePaise: result.displayPricePaise,
+          expiresAt: result.expiresAt,
+        })
+        .catch(this.emails.swallow("holding reserved mail"));
       const holding = await getAggregatorHolding(this.db, req.authUser.uid, result.holdingId);
       return holding ?? result;
     } catch (error) {
