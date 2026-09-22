@@ -67,6 +67,8 @@ export interface AdminUserView {
   website: string | null;
   location: string | null;
   bankAccountMasked: string | null;
+  /** The §194-O TDS flag an admin has set by hand. */
+  earningsAbove5L: boolean;
 }
 
 async function toAdminUser(db: Firestore, id: string, u: UserDoc): Promise<AdminUserView> {
@@ -90,6 +92,7 @@ async function toAdminUser(db: Firestore, id: string, u: UserDoc): Promise<Admin
     website: profile?.website ?? null,
     location: profile?.location ?? null,
     bankAccountMasked: profile?.bankAccountMasked ?? null,
+    earningsAbove5L: profile?.earningsAbove5L ?? false,
   };
 }
 

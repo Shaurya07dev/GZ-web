@@ -23,7 +23,8 @@
     "build": "npm run check:types && npm run check:api-build",
     "start": "node --env-file=../.env --experimental-strip-types apps/api/dist/main.js",
     "dev": "npm run build && npm run start",
-    "deploy:indexes": "node scripts/deploy-indexes.mjs"
+    "deploy:indexes": "node scripts/deploy-indexes.mjs",
+    "grant:role": "node --experimental-strip-types scripts/grant-role.ts"
   },
   "engines": {
     "node": ">=22.6"

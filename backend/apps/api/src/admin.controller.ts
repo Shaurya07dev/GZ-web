@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
-import { adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
+import { FirestoreRateConfigStore, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
+import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
@@ -76,7 +77,15 @@ export class AdminController {
   async user(@Param("id") id: string) {
     const user = await getUserForAdmin(this.db, id);
     if (!user) throw new NotFoundException({ type: "about:blank", title: "User not found", status: 404, code: "not_found" });
-    return user;
+    // The §194-O flag is toggled by hand (PATCH users/:id/earnings-above-5l),
+    // and until now the admin doing it had no figure to go on — the
+    // suggestion was computed by a function nothing called. Advisory only:
+    // crossing the threshold changes what is withheld from an artist, so a
+    // person still confirms it.
+    if (user.role !== "artist") return { ...user, earningsAbove5LSuggested: false };
+    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+    const suggested = await suggestEarningsAbove5L(this.db, id, rates);
+    return { ...user, earningsAbove5LSuggested: suggested };
   }
 
   @Roles("admin")

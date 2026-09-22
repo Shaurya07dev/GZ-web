@@ -160,14 +160,6 @@ export function normalizeRates(stored: Partial<PricingRates> & Record<string, un
   };
 }
 
-export const DELIVERY_ZONE_LABEL: Record<DeliveryZone, string> = {
-  local: "Same city",
-  regional: "Nearby",
-  metro: "Same region",
-  national: "Rest of India",
-  remote: "Remote area",
-};
-
 // --- Price ladder -----------------------------------------------------------
 
 /** Artist's price → GalleryZone's price before GST. 1,00,000 → 1,30,000. */

@@ -41,13 +41,3 @@ export interface OrderDto {
   createdAt: string;
 }
 
-export const advanceOrderStatusInputSchema = z
-  .object({
-    orderId: firestoreId,
-    to: z.enum(orderStatusValues),
-    // Required for "cancelled"; optional otherwise — validated at the
-    // handler level against the specific transition, not here, since the
-    // requirement is transition-dependent, not field-dependent.
-    reason: z.string().optional(),
-  })
-  .strict();

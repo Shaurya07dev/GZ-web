@@ -27,20 +27,6 @@ export const recordAggregatorSaleInputSchema = z
 
 export type RecordAggregatorSaleInput = z.infer<typeof recordAggregatorSaleInputSchema>;
 
-export const advanceShipmentInputSchema = z
-  .object({
-    saleId: firestoreId,
-    to: z.enum(["dispatched", "delivered"]),
-    courierRef: z.string().optional(),
-  })
-  .strict();
-
-export const markRemittedInputSchema = z
-  .object({
-    saleId: firestoreId,
-  })
-  .strict();
-
 export interface HoldingDto {
   id: string;
   artworkId: string;

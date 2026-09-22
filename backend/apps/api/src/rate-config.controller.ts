@@ -5,9 +5,9 @@
 // ID token is now verified and the caller's role re-derived from
 // Firestore on every request, not the 501 stub from before.
 
-import { Body, Controller, Get, Header, Inject, Param, Post, Req, UsePipes } from "@nestjs/common";
+import { Body, ConflictException, Controller, Get, Header, Inject, NotFoundException, Param, Post, Req, UsePipes } from "@nestjs/common";
 import { loadActiveRates } from "@galleryzone/config";
-import { Collections, FirestoreRateConfigStore, reindexAllListings, type Db, type RateConfigVersionDoc } from "@galleryzone/db";
+import { Collections, FirestoreRateConfigStore, RateConfigError, reindexAllListings, type Db, type RateConfigVersionDoc } from "@galleryzone/db";
 import { DEFAULT_RATE_SEED } from "@galleryzone/domain";
 import { proposeRateChangeSchema, type ProposeRateChangeInput } from "@galleryzone/contracts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
@@ -97,7 +97,17 @@ export class RateConfigController {
   @Post(":versionId/approve")
   async approve(@Req() req: AuthenticatedRequest, @Param("versionId") versionId: string) {
     // The store itself refuses a self-approval when proposedBy === approvedBy.
-    await new FirestoreRateConfigStore(this.db).approve({ versionId, approvedBy: req.authUser.uid });
+    try {
+      await new FirestoreRateConfigStore(this.db).approve({ versionId, approvedBy: req.authUser.uid });
+    } catch (error) {
+      if (error instanceof RateConfigError) {
+        if (error.message.startsWith("No rate_config version")) {
+          throw new NotFoundException({ type: "about:blank", title: "Not found", status: 404, code: "not_found" });
+        }
+        throw new ConflictException({ type: "about:blank", title: error.message, status: 409, code: "rate_change_rejected" });
+      }
+      throw error;
+    }
     // Every display price just moved: rebuild the projections, then drop the caches.
     await reindexAllListings(this.db);
     this.cache.clear();

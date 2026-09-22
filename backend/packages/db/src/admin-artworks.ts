@@ -31,31 +31,6 @@ export interface AdminArtworkRow {
   status: string;
 }
 
-export async function listAllArtworksAdmin(db: Firestore): Promise<AdminArtworkRow[]> {
-  const snap = await db.collection(Collections.artworks).get();
-  return Promise.all(
-    snap.docs.map(async (doc) => {
-      const artwork = doc.data() as ArtworkDoc;
-      const [pricingSnap, eventSnap] = await Promise.all([
-        db.collection(artworkPricingCol(doc.id)).doc("data").get(),
-        db.collection(artworkStatusEventsCol(doc.id)).orderBy("changedAt", "desc").limit(1).get(),
-      ]);
-      const pricing = pricingSnap.data() as ArtworkPricingDoc | undefined;
-      const latest = eventSnap.docs[0]?.data() as ArtworkStatusEventDoc | undefined;
-      return {
-        id: doc.id,
-        productCode: artwork.productCode,
-        artistId: artwork.artistId,
-        title: artwork.title,
-        category: artwork.category,
-        artistPricePaise: pricing?.artistPricePaise ?? 0,
-        rarityType: artwork.rarityType,
-        status: latest?.status ?? "draft",
-      };
-    }),
-  );
-}
-
 export async function setArtworkRarity(db: Firestore, artworkId: string, rarity: ArtworkRarity | null, adminId: string): Promise<void> {
   if (rarity !== null && !(artworkRarityValues as readonly string[]).includes(rarity)) throw new AdminArtworkError(`Invalid rarity ${rarity}`);
   const ref = db.collection(Collections.artworks).doc(artworkId);

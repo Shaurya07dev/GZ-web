@@ -1,8 +1,6 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { Collections, type GallerySpaceDoc } from "./collections.ts";
 
-export class GallerySpaceError extends Error {}
-
 export interface GallerySpaceInput {
   name: string;
   addressLine1: string;

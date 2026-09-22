@@ -97,15 +97,3 @@ export function decideNextAggregatorStep({
   };
 }
 
-/** Called at assignment time to compute this placement's own expiry. */
-export function assignmentWindowFor({
-  cycleStartedAt,
-  assignedAt,
-  rates,
-}: {
-  cycleStartedAt: string | Date;
-  assignedAt: string | Date;
-  rates: PricingRates;
-}) {
-  return placementWindow({ cycleStartedAt, assignedAt, rates });
-}

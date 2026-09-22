@@ -5,41 +5,6 @@ import { Collections, artworkStatusEventsCol, type ArtworkStatusEventDoc, type C
 
 export class AdminError extends Error {}
 
-export interface AdminKpis {
-  totalUsers: number;
-  totalArtworks: number;
-  pendingApprovalArtworks: number;
-  pendingWithdrawals: number;
-}
-
-export async function getAdminKpis(db: Firestore): Promise<AdminKpis> {
-  const [userCount, artworkSnap, pendingWithdrawalCount] = await Promise.all([
-    db.collection(Collections.users).count().get(),
-    db.collection(Collections.artworks).get(),
-    db.collection(Collections.withdrawalRequests).where("status", "==", "pending").count().get(),
-  ]);
-
-  // "Pending approval" = the latest statusEvents doc per artwork is
-  // pending_approval — no cheap aggregate query for this in Firestore, so
-  // it's N reads (one per artwork). Fine at today's scale; flagged as the
-  // first thing to denormalize (e.g. a `latestStatus` field on the
-  // artwork doc itself, updated alongside each status event write) once
-  // artwork volume makes this expensive.
-  const statuses = await Promise.all(
-    artworkSnap.docs.map(async (doc) => {
-      const eventSnap = await db.collection(artworkStatusEventsCol(doc.id)).orderBy("changedAt", "desc").limit(1).get();
-      return (eventSnap.docs[0]?.data() as ArtworkStatusEventDoc | undefined)?.status;
-    }),
-  );
-
-  return {
-    totalUsers: userCount.data().count,
-    totalArtworks: artworkSnap.size,
-    pendingApprovalArtworks: statuses.filter((s) => s === "pending_approval").length,
-    pendingWithdrawals: pendingWithdrawalCount.data().count,
-  };
-}
-
 export async function listCategories(db: Firestore): Promise<(CategoryDoc & { id: string })[]> {
   const snap = await db.collection(Collections.categories).get();
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as CategoryDoc) }));

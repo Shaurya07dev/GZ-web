@@ -181,11 +181,6 @@ export function queryMarketplace(all: PublicArtworkView[], query: MarketplaceQue
   };
 }
 
-/** Marketplace listing: only pieces currently on the marketplace and sold online. */
-export async function listMarketplaceArtworks(db: Firestore, query: MarketplaceQuery = {}): Promise<MarketplacePage> {
-  return queryMarketplace(await loadMarketplace(db), query);
-}
-
 /** One artist's public listings (artist page rail). */
 export async function listArtistPublicArtworks(db: Firestore, artistId: string): Promise<PublicArtworkView[]> {
   const snap = await db

@@ -281,12 +281,6 @@ export async function rejectArtwork(db: Firestore, artworkId: string, reason: st
   await appendArtworkStatus(db, artworkId, { status: "returned", changedBy: null, reason });
 }
 
-/** How many artworks this artist has ever submitted — feeds the rating-card composite score's artwork-count factor. */
-export async function countArtistArtworks(db: Firestore, artistId: string): Promise<number> {
-  const snap = await db.collection(Collections.artworks).where("artistId", "==", artistId).count().get();
-  return snap.data().count;
-}
-
 /**
  * "Sold on another platform": the piece leaves every GalleryZone channel
  * and an external-sale fee (rates.externalSalePenaltyRate × artist price)

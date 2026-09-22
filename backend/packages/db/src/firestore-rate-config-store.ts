@@ -10,6 +10,14 @@ import type { RateConfigStore, RateConfigVersion } from "@galleryzone/config";
 import { normalizeRates, type PricingRates } from "@galleryzone/domain";
 import { Collections, type RateConfigVersionDoc } from "./collections.ts";
 
+/**
+ * Typed so the API can answer "already approved" and "you proposed this"
+ * with a 409 and the real message. They were plain Errors, so both reached
+ * the admin console as a 500 — on the one screen where an admin most needs
+ * to be told which of the two rules they just hit.
+ */
+export class RateConfigError extends Error {}
+
 export class FirestoreRateConfigStore implements RateConfigStore {
   private readonly db: Firestore;
 
@@ -47,11 +55,11 @@ export class FirestoreRateConfigStore implements RateConfigStore {
     const ref = this.db.collection(Collections.rateConfigVersions).doc(versionId);
     await this.db.runTransaction(async (tx) => {
       const snapshot = await tx.get(ref);
-      if (!snapshot.exists) throw new Error(`No rate_config version ${versionId}`);
+      if (!snapshot.exists) throw new RateConfigError(`No rate_config version ${versionId}`);
       const existing = snapshot.data() as RateConfigVersionDoc;
-      if (existing.approved) throw new Error(`${versionId} is already approved`);
+      if (existing.approved) throw new RateConfigError(`${versionId} is already approved`);
       if (existing.proposedBy === approvedBy) {
-        throw new Error("A rate change cannot be self-approved by its proposer");
+        throw new RateConfigError("A rate change cannot be self-approved by its proposer");
       }
       tx.update(ref, { approvedBy, approvedAt: FieldValue.serverTimestamp(), approved: true });
     });
