@@ -400,6 +400,54 @@ export class Emails {
     });
   }
 
+  /**
+   * The artist asked to leave and then heard nothing either way. Admins
+   * weren't told a request had been filed at all, so it could sit unseen.
+   */
+  async deactivationRequested(input: { userId: string; reason: string }) {
+    const [user, admins] = await Promise.all([this.user(input.userId), this.admins()]);
+    if (user) {
+      await this.deliver(`deactivation-requested/${input.userId}`, user.email, "We've received your deactivation request", {
+        heading: "Your request is with us",
+        paragraphs: ["We'll review it and come back to you. Anything still in progress — a live listing, a piece with a gallery, an unpaid settlement — has to be closed out before an account can be deactivated."],
+      });
+    }
+    await this.deliver(`deactivation-requested-admin/${input.userId}`, admins, `Deactivation requested by ${user?.name ?? input.userId}`, {
+      heading: "Deactivation request",
+      paragraphs: [`<strong>${esc(user?.name ?? input.userId)}</strong> asked to deactivate their account.`, `Reason given: ${esc(input.reason)}`],
+    });
+  }
+
+  async deactivationDecided(input: { userId: string; approved: boolean; note?: string | undefined }) {
+    const user = await this.user(input.userId);
+    if (!user) return;
+    await this.deliver(`deactivation-${input.approved ? "approved" : "rejected"}/${input.userId}`, user.email, input.approved ? "Your account has been deactivated" : "We couldn't deactivate your account yet", {
+      heading: input.approved ? "Your account is deactivated" : "Your deactivation is on hold",
+      paragraphs: [
+        input.approved
+          ? "Your account is closed. Your provenance records stay intact — every certificate you issued remains verifiable, because collectors rely on them."
+          : "We can't close the account yet. Usually that means something is still open: a live listing, a piece out with a gallery, or an unsettled balance.",
+      ],
+      ...(input.note ? { footnote: `Note from the reviewer: ${esc(input.note)}` } : {}),
+    });
+  }
+
+  /** The fee is raised automatically when an artist declares a sale elsewhere; the decision on it came silently. */
+  async externalSaleFeeDecided(input: { penaltyId: string; artistId: string; title: string; amountPaise: number; waived: boolean; note?: string | undefined }) {
+    const artist = await this.user(input.artistId);
+    if (!artist) return;
+    await this.deliver(`external-fee-${input.waived ? "waived" : "approved"}/${input.penaltyId}`, artist.email, input.waived ? `Fee waived — “${input.title}”` : `External-sale fee confirmed — “${input.title}”`, {
+      heading: input.waived ? "We've waived this fee" : "Your external-sale fee is confirmed",
+      paragraphs: [
+        input.waived
+          ? `The <strong>${inr(input.amountPaise)}</strong> fee on “${esc(input.title)}” has been waived. Nothing is owed.`
+          : `The fee for selling “${esc(input.title)}” away from GalleryZone is <strong>${inr(input.amountPaise)}</strong>. It comes off your next settlement.`,
+      ],
+      ...(input.note ? { footnote: `Note from the reviewer: ${esc(input.note)}` } : {}),
+      cta: { label: "View my wallet", url: `${this.site}/dashboard/wallet` },
+    });
+  }
+
   // ── Support ──────────────────────────────────────────────────────────
 
   /**

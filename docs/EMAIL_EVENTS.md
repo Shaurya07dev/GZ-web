@@ -1,7 +1,8 @@
 # Email events
 
 Every moment GalleryZone should send mail, who receives it, and what is
-built today. Written 19 Sep 2026 against `backend/apps/api/src/mail/`.
+built today. Written 19 Sep 2026, revised 22 Sep 2026 against
+`backend/apps/api/src/mail/`.
 
 **Status key**
 
@@ -15,14 +16,19 @@ send carries an idempotency key (e.g. `order-paid-buyer/<orderId>`), so a
 retried request cannot send the same mail twice. With no `RESEND_API_KEY`
 the mailer dry-runs and logs instead of sending.
 
-**Two things gate real delivery right now**
+**What gates real delivery**
 
-1. `galleryzone.art` is registered in Resend but its DNS records are not
-   verified, so mail goes out from the sandbox sender and **only reaches
-   shaurya8851@gmail.com**. Until those records are added, no customer,
-   artist or aggregator receives anything.
+1. `galleryzone.art` is **verified in Resend** as of 22 Sep 2026, so mail
+   leaves from the real domain rather than the sandbox sender. That has not
+   yet been confirmed by actually receiving one — send yourself a password
+   reset.
 2. Admin-recipient mails resolve to every user with `role == "admin"`. If no
    admin account exists, those sends are silently skipped.
+
+**Every CTA link is checked against `frontend-web/app`.** Three were wrong
+and shipping in live mail until 22 Sep (`/admin/withdrawals`,
+`/aggregator/holdings`, `/dashboard/coa`). There is no shared `/support`
+page either — it resolves per role.
 
 ---
 
@@ -37,8 +43,8 @@ the mailer dry-runs and logs instead of sending.
 | Email address changed | old **and** new address | **Not built** | Security-relevant: the old address must be told. |
 | Password changed | the account | **Not built** | Same reason. |
 | Account suspended / reactivated by an admin | the user | **Not built** | `POST /v1/admin/users/:id/status` changes it silently today. |
-| Deactivation requested by the artist | the artist + admins | **Not built** | Request is recorded, nobody is told. |
-| Deactivation approved / rejected | the artist | **Not built** | |
+| Deactivation requested by the artist | the artist + admins | **Live** | |
+| Deactivation approved / rejected | the artist | **Live** | Carries the reviewer’s note. |
 
 ## 2. Artist — listings
 
@@ -48,19 +54,19 @@ the mailer dry-runs and logs instead of sending.
 | Artwork submitted for review | admins | **Live** | The review queue prompt. |
 | Artwork approved and listed | the artist | **Live** | Includes the CoA certificate number. |
 | Artwork rejected | the artist | **Live** | Carries the admin's reason. |
-| Artwork delisted by an admin | the artist | **Not built** | `POST /v1/admin/artworks/:id/delist` is silent. |
+| Artwork delisted by an admin | the artist | **Live** | |
 | Free edit window about to close | the artist | **Not built** | Needs a scheduled job. |
 | Listing expiring (end of the 180-day window) | the artist | **Not built** | Needs a scheduled job. |
-| "Sold elsewhere" declared → external-sale fee raised | the artist | **Not built** | The fee appears in their wallet with no warning. |
-| External-sale fee decided by an admin | the artist | **Not built** | |
+| "Sold elsewhere" declared → external-sale fee raised | the artist | **Not built** | The artist triggers this themselves and the response carries the amount, so it is the weakest gap here. |
+| External-sale fee decided by an admin | the artist | **Live** | Approved or waived, with the amount and the reviewer’s note. |
 
 ## 3. Artist — compliance
 
 | Event | To | Status | Notes |
 |---|---|---|---|
-| GSTIN approved / rejected | the artist | **Not built** | Matters for money: approval switches on 0.1% TDS withholding. |
-| KYC approved / rejected | the artist | **Not built** | Blocks payouts while unresolved. |
-| Insurance approved / rejected on a piece | the artist | **Not built** | |
+| GSTIN approved / rejected | the artist | **Live** | Matters for money: approval switches on TDS withholding. |
+| KYC approved / rejected | the artist | **Live** | Blocks payouts while unresolved. |
+| Insurance approved / rejected on a piece | the artist | **Live** | |
 | Artist MOU version bumped → re-signature required | all artists | **Not built** | Today they only find out on next sign-in. |
 | Earnings crossed the ₹5,00,000 §194-O threshold | the artist | **Not built** | Admin flags it; the artist should know why TDS changed. |
 
@@ -72,8 +78,8 @@ the mailer dry-runs and logs instead of sending.
 | Payment captured — piece sold | the artist | **Live** | Shows their net settlement. |
 | Payment captured | admins | **Not built** | No ops notification on a sale. |
 | Payment failed or abandoned | the buyer | **Not built** | Cart-recovery mail. |
-| Order confirmed → packed → in transit → delivered | the buyer | **Template only** | `orderStatus()` is written but `POST /v1/admin/orders/:id/status` never calls it. **Closest gap to a real complaint** — a buyer currently hears nothing between paying and delivery. |
-| Order status changed | the artist | **Not built** | The artist can't see where their piece is either. |
+| Order confirmed → packed → transit → delivered → cancelled | the buyer | **Live** | Wired into `PATCH /v1/admin/orders/:id/status`. The copy had been keyed to `shipped`/`refunded`, which are not order statuses, so nothing would have matched even once it was called. |
+| Order status changed | the artist | **Live** | On the stages that are theirs: confirmed, transit, delivered, cancelled. |
 | Order cancelled / refunded | the buyer + the artist | **Not built** | There is no refund flow yet at all. |
 | GST invoice issued | the buyer | **Not built** | Needs the invoice PDF first. |
 | Settlement released (7 days after delivery) | the artist | **Not built** | Needs the payout job. |
@@ -105,8 +111,8 @@ the mailer dry-runs and logs instead of sending.
 
 | Event | To | Status | Notes |
 |---|---|---|---|
-| Aggregator reserved a piece | the aggregator | **Not built** | Their own confirmation of terms and advance. |
-| Aggregator reserved a piece | the artist | **Not built** | **The artist's work leaves their studio and nobody emails them.** Highest-value gap in this section. |
+| Aggregator reserved a piece | the aggregator | **Live** | Their confirmation of the advance and the placement window. |
+| Aggregator reserved a piece | the artist | **Live** | Names the gallery and the date the placement window closes. |
 | Reserved piece — shipping instructions | the artist | **Not built** | |
 | Placement window closing (7 days out) | the aggregator | **Not built** | Needs a scheduled job. |
 | Placement expired, piece must return | the aggregator + the artist | **Not built** | Needs the expiry cron. |
@@ -120,8 +126,8 @@ the mailer dry-runs and logs instead of sending.
 
 | Event | To | Status | Notes |
 |---|---|---|---|
-| Support ticket raised | the person who raised it | **Not built** | No acknowledgement at all today. |
-| Support ticket raised | admins | **Not built** | Tickets are only visible if an admin opens the queue. |
+| Support ticket raised | the person who raised it | **Live** | |
+| Support ticket raised | admins | **Live** | Carries the message body with `replyTo` set to the requester, because there is still no admin support queue page. |
 | Support ticket replied to | the requester | **Not built** | |
 | Pricing-rule change proposed | the other platform admins | **Not built** | The two-admin approval needs a nudge to reach the second admin. |
 | Pricing-rule change approved | both admins | **Not built** | Every price on the site just moved — worth a record. |
@@ -130,19 +136,24 @@ the mailer dry-runs and logs instead of sending.
 
 ## Recommended order of work
 
-1. **Order status → buyer.** The template already exists; it needs one call in
-   `admin-orders.controller.ts`. Cheapest fix with the largest effect on how
-   the product feels.
-2. **Aggregator reservation → artist.** A physical artwork leaves a studio
-   with no email. This is the one gap with real-world consequences.
-3. **Compliance decisions** (GST, KYC, insurance) → the artist. These block
-   money and the artist cannot tell why.
-4. **Security mails**: password changed, email changed, bank account changed.
-   Expected by default, and their absence is what an audit flags.
-5. **Support acknowledgement**, both directions.
-6. **Scheduled mails** — placement expiry, listing expiry, settlement
-   released. These need the cron work that is already on the launch list, so
-   they come last.
+Items 1–3 and 5 of the original list were done on 22 Sep 2026: order status
+to the buyer and the artist, aggregator reservation to both sides, the
+compliance decisions, delisting, deactivation, the external-sale fee
+decision, and support acknowledgement in both directions. What is left:
+
+1. **Security mails**: password changed, email changed, bank account changed,
+   account suspended. Expected by default, and their absence is what an audit
+   flags. Password and email changes happen inside Firebase Auth rather than
+   in our own handlers, so these need a hook, not a controller call.
+2. **Payment failed or abandoned** → the buyer. Cart recovery.
+3. **Payout actually paid out** → the requester. Approval and payment are
+   separate events; only approval is mailed today.
+4. **GST invoice issued** → the buyer. Needs the invoice PDF first.
+5. **Scheduled mails** — placement expiry, listing expiry, free-edit window,
+   settlement released. These all need the cron work already on the launch
+   list, so they come last.
+6. **Support ticket replied to.** There is no admin reply flow, or an admin
+   support queue page, to hang it on yet.
 
 ## Adding one
 

@@ -123,6 +123,19 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
   const holding = holdingSnap.data() as AggregatorHoldingDoc;
   holdingStateMachine.assertTransition(holding.status, "sold_pending_settlement");
 
+  // soldPricePaise was recorded as given while every posting below settles on
+  // holding.displayPricePaise, so the sale record and the ledger could
+  // disagree about what the piece went for — and for a cash_at_premises sale
+  // the remittance owed to GalleryZone is chased against that record. The
+  // display price is the agreed selling price (setHoldingDisplayPrice is
+  // where it changes, once, and never below GalleryZone's offer), so a
+  // different figure here means the aggregator should have re-priced first.
+  if (input.soldPricePaise !== holding.displayPricePaise) {
+    throw new AggregatorFlowError(
+      `A sale must be recorded at the piece's selling price (${holding.displayPricePaise} paise). Update the price on the holding first.`,
+    );
+  }
+
   const pricingSnap = await db.collection(artworkPricingCol(holding.artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new AggregatorFlowError(`No artwork ${holding.artworkId}`);
   const pricing = pricingSnap.data() as ArtworkPricingDoc;
