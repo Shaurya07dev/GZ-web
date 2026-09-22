@@ -28,6 +28,25 @@ async function currentBalance(db: Firestore, accountType: WithdrawableAccountTyp
   return -sum || 0; // `|| 0` normalizes -0 the same way the Postgres version did
 }
 
+/**
+ * Money already spoken for by requests that haven't been paid out yet.
+ *
+ * A pending request posts nothing to the ledger — only approval does — so
+ * the raw ledger balance says the money is still there. Without this, an
+ * artist with a ₹10,000 balance could file five ₹10,000 requests and an
+ * admin approving them all would drive the account ₹40,000 negative.
+ */
+async function pendingRequested(db: Firestore, userId: string): Promise<number> {
+  const snap = await db.collection(Collections.withdrawalRequests).where("userId", "==", userId).where("status", "==", "pending").get();
+  return snap.docs.reduce((total, doc) => total + (doc.data() as WithdrawalRequestDoc).amountPaise, 0);
+}
+
+/** Ledger balance minus anything already requested and not yet settled. */
+async function availableToWithdraw(db: Firestore, accountType: WithdrawableAccountType, userId: string): Promise<number> {
+  const [balance, pending] = await Promise.all([currentBalance(db, accountType, userId), pendingRequested(db, userId)]);
+  return balance - pending;
+}
+
 export async function requestWithdrawal({
   db,
   userId,
@@ -44,9 +63,9 @@ export async function requestWithdrawal({
   if (!meetsMinWithdrawal(amountPaise, rates)) {
     throw new WithdrawalError(`Amount is below the minimum withdrawal (₹${rates.minWithdrawalPaise / 100})`);
   }
-  const balance = await currentBalance(db, accountType, userId);
-  if (amountPaise > balance) {
-    throw new WithdrawalError(`Requested amount (${amountPaise}) exceeds available balance (${balance})`);
+  const available = await availableToWithdraw(db, accountType, userId);
+  if (amountPaise > available) {
+    throw new WithdrawalError(`Requested amount (${amountPaise}) exceeds available balance (${available})`);
   }
 
   const ref = db.collection(Collections.withdrawalRequests).doc();
@@ -86,6 +105,15 @@ export async function approveWithdrawal(db: Firestore, withdrawalId: string, acc
   if (!snap.exists) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
   const request = snap.data() as WithdrawalRequestDoc;
   withdrawalStateMachine.assertTransition(request.status, "completed");
+
+  // Re-check at approval, not just at request time: the balance can have
+  // moved since (a reversal, an external-sale fee, another approval), and
+  // this is the point where real money leaves. Nothing else stops the
+  // ledger going negative.
+  const balance = await currentBalance(db, accountType, request.userId);
+  if (request.amountPaise > balance) {
+    throw new WithdrawalError(`Requested amount (${request.amountPaise}) exceeds available balance (${balance})`);
+  }
 
   const postings = withdrawalPayoutPostings({ accountType, ownerId: request.userId, amountPaise: request.amountPaise });
   const { transactionId } = await postLedgerEntries(db, { postings, idempotencyPrefix: `withdrawal:${withdrawalId}` });

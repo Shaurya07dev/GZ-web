@@ -43,6 +43,24 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   if (!pricingSnap.exists) throw new CheckoutError(`No artwork ${artworkId}`);
   const pricing = pricingSnap.data() as ArtworkPricingDoc;
 
+  // Both of these used to be taken on trust, which meant an order could be
+  // opened — and, in razorpay mode, actually paid — for a piece that was
+  // never for sale. markOrderPaid would then throw on the marketplace ->
+  // sold transition, AFTER the card was charged. Refusing here, before any
+  // money moves, is the only safe place for it. It also stops two buyers
+  // holding pending orders on the same one-of-a-kind original.
+  const artworkStatus = await latestStatusOf(db, artworkId);
+  if (artworkStatus !== "marketplace") {
+    throw new CheckoutError("This artwork is not available to buy");
+  }
+
+  // An addressId belonging to somebody else would ship the piece to a
+  // stranger and leak their address onto this order.
+  const addressSnap = await db.collection(Collections.addresses).doc(addressId).get();
+  if (!addressSnap.exists || (addressSnap.data() as { userId?: string }).userId !== customerId) {
+    throw new CheckoutError(`No address ${addressId}`);
+  }
+
   const rateStore = new FirestoreRateConfigStore(db);
   const activeVersion = await rateStore.getActiveVersion(new Date());
   if (!activeVersion) {
@@ -187,16 +205,19 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
     artworkStateMachine.assertTransition(artworkStatus, "sold");
     await appendArtworkStatus(db, order.artworkId, { status: "sold", changedBy: null, reason: `order:${orderId}` });
   }
-  await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get().then((snap) => {
-    if (!snap.empty) {
-      snap.docs[0]!.ref.update({
-        status: "captured",
-        method: capture.method,
-        providerPaymentId: capture.providerPaymentId,
-        rawWebhookPayload: capture.rawWebhookPayload ?? null,
-      });
-    }
-  });
+  // The inner update() used to be left unawaited inside the .then(), so this
+  // function could return — and the "paid" email go out — before the payment
+  // doc was marked captured. A webhook arriving in that window would see a
+  // pending capture and could mark it failed.
+  const paymentSnap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
+  if (!paymentSnap.empty) {
+    await paymentSnap.docs[0]!.ref.update({
+      status: "captured",
+      method: capture.method,
+      providerPaymentId: capture.providerPaymentId,
+      rawWebhookPayload: capture.rawWebhookPayload ?? null,
+    });
+  }
 
   return confirmationFor(db, orderId, order, transactionId);
 }
