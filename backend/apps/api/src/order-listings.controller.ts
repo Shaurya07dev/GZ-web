@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Req } from "@nestjs/common";
+import { Controller, Get, Inject, NotFoundException, Param, Req } from "@nestjs/common";
 import { listCustomerOrders, getOrder, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
@@ -16,7 +16,15 @@ export class OrderListingsController {
 
   @Roles("customer")
   @Get("orders/:id")
-  get(@Param("id") id: string) {
-    return getOrder(this.db, id);
+  async get(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    const order = await getOrder(this.db, id);
+    // 404 rather than 403, like the payment routes: a stranger must not be
+    // able to tell an order id apart from one that does not exist. The order
+    // carries the buyer's addressId and what they paid, so this read has to
+    // be scoped to its own customer.
+    if (!order || order.customerId !== req.authUser.uid) {
+      throw new NotFoundException({ type: "about:blank", title: "Not found", status: 404, code: "not_found" });
+    }
+    return order;
   }
 }
