@@ -448,6 +448,60 @@ export class Emails {
     });
   }
 
+  // ── Security ─────────────────────────────────────────────────────────
+
+  /**
+   * A changed payout destination is the classic account-takeover payload, so
+   * it always gets mailed — the point is that the real owner hears about it
+   * even when they were not the one who made the change.
+   */
+  async bankAccountChanged(input: { userId: string; maskedAccount: string | null }) {
+    const user = await this.user(input.userId);
+    if (!user) return;
+    await this.deliver(`bank-changed/${input.userId}/${Date.now()}`, user.email, "Your payout account was changed", {
+      preheader: "If this wasn't you, tell us straight away.",
+      heading: "Your payout account was changed",
+      paragraphs: [
+        input.maskedAccount
+          ? `Payouts will now go to the account ending <strong>${esc(input.maskedAccount.replace(/^•+\s*/, ""))}</strong>.`
+          : "The bank account on your profile has been removed, so payouts are on hold until you add one.",
+        "<strong>If you didn't do this, reply to this email immediately</strong> and we'll freeze payouts while we look into it.",
+      ],
+      cta: { label: "Check my profile", url: `${this.site}/dashboard/profile` },
+    });
+  }
+
+  /** An admin suspending or restoring an account used to be entirely silent to the person it happened to. */
+  async accountStatusChanged(input: { userId: string; status: string }) {
+    const user = await this.user(input.userId);
+    if (!user) return;
+    const copy: Record<string, { subject: string; heading: string; body: string }> = {
+      suspended: { subject: "Your account has been suspended", heading: "Your account is suspended", body: "You won't be able to sign in while this is in place. Reply to this email if you think it's a mistake and we'll take another look." },
+      blocked: { subject: "Your account has been blocked", heading: "Your account is blocked", body: "Access has been withdrawn. Reply to this email if you believe this is an error." },
+      active: { subject: "Your account is active again", heading: "Welcome back", body: "Your account has been restored and you can sign in as normal." },
+    };
+    const c = copy[input.status];
+    if (!c) return;
+    await this.deliver(`account-${input.status}/${input.userId}/${Date.now()}`, user.email, c.subject, {
+      heading: c.heading,
+      paragraphs: [c.body],
+    });
+  }
+
+  /** The buyer got as far as the gateway and it didn't go through. Nothing was said, so the cart just died. */
+  async paymentFailed(input: { orderId: string; customerId: string; title: string; totalPaise: number }) {
+    const buyer = await this.user(input.customerId);
+    if (!buyer) return;
+    await this.deliver(`payment-failed/${input.orderId}`, buyer.email, `Your payment for “${input.title}” didn't go through`, {
+      heading: "That payment didn't go through",
+      paragraphs: [
+        `Your payment of <strong>${inr(input.totalPaise)}</strong> for “${esc(input.title)}” was not completed, so the order hasn't been placed and you haven't been charged.`,
+        "The piece is still available. It's an original, so it stays available only until someone else buys it.",
+      ],
+      cta: { label: "Try again", url: `${this.site}/account/orders/${input.orderId}` },
+    });
+  }
+
   // ── Support ──────────────────────────────────────────────────────────
 
   /**

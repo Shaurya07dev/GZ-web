@@ -42,7 +42,7 @@ page either — it resolves per role.
 | Email verification re-sent | the account | **Live** | `POST /v1/auth/resend-verification`. |
 | Email address changed | old **and** new address | **Not built** | Security-relevant: the old address must be told. |
 | Password changed | the account | **Not built** | Same reason. |
-| Account suspended / reactivated by an admin | the user | **Not built** | `POST /v1/admin/users/:id/status` changes it silently today. |
+| Account suspended / reactivated by an admin | the user | **Live** | Suspended, blocked and restored. |
 | Deactivation requested by the artist | the artist + admins | **Live** | |
 | Deactivation approved / rejected | the artist | **Live** | Carries the reviewer’s note. |
 
@@ -77,7 +77,7 @@ page either — it resolves per role.
 | Payment captured — order confirmed | the buyer | **Live** | Receipt with the total paid. |
 | Payment captured — piece sold | the artist | **Live** | Shows their net settlement. |
 | Payment captured | admins | **Not built** | No ops notification on a sale. |
-| Payment failed or abandoned | the buyer | **Not built** | Cart-recovery mail. |
+| Payment failed or abandoned | the buyer | **Live** | On Razorpay's `payment.failed` webhook. Says they were not charged and the piece is still available. |
 | Order confirmed → packed → transit → delivered → cancelled | the buyer | **Live** | Wired into `PATCH /v1/admin/orders/:id/status`. The copy had been keyed to `shipped`/`refunded`, which are not order statuses, so nothing would have matched even once it was called. |
 | Order status changed | the artist | **Live** | On the stages that are theirs: confirmed, transit, delivered, cancelled. |
 | Order cancelled / refunded | the buyer + the artist | **Not built** | There is no refund flow yet at all. |
@@ -93,7 +93,7 @@ page either — it resolves per role.
 | Withdrawal approved | the requester | **Live** | |
 | Withdrawal rejected | the requester | **Live** | |
 | Payout actually paid out (NEFT/RazorpayX reference) | the requester | **Not built** | Approval and payment are separate events; only approval is mailed. |
-| Bank account changed on a profile | the account | **Not built** | Security-relevant — a changed payout destination should always be mailed. |
+| Bank account changed on a profile | the account | **Live** | Always sent, with a “wasn’t you?” line — the point is the real owner hears about it. |
 
 ## 6. Certificates, ownership and the passport
 
@@ -141,18 +141,19 @@ to the buyer and the artist, aggregator reservation to both sides, the
 compliance decisions, delisting, deactivation, the external-sale fee
 decision, and support acknowledgement in both directions. What is left:
 
-1. **Security mails**: password changed, email changed, bank account changed,
-   account suspended. Expected by default, and their absence is what an audit
-   flags. Password and email changes happen inside Firebase Auth rather than
-   in our own handlers, so these need a hook, not a controller call.
-2. **Payment failed or abandoned** → the buyer. Cart recovery.
-3. **Payout actually paid out** → the requester. Approval and payment are
-   separate events; only approval is mailed today.
-4. **GST invoice issued** → the buyer. Needs the invoice PDF first.
-5. **Scheduled mails** — placement expiry, listing expiry, free-edit window,
-   settlement released. These all need the cron work already on the launch
-   list, so they come last.
-6. **Support ticket replied to.** There is no admin reply flow, or an admin
+1. **Password changed / email address changed** → the account. The last two
+   security mails. Both happen inside Firebase Auth rather than in our own
+   handlers, so they need a Firebase Function on the auth events, not a
+   controller call — which is why they are still open while the other
+   security mails are done.
+2. **Payout actually paid out** → the requester. Approval and the bank
+   transfer are separate events; only approval is mailed. Needs the RazorpayX
+   payout integration to have something to report.
+3. **GST invoice issued** → the buyer. Needs the invoice PDF first.
+4. **Scheduled mails** — placement expiry, listing expiry, free-edit window
+   closing, settlement released. These all need the cron work already on the
+   launch list, so they come last.
+5. **Support ticket replied to.** There is no admin reply flow, or an admin
    support queue page, to hang it on yet.
 
 ## Adding one

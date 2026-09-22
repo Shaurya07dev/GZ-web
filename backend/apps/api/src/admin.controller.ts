@@ -4,6 +4,7 @@ import { NotFoundException } from "@nestjs/common";
 import { FirestoreRateConfigStore, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
+import { Emails } from "./mail/emails.ts";
 import { DB } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -15,7 +16,10 @@ type StatusBody = z.infer<typeof statusSchema>;
 
 @Controller("v1/admin")
 export class AdminController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly emails: Emails,
+  ) {}
 
   @Roles("admin")
   @Get("kpis")
@@ -90,7 +94,10 @@ export class AdminController {
 
   @Roles("admin")
   @Patch("users/:id/status")
-  setUserStatus(@Param("id") id: string, @Body(new ZodValidationPipe(statusSchema)) body: StatusBody) {
-    return setUserStatus(this.db, id, body.status);
+  async setUserStatus(@Param("id") id: string, @Body(new ZodValidationPipe(statusSchema)) body: StatusBody) {
+    const result = await setUserStatus(this.db, id, body.status);
+    // Being locked out with no explanation is the worst version of this.
+    void this.emails.accountStatusChanged({ userId: id, status: body.status }).catch(this.emails.swallow("account status mail"));
+    return result;
   }
 }

@@ -11,6 +11,7 @@ import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
+import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 const nullableText = (max: number) => z.string().trim().max(max).nullable().optional();
@@ -44,6 +45,7 @@ export class ProfileController {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
+    private readonly emails: Emails,
   ) {}
 
   @Roles("customer", "artist", "aggregator", "admin")
@@ -59,6 +61,13 @@ export class ProfileController {
   async patch(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(patchSchema)) body: PatchBody) {
     try {
       const profile = await updateOwnProfile(this.db, req.authUser.uid, body);
+      // A changed payout destination is the classic account-takeover payload,
+      // so the owner is always told — including when it wasn't them.
+      if (body.bankAccountNumber !== undefined) {
+        void this.emails
+          .bankAccountChanged({ userId: req.authUser.uid, maskedAccount: profile.bankAccountMasked ?? null })
+          .catch(this.emails.swallow("bank change mail"));
+      }
       // A renamed or relocated artist changes every one of their listing rows.
       if (profile.role === "artist" && (body.fullName !== undefined || body.location !== undefined)) {
         await refreshArtistListings(this.db, req.authUser.uid);

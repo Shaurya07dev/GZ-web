@@ -155,9 +155,18 @@ export class PaymentsController {
           if (!(error instanceof CheckoutError)) throw error;
         }
         break;
-      case "payment.failed":
+      case "payment.failed": {
         await markPaymentFailed(this.db, orderId, { providerPaymentId: payment?.id ?? null, rawWebhookPayload: event });
+        // The buyer reached the gateway and it declined. Saying nothing means
+        // the cart simply dies; they often don't realise it didn't go through.
+        const failed = await getOrder(this.db, orderId);
+        if (failed) {
+          void this.emails
+            .paymentFailed({ orderId, customerId: failed.customerId, title: failed.artwork?.title ?? "your artwork", totalPaise: failed.totalPaise })
+            .catch(this.emails.swallow("payment failed mail"));
+        }
         break;
+      }
       default:
         break;
     }
