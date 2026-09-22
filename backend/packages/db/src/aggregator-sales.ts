@@ -3,8 +3,9 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { shipmentStateMachine, type ShipmentStatus } from "@galleryzone/domain";
 import { Collections, type AggregatorHoldingDoc, type AggregatorSaleDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class AggregatorSalesError extends Error {}
+export class AggregatorSalesError extends DbError {}
 
 // aggregatorSales doesn't carry aggregatorId directly (it's on the parent
 // holding) — resolve via the holdings the aggregator owns first, same

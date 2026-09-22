@@ -16,6 +16,8 @@ import {
   Logger,
 } from "@nestjs/common";
 import type { Response } from "express";
+import { DbError } from "@galleryzone/db";
+import { IllegalTransitionError } from "@galleryzone/domain";
 
 interface ProblemDetails {
   type: string;
@@ -47,6 +49,31 @@ function codeFor(status: number): string {
   }
 }
 
+/**
+ * A deliberate refusal from the db or domain layer, mapped to a real status
+ * so it doesn't fall through as a 500.
+ *
+ * Controllers that want a specific `code`, or a status other than these two,
+ * still catch the error themselves — this is the floor. It exists because
+ * ten error classes had no controller catching them at all, so genuine
+ * answers ("that is below the minimum withdrawal", "this sale was already
+ * marked remitted") reached the caller as "Internal server error".
+ *
+ * The "No " prefix convention is documented on DbError.
+ */
+function domainProblem(exception: unknown): ProblemDetails | null {
+  if (exception instanceof IllegalTransitionError) {
+    return { type: "about:blank", title: exception.message, status: HttpStatus.CONFLICT, code: "illegal_transition" };
+  }
+  if (!(exception instanceof DbError)) return null;
+  if (exception.message.startsWith("No ")) {
+    // Generic title: most of these are scoped to a caller, and echoing the
+    // message back would confirm whether the id exists.
+    return { type: "about:blank", title: "Not found", status: HttpStatus.NOT_FOUND, code: "not_found" };
+  }
+  return { type: "about:blank", title: exception.message, status: HttpStatus.CONFLICT, code: "conflict" };
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -72,6 +99,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
         code: codeFor(status),
       };
       response.status(status).json(problem);
+      return;
+    }
+
+    const known = domainProblem(exception);
+    if (known) {
+      response.status(known.status).json(known);
       return;
     }
 

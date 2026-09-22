@@ -12,8 +12,9 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { Collections, artworkImagesCol, type ArtworkDoc, type ArtworkImageDoc } from "./collections.ts";
 import { refreshListing } from "./listing-projection.ts";
+import { DbError } from "./errors.ts";
 
-export class ArtworkImageError extends Error {}
+export class ArtworkImageError extends DbError {}
 
 export const MAX_IMAGES_PER_ARTWORK = 8;
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024;

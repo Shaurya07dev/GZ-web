@@ -8,8 +8,9 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { gstStateMachine, insuranceStateMachine, kycStateMachine, type ReviewStatus } from "@galleryzone/domain";
 import { Collections, userProfileCol, type AuditLogDoc, type ProfileDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class ModerationError extends Error {}
+export class ModerationError extends DbError {}
 
 interface DecisionInput {
   db: Firestore;

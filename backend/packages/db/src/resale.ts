@@ -8,8 +8,9 @@ import { resaleListingStateMachine } from "@galleryzone/domain";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, type ResaleListingDoc } from "./collections.ts";
 import { getCurrentOwner } from "./ownership.ts";
+import { DbError } from "./errors.ts";
 
-export class ResaleError extends Error {}
+export class ResaleError extends DbError {}
 
 export async function listMyResaleListings(db: Firestore, sellerId: string): Promise<(ResaleListingDoc & { id: string })[]> {
   const snap = await db.collection(Collections.resaleListings).where("sellerId", "==", sellerId).get();

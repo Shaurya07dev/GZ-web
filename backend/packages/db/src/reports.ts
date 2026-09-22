@@ -5,8 +5,9 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { shouldFlagEarningsAbove5L, type PricingRates } from "@galleryzone/domain";
 import { Collections, userProfileCol, type OrderDoc, type SettlementDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class ReportError extends Error {}
+export class ReportError extends DbError {}
 
 export async function setEarningsAbove5L(db: Firestore, userId: string, value: boolean): Promise<void> {
   const ref = db.collection(userProfileCol(userId)).doc("data");

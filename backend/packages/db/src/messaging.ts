@@ -4,8 +4,9 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { Collections, type MessageThreadDoc, type SupportTicketDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class MessagingError extends Error {}
+export class MessagingError extends DbError {}
 
 export async function listMessages(db: Firestore, userId: string): Promise<(MessageThreadDoc & { id: string })[]> {
   const snap = await db.collection(Collections.messageThreads).where("userId", "==", userId).get();

@@ -9,8 +9,9 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { meetsMinWithdrawal, withdrawalPayoutPostings, withdrawalStateMachine, type PricingRates } from "@galleryzone/domain";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, type LedgerAccountDoc, type LedgerEntryDoc, type WithdrawalRequestDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class WithdrawalError extends Error {}
+export class WithdrawalError extends DbError {}
 
 export type WithdrawableAccountType = Extract<LedgerAccountDoc["type"], "artist_payable" | "aggregator_payable" | "customer_wallet">;
 

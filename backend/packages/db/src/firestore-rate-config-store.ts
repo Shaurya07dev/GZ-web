@@ -9,6 +9,7 @@ import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore"
 import type { RateConfigStore, RateConfigVersion } from "@galleryzone/config";
 import { normalizeRates, type PricingRates } from "@galleryzone/domain";
 import { Collections, type RateConfigVersionDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
 /**
  * Typed so the API can answer "already approved" and "you proposed this"
@@ -16,7 +17,7 @@ import { Collections, type RateConfigVersionDoc } from "./collections.ts";
  * the admin console as a 500 — on the one screen where an admin most needs
  * to be told which of the two rules they just hit.
  */
-export class RateConfigError extends Error {}
+export class RateConfigError extends DbError {}
 
 export class FirestoreRateConfigStore implements RateConfigStore {
   private readonly db: Firestore;

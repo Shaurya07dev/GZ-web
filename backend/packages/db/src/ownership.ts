@@ -18,8 +18,9 @@
 import { FieldValue, Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore";
 import { transferStateMachine, type TransferStatus } from "@galleryzone/domain";
 import { Collections, artworkOwnershipEventsCol, type ArtworkDoc, type OwnershipEventDoc, type UserDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class OwnershipError extends Error {}
+export class OwnershipError extends DbError {}
 export class OwnershipNotFoundError extends OwnershipError {}
 export class OwnershipConflictError extends OwnershipError {}
 

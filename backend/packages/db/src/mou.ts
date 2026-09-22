@@ -7,8 +7,9 @@
 
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { Collections, type UserDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class MouError extends Error {}
+export class MouError extends DbError {}
 
 export type MouParty = "artist" | "aggregator";
 

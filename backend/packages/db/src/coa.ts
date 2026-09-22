@@ -16,8 +16,9 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { physicalCoaStateMachine } from "@galleryzone/domain";
 import { Collections, type ArtworkDoc, type PhysicalCoaRequestDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class CoaError extends Error {}
+export class CoaError extends DbError {}
 /** Thrown when the caller may not act on this artwork/request (controller maps to 404, never 403, to avoid confirming ids). */
 export class CoaNotFoundError extends CoaError {}
 /** Thrown for state conflicts (already requested, wrong status) — controller maps to 409. */

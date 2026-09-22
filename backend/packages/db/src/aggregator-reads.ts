@@ -20,8 +20,9 @@ import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type Artwork
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 import { getPublicArtwork, type PublicArtworkView } from "./public-artworks.ts";
+import { DbError } from "./errors.ts";
 
-export class AggregatorReadError extends Error {}
+export class AggregatorReadError extends DbError {}
 
 const AGGREGATOR_LISTING_TYPES = new Set(["aggregator_only", "marketplace_and_aggregator"]);
 const ACTIVE_HOLDING = new Set(["reserved", "sold_pending_settlement"]);

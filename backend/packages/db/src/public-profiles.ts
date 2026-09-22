@@ -4,8 +4,9 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { Collections, type ArtworkDoc, type PublicProfileDoc, type UserDoc, type UserRole, type UserStatus } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class ProfileError extends Error {}
+export class ProfileError extends DbError {}
 
 export interface PublicArtistProfile {
   id: string;

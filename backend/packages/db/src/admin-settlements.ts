@@ -4,8 +4,9 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { settlementStateMachine } from "@galleryzone/domain";
 import { Collections, type SettlementDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class SettlementError extends Error {}
+export class SettlementError extends DbError {}
 
 export interface SettlementView {
   id: string;

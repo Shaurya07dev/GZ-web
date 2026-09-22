@@ -17,8 +17,9 @@ import {
   type AuditLogDoc,
   artworkRarityValues,
 } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class AdminArtworkError extends Error {}
+export class AdminArtworkError extends DbError {}
 
 export interface AdminArtworkRow {
   id: string;

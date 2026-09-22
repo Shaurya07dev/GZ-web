@@ -22,8 +22,9 @@ import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf } from "./listing-projection.ts";
 import { recordSaleTransfer } from "./ownership.ts";
+import { DbError } from "./errors.ts";
 
-export class CheckoutError extends Error {}
+export class CheckoutError extends DbError {}
 
 export interface CreateOrderInput {
   db: Firestore;

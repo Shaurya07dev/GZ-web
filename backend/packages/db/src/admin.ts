@@ -2,8 +2,9 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { Collections, artworkStatusEventsCol, type ArtworkStatusEventDoc, type CategoryDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class AdminError extends Error {}
+export class AdminError extends DbError {}
 
 export async function listCategories(db: Firestore): Promise<(CategoryDoc & { id: string })[]> {
   const snap = await db.collection(Collections.categories).get();

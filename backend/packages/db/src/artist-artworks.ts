@@ -13,8 +13,9 @@ import { listArtworkImages, type ArtworkImage } from "./artwork-images.ts";
 import { getPublicArtwork, type PublicArtworkView } from "./public-artworks.ts";
 import { issueCertificate } from "./coa.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
+import { DbError } from "./errors.ts";
 
-export class ArtistArtworkError extends Error {}
+export class ArtistArtworkError extends DbError {}
 
 export interface SubmitArtworkInput {
   db: Firestore;

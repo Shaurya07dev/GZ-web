@@ -18,8 +18,9 @@
 import { FieldValue, type Firestore, type Transaction } from "firebase-admin/firestore";
 import type { Posting } from "@galleryzone/domain";
 import { Collections, type LedgerAccountDoc, type LedgerEntryDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class LedgerError extends Error {}
+export class LedgerError extends DbError {}
 
 function assertBalanced(postings: Posting[]): void {
   const sum = postings.reduce((total, p) => total + p.amountPaise, 0);

@@ -4,8 +4,9 @@
 
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import { Collections, type AddressDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class AddressError extends Error {}
+export class AddressError extends DbError {}
 
 export interface AddressInput {
   line1: string;

@@ -11,8 +11,9 @@ import { getAuth } from "firebase-admin/auth";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getApps } from "firebase-admin/app";
 import { Collections, type PublicProfileDoc, type UserDoc, type UserRole } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class AuthError extends Error {}
+export class AuthError extends DbError {}
 
 function authService() {
   const app = getApps()[0];

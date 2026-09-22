@@ -4,8 +4,9 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { orderStateMachine, type OrderStatus } from "@galleryzone/domain";
 import { Collections, orderStatusEventsCol, type AddressDoc, type OrderDoc } from "./collections.ts";
 import { decorate, type OrderView } from "./order-listings.ts";
+import { DbError } from "./errors.ts";
 
-export class AdminOrderError extends Error {}
+export class AdminOrderError extends DbError {}
 
 export async function listOrdersAdmin(db: Firestore): Promise<OrderView[]> {
   const snap = await db.collection(Collections.orders).orderBy("createdAt", "desc").get();

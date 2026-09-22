@@ -6,8 +6,9 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { deactivationStateMachine, penaltyStateMachine, type DeactivationStatus, type PenaltyStatus } from "@galleryzone/domain";
 import { Collections, type AuditLogDoc, type ExternalSalePenaltyDoc } from "./collections.ts";
+import { DbError } from "./errors.ts";
 
-export class DeactivationError extends Error {}
+export class DeactivationError extends DbError {}
 
 async function latestDeactivationStatus(db: Firestore, userId: string): Promise<DeactivationStatus | "none"> {
   const snap = await db.collection(Collections.auditLog).where("entityId", "==", userId).orderBy("createdAt").get();

@@ -22,8 +22,9 @@ import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkPricingDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 import { artworkStateMachine } from "@galleryzone/domain";
+import { DbError } from "./errors.ts";
 
-export class AggregatorFlowError extends Error {}
+export class AggregatorFlowError extends DbError {}
 
 async function requireActiveRates(db: Firestore): Promise<PricingRates> {
   const store = new FirestoreRateConfigStore(db);
