@@ -2,7 +2,7 @@
 // "generation" computes real aggregates on demand, same as the Postgres
 // version — no rendering pipeline, no persistence table yet.
 
-import { Timestamp, type Firestore } from "firebase-admin/firestore";
+import type { Firestore } from "firebase-admin/firestore";
 import { shouldFlagEarningsAbove5L, type PricingRates } from "@galleryzone/domain";
 import { Collections, userProfileCol, type OrderDoc, type SettlementDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
@@ -18,14 +18,20 @@ export async function setEarningsAbove5L(db: Firestore, userId: string, value: b
 
 /** Suggests the flag from real year-to-date settlement totals — an admin still confirms it via setEarningsAbove5L(). */
 export async function suggestEarningsAbove5L(db: Firestore, artistId: string, rates: PricingRates, asOf: Date = new Date()): Promise<boolean> {
-  const yearStart = new Date(Date.UTC(asOf.getUTCFullYear(), 0, 1));
-  const snap = await db
-    .collection(Collections.settlements)
-    .where("artistId", "==", artistId)
-    .where("createdAt", ">=", Timestamp.fromDate(yearStart))
-    .where("createdAt", "<=", Timestamp.fromDate(asOf))
-    .get();
-  const total = snap.docs.reduce((sum, d) => sum + (d.data() as SettlementDoc).artistAmountPaise, 0);
+  const yearStart = Date.UTC(asOf.getUTCFullYear(), 0, 1);
+  const until = asOf.getTime();
+  // Equality on artistId only, with the date window applied in memory. The
+  // range filter used to be in the query, which makes it a composite index
+  // Firestore will not serve without a deploy — and it took the whole admin
+  // user page down with a FAILED_PRECONDITION 500 rather than just losing the
+  // suggestion. One artist's settlements is a small read; correctness here
+  // must not depend on an index having been created.
+  const snap = await db.collection(Collections.settlements).where("artistId", "==", artistId).get();
+  const total = snap.docs.reduce((sum, d) => {
+    const settlement = d.data() as SettlementDoc;
+    const at = settlement.createdAt?.toMillis?.() ?? 0;
+    return at >= yearStart && at <= until ? sum + settlement.artistAmountPaise : sum;
+  }, 0);
   return shouldFlagEarningsAbove5L(total, rates);
 }
 

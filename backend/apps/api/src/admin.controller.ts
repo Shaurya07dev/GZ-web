@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Logger, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
 import { FirestoreRateConfigStore, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
@@ -16,6 +16,8 @@ type StatusBody = z.infer<typeof statusSchema>;
 
 @Controller("v1/admin")
 export class AdminController {
+  private readonly logger = new Logger(AdminController.name);
+
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly emails: Emails,
@@ -87,9 +89,20 @@ export class AdminController {
     // crossing the threshold changes what is withheld from an artist, so a
     // person still confirms it.
     if (user.role !== "artist") return { ...user, earningsAbove5LSuggested: false };
-    const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
-    const suggested = await suggestEarningsAbove5L(this.db, id, rates);
+    // Advisory: if it can't be computed, the page still has to render. It took
+    // this whole route down once already by depending on a Firestore index.
+    const suggested = await this.earningsSuggestion(id);
     return { ...user, earningsAbove5LSuggested: suggested };
+  }
+
+  private async earningsSuggestion(userId: string): Promise<boolean | null> {
+    try {
+      const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+      return await suggestEarningsAbove5L(this.db, userId, rates);
+    } catch (error) {
+      this.logger.warn(`earnings suggestion for ${userId} unavailable: ${String(error)}`);
+      return null;
+    }
   }
 
   @Roles("admin")
