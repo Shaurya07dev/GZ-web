@@ -35,6 +35,7 @@ import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { initials } from "@/features/account/account-data";
 import { readSessionRole, subscribeToSession } from "@/lib/session";
 import { authService } from "@/services/authService";
+import { useMounted } from "@/hooks/useMounted";
 
 interface NavItem {
   href: string;
@@ -127,7 +128,7 @@ export function MobileBottomNav() {
   const { data: me } = useCurrentUser();
   const pathname = usePathname();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const sessionRole = useSyncExternalStore(
     subscribeToSession,
     readSessionRole,
@@ -135,17 +136,13 @@ export function MobileBottomNav() {
   );
   const { data: profile } = useCustomerProfile();
   const customer = profile ?? { name: me?.name ?? "", email: me?.email ?? "" };
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   // The sheet belongs to whatever page it was opened from — leaving it open
-  // across a navigation would show stale content behind the new page.
-  useEffect(() => {
-    setMoreOpen(false);
-  }, [pathname]);
+  // across a navigation would show stale content behind the new page. Keyed
+  // to that path rather than closed by an effect, so there is no second
+  // render pass on every route change.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const moreOpen = openedAt === pathname;
+  const setMoreOpen = (next: boolean) => setOpenedAt(next ? pathname : null);
 
   if (HIDDEN_ROUTES.includes(pathname)) return null;
   if (HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) return null;

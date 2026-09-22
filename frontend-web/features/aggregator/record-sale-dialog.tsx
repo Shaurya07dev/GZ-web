@@ -28,6 +28,7 @@ import {
   FieldLabel,
   FieldError,
   FieldGroup,
+  FieldDescription,
 } from "@/components/ui/field";
 import { PriceTag } from "@/components/shared/price-tag";
 import { useRecordSaleMutation } from "@/hooks/useAggregatorCollection";
@@ -92,9 +93,10 @@ export function RecordSaleDialog({
   });
 
   useEffect(() => {
-    // Pre-filled with GalleryZone's set display price, since that's what the
-    // piece is meant to sell at -- still editable, for the rare sale that
-    // actually closed at a different number.
+    // Always the holding's own selling price. The field used to be editable,
+    // but every ledger posting for the sale settles on the display price, so
+    // a different number here would only make the sale record and the money
+    // disagree -- the API refuses it. Re-price the holding to change it.
     if (open && holding) {
       reset({ soldPrice: holding.displayPrice, ...BLANK_BUYER_FIELDS });
     }
@@ -199,13 +201,16 @@ export function RecordSaleDialog({
                   <Input
                     id="soldPrice"
                     type="number"
-                    min={1}
-                    className="h-10"
+                    readOnly
+                    className="h-10 bg-muted/40"
                     value={field.value || ""}
-                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
                     onBlur={field.onBlur}
                     aria-invalid={fieldState.invalid}
                   />
+                  <FieldDescription>
+                    This piece&rsquo;s selling price. To change it, set a new
+                    price on the holding before recording the sale.
+                  </FieldDescription>
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

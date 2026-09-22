@@ -12,14 +12,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ArtworkCardSkeleton } from "@/components/shared/artwork-card-skeleton";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { useMounted } from "@/hooks/useMounted";
 
 export default function WishlistPage() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const ids = useWishlistStore((state) => state.ids);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Saved ids live in the browser; each piece is read from the API so a
   // sold or delisted artwork simply drops out of the list.

@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { authService } from "@/services/authService";
 import { useAggregatorMessages } from "@/hooks/useAggregatorMessages";
+import { useMounted } from "@/hooks/useMounted";
 
 const PRIMARY_TABS = [
   { href: "/aggregator/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -88,13 +89,16 @@ function isMoreActive(pathname: string) {
 export function AggregatorMobileBottomNav() {
   const { data: me } = useCurrentUser();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const mounted = useMounted();
+  // Keyed to the path it was opened from rather than closed by an effect on
+  // navigation: leaving it open across a route change would show stale
+  // content behind the new page, and deriving it means there is no second
+  // render pass to do the closing.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const moreOpen = openedAt === pathname;
+  const setMoreOpen = (next: boolean) => setOpenedAt(next ? pathname : null);
   const { data: messages } = useAggregatorMessages();
   const unreadMessages = messages?.filter((m) => m.unread).length ?? 0;
-
-  useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { setMoreOpen(false); }, [pathname]);
 
   if (!mounted) return null;
 
@@ -125,7 +129,7 @@ export function AggregatorMobileBottomNav() {
 
         <button
           type="button"
-          onClick={() => setMoreOpen((o) => !o)}
+          onClick={() => setMoreOpen(!moreOpen)}
           className={cn(
             "relative flex flex-1 flex-col items-center justify-center gap-0.5 pt-1 text-[10px] font-medium transition-colors",
             moreHighlighted ? "text-gold-bright" : "text-muted-foreground",
