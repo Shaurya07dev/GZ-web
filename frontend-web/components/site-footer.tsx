@@ -93,7 +93,7 @@ export function SiteFooter() {
           <motion.div
             variants={footerFadeItem}
             transition={{ duration: 0.5, ease: "easeOut", delay: 0.06 }}
-            className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-5"
+            className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-6"
           >
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.title} className="flex flex-col">
