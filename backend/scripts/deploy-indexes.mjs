@@ -60,6 +60,8 @@ for (const idx of list.data.indexes ?? []) {
 }
 
 let created = 0;
+let missing = 0;
+let failed = 0;
 for (const idx of wanted) {
   const sig = signature(idx.collectionGroup, idx.fields);
   if (existing.has(sig)) {
@@ -68,6 +70,7 @@ for (const idx of wanted) {
   }
   if (dryRun) {
     console.log(`missing  ${sig}`);
+    missing += 1;
     continue;
   }
   try {
@@ -83,8 +86,23 @@ for (const idx of wanted) {
     if (/already exists/i.test(msg)) console.log(`ok       ${sig} (already building)`);
     else {
       console.error(`FAILED   ${sig}: ${msg}`);
+      failed += 1;
       process.exitCode = 1;
     }
   }
 }
-console.log(created ? `${created} index(es) queued — they take a minute or two to build.` : "Nothing to create.");
+// Say what actually happened. Counting only successes made this print
+// "Nothing to create." directly under a list of failures, which reads as
+// "all good" when nothing was created at all.
+if (dryRun) {
+  console.log(missing ? `${missing} index(es) missing — re-run without --dry-run to create them.` : "Nothing to create.");
+} else if (failed) {
+  console.error(
+    `${failed} index(es) could NOT be created${created ? `, ${created} queued` : ""}. ` +
+      `"The caller does not have permission" means the service account needs the ` +
+      `Cloud Datastore Index Admin role (roles/datastore.indexAdmin), or create them ` +
+      `from the Firebase console instead.`,
+  );
+} else {
+  console.log(created ? `${created} index(es) queued — they take a minute or two to build.` : "Nothing to create.");
+}

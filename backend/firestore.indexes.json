@@ -127,34 +127,6 @@
       ]
     },
     {
-      "collectionGroup": "artworks",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "artistId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "ledgerEntries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "accountId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "auditLog",
       "queryScope": "COLLECTION",
       "fields": [
