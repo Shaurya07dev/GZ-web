@@ -80,6 +80,8 @@ export const Collections = {
   gallerySpaces: "gallerySpaces",
   buyerInvites: "buyerInvites",
   auditLog: "auditLog",
+  /** Pending Secure ID sessions, mapping a verification_id back to the user who started it. */
+  verificationSessions: "verificationSessions",
   disputes: "disputes",
   rateConfigVersions: "rateConfigVersions",
   messageThreads: "messageThreads",
@@ -115,6 +117,22 @@ export interface UserDoc {
   roleGrants: string[]; // RoleGrant values, kept as string[] for forward-compat with a grant not yet in the RoleGrant union
 }
 
+/**
+ * One machine identity/registry check, kept for the admin who decides and for
+ * any later audit. Written by verification.ts; read by the admin panes.
+ */
+export interface VerificationEvidence {
+  /** Which check produced this: "cashfree_gstin" | "cashfree_digilocker". */
+  provider: string;
+  outcome: "valid" | "invalid" | "failed";
+  /** Cashfree's reference, so a result can be traced back in their dashboard. */
+  referenceId: string | null;
+  /** The name the registry or DigiLocker returned, for the admin to compare against the artist's own. */
+  verifiedName: string | null;
+  detail: Record<string, unknown> | null;
+  checkedAt: FirebaseFirestore.Timestamp;
+}
+
 export interface ProfileDoc {
   bio: string | null;
   profileImageUrl: string | null;
@@ -127,6 +145,13 @@ export interface ProfileDoc {
   gstStatus: ReviewStatus | null;
   aadhaarStatus: ReviewStatus | null;
   aadhaarMasked: string | null;
+  /**
+   * What Cashfree Secure ID said, if it was ever asked. Evidence for the admin
+   * who decides gstStatus/aadhaarStatus — never an approval in itself
+   * (verification.ts explains why).
+   */
+  gstVerification?: VerificationEvidence | null;
+  aadhaarVerification?: VerificationEvidence | null;
   bankAccountMasked: string | null;
   ifsc: string | null;
   pickupLine1: string | null;
@@ -343,7 +368,7 @@ export interface PaymentDoc {
   orderId: string;
   provider: string;
   providerPaymentId: string | null;
-  /** The gateway's own order id (Razorpay order_…), set when a checkout session is opened. */
+  /** The gateway's own order id (Cashfree echoes back the one we send), set when a checkout session is opened. */
   providerOrderId?: string | null;
   method: string | null;
   amountPaise: number;
@@ -353,12 +378,12 @@ export interface PaymentDoc {
   createdAt: FirebaseFirestore.Timestamp;
 }
 
-/** One Razorpay top-up of an aggregator's wallet. Server-only: the catch-all rule denies clients. */
+/** One gateway top-up of an aggregator's wallet. Server-only: the catch-all rule denies clients. */
 export interface WalletTopupDoc {
   userId: string;
   amountPaise: number;
   status: "pending" | "paid" | "failed";
-  /** The gateway's own order id (Razorpay order_…), set when checkout opens. */
+  /** The gateway's own order id (Cashfree echoes back the one we send), set when checkout opens. */
   providerOrderId: string | null;
   providerPaymentId: string | null;
   method: string | null;
@@ -372,6 +397,11 @@ export type LedgerAccountType =
   | "aggregator_held"
   | "customer_wallet"
   | "platform_revenue"
+  | "gateway_escrow"
+  // Historical: what "gateway_escrow" was called while the gateway was
+  // Razorpay. Kept in the union so ledger entries written before the move to
+  // Cashfree still read back typed. Nothing writes it any more; scripts/
+  // migrate-escrow-account.ts repoints the old docs.
   | "razorpay_escrow"
   | "gst_payable"
   | "tds_payable";

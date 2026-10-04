@@ -5,7 +5,7 @@ import { z } from "zod";
 import { WALLET_TOPUP_MAX_PAISE, WALLET_TOPUP_MIN_PAISE } from "@galleryzone/domain";
 import { firestoreId } from "./ids.ts";
 
-/** Add money to the wallet through Razorpay (client, 30 Sep 2026). One payment at a time, within the bounds in the domain. */
+/** Add money to the wallet through the payment gateway (client, 30 Sep 2026). One payment at a time, within the bounds in the domain. */
 export const startWalletTopupInputSchema = z
   .object({ amountPaise: z.number().int().min(WALLET_TOPUP_MIN_PAISE).max(WALLET_TOPUP_MAX_PAISE) })
   .strict();
@@ -16,17 +16,6 @@ export type StartWalletTopupInput = z.infer<typeof startWalletTopupInputSchema>;
 export const remitSaleInputSchema = z.object({ via: z.enum(["wallet", "bank"]) }).strict();
 
 export type RemitSaleInput = z.infer<typeof remitSaleInputSchema>;
-
-/** What Checkout.js hands back once the aggregator has paid. */
-export const verifyWalletTopupInputSchema = z
-  .object({
-    razorpayOrderId: z.string().min(1).max(100),
-    razorpayPaymentId: z.string().min(1).max(100),
-    signature: z.string().min(1).max(200),
-  })
-  .strict();
-
-export type VerifyWalletTopupInput = z.infer<typeof verifyWalletTopupInputSchema>;
 
 export const reserveHoldingInputSchema = z
   .object({

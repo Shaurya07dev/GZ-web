@@ -77,7 +77,7 @@ page either — it resolves per role.
 | Payment captured — order confirmed | the buyer | **Live** | Receipt with the total paid. |
 | Payment captured — piece sold | the artist | **Live** | Shows their net settlement. |
 | Payment captured | admins | **Not built** | No ops notification on a sale. |
-| Payment failed or abandoned | the buyer | **Live** | On Razorpay's `payment.failed` webhook. Says they were not charged and the piece is still available. |
+| Payment failed or abandoned | the buyer | **Live** | On Cashfree's `PAYMENT_FAILED_WEBHOOK` / `PAYMENT_USER_DROPPED_WEBHOOK`. Says they were not charged and the piece is still available. |
 | Order confirmed → packed → transit → delivered → cancelled | the buyer | **Live** | Wired into `PATCH /v1/admin/orders/:id/status`. The copy had been keyed to `shipped`/`refunded`, which are not order statuses, so nothing would have matched even once it was called. |
 | Order status changed | the artist | **Live** | On the stages that are theirs: confirmed, transit, delivered, cancelled. |
 | Order cancelled / refunded | the buyer + the artist | **Not built** | There is no refund flow yet at all. |
@@ -92,7 +92,7 @@ page either — it resolves per role.
 | Withdrawal requested | admins | **Live** | The approval prompt. |
 | Withdrawal approved | the requester | **Live** | |
 | Withdrawal rejected | the requester | **Live** | |
-| Payout actually paid out (NEFT/RazorpayX reference) | the requester | **Not built** | Approval and payment are separate events; only approval is mailed. |
+| Payout actually paid out (NEFT/Cashfree Payouts reference) | the requester | **Not built** | Approval and payment are separate events; only approval is mailed. |
 | Bank account changed on a profile | the account | **Live** | Always sent, with a “wasn’t you?” line — the point is the real owner hears about it. |
 
 ## 6. Certificates, ownership and the passport
@@ -150,7 +150,7 @@ decision, and support acknowledgement in both directions. What is left:
    controller call — which is why they are still open while the other
    security mails are done.
 2. **Payout actually paid out** → the requester. Approval and the bank
-   transfer are separate events; only approval is mailed. Needs the RazorpayX
+   transfer are separate events; only approval is mailed. Needs the Cashfree Payouts
    payout integration to have something to report.
 3. **GST invoice issued** → the buyer. Needs the invoice PDF first.
 4. **Scheduled mails** — listing expiry, free-edit window closing,

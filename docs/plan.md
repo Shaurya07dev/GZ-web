@@ -565,7 +565,26 @@ store it in Redis **and** as `ledger_transactions.idempotency_key`.
 
 ---
 
-## 10. Razorpay integration
+## 10. Payment gateway integration
+
+> **Superseded, 4 Oct 2026 — the gateway is Cashfree, not Razorpay.** The
+> sections below are kept because the *requirements* still hold (split
+> settlement, KYC'd payee onboarding, idempotent webhooks, penny-drop verified
+> fund accounts); only the vendor changed. What is built today:
+>
+> | This section says | Built as |
+> |---|---|
+> | Razorpay Orders + Checkout.js | Cashfree PG: `POST /pg/orders` + `payment_session_id` (`apps/api/src/payments/cashfree.ts`) |
+> | Client-side HMAC verification | **Gone.** Cashfree hands the browser nothing to verify; the API re-reads the order from Cashfree |
+> | `payment.captured` / `order.paid` / `payment.failed` | `PAYMENT_SUCCESS_WEBHOOK` / `PAYMENT_FAILED_WEBHOOK` / `PAYMENT_USER_DROPPED_WEBHOOK` |
+> | Amounts in paise to the gateway | Cashfree takes **rupees as a decimal**; converted in one place (`packages/domain/src/gateway-money.ts`) |
+> | Razorpay Route (split settlement) | **Not built.** The Cashfree equivalent is Easy Split; the ledger already models the split internally |
+> | RazorpayX Payouts | **Not built.** The Cashfree equivalent is Cashfree Payouts |
+> | Penny-drop bank verification | **Not built.** Cashfree Secure ID bank-account verification |
+>
+> Aadhaar and GSTIN verification, which this plan did not cover, are built on
+> Cashfree Secure ID (`apps/api/src/verification/`).
+
 
 - **Route** for split settlement. Artists and aggregators are onboarded as **linked accounts**
   with their own KYC. Transfers are defined at order creation and executed on capture.

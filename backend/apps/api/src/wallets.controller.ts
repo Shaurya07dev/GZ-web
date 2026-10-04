@@ -44,7 +44,7 @@ export class AggregatorWalletController {
   constructor(@Inject(DB) private readonly db: Db) {}
 
   // No withdrawal route here (plan.md §3.4: an aggregator is an agent, not a
-  // principal). Money comes in by Razorpay top-up (payments.controller.ts) and
+  // principal). Money comes in by Cashfree top-up (payments.controller.ts) and
   // out through reservations and sales. `balancePaise` is what can be spent
   // now; `heldPaise` is set aside for pieces they hold.
   @Roles("aggregator")

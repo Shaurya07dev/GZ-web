@@ -2,7 +2,7 @@
 // createOrder() records intent at "pending" with nothing captured yet;
 // markOrderPaid() moves it to "paid", posts the ledger entries, passes
 // title to the buyer and takes the piece off the marketplace. Who calls
-// markOrderPaid depends on PAYMENTS_MODE: the Razorpay webhook / checkout
+// markOrderPaid depends on PAYMENTS_MODE: the Cashfree webhook / status re-read
 // verification (payments.controller.ts) in production, or the customer's
 // own simulate-payment call in simulated mode. Idempotent on the order.
 
@@ -44,7 +44,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   const pricing = pricingSnap.data() as ArtworkPricingDoc;
 
   // Both of these used to be taken on trust, which meant an order could be
-  // opened — and, in razorpay mode, actually paid — for a piece that was
+  // opened — and, in cashfree mode, actually paid — for a piece that was
   // never for sale. markOrderPaid would then throw on the marketplace ->
   // sold transition, AFTER the card was charged. Refusing here, before any
   // money moves, is the only safe place for it. It also stops two buyers
@@ -94,7 +94,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
 
   const paymentDoc: PaymentDoc = {
     orderId: orderRef.id,
-    provider: "razorpay",
+    provider: "cashfree",
     providerPaymentId: null,
     method: "simulated",
     amountPaise: checkout.total,

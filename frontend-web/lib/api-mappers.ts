@@ -236,9 +236,9 @@ export function toOrder(dto: OrderDto): Order {
     payment:
       dto.payment && dto.payment.status === "captured"
         ? {
-            provider: "razorpay",
+            provider: "cashfree",
             paymentId: dto.payment.providerPaymentId ?? "",
-            method: dto.payment.method ?? "razorpay",
+            method: dto.payment.method ?? "cashfree",
             simulated: dto.payment.method === "simulated",
           }
         : null,

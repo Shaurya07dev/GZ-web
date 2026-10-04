@@ -1,8 +1,8 @@
 // Aggregator wallet top-ups. Client, 30 Sep 2026: money goes in "from his bank
-// account like Razorpay". A top-up is our record of one Razorpay order: created
+// account like Razorpay". A top-up is our record of one gateway order: created
 // pending, credited to the wallet exactly once when the payment is captured.
 //
-// Both the checkout callback and Razorpay's webhook can report the same
+// Both the status re-read and Cashfree's webhook can report the same
 // payment, so markTopupPaid is idempotent: the ledger entries are keyed on the
 // top-up id (a replayed post throws ALREADY_EXISTS) and the status flips in the
 // same transaction as the credit. The amount credited is always the amount we
@@ -63,7 +63,7 @@ export async function markTopupPaid(
   if (topup.status === "paid") return { userId: topup.userId, amountPaise: topup.amountPaise, alreadyPaid: true };
 
   try {
-    // A payment that failed once can be retried on the same Razorpay order and
+    // A payment that failed once can be retried on the same gateway order and
     // succeed, so "failed" is not final: only "paid" is.
     await postLedgerEntries(db, {
       postings: walletTopupPostings({ aggregatorId: topup.userId, amountPaise: topup.amountPaise }),

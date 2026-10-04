@@ -1,7 +1,7 @@
 // Checkout — plan.md's Marketplace/Orders surface. @galleryzone/db's
 // createOrder()/confirmSimulatedPayment() do the real work (see that
 // file's own header for why confirmSimulatedPayment is explicitly a
-// pre-Razorpay placeholder); this controller is deliberately thin.
+// pre-gateway placeholder); this controller is deliberately thin.
 
 import { Body, ConflictException, Controller, ForbiddenException, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
 import { createOrder, confirmSimulatedPayment, getOrder, CheckoutError, type Db } from "@galleryzone/db";
@@ -46,11 +46,11 @@ export class OrdersController {
     }
   }
 
-  // Pre-Razorpay only — see checkout.ts's own warning. This is a stand-in
+  // Simulated mode only — see checkout.ts's own warning. This is a stand-in
   // for the payment webhook, so it's normally an operator action
   // (platform_admin). While PAYMENTS_MODE=simulated the order's OWN
   // customer may call it too, so the web checkout works end to end before
-  // Razorpay lands; flipping the env to "razorpay" closes that door
+  // Cashfree lands; flipping the env to "cashfree" closes that door
   // without a code change.
   @Roles("customer", "platform_admin")
   @Post(":id/simulate-payment")

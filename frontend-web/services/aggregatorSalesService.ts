@@ -7,7 +7,7 @@ import type { Settlement } from "@/types/admin";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 import { http } from "@/lib/api";
 import { paiseToRupees } from "@/lib/api-mappers";
-import { openRazorpayCheckout, type RazorpaySession } from "@/lib/razorpay-checkout";
+import { PaymentDismissedError, openCashfreeCheckout, type CashfreeSession } from "@/lib/cashfree-checkout";
 import { aggregatorService } from "./aggregatorService";
 
 export interface AggregatorCustomer {
@@ -202,23 +202,25 @@ export const aggregatorSalesService = {
       .sort((a, b) => b.date.localeCompare(a.date));
   },
 
-  // Money comes in from the aggregator's own bank account through Razorpay
+  // Money comes in from the aggregator's own bank account through Cashfree
   // (client, 30 Sep 2026). The API opens the gateway order; the browser only
-  // ever gets the public key and that order id. The wallet is credited once the
-  // API has verified the payment (the webhook does the same, idempotently).
+  // ever gets a short-lived payment session id. The wallet is credited once the
+  // API has re-read the order from Cashfree and seen PAID for the right amount
+  // (the webhook does the same, idempotently).
   // With PAYMENTS_MODE=simulated on the API there is no gateway and no money.
   addFunds: async (amount: number): Promise<void> => {
-    const session = await http.post<{ mode: "simulated"; topupId: string } | (RazorpaySession & { topupId: string })>("/v1/aggregator/wallet/topups", {
+    const session = await http.post<{ mode: "simulated"; topupId: string } | (CashfreeSession & { topupId: string })>("/v1/aggregator/wallet/topups", {
       amountPaise: Math.round(amount * 100),
     });
     const base = `/v1/aggregator/wallet/topups/${encodeURIComponent(session.topupId)}`;
-    if (session.mode === "razorpay") {
-      const paid = await openRazorpayCheckout(session);
-      await http.post(`${base}/verify`, {
-        razorpayOrderId: paid.razorpay_order_id,
-        razorpayPaymentId: paid.razorpay_payment_id,
-        signature: paid.razorpay_signature,
-      });
+    if (session.mode === "cashfree") {
+      const outcome = await openCashfreeCheckout(session);
+      // Verified even when the SDK reported a problem — see orderService for why.
+      const confirmed = await http.post<{ status: string }>(`${base}/verify`);
+      if (confirmed.status !== "paid") {
+        if (outcome.reportedError || outcome.redirecting) throw new PaymentDismissedError();
+        throw new Error("The payment did not go through. Nothing was added to your wallet.");
+      }
     } else {
       await http.post(`${base}/simulate`);
     }

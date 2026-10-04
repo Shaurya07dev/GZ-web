@@ -1,7 +1,7 @@
 # GalleryZone — testing guide (pre-launch)
 
 Live: **https://www.galleryzone.art** (also https://gz-web-livid.vercel.app) → API https://api-production-9fd9.up.railway.app.
-Payments are in **Razorpay test mode** — nothing real is charged.
+Payments run on **Cashfree**. With `PAYMENTS_MODE=simulated` (the default) there is no gateway at all; with `PAYMENTS_MODE=cashfree` and sandbox keys it is Cashfree test mode. Nothing real is charged either way.
 
 ## Accounts
 
@@ -38,10 +38,20 @@ Change any password with **Forgot password** on `/login` — the email is real (
 
 1. Register as a customer → `/marketplace` → open the piece → **Buy now**.
 2. Add a delivery address → review → **Pay**.
-3. Razorpay test checkout opens. Use: card `4111 1111 1111 1111`, any future expiry, any CVV, any OTP; or UPI `success@razorpay`.
+3. Cashfree test checkout opens in a modal. Use card `4706131211212123`, expiry `03/2028`, CVV `123`, name `Test`, OTP `111000`. (Any card from Cashfree's test-data page works; the OTP is `111000` for all of them.)
 4. On success: order → **paid**, ownership transfers to the buyer, the piece leaves the marketplace, buyer gets a receipt email, artist gets a "Sold" email with the net payout.
 5. `/verify/<artworkId>` (also the QR on the certificate) shows the new owner. `/account/orders` lists the order with the gateway payment id.
-6. Webhook: in Razorpay dashboard → Webhooks → point `https://api-production-9fd9.up.railway.app/v1/payments/razorpay/webhook` with the secret you gave me, events `payment.captured`, `payment.failed`, `order.paid`. The verify callback already marks orders paid; the webhook makes it robust if the buyer closes the tab.
+6. Webhook: merchant.cashfree.com → Developers → Webhooks → add
+   `https://api-production-9fd9.up.railway.app/v1/payments/cashfree/webhook`,
+   events `PAYMENT_SUCCESS_WEBHOOK`, `PAYMENT_FAILED_WEBHOOK`,
+   `PAYMENT_USER_DROPPED_WEBHOOK`. There is no separate webhook secret —
+   Cashfree signs with the same secret key as the API.
+
+   Note the difference from Razorpay: the browser no longer posts a signed
+   result back. When you return from the modal the site asks the API, and the
+   API asks Cashfree directly, so an order is only ever marked paid because
+   Cashfree said `PAID` for the right amount. The webhook is what makes it
+   robust if you close the tab.
 
 ## Flow 3 — Certificates & provenance
 

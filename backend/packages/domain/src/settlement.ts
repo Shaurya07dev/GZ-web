@@ -24,7 +24,7 @@ export type LedgerAccountType =
   | "aggregator_held"
   | "customer_wallet"
   | "platform_revenue"
-  | "razorpay_escrow"
+  | "gateway_escrow"
   | "gst_payable"
   | "tds_payable";
 
@@ -80,7 +80,7 @@ export function marketplaceCheckoutPostings({
 
   return assertBalanced(
     [
-      { accountType: "razorpay_escrow", amountPaise: checkout.total, reason: "checkout_capture" },
+      { accountType: "gateway_escrow", amountPaise: checkout.total, reason: "checkout_capture" },
       { accountType: "gst_payable", amountPaise: -gstLiability, reason: "gst_liability" },
       { accountType: "tds_payable", amountPaise: -settlement.tdsDeduction, reason: "artist_tds_withheld" },
       { accountType: "artist_payable", ownerId: artistId, amountPaise: -settlement.net, reason: "marketplace_settlement" },
@@ -159,7 +159,7 @@ export function aggregatorSalePostings({
       // isn't new money: it is the aggregatorHoldPostings legs, reversed.
       { accountType: "aggregator_held", ownerId: aggregatorId, amountPaise: heldPaise, reason: "hold_released_on_sale" },
       { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: -heldPaise, reason: "hold_returned_to_wallet" },
-      { accountType: "razorpay_escrow", amountPaise: displayPricePaise, reason: "aggregator_sale_capture" },
+      { accountType: "gateway_escrow", amountPaise: displayPricePaise, reason: "aggregator_sale_capture" },
       { accountType: "gst_payable", amountPaise: -gstLiability, reason: "gst_liability" },
       { accountType: "tds_payable", amountPaise: -settlement.tdsDeduction, reason: "artist_tds_withheld" },
       { accountType: "artist_payable", ownerId: artistId, amountPaise: -settlement.net, reason: "aggregator_settlement" },
@@ -182,7 +182,7 @@ export function aggregatorSalePostings({
 export function walletTopupPostings({ aggregatorId, amountPaise }: { aggregatorId: string; amountPaise: number }): Posting[] {
   return assertBalanced(
     [
-      { accountType: "razorpay_escrow", amountPaise, reason: "wallet_topup_capture" },
+      { accountType: "gateway_escrow", amountPaise, reason: "wallet_topup_capture" },
       { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: -amountPaise, reason: "wallet_topup" },
     ],
     "walletTopupPostings",
@@ -253,7 +253,7 @@ export function cashRemittanceFromWalletPostings({ aggregatorId, amountPaise }: 
   return assertBalanced(
     [
       { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise, reason: "cash_sale_paid_from_wallet" },
-      { accountType: "razorpay_escrow", amountPaise: -amountPaise, reason: "cash_sale_remitted" },
+      { accountType: "gateway_escrow", amountPaise: -amountPaise, reason: "cash_sale_remitted" },
     ],
     "cashRemittanceFromWalletPostings",
   );
@@ -282,7 +282,7 @@ export function withdrawalPayoutPostings({
   return assertBalanced(
     [
       { accountType, ownerId, amountPaise, reason: "payable_discharged" },
-      { accountType: "razorpay_escrow", amountPaise: -amountPaise, reason: "razorpayx_payout" },
+      { accountType: "gateway_escrow", amountPaise: -amountPaise, reason: "payout_sent" },
     ],
     "withdrawalPayoutPostings",
   );

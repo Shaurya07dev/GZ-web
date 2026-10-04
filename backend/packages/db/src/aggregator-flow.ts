@@ -132,7 +132,7 @@ export async function reserveHolding({
   };
 
   // The advance and the delivery deposit are set aside from the aggregator's
-  // wallet (client, 30 Sep 2026: money comes in by Razorpay top-up). The funds
+  // wallet (client, 30 Sep 2026: money comes in by gateway top-up). The funds
   // check, the hold and the holding itself commit in ONE transaction, so a
   // reservation can never exist without its money, or take money twice.
   await postLedgerEntries(db, {

@@ -12,3 +12,4 @@
 
 # The single env file lives at the root — never committed.
 /.env
+.claude/skills/

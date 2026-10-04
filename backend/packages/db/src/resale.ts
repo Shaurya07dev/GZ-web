@@ -56,7 +56,7 @@ export async function completeResaleSale(db: Firestore, sellerId: string, listin
 
   const { transactionId } = await postLedgerEntries(db, {
     postings: [
-      { accountType: "razorpay_escrow", amountPaise: listing.listedPricePaise, reason: "resale_capture" },
+      { accountType: "gateway_escrow", amountPaise: listing.listedPricePaise, reason: "resale_capture" },
       { accountType: "customer_wallet", ownerId: sellerId, amountPaise: -listing.listedPricePaise, reason: "resale_credit" },
     ],
     idempotencyPrefix: `resale:${listingId}`,

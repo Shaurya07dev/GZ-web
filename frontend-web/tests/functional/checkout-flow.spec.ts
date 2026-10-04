@@ -26,13 +26,12 @@ test('full checkout: address -> review -> confirm -> pay -> order placed', async
   await expect(page.getByText('₹25,900').first()).toBeVisible(); // Total
   await page.getByRole('button', { name: 'Continue to confirm' }).click();
 
-  // Step 3: Confirm — opens the payment simulation dialog.
+  // Step 3: Confirm. In simulated mode (PAYMENTS_MODE=simulated on the API)
+  // there is no gateway and no dialog — paying calls simulate-payment
+  // straight through. The gateway's own modal is covered where it is faked,
+  // in aggregator-money.spec.ts.
   await expect(page.getByRole('heading', { name: 'Ready to place your order' })).toBeVisible();
   await page.getByRole('button', { name: /^Pay ₹/ }).click();
-
-  const paymentDialog = page.getByRole('dialog', { name: /Razorpay/ });
-  await expect(paymentDialog).toBeVisible();
-  await paymentDialog.getByRole('button', { name: /^Pay ₹/ }).click();
 
   // Completing payment shows an in-place success state — no URL change,
   // confirmed live (this isn't a missed redirect, it's how the flow works).

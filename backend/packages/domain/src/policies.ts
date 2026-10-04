@@ -70,7 +70,7 @@ export function shouldFlagEarningsAbove5L(yearToDateEarningsPaise: number, rates
   return yearToDateEarningsPaise >= rates.earningsAbove5LThresholdPaise;
 }
 
-// One wallet top-up through Razorpay. The floor is about what one reservation
+// One wallet top-up through the gateway. The floor is about what one reservation
 // needs; the ceiling keeps a mistyped amount from becoming a very large charge.
 // ponytail: fixed here, not in the admin rate console; move it there if it ever needs tuning.
 export const WALLET_TOPUP_MIN_PAISE = 100_000; // ₹1,000

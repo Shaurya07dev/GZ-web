@@ -36,7 +36,7 @@ Recent commits, newest first:
   goes to the landing page when signed out and to your own side when signed in.
 - `a367f7a` — aggregator coordinator block, MOU-gate on reserving, one-shot
   display price, artwork history in COA & NFC, walk-in buyers connecting to
-  accounts by email, simulated Razorpay checkout.
+  accounts by email, simulated checkout (no gateway).
 - `020c0e2` — Demo Customer lands in the collector portal; checkout scrolls
   itself back into view between steps.
 - `94350fd` — ported production's survey rewrite, 404 redesign, About colour
@@ -67,7 +67,7 @@ buttons, which skip the form.
 | Paper COA request, ownership transfer (resale) | `/account/collection` | customer |
 | Bank account, withdraw store credit | `/account/wallet` | customer |
 | Resale listing, simulate a sale | `/account/resale` | customer |
-| Simulated Razorpay payment | `/checkout?artworkId=…` | customer |
+| Simulated payment (no gateway) | `/checkout?artworkId=…` | customer |
 | Passport, ownership history | `/verify/<artworkId>` | anyone |
 | Transfer acceptance | `/transfer/<transferId>` | no account needed |
 
@@ -177,7 +177,7 @@ delivery is settled solely on a sale. Returned holdings are kept with status
   signed-in person arriving at the site root goes to their own side. Buyers go
   to `/marketplace`, everyone else to their dashboard. The public pages stay
   public.
-- Razorpay is a **simulation** for now. No keys, no gateway.
+- The gateway is **Cashfree** (migrated 4 Oct 2026). With `PAYMENTS_MODE=simulated` it is still a simulation: no keys, no gateway.
 - Aggregators must sign their MOU in the website before reserving artwork.
 - Keep interfaces ordinary. His customers are not advanced users — an earlier
   `?home=1` escape hatch was rejected for exactly this reason. If a solution
