@@ -33,9 +33,14 @@ export interface AppEnv {
   /** Browser origins allowed by CORS. Comma-separated in env; defaults to the local Next dev server. */
   corsOrigins: string[];
   /**
-   * "simulated" lets the order's own customer call POST /v1/orders/:id/simulate-payment
-   * (a stand-in for the gateway webhook). Anything else refuses that route for
-   * customers, so a deploy can't accidentally ship free checkout.
+   * "simulated" lets the order's own customer call
+   * POST /v1/orders/:id/simulate-payment — i.e. mark their own order paid
+   * without paying. "cashfree" closes that door.
+   *
+   * Because the permissive value is the one that costs money, this is parsed
+   * strictly: an unrecognised value FAILS THE BOOT rather than falling back.
+   * A silent fallback is exactly how a stale "razorpay" left over from the old
+   * gateway would have turned into free checkout.
    */
   paymentsMode: "simulated" | "cashfree";
   /** S3-compatible object storage for artwork images (Railway bucket). Null until configured — image routes then 503. */
@@ -71,6 +76,33 @@ function nodeEnvOf(value: string | undefined): AppEnv["nodeEnv"] {
   return "development";
 }
 
+/**
+ * Strict on purpose. "simulated" means a customer can mark their own order
+ * paid, so every path that is not deliberate ends in an exception rather than
+ * in that mode:
+ *
+ *   - an unrecognised value (a stale "razorpay", a typo, "true") throws;
+ *   - unset throws in production, where leaving it out is never intentional,
+ *     while still defaulting to "simulated" for local development.
+ */
+function paymentsModeOf(value: string | undefined, nodeEnv: AppEnv["nodeEnv"]): AppEnv["paymentsMode"] {
+  if (value === "simulated" || value === "cashfree") return value;
+  if (value === undefined || value.length === 0) {
+    if (nodeEnv === "production") {
+      throw new Error(
+        "PAYMENTS_MODE is not set. Set it to \"cashfree\" to take real payments, or \"simulated\" to " +
+          "deliberately allow customers to mark their own orders paid. There is no default in production.",
+      );
+    }
+    return "simulated";
+  }
+  throw new Error(
+    `PAYMENTS_MODE=${JSON.stringify(value)} is not a valid mode. Use "cashfree" or "simulated". ` +
+      `(If this says "razorpay", the gateway moved to Cashfree — set it to "cashfree". It is refused rather ` +
+      `than ignored because falling back to "simulated" would let customers mark their own orders paid.)`,
+  );
+}
+
 /** Reads process.env once at boot. Call this exactly once per process. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
   return {
@@ -86,7 +118,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     sentryDsn: optional(source.SENTRY_DSN),
     gcpProjectId: required("GCP_PROJECT_ID", source.GCP_PROJECT_ID),
     corsOrigins: (source.CORS_ORIGINS ?? "http://localhost:3000").split(",").map((o) => o.trim()).filter(Boolean),
-    paymentsMode: source.PAYMENTS_MODE === "cashfree" ? "cashfree" : "simulated",
+    paymentsMode: paymentsModeOf(source.PAYMENTS_MODE, nodeEnvOf(source.NODE_ENV)),
     publicApiUrl:
       optional(source.PUBLIC_API_URL) ??
       (source.RAILWAY_PUBLIC_DOMAIN ? `https://${source.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${Number(source.PORT ?? 8080)}`),

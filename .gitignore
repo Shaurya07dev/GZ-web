@@ -10,6 +10,8 @@
 !/.env.example
 !/README.md
 
-# The single env file lives at the root — never committed.
+# The single env file lives at the root — never committed. The glob covers
+# backups and variants too: a stray .env.bak holds the same live secrets.
 /.env
+/.env.*
 .claude/skills/
