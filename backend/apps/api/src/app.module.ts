@@ -39,7 +39,7 @@ import { Emails } from "./mail/emails.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
-import { Cashfree } from "./payments/cashfree.ts";
+import { Razorpay } from "./payments/razorpay.ts";
 import { CashfreeVerification } from "./verification/cashfree-verification.ts";
 import { VerificationController } from "./verification/verification.controller.ts";
 import { RolesGuard } from "./auth/roles.guard.ts";
@@ -107,7 +107,7 @@ import { DbModule } from "./db.module.ts";
     NfcReminderSweep,
     Mailer,
     Emails,
-    Cashfree,
+    Razorpay,
     CashfreeVerification,
   ],
 })

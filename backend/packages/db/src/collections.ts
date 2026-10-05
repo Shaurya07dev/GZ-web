@@ -368,7 +368,7 @@ export interface PaymentDoc {
   orderId: string;
   provider: string;
   providerPaymentId: string | null;
-  /** The gateway's own order id (Cashfree echoes back the one we send), set when a checkout session is opened. */
+  /** The gateway's own order id (Razorpay generates its own `order_...`), set when a checkout session is opened. */
   providerOrderId?: string | null;
   method: string | null;
   amountPaise: number;
@@ -383,7 +383,7 @@ export interface WalletTopupDoc {
   userId: string;
   amountPaise: number;
   status: "pending" | "paid" | "failed";
-  /** The gateway's own order id (Cashfree echoes back the one we send), set when checkout opens. */
+  /** The gateway's own order id (Razorpay generates its own `order_...`), set when checkout opens. */
   providerOrderId: string | null;
   providerPaymentId: string | null;
   method: string | null;

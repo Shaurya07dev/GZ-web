@@ -50,7 +50,7 @@ export class OrdersController {
   // for the payment webhook, so it's normally an operator action
   // (platform_admin). While PAYMENTS_MODE=simulated the order's OWN
   // customer may call it too, so the web checkout works end to end before
-  // Cashfree lands; flipping the env to "cashfree" closes that door
+  // the gateway lands; flipping the env to "razorpay" closes that door
   // without a code change.
   @Roles("customer", "platform_admin")
   @Post(":id/simulate-payment")

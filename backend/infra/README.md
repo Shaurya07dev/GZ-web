@@ -9,7 +9,7 @@ Planned modules once access is confirmed:
 - `cloud-sql/` — Postgres 16, `asia-south1`, private-IP only, PITR + 30-day
   backup retention (plan.md §15).
 - `cloud-run/` — `apps/api`, `apps/jobs`, min-instances ≥1.
-- `secret-manager/` — Cashfree keys (gateway and Secure ID are separate
+- `secret-manager/` — Razorpay gateway keys and Cashfree Secure ID keys (separate
   pairs), DB credentials, Firebase service
   account.
 - `kms/` — NFC (NTAG 424 DNA) signing keys, PII column encryption keys.

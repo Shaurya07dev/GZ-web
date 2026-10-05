@@ -2,7 +2,7 @@
 // account like Razorpay". A top-up is our record of one gateway order: created
 // pending, credited to the wallet exactly once when the payment is captured.
 //
-// Both the status re-read and Cashfree's webhook can report the same
+// Both the status re-read and Razorpay's webhook can report the same
 // payment, so markTopupPaid is idempotent: the ledger entries are keyed on the
 // top-up id (a replayed post throws ALREADY_EXISTS) and the status flips in the
 // same transaction as the credit. The amount credited is always the amount we

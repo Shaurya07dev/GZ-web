@@ -13,8 +13,9 @@ import { HttpExceptionFilter } from "./http-exception.filter.ts";
 // its own edge, so the client IP is the first X-Forwarded-For hop.
 async function bootstrap() {
   const env = loadEnv();
-  // rawBody: the Cashfree webhook signature is over the timestamp plus the
-  // exact bytes received, so a re-serialised body will not match.
+  // rawBody: both webhook signatures (Razorpay's over the body, Cashfree
+  // Secure ID's over the timestamp plus the body) are computed over the exact
+  // bytes received, so a re-serialised body will not match.
   const app = await NestFactory.create(AppModule, { rawBody: true, bodyParser: true });
   // Image bytes for the fallback upload route arrive as the raw body.
   app.use(express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "16mb" }));

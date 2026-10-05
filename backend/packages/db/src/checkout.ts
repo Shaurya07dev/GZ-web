@@ -2,7 +2,7 @@
 // createOrder() records intent at "pending" with nothing captured yet;
 // markOrderPaid() moves it to "paid", posts the ledger entries, passes
 // title to the buyer and takes the piece off the marketplace. Who calls
-// markOrderPaid depends on PAYMENTS_MODE: the Cashfree webhook / status re-read
+// markOrderPaid depends on PAYMENTS_MODE: the Razorpay webhook / status re-read
 // verification (payments.controller.ts) in production, or the customer's
 // own simulate-payment call in simulated mode. Idempotent on the order.
 
@@ -44,7 +44,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   const pricing = pricingSnap.data() as ArtworkPricingDoc;
 
   // Both of these used to be taken on trust, which meant an order could be
-  // opened — and, in cashfree mode, actually paid — for a piece that was
+  // opened — and, in razorpay mode, actually paid — for a piece that was
   // never for sale. markOrderPaid would then throw on the marketplace ->
   // sold transition, AFTER the card was charged. Refusing here, before any
   // money moves, is the only safe place for it. It also stops two buyers
@@ -94,7 +94,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
 
   const paymentDoc: PaymentDoc = {
     orderId: orderRef.id,
-    provider: "cashfree",
+    provider: "razorpay",
     providerPaymentId: null,
     method: "simulated",
     amountPaise: checkout.total,
@@ -143,6 +143,20 @@ export async function attachProviderOrder(db: Firestore, orderId: string, provid
 export async function orderIdForProviderOrder(db: Firestore, providerOrderId: string): Promise<string | null> {
   const snap = await db.collection(Collections.payments).where("providerOrderId", "==", providerOrderId).limit(1).get();
   return snap.empty ? null : (snap.docs[0]!.data() as PaymentDoc).orderId;
+}
+
+/**
+ * The other direction: which gateway order did we open for this order of ours?
+ *
+ * Needed because Razorpay generates its own order id (`order_...`) rather than
+ * echoing back one we chose, so it cannot be derived from our order id — it
+ * has to be read back from the payment doc that attachProviderOrder wrote.
+ * This is what lets the verify route re-read an order's status without
+ * trusting the browser to tell us which gateway order to ask about.
+ */
+export async function providerOrderIdForOrder(db: Firestore, orderId: string): Promise<string | null> {
+  const snap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
+  return snap.empty ? null : ((snap.docs[0]!.data() as PaymentDoc).providerOrderId ?? null);
 }
 
 export async function markPaymentFailed(db: Firestore, orderId: string, detail: { providerPaymentId: string | null; rawWebhookPayload: unknown }): Promise<void> {

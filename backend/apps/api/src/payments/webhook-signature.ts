@@ -1,12 +1,17 @@
-// Shared gate for the two Cashfree webhooks (payments and Secure ID).
+// Shared gate for both inbound webhooks: Razorpay (payments) and Cashfree
+// Secure ID (Aadhaar/GSTIN verification).
+//
+// The two sign differently - Razorpay HMACs the raw body alone, Secure ID
+// HMACs the timestamp plus the body - so each caller passes its own `verify`.
+// What is shared is the DECISION, which is the part worth getting right once.
 //
 // Three outcomes, and the distinction between the last two is the point:
 //
 //   verified   — signature matches: process the event.
 //   probe      — NO signature headers at all: acknowledge with 200 and process
-//                NOTHING. This is what Cashfree's dashboard "Test & Add"
-//                button sends, and refusing it makes a webhook impossible to
-//                register. It costs nothing to allow, because an unsigned
+//                NOTHING. This is what a dashboard's "send a test event"
+//                button sends (Cashfree's "Test & Add" is how we found this),
+//                and refusing it makes a webhook impossible to register. It costs nothing to allow, because an unsigned
 //                request carries no data we are willing to act on, so a 200
 //                here changes no state and reveals nothing.
 //   rejected   — headers present but the signature does not match: 400. That
@@ -21,7 +26,7 @@ import { BadRequestException, Logger } from "@nestjs/common";
 
 export type WebhookCheck = "verified" | "probe" | "rejected";
 
-const logger = new Logger("CashfreeWebhook");
+const logger = new Logger("GatewayWebhook");
 
 export function classifyWebhook(input: {
   /** Which endpoint, for the log line. */

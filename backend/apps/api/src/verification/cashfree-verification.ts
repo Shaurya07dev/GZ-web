@@ -16,10 +16,32 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import type { AppEnv } from "@galleryzone/config";
+import { secureIdSignature } from "@galleryzone/domain";
 import { ENV } from "../db.module.ts";
 
 const API_VERSION = "2024-12-01";
 const BASE_URL = { sandbox: "https://sandbox.cashfree.com/verification", production: "https://api.cashfree.com/verification" } as const;
+
+/**
+ * Cashfree documents the 2FA signature as valid for 5-10 minutes. Four
+ * minutes keeps it comfortably inside the shorter end of that window while
+ * still reusing one signature across a burst of calls.
+ */
+const SIGNATURE_TTL_MS = 4 * 60_000;
+
+/**
+ * Names the 2FA misconfiguration behind a refusal, so the operator reading the
+ * problem response knows which of the two factors to fix. Both are OUR setup
+ * being wrong, never a verdict about the person being checked — which is the
+ * distinction that matters, because recording one of these as "invalid GSTIN"
+ * would quietly accuse an artist of a bad registration number.
+ */
+function twoFactorCode(body: { code?: string; message?: string }): string {
+  if (body.code === "ip_validation_failed") return "verification_ip_not_whitelisted";
+  const text = `${body.code ?? ""} ${body.message ?? ""}`.toLowerCase();
+  if (text.includes("signature")) return "verification_signature_rejected";
+  return "verification_upstream_error";
+}
 
 /** What the GST registry says about a GSTIN. `valid` is the only thing that can support an approval. */
 export interface GstinResult {
@@ -45,26 +67,75 @@ export class CashfreeVerification {
   private readonly logger = new Logger(CashfreeVerification.name);
   private readonly clientId: string | null;
   private readonly clientSecret: string | null;
+  private readonly publicKey: string | null;
   private readonly baseUrl: string;
   private readonly siteUrl: string;
+  private cachedSignature: { value: string; until: number } | null = null;
 
   constructor(@Inject(ENV) env: AppEnv) {
     this.clientId = env.cashfreeVerificationAppId;
     this.clientSecret = env.cashfreeVerificationSecretKey;
+    this.publicKey = env.cashfreeVerificationPublicKey;
     this.baseUrl = BASE_URL[env.cashfreeEnv];
     this.siteUrl = env.publicSiteUrl;
     if (!this.enabled) this.logger.warn("CASHFREE_VERIFICATION_APP_ID/SECRET not set — GSTIN and Aadhaar verification unavailable");
+    else if (!this.publicKey) {
+      this.logger.warn(
+        "CASHFREE_VERIFICATION_PUBLIC_KEY not set — Secure ID calls will be sent without X-Cf-Signature, " +
+          "which only works if this host's outbound IP is allow-listed in the Cashfree dashboard",
+      );
+    }
   }
 
   get enabled(): boolean {
     return Boolean(this.clientId && this.clientSecret);
   }
 
+  /**
+   * Secure ID's second 2FA factor.
+   *
+   * Secure ID (unlike the payment gateway) refuses every request that does not
+   * satisfy 2FA, and offers two ways to do it: allow-list the caller's IP, or
+   * sign each request. Allow-listing cannot work from a host with no static
+   * outbound IP — which is the case here — so this signs.
+   *
+   * The proof is RSA-OAEP(SHA-1) of "<clientId>.<unixSeconds>" under the
+   * public key Cashfree publishes for the account, base64, in X-Cf-Signature.
+   * Three details, each of which fails in a way that looks like a bad key:
+   *
+   *   - SHA-1, not SHA-256. Node's OAEP default is SHA-256, and Cashfree
+   *     specifies SHA-1, so `oaepHash` has to be stated explicitly.
+   *   - Seconds, not milliseconds. A millisecond timestamp reads as a date in
+   *     the far future and is rejected as expired.
+   *   - OAEP is randomised, so the same input gives a different ciphertext
+   *     every time. That is fine — Cashfree decrypts rather than compares —
+   *     and it is why caching the result is safe within its validity window.
+   *
+   * Returns null when no public key is configured, and the header is then
+   * omitted entirely: Cashfree's docs are explicit that an account on IP
+   * allow-listing must NOT send this header, so sending an unwanted one would
+   * break the very setup it is meant to replace.
+   */
+  private signature(): string | null {
+    if (!this.publicKey || !this.clientId) return null;
+    if (this.cachedSignature && this.cachedSignature.until > Date.now()) return this.cachedSignature.value;
+    const value = secureIdSignature({ clientId: this.clientId, publicKeyPem: this.publicKey });
+    this.cachedSignature = { value, until: Date.now() + SIGNATURE_TTL_MS };
+    return value;
+  }
+
   private headers(): Record<string, string> {
     if (!this.clientId || !this.clientSecret) {
       throw new ServiceUnavailableException({ type: "about:blank", title: "Verification is not configured", status: 503, code: "verification_unavailable" });
     }
-    return { "Content-Type": "application/json", "x-api-version": API_VERSION, "X-Client-Id": this.clientId, "X-Client-Secret": this.clientSecret };
+    const signature = this.signature();
+    return {
+      "Content-Type": "application/json",
+      "x-api-version": API_VERSION,
+      "X-Client-Id": this.clientId,
+      "X-Client-Secret": this.clientSecret,
+      ...(signature ? { "X-Cf-Signature": signature } : {}),
+    };
   }
 
   /**
@@ -109,7 +180,7 @@ export class CashfreeVerification {
         status: 503,
         // The operator needs to know which misconfiguration this was; the
         // artist only ever sees the title.
-        code: body.code === "ip_validation_failed" ? "verification_ip_not_whitelisted" : "verification_upstream_error",
+        code: twoFactorCode(body),
       });
     }
     return {
@@ -140,7 +211,7 @@ export class CashfreeVerification {
     const body = (await res.json().catch(() => ({}))) as { reference_id?: string | number; url?: string; verification_id?: string; message?: string; code?: string };
     if (!res.ok || !body.url) {
       this.logger.error(`cashfree digilocker session failed: ${res.status} ${body.code ?? ""} ${body.message ?? ""}`);
-      throw new ServiceUnavailableException({ type: "about:blank", title: "Could not start Aadhaar verification", status: 503, code: "verification_upstream_error" });
+      throw new ServiceUnavailableException({ type: "about:blank", title: "Could not start Aadhaar verification", status: 503, code: twoFactorCode(body) });
     }
     return {
       referenceId: body.reference_id === undefined ? "" : String(body.reference_id),
