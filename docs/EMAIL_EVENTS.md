@@ -77,7 +77,7 @@ page either — it resolves per role.
 | Payment captured — order confirmed | the buyer | **Live** | Receipt with the total paid. |
 | Payment captured — piece sold | the artist | **Live** | Shows their net settlement. |
 | Payment captured | admins | **Not built** | No ops notification on a sale. |
-| Payment failed or abandoned | the buyer | **Live** | On Cashfree's `PAYMENT_FAILED_WEBHOOK` / `PAYMENT_USER_DROPPED_WEBHOOK`. Says they were not charged and the piece is still available. |
+| Payment failed or abandoned | the buyer | **Live** | On Razorpay's `payment.failed` webhook. Says they were not charged and the piece is still available. |
 | Order confirmed → packed → transit → delivered → cancelled | the buyer | **Live** | Wired into `PATCH /v1/admin/orders/:id/status`. The copy had been keyed to `shipped`/`refunded`, which are not order statuses, so nothing would have matched even once it was called. |
 | Order status changed | the artist | **Live** | On the stages that are theirs: confirmed, transit, delivered, cancelled. |
 | Order cancelled / refunded | the buyer + the artist | **Not built** | There is no refund flow yet at all. |

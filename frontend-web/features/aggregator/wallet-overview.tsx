@@ -26,7 +26,7 @@ import {
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
 import { GstNumberCard } from "@/components/shared/gst-number-card";
-import { PaymentDismissedError } from "@/lib/cashfree-checkout";
+import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 
 const MIN_WITHDRAWAL = 1000;
@@ -125,7 +125,7 @@ export function WalletOverview() {
 
 // The advance and delivery are held from this balance, so an empty wallet
 // means nothing can be reserved. Money comes in from the aggregator's own bank
-// account, card or UPI through Cashfree.
+// account, card or UPI through Razorpay.
 function AddFundsCard() {
   const addFunds = useAddAggregatorFundsMutation();
   const [amount, setAmount] = useState("");
@@ -164,7 +164,7 @@ function AddFundsCard() {
             Add funds
           </h2>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-            Pay from your bank account, card or UPI through Cashfree.
+            Pay from your bank account, card or UPI through Razorpay.
             Reserving artwork holds the advance and delivery from this balance.
             The advance comes back if a piece doesn&rsquo;t sell; the delivery
             deposit comes back when it does.

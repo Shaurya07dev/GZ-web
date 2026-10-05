@@ -38,6 +38,10 @@ import {
   useArtistAccountProfile,
   useSaveArtistProfileMutation,
 } from "@/hooks/useArtistAccount";
+import {
+  useStartAadhaarVerificationMutation,
+  useVerifyGstinMutation,
+} from "@/hooks/useVerification";
 import { ArtistNetworkPanel } from "./artist-network-panel";
 import { ArtistProfileSummary } from "./artist-profile-summary";
 import { MouAgreement } from "./mou-agreement";
@@ -119,6 +123,8 @@ export function ProfileKycForm() {
 function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   const { data: me } = useCurrentUser();
   const saveProfileMutation = useSaveArtistProfileMutation();
+  const verifyGstinMutation = useVerifyGstinMutation();
+  const startAadhaarMutation = useStartAadhaarVerificationMutation();
 
   const [profileForm, setProfileForm] = useState<ProfileFormState>({
     fullName: profile.fullName,
@@ -218,6 +224,13 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
   const gstinTrimmed = profileForm.gstin.trim();
   const gstinInvalid =
     gstinTrimmed.length > 0 && !GSTIN_PATTERN.test(gstinTrimmed);
+  // The registry check runs against what the API has stored, not what is in
+  // the box, so both of these matter: a GSTIN worth checking, and no pending
+  // edit that would make the result describe the wrong number.
+  const savedGstin = profile.gstin.trim();
+  const gstinSavedAndValid =
+    savedGstin.length > 0 && GSTIN_PATTERN.test(savedGstin);
+  const gstinHasUnsavedEdits = gstinTrimmed !== savedGstin;
   // PAN, unlike GST, is compulsory — this is what actually gates listing
   // (see the gate in artwork-submit-form.tsx).
   const panTrimmed = profileForm.pan.trim();
@@ -460,6 +473,27 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
                 className="h-10 pl-9 font-mono"
               />
             </div>
+            {/* Checking the GSTIN against the government registry. It reads
+                the SAVED number (the API takes no GSTIN in the request body,
+                so it can't be used as a free registry lookup), which is why
+                an unsaved edit asks for a save first rather than silently
+                checking the old value. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => verifyGstinMutation.mutate()}
+                disabled={!gstinSavedAndValid || gstinHasUnsavedEdits || verifyGstinMutation.isPending}
+              >
+                <ShieldCheck className="size-3.5" />
+                {verifyGstinMutation.isPending ? "Checking the registry…" : "Verify with the GST registry"}
+              </Button>
+              {gstinHasUnsavedEdits && gstinTrimmed.length > 0 ? (
+                <span className="text-[11px] text-muted-foreground">Save your profile first, then check it.</span>
+              ) : null}
+            </div>
+
             {gstinInvalid ? (
               <p className="text-xs text-destructive">
                 That doesn&rsquo;t look like a valid GSTIN. Leave it blank if
@@ -533,23 +567,51 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           proof paired beside the profile it verifies. */}
       <div className="flex flex-col gap-6">
         <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
-          <div className="flex items-center justify-between">
+          {/* The status comes from the profile, never from this component:
+              it read "Verified" unconditionally before DigiLocker was wired
+              up, which told every artist their identity was confirmed when
+              nothing had been checked. The badge is the same four-state one
+              the GSTIN uses because it IS the same state machine — a machine
+              check moves it to "submitted" and an admin approves. */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display text-base font-semibold text-foreground">
               Aadhaar verification
             </h2>
-            <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400">
-              <ShieldCheck className="size-3" />
-              Verified
-            </span>
+            <GstStatusBadge status={profile.aadhaarStatus} />
           </div>
-          <p className="mt-3 flex items-center gap-2 font-mono text-sm text-foreground">
-            <Lock className="size-3.5 text-muted-foreground" />
-            {profile.aadhaarMasked}
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-            Encrypted at rest and used only for identity verification. Contact
-            support to update your Aadhaar details.
-          </p>
+          {profile.aadhaarMasked ? (
+            <p className="mt-3 flex items-center gap-2 font-mono text-sm text-foreground">
+              <Lock className="size-3.5 text-muted-foreground" />
+              {profile.aadhaarMasked}
+            </p>
+          ) : null}
+          {profile.aadhaarStatus === "approved" ? (
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Verified through DigiLocker. Only the last four digits are ever
+              stored. Contact support to update your Aadhaar details.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                {profile.aadhaarStatus === "submitted"
+                  ? "Your DigiLocker result is with GalleryZone for review. Nothing more is needed from you."
+                  : profile.aadhaarStatus === "rejected"
+                    ? "Your last attempt wasn't accepted. You can run it again through DigiLocker."
+                    : "Verify your identity through DigiLocker, the government's own document service. You consent on DigiLocker's site, so your Aadhaar number never reaches GalleryZone — we receive only your verified name and the last four digits."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3 w-fit"
+                onClick={() => startAadhaarMutation.mutate()}
+                disabled={profile.aadhaarStatus === "submitted" || startAadhaarMutation.isPending}
+              >
+                <ShieldCheck className="size-3.5" />
+                {startAadhaarMutation.isPending ? "Opening DigiLocker…" : profile.aadhaarStatus === "rejected" ? "Try DigiLocker again" : "Verify with DigiLocker"}
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5 sm:p-6">

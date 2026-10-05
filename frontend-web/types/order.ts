@@ -35,7 +35,7 @@ export interface Order {
   // features/checkout/payment-simulation.tsx) — the shape is the gateway's
   // own record of the capture, whichever provider captured it.
   payment?: {
-    provider: "cashfree";
+    provider: "razorpay";
     paymentId: string;
     method: string;
     simulated: boolean;

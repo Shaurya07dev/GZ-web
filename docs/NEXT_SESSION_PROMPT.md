@@ -177,7 +177,7 @@ delivery is settled solely on a sale. Returned holdings are kept with status
   signed-in person arriving at the site root goes to their own side. Buyers go
   to `/marketplace`, everyone else to their dashboard. The public pages stay
   public.
-- The gateway is **Cashfree** (migrated 4 Oct 2026). With `PAYMENTS_MODE=simulated` it is still a simulation: no keys, no gateway.
+- The gateway is **Razorpay**. It moved to Cashfree on 4 Oct 2026 and back on 5 Oct 2026 (client decision); Cashfree is now used ONLY for Aadhaar/GSTIN verification. With `PAYMENTS_MODE=simulated` it is still a simulation: no keys, no gateway.
 - Aggregators must sign their MOU in the website before reserving artwork.
 - Keep interfaces ordinary. His customers are not advanced users — an earlier
   `?home=1` escape hatch was rejected for exactly this reason. If a solution

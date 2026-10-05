@@ -567,23 +567,29 @@ store it in Redis **and** as `ledger_transactions.idempotency_key`.
 
 ## 10. Payment gateway integration
 
-> **Superseded, 4 Oct 2026 — the gateway is Cashfree, not Razorpay.** The
-> sections below are kept because the *requirements* still hold (split
-> settlement, KYC'd payee onboarding, idempotent webhooks, penny-drop verified
-> fund accounts); only the vendor changed. What is built today:
+> **Partly superseded — the gateway is Razorpay, as this section says, but
+> less of it is built than it describes.** The vendor moved to Cashfree on
+> 4 Oct 2026 and back to Razorpay on 5 Oct 2026 on the client's instruction;
+> Cashfree is retained for Aadhaar/GSTIN verification only. The round trip left
+> the integration stronger than the original, so what is built today is NOT
+> simply what this section asks for:
 >
 > | This section says | Built as |
 > |---|---|
-> | Razorpay Orders + Checkout.js | Cashfree PG: `POST /pg/orders` + `payment_session_id` (`apps/api/src/payments/cashfree.ts`) |
-> | Client-side HMAC verification | **Gone.** Cashfree hands the browser nothing to verify; the API re-reads the order from Cashfree |
-> | `payment.captured` / `order.paid` / `payment.failed` | `PAYMENT_SUCCESS_WEBHOOK` / `PAYMENT_FAILED_WEBHOOK` / `PAYMENT_USER_DROPPED_WEBHOOK` |
-> | Amounts in paise to the gateway | Cashfree takes **rupees as a decimal**; converted in one place (`packages/domain/src/gateway-money.ts`) |
-> | Razorpay Route (split settlement) | **Not built.** The Cashfree equivalent is Easy Split; the ledger already models the split internally |
-> | RazorpayX Payouts | **Not built.** The Cashfree equivalent is Cashfree Payouts |
-> | Penny-drop bank verification | **Not built.** Cashfree Secure ID bank-account verification |
+> | Razorpay Orders + Checkout.js | As described (`apps/api/src/payments/razorpay.ts`) |
+> | Client-side HMAC verification | Still checked — but **no longer sufficient**. `POST /orders/:id/payment/verify` takes the signed payload as an OPTIONAL body and then re-reads the order from Razorpay over our own authenticated connection. That read, not the browser, settles the order. Carried over from the Cashfree work, which had nothing client-side to trust. |
+> | (not mentioned) | **Amount guard.** A paid order whose `amount`/`amount_paid` disagree with our own total is refused and logged, on both the re-read and the webhook path. |
+> | `payment.captured` / `order.paid` / `payment.failed` | As described, mapped back to our order by the `gzOrderId` / `gzTopupId` note |
+> | Amounts in paise to the gateway | As described — Razorpay's unit for INR is the paise, so there is no conversion anywhere (the Cashfree detour needed a dedicated module for its rupee decimals; it has been deleted) |
+> | Razorpay Route (split settlement) | **Not built.** The ledger already models the split internally |
+> | RazorpayX Payouts | **Not built.** |
+> | Penny-drop bank verification | **Not built.** |
 >
 > Aadhaar and GSTIN verification, which this plan did not cover, are built on
-> Cashfree Secure ID (`apps/api/src/verification/`).
+> Cashfree Secure ID (`apps/api/src/verification/`). Secure ID enforces 2FA on
+> every call; because Railway has no static outbound IP, requests are signed
+> (`X-Cf-Signature`, RSA-OAEP/SHA-1, `packages/domain/src/secure-id-signature.ts`)
+> rather than IP allow-listed.
 
 
 - **Route** for split settlement. Artists and aggregators are onboarded as **linked accounts**

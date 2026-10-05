@@ -260,27 +260,44 @@ test('a declined request stands for the window, and the piece cannot be asked ab
   await expect(page.getByRole('button', { name: 'Ask to keep it longer' })).toHaveCount(0);
 });
 
-// ---- The wallet: money comes in through Cashfree ---------------------------------------------
+// ---- The wallet: money comes in through Razorpay ---------------------------------------------
 
-// Note what is NOT in this session: no key, no signature, no amount the
-// browser could tamper with. Only a short-lived session id.
-const cashfreeSession = (topupId: string, orderId: string) => ({
-  mode: 'cashfree', topupId, paymentSessionId: 'session_test_1', orderId, amountPaise: 2_500_000, currency: 'INR', environment: 'sandbox',
+// The key id IS public (it identifies the merchant to Checkout.js), but note
+// what still is not here: no secret, and no amount the browser can tamper
+// with that the API will not re-check against its own record.
+const razorpaySession = (topupId: string, orderId: string) => ({
+  mode: 'razorpay', topupId, keyId: 'rzp_test_fake', razorpayOrderId: orderId, amountPaise: 2_500_000,
+  currency: 'INR', name: 'GalleryZone', description: 'Add funds to your GalleryZone wallet',
+  prefill: { name: '', email: '', contact: '' },
 });
 
-/** Stands in for the Cashfree JS SDK: records what it was opened with, then completes or is closed. */
-async function fakeCashfree(page: Page, behaviour: 'pay' | 'close') {
-  await page.addInitScript((mode) => {
-    type Options = { paymentSessionId: string; redirectTarget?: string };
-    (window as unknown as { Cashfree: unknown }).Cashfree = () => ({
-      checkout(options: Options) {
-        (window as unknown as { __cf: Options }).__cf = options;
-        return new Promise((resolve) =>
-          setTimeout(() => resolve(mode === 'pay' ? {} : { error: { message: 'Payment was cancelled by the user' } }), 50),
-        );
-      },
-    });
-  }, behaviour);
+/** The signed success payload Checkout.js hands back. The API verifies its HMAC AND re-reads the order. */
+const SUCCESS = { razorpay_order_id: 'order_test_1', razorpay_payment_id: 'pay_test_1', razorpay_signature: 'deadbeef' };
+
+/** Stands in for Razorpay Checkout.js: records what it was opened with, then completes or is dismissed. */
+async function fakeRazorpay(page: Page, behaviour: 'pay' | 'close') {
+  await page.addInitScript(([mode, success]) => {
+    type Options = {
+      key: string;
+      order_id: string;
+      amount: number;
+      handler: (r: unknown) => void;
+      modal: { ondismiss: () => void };
+    };
+    (window as unknown as { Razorpay: unknown }).Razorpay = class {
+      private readonly options: Options;
+      constructor(options: Options) {
+        this.options = options;
+        (window as unknown as { __rzp: Options }).__rzp = options;
+      }
+      on() {
+        /* payment.failed is not exercised here */
+      }
+      open() {
+        setTimeout(() => (mode === 'pay' ? this.options.handler(success) : this.options.modal.ondismiss()), 50);
+      }
+    };
+  }, [behaviour, SUCCESS] as const);
 }
 
 async function walletThatFollows(page: Page) {
@@ -293,15 +310,15 @@ async function walletThatFollows(page: Page) {
 
 const freeToUse = (page: Page) => page.getByText('Free to use').locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]');
 
-test('topping up: Cashfree opens on our session, and the wallet is credited once the API has verified it', async ({ page, baseURL }, testInfo) => {
+test('topping up: Razorpay opens on our order, and the wallet is credited once the API has verified it', async ({ page, baseURL }, testInfo) => {
   await open(page, baseURL!);
-  await fakeCashfree(page, 'pay');
+  await fakeRazorpay(page, 'pay');
   const wallet = await walletThatFollows(page);
   const started: unknown[] = [];
   const verified: unknown[] = [];
   await page.route('**/v1/aggregator/wallet/topups', (route) => {
     started.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(cashfreeSession('t1', 'gz-topup-t1')) });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(razorpaySession('t1', 'order_test_1')) });
   });
   await page.route('**/v1/aggregator/wallet/topups/t1/verify', (route) => {
     verified.push(route.request().postDataJSON());
@@ -317,27 +334,34 @@ test('topping up: Cashfree opens on our session, and the wallet is credited once
   // The amount goes to the API in paise; the API, not the browser, opens the gateway order.
   await expect(page.getByText('Added to your wallet')).toBeVisible();
   expect(started).toEqual([{ amountPaise: 2_500_000 }]);
-  // The SDK is handed only the session id — no key and no amount.
-  expect(await page.evaluate(() => (window as unknown as { __cf: { paymentSessionId: string } }).__cf)).toMatchObject({ paymentSessionId: 'session_test_1' });
-  // And the confirmation carries NO body: the API asks Cashfree itself, so
-  // there is nothing here for a tampered browser to assert.
-  expect(verified).toEqual([null]);
+  // Checkout.js is opened on OUR order id and OUR amount, both of which the
+  // API re-checks against its own record before anything settles.
+  expect(await page.evaluate(() => (window as unknown as { __rzp: { key: string; order_id: string; amount: number } }).__rzp)).toMatchObject({
+    key: 'rzp_test_fake',
+    order_id: 'order_test_1',
+    amount: 2_500_000,
+  });
+  // The confirmation forwards the signed payload, and that is ALL it is: the
+  // API checks its HMAC and then re-reads the order from Razorpay, so a
+  // tampered browser cannot settle anything by sending a nicer-looking body.
+  expect(verified).toEqual([SUCCESS]);
   await expect(freeToUse(page)).toContainText('₹25,000');
   await page.screenshot({ path: testInfo.outputPath('wallet-topped-up.png'), fullPage: true });
 });
 
-test('closing the Cashfree window charges nothing and credits nothing', async ({ page, baseURL }) => {
+test('closing the Razorpay window charges nothing and credits nothing', async ({ page, baseURL }) => {
   await open(page, baseURL!);
-  await fakeCashfree(page, 'close');
+  await fakeRazorpay(page, 'close');
   const wallet = await walletThatFollows(page);
   const verified: unknown[] = [];
-  await json(page, '**/v1/aggregator/wallet/topups', cashfreeSession('t2', 'gz-topup-t2'), 'POST');
-  // The confirmation is made even when the window was closed: an errored or
-  // dismissed modal can still have taken a payment, so the API is always the
-  // one that decides. Here it reports the order never left ACTIVE.
+  await json(page, '**/v1/aggregator/wallet/topups', razorpaySession('t2', 'order_test_2'), 'POST');
+  // The confirmation is made even when the window was closed: a dismissed
+  // modal can still have taken a payment (a UPI app completing out of band),
+  // so the API is always the one that decides. Here it reports the order was
+  // never paid.
   await page.route('**/v1/aggregator/wallet/topups/t2/verify', (route) => {
     verified.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'ACTIVE' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'created' }) });
   });
   await page.goto('/aggregator/wallet');
 
@@ -345,7 +369,9 @@ test('closing the Cashfree window charges nothing and credits nothing', async ({
   await page.getByRole('button', { name: 'Add to wallet' }).click();
 
   await expect(page.getByText('Payment cancelled — nothing was charged.')).toBeVisible();
-  // Asked once, with no body — and credited nothing, because Cashfree said not paid.
+  // Asked once, with no payload to forward (the modal was dismissed before
+  // Checkout.js produced one) — and credited nothing, because Razorpay said
+  // the order was never paid.
   expect(verified).toEqual([null]);
   expect(wallet.balancePaise).toBe(0);
   await expect(freeToUse(page)).toContainText('₹0');

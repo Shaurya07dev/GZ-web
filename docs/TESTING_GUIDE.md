@@ -1,7 +1,9 @@
 # GalleryZone — testing guide (pre-launch)
 
 Live: **https://www.galleryzone.art** (also https://gz-web-livid.vercel.app) → API https://api-production-9fd9.up.railway.app.
-Payments run on **Cashfree**. With `PAYMENTS_MODE=simulated` (the default) there is no gateway at all; with `PAYMENTS_MODE=cashfree` and sandbox keys it is Cashfree test mode. Nothing real is charged either way.
+Payments run on **Razorpay**. With `PAYMENTS_MODE=simulated` (the default) there is no gateway at all; with `PAYMENTS_MODE=razorpay` and `rzp_test_` keys it is Razorpay test mode. Nothing real is charged either way.
+
+Cashfree is still in the stack, but only for **Aadhaar and GSTIN verification** (Secure ID) — it is not the payment gateway. The gateway moved to Cashfree on 4 Oct 2026 and back on 5 Oct 2026.
 
 ## Accounts
 
@@ -38,20 +40,49 @@ Change any password with **Forgot password** on `/login` — the email is real (
 
 1. Register as a customer → `/marketplace` → open the piece → **Buy now**.
 2. Add a delivery address → review → **Pay**.
-3. Cashfree test checkout opens in a modal. Use card `4706131211212123`, expiry `03/2028`, CVV `123`, name `Test`, OTP `111000`. (Any card from Cashfree's test-data page works; the OTP is `111000` for all of them.)
+3. Razorpay Checkout opens in a modal. In test mode use card `4111 1111 1111 1111`, any future expiry, any CVV, and approve the 3-D Secure page — or pick **UPI** and use the `success@razorpay` VPA. (Razorpay's test-card page lists the rest, including cards that deliberately fail.)
 4. On success: order → **paid**, ownership transfers to the buyer, the piece leaves the marketplace, buyer gets a receipt email, artist gets a "Sold" email with the net payout.
 5. `/verify/<artworkId>` (also the QR on the certificate) shows the new owner. `/account/orders` lists the order with the gateway payment id.
-6. Webhook: merchant.cashfree.com → Developers → Webhooks → add
-   `https://api-production-9fd9.up.railway.app/v1/payments/cashfree/webhook`,
-   events `PAYMENT_SUCCESS_WEBHOOK`, `PAYMENT_FAILED_WEBHOOK`,
-   `PAYMENT_USER_DROPPED_WEBHOOK`. There is no separate webhook secret —
-   Cashfree signs with the same secret key as the API.
+6. Webhook: dashboard.razorpay.com → Account & Settings → Webhooks → add
+   `https://api-production-9fd9.up.railway.app/v1/payments/razorpay/webhook`,
+   events `payment.captured`, `order.paid`, `payment.failed`. The secret is one
+   **you choose** here, and it must match `RAZORPAY_WEBHOOK_SECRET` — it is a
+   third credential, not the API secret.
 
-   Note the difference from Razorpay: the browser no longer posts a signed
-   result back. When you return from the modal the site asks the API, and the
-   API asks Cashfree directly, so an order is only ever marked paid because
-   Cashfree said `PAID` for the right amount. The webhook is what makes it
-   robust if you close the tab.
+   Worth knowing, because it is not how the old Razorpay integration worked:
+   the browser does post a signed result back, and its HMAC is checked, but
+   that alone no longer settles anything. The API then re-reads the order from
+   Razorpay over its own connection and compares the amount against our own
+   total, so an order is marked paid because **Razorpay** said it was paid for
+   the right amount. The webhook is what makes it robust if you close the tab;
+   both paths are idempotent, so whichever lands second does nothing.
+
+   Two things worth trying deliberately: close the modal without paying (you
+   should see "Payment cancelled — nothing was charged", and the order stays
+   pending), and pay with a UPI app in a way that completes after the modal
+   gives up — the order should still end up paid, via the webhook.
+
+## Flow 2b — Artist verifies GSTIN and Aadhaar
+
+Needs the Secure ID keys **and** `CASHFREE_VERIFICATION_PUBLIC_KEY` (2FA set to
+Public Key in the Cashfree dashboard). Without a 2FA factor both actions answer
+503 and the UI says the check is unavailable — which is deliberate: a
+misconfiguration on our side must never be shown as "your GSTIN is invalid".
+
+1. Artist → `/dashboard/profile` → enter a real GSTIN → **Save** (the check runs
+   against the saved value, so the button stays disabled until you save).
+2. **Verify with the GST registry** → on a pass you see the registered legal
+   name and the badge moves to *Pending GalleryZone approval*. It does NOT move
+   to Approved: a machine check is evidence, and an admin still decides, because
+   the GST flag drives invoicing and the §194-O TDS threshold.
+3. **Verify with DigiLocker** → you are sent to DigiLocker, consent there, and
+   come back to the profile. The result arrives on the webhook, so the badge may
+   take a moment; only your verified name and the last four Aadhaar digits are
+   stored — the full number never reaches GalleryZone.
+4. Webhook: merchant.cashfree.com → Developers → Webhooks, under **Secure ID**
+   → `https://api-production-9fd9.up.railway.app/v1/verification/cashfree/webhook`,
+   the `DIGILOCKER_VERIFICATION_*` events. This is a different endpoint and a
+   different secret from the payment webhook.
 
 ## Flow 3 — Certificates & provenance
 

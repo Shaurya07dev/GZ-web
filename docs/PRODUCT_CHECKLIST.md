@@ -19,7 +19,7 @@ honest empty state (artist network, reviews, buyer invites — no routes yet).
 - [x] Two platform admins exist.
 - [x] Rate config v1 approved (2026-09-16).
 - [ ] Add `gz-web-livid.vercel.app` to Firebase Auth authorized domains.
-- [x] Approve → certificate → marketplace → gateway session verified live (on Razorpay at the time; the gateway is now Cashfree and needs re-walking). Browser-side: pay with the test card → transfer → CoA request (see TESTING_GUIDE).
+- [x] Approve → certificate → marketplace → gateway session verified live (on Razorpay, which is the gateway again as of 5 Oct 2026). Browser-side: pay with the test card → transfer → CoA request (see TESTING_GUIDE).
 - [x] Artist MOU v2026.2 generated from `docs/legal/artist-mou-2026.2.txt` (`frontend-web/scripts/gen-mou.mjs`).
 
 ## 1. Remove every hardcoded thing on the web pages (2–3 weeks)
@@ -53,8 +53,8 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 
 ## 2. Backend features that don't exist yet (3–4 weeks)
 - [x] **Images**: Railway bucket, presigned PUT (bucket CORS set at API boot) with a through-the-API fallback, immutable serve route; verified end-to-end 2026-09-17. Still to do: admin image moderation.
-- [ ] **Payments**: migrated to **Cashfree** (4 Oct 2026) — order + `payment_session_id` + server-side status re-read + signature-verified, amount-checked webhook. Code complete and type-checked, but **not yet exercised against a live sandbox**: needs `CASHFREE_APP_ID`/`CASHFREE_SECRET_KEY`, `PAYMENTS_MODE=cashfree`, the webhook registered, and the domain whitelisted. Still open after that: refunds/cancellation flow, live-mode keys after KYC.
-- [ ] **Verification**: Aadhaar via Cashfree Secure ID DigiLocker + GSTIN registry lookup. Code complete; needs the SEPARATE Secure ID key pair and its own webhook registered. A pass is recorded as evidence — an admin still approves.
+- [ ] **Payments**: **Razorpay** (moved to Cashfree 4 Oct 2026, moved back 5 Oct 2026 on the client's instruction) — gateway order + Checkout.js + HMAC-verified callback + **server-side status re-read** + signature-verified, amount-checked webhook. The re-read and the amount guard are new: the pre-Cashfree Razorpay code settled on the browser's signed payload alone. Needs `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`/`RAZORPAY_WEBHOOK_SECRET`, `PAYMENTS_MODE=razorpay`, and the webhook registered. Still open after that: refunds/cancellation flow, live-mode keys after KYC.
+- [ ] **Verification**: Aadhaar via Cashfree Secure ID DigiLocker + GSTIN registry lookup, reachable from the artist's Profile & KYC page. Secure ID enforces 2FA on every call and Railway has no static outbound IP, so requests are signed with `CASHFREE_VERIFICATION_PUBLIC_KEY` (RSA-OAEP/SHA-1, `X-Cf-Signature`) rather than IP allow-listed. Needs the SEPARATE Secure ID key pair, that public key, and its own webhook registered. A pass is recorded as evidence — an admin still approves.
 - [ ] **Payouts**: Cashfree Payouts (or manual bank) settlement to artists/aggregators; today the ledger records, nobody is paid.
 - [ ] **Profiles**: artist/aggregator/customer profile write routes; KYC/PAN/GST document upload + review.
 - [x] **Email** via Resend: welcome+verify, password reset, artwork submitted/approved/returned, order paid (buyer+artist), order status, transfer invite, CoA request, withdrawal requested/decided. **Domain galleryzone.art registered — DNS records pending (until then only the owner's inbox receives mail).** In-app notification feed still open.
@@ -79,6 +79,6 @@ Swap each remaining service to the API **and** delete the direct fixture imports
 - [ ] Artist onboarding flow polish (survey → register → KYC → first listing) and admin runbook.
 - [ ] SEO metadata/sitemap/OG images from live data; analytics (Vercel/GA).
 - [ ] Accessibility pass on the real-data pages; empty/error/loading states everywhere (fixtures hid these).
-- [ ] Beta with a handful of vetted artists + real payments in Cashfree sandbox first.
+- [ ] Beta with a handful of vetted artists + real payments in the Razorpay test mode first.
 
 Rough effort for a small team: **6–8 weeks to a beta with real payments and no hardcoded data; ~3 months to a confident public launch.**

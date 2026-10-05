@@ -7,7 +7,7 @@ import type { Settlement } from "@/types/admin";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 import { http } from "@/lib/api";
 import { paiseToRupees } from "@/lib/api-mappers";
-import { PaymentDismissedError, openCashfreeCheckout, type CashfreeSession } from "@/lib/cashfree-checkout";
+import { PaymentDismissedError, openRazorpayCheckout, type RazorpaySession } from "@/lib/razorpay-checkout";
 import { aggregatorService } from "./aggregatorService";
 
 export interface AggregatorCustomer {
@@ -202,24 +202,24 @@ export const aggregatorSalesService = {
       .sort((a, b) => b.date.localeCompare(a.date));
   },
 
-  // Money comes in from the aggregator's own bank account through Cashfree
+  // Money comes in from the aggregator's own bank account through Razorpay
   // (client, 30 Sep 2026). The API opens the gateway order; the browser only
-  // ever gets a short-lived payment session id. The wallet is credited once the
-  // API has re-read the order from Cashfree and seen PAID for the right amount
+  // ever gets the public key id. The wallet is credited once the API has
+  // re-read the order from Razorpay and seen it paid for the right amount
   // (the webhook does the same, idempotently).
   // With PAYMENTS_MODE=simulated on the API there is no gateway and no money.
   addFunds: async (amount: number): Promise<void> => {
-    const session = await http.post<{ mode: "simulated"; topupId: string } | (CashfreeSession & { topupId: string })>("/v1/aggregator/wallet/topups", {
+    const session = await http.post<{ mode: "simulated"; topupId: string } | (RazorpaySession & { topupId: string })>("/v1/aggregator/wallet/topups", {
       amountPaise: Math.round(amount * 100),
     });
     const base = `/v1/aggregator/wallet/topups/${encodeURIComponent(session.topupId)}`;
-    if (session.mode === "cashfree") {
-      const outcome = await openCashfreeCheckout(session);
-      // Verified even when the SDK reported a problem — see orderService for why.
-      const confirmed = await http.post<{ status: string }>(`${base}/verify`);
+    if (session.mode === "razorpay") {
+      const outcome = await openRazorpayCheckout(session);
+      // Verified even when the modal was dismissed — see orderService for why.
+      const confirmed = await http.post<{ status: string }>(`${base}/verify`, outcome.success ?? undefined);
       if (confirmed.status !== "paid") {
-        if (outcome.reportedError || outcome.redirecting) throw new PaymentDismissedError();
-        throw new Error("The payment did not go through. Nothing was added to your wallet.");
+        if (outcome.dismissed) throw new PaymentDismissedError();
+        throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was added to your wallet.");
       }
     } else {
       await http.post(`${base}/simulate`);

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
-import { PaymentDismissedError } from "@/lib/cashfree-checkout";
+import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import { useCheckoutQuote } from "@/hooks/useCheckoutQuote";
 import { PayeeDetails } from "@/components/shared/payee-details";
 import type { Artwork } from "@/types/artwork";
@@ -22,7 +22,7 @@ interface CheckoutConfirmStepProps {
 }
 
 // Step 3 of checkout: one action. The service creates the order, opens
-// the Cashfree checkout and confirms the payment with the API; closing
+// the Razorpay checkout and confirms the payment with the API; closing
 // the payment window leaves the order pending and the buyer here.
 export function CheckoutConfirmStep({
   artwork,
@@ -116,7 +116,7 @@ export function CheckoutConfirmStep({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           You&rsquo;re buying &ldquo;{artwork.title}&rdquo;, delivered to{" "}
-          {address.line1}, {address.city}. Paying opens the secure Cashfree
+          {address.line1}, {address.city}. Paying opens the secure Razorpay
           checkout — UPI, cards and net banking.
         </p>
       </div>

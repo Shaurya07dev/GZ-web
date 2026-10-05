@@ -1,7 +1,7 @@
 import type { Order } from "@/types/order";
 import { http, isApiError } from "@/lib/api";
 import { toOrder, type OrderDto } from "@/lib/api-mappers";
-import { PaymentDismissedError, openCashfreeCheckout, type CashfreeSession } from "@/lib/cashfree-checkout";
+import { PaymentDismissedError, openRazorpayCheckout, type RazorpaySession } from "@/lib/razorpay-checkout";
 
 // Real checkout against the API. Money is computed server-side from the
 // artwork's pricing doc and the active rate config (packages/domain) — the
@@ -30,10 +30,11 @@ export const orderService = {
   },
 
   // 1. create the order (pending)  2. ask the API for a payment session
-  // 3a. Cashfree: run the payment flow, then ask the API to confirm. The API
-  //     re-reads the order from Cashfree and marks it paid only if Cashfree
-  //     itself says PAID for the right amount — nothing the browser reports is
-  //     trusted (the webhook does the same independently, idempotently)
+  // 3a. Razorpay: run the payment flow, then ask the API to confirm. The API
+  //     re-reads the order from Razorpay and marks it paid only if Razorpay
+  //     itself says paid for the right amount — the signed payload we forward
+  //     is checked too, but it is never sufficient on its own (the webhook
+  //     does the same independently, idempotently)
   // 3b. simulated (PAYMENTS_MODE=simulated on the API): the customer's own
   //     simulate-payment call — no money moves
   create: async (payload: CreateOrderPayload): Promise<Order> => {
@@ -45,20 +46,19 @@ export const orderService = {
       idempotencyKey: crypto.randomUUID(),
     });
     const base = `/v1/orders/${encodeURIComponent(orderId)}`;
-    const session = await http.post<{ mode: "simulated" } | CashfreeSession>(`${base}/payment/session`);
-    if (session.mode === "cashfree") {
-      const outcome = await openCashfreeCheckout(session);
-      // Verified even when the SDK reported a problem: an errored modal can
-      // still have taken the payment (a UPI app completing out of band), and
-      // the API's answer comes from Cashfree rather than from this browser.
-      // No body — there is nothing here worth sending.
-      const confirmed = await http.post<{ status: string }>(`${base}/payment/verify`);
+    const session = await http.post<{ mode: "simulated" } | RazorpaySession>(`${base}/payment/session`);
+    if (session.mode === "razorpay") {
+      const outcome = await openRazorpayCheckout(session);
+      // Verified even when the modal was dismissed or reported a failure: it
+      // can still have taken the payment (a UPI app completing out of band),
+      // and the API's answer comes from Razorpay rather than from this browser.
+      const confirmed = await http.post<{ status: string }>(`${base}/payment/verify`, outcome.success ?? undefined);
       if (confirmed.status !== "paid") {
         // Not paid, and the gateway said so. If the buyer simply closed the
         // window this is the quiet "nothing was charged" path; otherwise the
         // webhook will still settle it if a late capture arrives.
-        if (outcome.reportedError || outcome.redirecting) throw new PaymentDismissedError();
-        throw new Error("The payment did not go through. Nothing was charged.");
+        if (outcome.dismissed) throw new PaymentDismissedError();
+        throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was charged.");
       }
     } else {
       await http.post(`${base}/simulate-payment`);
