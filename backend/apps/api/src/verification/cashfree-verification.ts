@@ -88,14 +88,29 @@ export class CashfreeVerification {
       trade_name_of_business?: string;
       gst_in_status?: string;
       reference_id?: string | number;
+      type?: string;
       message?: string;
       code?: string;
     };
-    // A 4xx from the registry lookup is a verdict about the GSTIN, not an
-    // outage: it is reported as "not valid", not as a 503.
-    if (!res.ok && res.status >= 500) {
-      this.logger.error(`cashfree gstin lookup failed: ${res.status} ${body.code ?? ""} ${body.message ?? ""}`);
-      throw new ServiceUnavailableException({ type: "about:blank", title: "Could not reach the GST registry", status: 503, code: "verification_upstream_error" });
+    // Only a real answer from the registry counts as an answer. 200 carries the
+    // verdict, and 404/422 mean "no such registration" — also a verdict. Every
+    // other status is OUR problem (bad or missing keys, an un-whitelisted IP,
+    // a rate limit, an outage) and must not be written down as "this artist's
+    // GSTIN is invalid". Secure ID enforces IP allow-listing, so a 403
+    // ip_validation_failed is the likely first response from a new
+    // environment — recording that as a failed GSTIN would quietly accuse the
+    // artist of a bad registration number.
+    const isVerdict = res.status === 200 || res.status === 404 || res.status === 422;
+    if (!isVerdict) {
+      this.logger.error(`cashfree gstin lookup failed: ${res.status} ${body.type ?? ""} ${body.code ?? ""} ${body.message ?? ""}`);
+      throw new ServiceUnavailableException({
+        type: "about:blank",
+        title: "Could not reach the GST registry",
+        status: 503,
+        // The operator needs to know which misconfiguration this was; the
+        // artist only ever sees the title.
+        code: body.code === "ip_validation_failed" ? "verification_ip_not_whitelisted" : "verification_upstream_error",
+      });
     }
     return {
       valid: res.ok && body.valid === true,
