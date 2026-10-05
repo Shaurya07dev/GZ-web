@@ -37,9 +37,14 @@ const SIGNATURE_TTL_MS = 4 * 60_000;
  * would quietly accuse an artist of a bad registration number.
  */
 function twoFactorCode(body: { code?: string; message?: string }): string {
+  // Keyed on Cashfree's `code` and nothing else. Matching on `message` text
+  // would be the documented anti-pattern: those strings are display-and-log
+  // material and get reworded between API versions, so a substring match
+  // silently stops firing. An unrecognised code falls through to the generic
+  // upstream error, and the caller logs the raw code and message alongside it
+  // so a new one can be added here deliberately.
   if (body.code === "ip_validation_failed") return "verification_ip_not_whitelisted";
-  const text = `${body.code ?? ""} ${body.message ?? ""}`.toLowerCase();
-  if (text.includes("signature")) return "verification_signature_rejected";
+  if (body.code === "signature_validation_failed" || body.code === "invalid_signature") return "verification_signature_rejected";
   return "verification_upstream_error";
 }
 
