@@ -19,7 +19,7 @@
 //      session WE issued. An id we never issued matches nobody, so a forged
 //      webhook cannot attach a "verified" identity to an arbitrary account.
 
-import { BadRequestException, Controller, Headers, HttpCode, Inject, Post, Req } from "@nestjs/common";
+import { Controller, Headers, HttpCode, Inject, Post, Req } from "@nestjs/common";
 import { SkipThrottle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { randomUUID } from "node:crypto";
@@ -35,6 +35,7 @@ import { Public, Roles } from "../auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "../auth/roles.guard.ts";
 import { DB } from "../db.module.ts";
 import { CashfreeVerification } from "./cashfree-verification.ts";
+import { classifyWebhook, invalidSignature } from "../payments/webhook-signature.ts";
 
 interface DigiLockerWebhook {
   type?: string;
@@ -113,9 +114,17 @@ export class VerificationController {
     @Headers("x-webhook-timestamp") timestamp: string | undefined,
   ) {
     const raw = req.rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
-    if (!this.verification.verifyWebhookSignature(raw, timestamp, signature)) {
-      throw new BadRequestException({ type: "about:blank", title: "Invalid webhook signature", status: 400, code: "bad_signature" });
-    }
+    const check = classifyWebhook({
+      source: "verification",
+      rawBody: raw,
+      timestamp,
+      signature,
+      verify: (b, t, s) => this.verification.verifyWebhookSignature(b, t, s),
+    });
+    // Same rule as the payments webhook: acknowledge an unsigned probe so the
+    // endpoint can be registered, read nothing from it, refuse a bad signature.
+    if (check === "probe") return { received: true, matched: false };
+    if (check === "rejected") throw invalidSignature();
     const event = req.body as DigiLockerWebhook;
     const type = event.type ?? "";
     if (!type.startsWith("DIGILOCKER_VERIFICATION")) return { received: true, matched: false };

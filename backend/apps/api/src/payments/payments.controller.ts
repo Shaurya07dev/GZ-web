@@ -61,6 +61,7 @@ import { Emails } from "../mail/emails.ts";
 import { ReadCache } from "../read-cache.ts";
 import { ZodValidationPipe } from "../zod-validation.pipe.ts";
 import { Cashfree, type CashfreeOrder, type CustomerDetails } from "./cashfree.ts";
+import { classifyWebhook, invalidSignature } from "./webhook-signature.ts";
 
 const notFound = () => new NotFoundException({ type: "about:blank", title: "Order not found", status: 404, code: "not_found" });
 
@@ -295,9 +296,17 @@ export class PaymentsController {
     @Headers("x-webhook-timestamp") timestamp: string | undefined,
   ) {
     const raw = req.rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
-    if (!this.cashfree.verifyWebhookSignature(raw, timestamp, signature)) {
-      throw new BadRequestException({ type: "about:blank", title: "Invalid webhook signature", status: 400, code: "bad_signature" });
-    }
+    const check = classifyWebhook({
+      source: "payments",
+      rawBody: raw,
+      timestamp,
+      signature,
+      verify: (b, t, s) => this.cashfree.verifyWebhookSignature(b, t, s),
+    });
+    // An unsigned probe (the dashboard's "Test & Add") is acknowledged and
+    // nothing is read from it; a wrong signature is refused.
+    if (check === "probe") return { received: true, matched: false };
+    if (check === "rejected") throw invalidSignature();
     const event = req.body as WebhookEvent;
     const type = event.type as WebhookType | undefined;
     const gatewayOrderId = event.data?.order?.order_id ?? null;
