@@ -2084,7 +2084,7 @@ as String,
 /// @nodoc
 mixin _$AggregatorHolding {
 
- String get id; String get artworkId;/// 5% in month one, 3% from month two onwards — see `core/pricing.dart`.
+ String get id; String get artworkId;/// 5% in the first two months, 3% from the third - see `core/pricing.dart`.
  int get advancePercent; double get advanceAmount; double get displayPrice; String get assignedAt; String get expiresAt; HoldingStatus get status; AssignmentSource get assignmentSource;/// Paid with the advance before taking possession (MOU §7). The
 /// money-flow sheet returns it only if the piece sells — an unsold piece
 /// going back to GalleryZone refunds the advance alone.
@@ -2093,9 +2093,8 @@ mixin _$AggregatorHolding {
 /// aggregator each month, at a lower price and a different advance rate,
 /// so the month is a property of the artwork's journey rather than of any
 /// one aggregator. Seeded holdings predate the field; 1 is the default.
- int get cycleMonth;/// Aggregator MOU §6: the aggregator gets ONE opportunity to set the
-/// selling price. Stamped the first time they set it; after that the
-/// price is locked.
+ int get cycleMonth;/// Set when the aggregator priced the piece above GalleryZone's offer as
+/// they reserved it (month 1 only). The price is fixed from then on.
  String? get displayPriceSetAt;/// Set when the piece went back to GalleryZone unsold.
  String? get returnedAt;/// True when this placement runs past the usual thirty days because what
 /// would have been left of the artist's 180 days was too short to hand to
@@ -2334,7 +2333,7 @@ class _AggregatorHolding implements AggregatorHolding {
 
 @override final  String id;
 @override final  String artworkId;
-/// 5% in month one, 3% from month two onwards — see `core/pricing.dart`.
+/// 5% in the first two months, 3% from the third - see `core/pricing.dart`.
 @override final  int advancePercent;
 @override final  double advanceAmount;
 @override final  double displayPrice;
@@ -2352,9 +2351,8 @@ class _AggregatorHolding implements AggregatorHolding {
 /// so the month is a property of the artwork's journey rather than of any
 /// one aggregator. Seeded holdings predate the field; 1 is the default.
 @override@JsonKey() final  int cycleMonth;
-/// Aggregator MOU §6: the aggregator gets ONE opportunity to set the
-/// selling price. Stamped the first time they set it; after that the
-/// price is locked.
+/// Set when the aggregator priced the piece above GalleryZone's offer as
+/// they reserved it (month 1 only). The price is fixed from then on.
 @override final  String? displayPriceSetAt;
 /// Set when the piece went back to GalleryZone unsold.
 @override final  String? returnedAt;
