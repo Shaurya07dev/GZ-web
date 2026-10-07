@@ -1,4 +1,4 @@
-# GalleryZone main website
+# GalleryZone
 
 A marketplace for original artwork, built around one idea: every piece carries a
 verifiable identity — who made it, who owns it now, and everywhere it has been.
@@ -6,18 +6,20 @@ Three portals run on the same catalogue: **artists** list and price their work,
 **aggregators** take pieces on display in real galleries, and **collectors** buy,
 own and resell them. A QR code on each piece resolves to its public passport.
 
-This repository is the website and its API.
+This repository is all of it: the website, its API and the mobile app.
 
 | Folder | What it is |
 |---|---|
 | `frontend-web/` | Next.js 16 site (App Router). Deployed on Vercel. |
 | `backend/` | NestJS API on Firestore (Firebase Admin SDK is the only writer). npm-workspaces monorepo: `apps/api`, `packages/{domain,db,contracts,config}`. |
+| `mobile/` | Flutter app (Android and iOS) for artists, aggregators and collectors. Talks to the same API. See [`mobile/README.md`](mobile/README.md). |
 | `docs/` | Design notes, the backend master plan, audits. |
 
 ## Running it locally
 
-One env file for everything: copy `.env.example` to `.env` at the repo root and
-fill it in (Firebase web config, the Admin SDK key path). Both apps read it.
+One env file for everything: a `.env` at the repo root (Firebase web config, the
+Admin SDK key path). It is never committed, so ask a maintainer for the values.
+Both apps read it.
 
 ```bash
 # API  → http://localhost:8080
@@ -35,11 +37,11 @@ Playwright.
 ## Deploying
 
 - **Website**: Vercel, *Import from GitHub* with **Root Directory = `frontend-web`**.
-  Set the `NEXT_PUBLIC_*` variables from `.env.example` in the project's
+  Set the `NEXT_PUBLIC_*` variables in the project's
   Environment Variables (`NEXT_PUBLIC_SITE_URL` = the production domain — it is
   baked into QR codes; `NEXT_PUBLIC_API_URL` = where the API is hosted).
 - **API**: any Node 22+ host (Railway, Render, Cloud Run). Set the backend
-  variables from `.env.example`, provide the service-account JSON as a file,
+  variables, provide the service-account JSON as a file,
   and put the Vercel domain in `CORS_ORIGINS`. Build with `npm run build`, run
   with `node --experimental-strip-types apps/api/dist/main.js`.
 - **Firestore rules/indexes**: `cd backend && npx firebase-tools deploy --only firestore`.
