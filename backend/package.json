@@ -32,6 +32,7 @@
     "start": "node --env-file=../.env --experimental-strip-types apps/api/dist/main.js",
     "dev": "npm run build && npm run start",
     "deploy:indexes": "node scripts/deploy-indexes.mjs",
+    "clear:orphaned-images": "node --experimental-strip-types scripts/clear-orphaned-images.ts",
     "migrate:escrow": "node --experimental-strip-types scripts/migrate-escrow-account.ts",
     "grant:role": "node --experimental-strip-types scripts/grant-role.ts"
   },
