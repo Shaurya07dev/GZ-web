@@ -232,6 +232,7 @@ function PieceRow({ entry, topic }: { entry: MyPassport; topic: PassportTopicSlu
               productCode: passport.productCode,
               title: passport.title,
               artistName: passport.artistName,
+              artistSignatureDataUrl: passport.artistSignatureDataUrl,
               category: passport.category,
               medium: passport.medium,
               dimensions: passport.dimensions,

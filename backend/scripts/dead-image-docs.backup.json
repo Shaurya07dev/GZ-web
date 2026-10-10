@@ -1,0 +1,62 @@
+[
+  {
+    "artworkId": "092ahyr0PbaM6STAG7t0",
+    "title": "Gajanan’s Blessing",
+    "imageId": "bthJs8MSnXN5kLldZDpM",
+    "url": "https://api-production-9fd9.up.railway.app/v1/images/artworks/092ahyr0PbaM6STAG7t0/bwiijojcmuidqt4u.jpg",
+    "thumbnailUrl": null,
+    "altText": "Gajanan’s Blessing, photo 1",
+    "sortOrder": 0,
+    "storagePath": "artworks/092ahyr0PbaM6STAG7t0/bwiijojcmuidqt4u.jpg"
+  },
+  {
+    "artworkId": "KPLfLUGiuoj0GFXpkJRG",
+    "title": "Test Canvas",
+    "imageId": "o25Nz0RxquiemDdb5JaG",
+    "url": "https://api-production-9fd9.up.railway.app/v1/images/artworks/KPLfLUGiuoj0GFXpkJRG/kmmliey6mu5etq54.png",
+    "thumbnailUrl": null,
+    "altText": "Test Canvas",
+    "sortOrder": 0,
+    "storagePath": "artworks/KPLfLUGiuoj0GFXpkJRG/kmmliey6mu5etq54.png"
+  },
+  {
+    "artworkId": "VKThgTXRfCNP3OEc4S5j",
+    "title": "Poster",
+    "imageId": "Gg6I3alxq2JasBdfm74g",
+    "url": "https://api-production-9fd9.up.railway.app/v1/images/artworks/VKThgTXRfCNP3OEc4S5j/j62cj1rymucxsvuk.png",
+    "thumbnailUrl": null,
+    "altText": "Poster, photo 1",
+    "sortOrder": 0,
+    "storagePath": "artworks/VKThgTXRfCNP3OEc4S5j/j62cj1rymucxsvuk.png"
+  },
+  {
+    "artworkId": "eQ5ZEv6cFaBc1N5QGUyY",
+    "title": "Ganpati bappa Blessings",
+    "imageId": "ixG5IuXq98WKpNLeX24F",
+    "url": "https://api-production-9fd9.up.railway.app/v1/images/artworks/eQ5ZEv6cFaBc1N5QGUyY/k6k4mb3fmuienols.jpg",
+    "thumbnailUrl": null,
+    "altText": "Ganpati bappa Blessings , photo 1",
+    "sortOrder": 0,
+    "storagePath": "artworks/eQ5ZEv6cFaBc1N5QGUyY/k6k4mb3fmuienols.jpg"
+  },
+  {
+    "artworkId": "gq2DTKcdKZlxFlEi97nj",
+    "title": "Galaxy",
+    "imageId": "Yqz95cAAIwK6makAJf2l",
+    "url": "https://api-production-9fd9.up.railway.app/v1/images/artworks/gq2DTKcdKZlxFlEi97nj/60sogugymumvtglo.png",
+    "thumbnailUrl": null,
+    "altText": "Galaxy, photo 1",
+    "sortOrder": 0,
+    "storagePath": "artworks/gq2DTKcdKZlxFlEi97nj/60sogugymumvtglo.png"
+  },
+  {
+    "artworkId": "sMHiQmyiVqAPtYSvYQL0",
+    "title": "testin",
+    "imageId": "WVsh7wZw9jiiZhxwC4vg",
+    "url": "https://api-production-9fd9.up.railway.app/v1/images/artworks/sMHiQmyiVqAPtYSvYQL0/su2e13d2mu9o0eq2.jpg",
+    "thumbnailUrl": null,
+    "altText": "testin, photo 1",
+    "sortOrder": 0,
+    "storagePath": "artworks/sMHiQmyiVqAPtYSvYQL0/su2e13d2mu9o0eq2.jpg"
+  }
+]

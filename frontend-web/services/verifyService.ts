@@ -12,6 +12,8 @@ export interface VerifyPassport {
   title: string;
   artistId: string;
   artistName: string;
+  /** The signature the artist drew when signing the MOU, for the certificate. Null if they signed before the pad existed. */
+  artistSignatureDataUrl: string | null;
   category: string;
   medium: string;
   dimensions: string | null;

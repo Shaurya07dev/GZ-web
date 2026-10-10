@@ -7,7 +7,7 @@
 // this DTO too (verify-dto.check.ts).
 
 import { Controller, Get, Header, Inject, NotFoundException, Param } from "@nestjs/common";
-import { getCurrentOwner, getPublicArtwork, listOwnershipEvents, loadPassportExtras, OwnershipNotFoundError, type Db, type OwnershipEvent } from "@galleryzone/db";
+import { getCurrentOwner, getLatestMouAcceptance, getPublicArtwork, listOwnershipEvents, loadPassportExtras, OwnershipNotFoundError, type Db, type OwnershipEvent } from "@galleryzone/db";
 import type { VerifyPassportDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
@@ -52,6 +52,10 @@ async function buildPassport(db: Db, artworkId: string): Promise<VerifyPassportD
   }
   const events = await listOwnershipEvents(db, artworkId);
   const { nfcLinked, nfcLocked, lifecycle } = await loadPassportExtras(db, artworkId, events);
+  // The signature the artist drew when they signed the MOU, so the
+  // certificate is signed rather than blank. A missing MOU record is not an
+  // error here — the passport is still a passport without it.
+  const mou = await getLatestMouAcceptance(db, artwork.artistId, "artist").catch(() => null);
 
   // Built field-by-field: no spread of the artwork view, so a future field
   // on it can't leak here by accident.
@@ -61,6 +65,7 @@ async function buildPassport(db: Db, artworkId: string): Promise<VerifyPassportD
     title: artwork.title,
     artistId: artwork.artistId,
     artistName: artwork.artistName,
+    artistSignatureDataUrl: mou?.signatureDataUrl ?? null,
     category: artwork.category,
     medium: artwork.medium,
     dimensions: artwork.dimensions,

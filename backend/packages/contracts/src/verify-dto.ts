@@ -10,6 +10,19 @@ export interface VerifyPassportDto {
   title: string;
   artistId: string;
   artistName: string;
+  /**
+   * The artist's drawn signature, as captured once when they signed the MOU,
+   * so the Certificate of Authenticity carries it rather than a blank line.
+   *
+   * This is deliberately on the PUBLIC passport (owner's decision, 10 Oct
+   * 2026): the certificate downloads from the public /verify page too, and a
+   * certificate with an empty signature area is not a certificate. The
+   * consequence, stated plainly because the rest of this DTO is built to
+   * avoid exactly this: it is a handwritten signature served unauthenticated,
+   * one request per artwork. Null for artists who signed before the pad
+   * existed.
+   */
+  artistSignatureDataUrl: string | null;
   category: string;
   medium: string;
   dimensions: string | null;

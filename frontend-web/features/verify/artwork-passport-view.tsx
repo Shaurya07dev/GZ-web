@@ -118,6 +118,7 @@ export function ArtworkPassportView({ artworkId }: { artworkId: string }) {
             productCode: passport?.productCode,
             title: artwork.title,
             artistName: artwork.artistName,
+            artistSignatureDataUrl: passport?.artistSignatureDataUrl ?? null,
             category: artwork.category,
             medium: artwork.medium,
             dimensions: artwork.dimensions,

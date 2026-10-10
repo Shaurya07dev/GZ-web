@@ -8,16 +8,17 @@ import { artworkQrDataUrl } from "@/lib/qr";
 // the artwork there is the real thing an artist receives and nothing about
 // the design lives in this file — only where each value sits on it.
 //
-// Two areas are deliberately left EMPTY:
+// The artist's signature above the signature line is the one the artist drew
+// when they signed their MOU, carried on the passport. A certificate with an
+// empty signature area is not a certificate (owner's decision, 10 Oct 2026),
+// so it is printed on every copy — including one downloaded from the public
+// /verify page. The trade that was accepted to get there is recorded on
+// `artistSignatureDataUrl` in verify-dto.ts: it is a handwritten signature
+// served unauthenticated. An artist who signed before the signature pad
+// existed has none, and the line is simply left blank for a wet signature.
 //
-//   * "Artist Signature" — this is signed by hand. The data that reaches this
-//     function comes from the public passport, and shipping a reproducible
-//     signature image through a public page would hand anyone a forgery. The
-//     artist signs the printed copy; that is the point of the paper
-//     certificate under MOU §12.
-//   * The gold "VERIFIED ARTWORK" seal and "AUTHORIZED SIGNATORY" block are
-//     part of the template — GalleryZone's own attestation, not per-artwork
-//     data.
+// The gold "VERIFIED ARTWORK" seal and the "AUTHORIZED SIGNATORY" block are
+// part of the template — GalleryZone's own attestation, not per-artwork data.
 //
 // Ownership is not printed either, and that is on purpose: a certificate is
 // a permanent object but ownership changes. The QR resolves to the live
@@ -65,6 +66,17 @@ const QR_SIZE = 170;
 const QR_X = 964;
 const QR_Y = 432;
 
+/**
+ * The space above the printed "Artist Signature" label, between the bottom of
+ * the declaration text and the label itself. The signature is fitted inside
+ * this box keeping its own aspect ratio, so a wide scrawl and a tall one both
+ * sit on the line rather than being stretched to fill it.
+ */
+const SIG_CENTER_X = 737;
+const SIG_BOTTOM = 662;
+const SIG_MAX_W = 180;
+const SIG_MAX_H = 62;
+
 const INK: [number, number, number] = [26, 22, 18];
 const MUTED: [number, number, number] = [110, 104, 96];
 
@@ -81,6 +93,8 @@ export interface CoaPdfInput {
   coaIssueDate: string;
   /** Current legal owner. Not printed — see the note at the top of this file — but kept so callers need not change. */
   ownerName: string;
+  /** The artist's drawn signature from their MOU, placed above the signature line. Null = the line is left for a wet signature. */
+  artistSignatureDataUrl?: string | null;
 }
 
 function formatDate(iso: string): string {
@@ -181,6 +195,24 @@ export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
 
   // The QR, in the panel the template reserves for it.
   if (qr) doc.addImage(qr, "PNG", mm(QR_X), mm(QR_Y), mm(QR_SIZE), mm(QR_SIZE));
+
+  // The artist's signature, sitting on the line above its printed label.
+  if (input.artistSignatureDataUrl) {
+    try {
+      const { width, height } = doc.getImageProperties(input.artistSignatureDataUrl);
+      // Fit inside the box without distorting: scale by whichever axis binds
+      // first. A signature stretched to fill a fixed box stops looking like
+      // the person's hand, which is the only thing it is there to be.
+      const scale = Math.min(SIG_MAX_W / width, SIG_MAX_H / height);
+      const w = width * scale;
+      const h = height * scale;
+      doc.addImage(input.artistSignatureDataUrl, "PNG", mm(SIG_CENTER_X - w / 2), mm(SIG_BOTTOM - h), mm(w), mm(h));
+    } catch {
+      // An unreadable signature leaves the line blank for a wet signature,
+      // which is the same place we were before it existed — never a failed
+      // download.
+    }
+  }
 
   const name = input.coaCertificateNumber || input.productCode || input.artworkId;
   doc.save(`GalleryZone-CoA-${name}.pdf`);
