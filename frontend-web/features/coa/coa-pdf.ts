@@ -1,11 +1,72 @@
 import { jsPDF } from "jspdf";
 import { artworkQrDataUrl } from "@/lib/qr";
-import { verifyUrlFor } from "@/lib/verify-url";
 
-const PAGE_WIDTH = 210; // A4, mm
-const PAGE_HEIGHT = 297;
-const MARGIN = 20;
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+// The Certificate of Authenticity, rendered onto GalleryZone's designed
+// certificate (public/coa-template.png) rather than drawn from scratch.
+//
+// Everything variable is overlaid on the template at measured positions, so
+// the artwork there is the real thing an artist receives and nothing about
+// the design lives in this file — only where each value sits on it.
+//
+// Two areas are deliberately left EMPTY:
+//
+//   * "Artist Signature" — this is signed by hand. The data that reaches this
+//     function comes from the public passport, and shipping a reproducible
+//     signature image through a public page would hand anyone a forgery. The
+//     artist signs the printed copy; that is the point of the paper
+//     certificate under MOU §12.
+//   * The gold "VERIFIED ARTWORK" seal and "AUTHORIZED SIGNATORY" block are
+//     part of the template — GalleryZone's own attestation, not per-artwork
+//     data.
+//
+// Ownership is not printed either, and that is on purpose: a certificate is
+// a permanent object but ownership changes. The QR resolves to the live
+// passport, so the piece of paper never goes stale or contradicts the ledger.
+
+const TEMPLATE_URL = "/coa-template.png";
+
+// The template's intrinsic pixel size. Every coordinate below is expressed in
+// these pixels — measured off the artwork — and scaled to the page at render
+// time, so the positions stay readable and stay correct if the page size
+// changes.
+const TPL_W = 1280;
+const TPL_H = 853;
+
+/** Page width in mm; the height follows the template's aspect so nothing is stretched. */
+const PAGE_W = 297;
+const PAGE_H = (PAGE_W * TPL_H) / TPL_W;
+const PX = PAGE_W / TPL_W;
+
+/** Template pixels → page mm. */
+const mm = (px: number): number => px * PX;
+
+// --- measured positions on the template ------------------------------------
+
+/** Baseline of each of the seven ruled fields, and where their values start. */
+const FIELD_VALUE_X = 366;
+const FIELD_VALUE_MAX_W = 196; // the ruled line ends at ~562px
+const FIELD_BASELINES = {
+  artistName: 402,
+  title: 446,
+  artForm: 487,
+  medium: 529,
+  dimensions: 573,
+  yearCreated: 615,
+  artworkId: 658,
+} as const;
+
+/** Bottom-left "DATE OF ISSUE" block — the label is on the template, the value goes under it. */
+const DATE_CENTER_X = 233;
+const DATE_BASELINE = 775;
+const CERT_NO_BASELINE = 794;
+
+/** The blank panel under "VERIFIED THIS ARTWORK", above the "Scan to verify…" caption. */
+const QR_SIZE = 170;
+const QR_X = 964;
+const QR_Y = 432;
+
+const INK: [number, number, number] = [26, 22, 18];
+const MUTED: [number, number, number] = [110, 104, 96];
 
 export interface CoaPdfInput {
   artworkId: string;
@@ -18,7 +79,7 @@ export interface CoaPdfInput {
   yearCreated: number | null;
   coaCertificateNumber: string;
   coaIssueDate: string;
-  /** Current legal owner as recorded on the passport. */
+  /** Current legal owner. Not printed — see the note at the top of this file — but kept so callers need not change. */
   ownerName: string;
 }
 
@@ -28,123 +89,99 @@ function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" }).format(date);
 }
 
-// Renders the digital Certificate of Authenticity client-side from the
-// same passport data the /verify page shows (same precedent as
-// features/mou/mou-pdf.ts). The QR in the corner resolves to that public
-// page, so a printed copy is verifiable by anyone with a phone. It is a
-// record of what GalleryZone registered — the hand-signed paper version
-// (MOU §12) is requested separately and physically signed by the artist.
-export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const gold: [number, number, number] = [176, 132, 58];
-  const ink: [number, number, number] = [26, 22, 18];
-  const muted: [number, number, number] = [110, 104, 96];
-
-  // Border
-  doc.setDrawColor(...gold);
-  doc.setLineWidth(0.6);
-  doc.rect(10, 10, PAGE_WIDTH - 20, PAGE_HEIGHT - 20);
-  doc.setLineWidth(0.2);
-  doc.rect(12.5, 12.5, PAGE_WIDTH - 25, PAGE_HEIGHT - 25);
-
-  let y = 34;
-  doc.setTextColor(...gold);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("G A L L E R Y Z O N E", PAGE_WIDTH / 2, y, { align: "center" });
-  y += 12;
-
-  doc.setTextColor(...ink);
-  doc.setFont("times", "bold");
-  doc.setFontSize(24);
-  doc.text("Certificate of Authenticity", PAGE_WIDTH / 2, y, { align: "center" });
-  y += 8;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...muted);
-  doc.text(`Certificate No. ${input.coaCertificateNumber}`, PAGE_WIDTH / 2, y, { align: "center" });
-  y += 14;
-
-  doc.setDrawColor(...gold);
-  doc.line(PAGE_WIDTH / 2 - 15, y, PAGE_WIDTH / 2 + 15, y);
-  y += 12;
-
-  doc.setTextColor(...muted);
-  doc.setFontSize(10);
-  doc.text("This certifies that the artwork", PAGE_WIDTH / 2, y, { align: "center" });
-  y += 12;
-
-  doc.setTextColor(...ink);
-  doc.setFont("times", "bolditalic");
-  doc.setFontSize(20);
-  const titleLines = doc.splitTextToSize(input.title, CONTENT_WIDTH) as string[];
-  doc.text(titleLines, PAGE_WIDTH / 2, y, { align: "center" });
-  y += titleLines.length * 9 + 2;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  doc.setTextColor(...muted);
-  doc.text(`by ${input.artistName}`, PAGE_WIDTH / 2, y, { align: "center" });
-  y += 14;
-
-  doc.setFontSize(10);
-  doc.setTextColor(...ink);
-  const details: [string, string][] = [
-    ["Product code", input.productCode || "—"],
-    ["Category", input.category],
-    ["Medium", input.medium],
-    ["Dimensions", input.dimensions ?? "—"],
-    ["Year", input.yearCreated ? String(input.yearCreated) : "—"],
-    ["Certificate issued", formatDate(input.coaIssueDate)],
-    ["Registered legal owner", input.ownerName],
-  ];
-  const labelX = MARGIN + 12;
-  const valueX = PAGE_WIDTH / 2 + 4;
-  for (const [label, value] of details) {
-    doc.setTextColor(...muted);
-    doc.text(label, labelX, y);
-    doc.setTextColor(...ink);
-    const lines = doc.splitTextToSize(value, PAGE_WIDTH - MARGIN - valueX) as string[];
-    doc.text(lines, valueX, y);
-    y += Math.max(1, lines.length) * 6.5;
-  }
-  y += 8;
-
-  doc.setTextColor(...muted);
-  doc.setFontSize(9);
-  const statement = doc.splitTextToSize(
-    "is an original work registered on GalleryZone. Its provenance — the chain of legal ownership from the artist onward — is recorded on the platform's ledger and can be verified at any time by scanning the code below or visiting the address beneath it. This digital certificate reflects the record as of the date of download; the hand-signed paper certificate issued by the artist on request is the physical counterpart of this record.",
-    CONTENT_WIDTH - 10,
-  ) as string[];
-  doc.text(statement, PAGE_WIDTH / 2, y, { align: "center" });
-  y += statement.length * 4.5 + 10;
-
-  // QR + verify URL
-  const qrSize = 38;
+/**
+ * Loads the certificate artwork as a data URL.
+ *
+ * jsPDF needs the bytes, not a URL, so this fetches once per download. A
+ * failure here is fatal and says so: a certificate rendered without its
+ * template would be a page of floating text with no border, no seal and no
+ * branding, which is worse than no certificate at all.
+ */
+async function loadTemplate(): Promise<string> {
+  let response: Response;
   try {
-    const qr = await artworkQrDataUrl(input.artworkId, 512);
-    doc.addImage(qr, "PNG", PAGE_WIDTH / 2 - qrSize / 2, y, qrSize, qrSize);
+    response = await fetch(TEMPLATE_URL);
   } catch {
-    // No QR image just means the URL line below is the only pointer — still verifiable.
+    throw new Error("Couldn't load the certificate design. Check your connection and try again.");
   }
-  y += qrSize + 6;
-  doc.setFontSize(8.5);
-  doc.setTextColor(...gold);
-  doc.text(verifyUrlFor(input.artworkId), PAGE_WIDTH / 2, y, { align: "center" });
-  y += 5;
-  doc.setTextColor(...muted);
-  doc.text("Scan to verify authenticity and current ownership", PAGE_WIDTH / 2, y, { align: "center" });
+  if (!response.ok) throw new Error("Couldn't load the certificate design. Please try again.");
+  const buffer = await response.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  // Chunked so a ~1 MB image doesn't blow the argument limit of String.fromCharCode.
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return `data:image/png;base64,${btoa(binary)}`;
+}
 
-  // Footer
-  doc.setFontSize(7.5);
-  doc.setTextColor(...muted);
-  doc.text(
-    `Generated ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date())} · GalleryZone acts as an intermediary; title passes directly from seller to buyer.`,
-    PAGE_WIDTH / 2,
-    PAGE_HEIGHT - 16,
-    { align: "center" },
-  );
+/**
+ * Draws a field value on its ruled line, shrinking the type only as far as it
+ * has to before truncating. A long artwork title is common and must not run
+ * over the rule into the declaration column.
+ */
+function fitText(doc: jsPDF, text: string, x: number, baseline: number, maxWidthPx: number, startSize = 12): void {
+  const maxW = mm(maxWidthPx);
+  let size = startSize;
+  doc.setFontSize(size);
+  while (doc.getTextWidth(text) > maxW && size > 8) {
+    size -= 0.5;
+    doc.setFontSize(size);
+  }
+  let out = text;
+  if (doc.getTextWidth(out) > maxW) {
+    // Still too wide at the floor size — truncate rather than overrun.
+    while (out.length > 1 && doc.getTextWidth(`${out}…`) > maxW) out = out.slice(0, -1);
+    out = `${out}…`;
+  }
+  doc.text(out, mm(x), mm(baseline));
+  doc.setFontSize(startSize);
+}
 
-  doc.save(`GalleryZone-CoA-${input.coaCertificateNumber}.pdf`);
+export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
+  const [template, qr] = await Promise.all([
+    loadTemplate(),
+    // A missing QR is survivable — every other field still identifies the
+    // piece — so it must not take the whole certificate down with it.
+    artworkQrDataUrl(input.artworkId, 1024).catch(() => null),
+  ]);
+
+  const doc = new jsPDF({ unit: "mm", format: [PAGE_W, PAGE_H], orientation: "landscape" });
+  doc.addImage(template, "PNG", 0, 0, PAGE_W, PAGE_H, undefined, "FAST");
+
+  // The seven ruled fields.
+  doc.setTextColor(...INK);
+  doc.setFont("times", "normal");
+  const fields: [number, string][] = [
+    [FIELD_BASELINES.artistName, input.artistName],
+    [FIELD_BASELINES.title, input.title],
+    [FIELD_BASELINES.artForm, input.category],
+    [FIELD_BASELINES.medium, input.medium],
+    [FIELD_BASELINES.dimensions, input.dimensions ?? "—"],
+    [FIELD_BASELINES.yearCreated, input.yearCreated ? String(input.yearCreated) : "—"],
+    [FIELD_BASELINES.artworkId, input.productCode || input.artworkId],
+  ];
+  for (const [baseline, value] of fields) {
+    fitText(doc, value, FIELD_VALUE_X, baseline, FIELD_VALUE_MAX_W);
+  }
+
+  // Date of issue, under its printed label.
+  doc.setFontSize(11);
+  doc.text(formatDate(input.coaIssueDate), mm(DATE_CENTER_X), mm(DATE_BASELINE), { align: "center" });
+
+  // The certificate's own number. The template has no field for it — "ARTWORK
+  // ID" is the artwork's code, which is a different thing — so it sits
+  // quietly under the date where it can still be quoted in correspondence.
+  if (input.coaCertificateNumber) {
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(input.coaCertificateNumber, mm(DATE_CENTER_X), mm(CERT_NO_BASELINE), { align: "center" });
+    doc.setTextColor(...INK);
+  }
+
+  // The QR, in the panel the template reserves for it.
+  if (qr) doc.addImage(qr, "PNG", mm(QR_X), mm(QR_Y), mm(QR_SIZE), mm(QR_SIZE));
+
+  const name = input.coaCertificateNumber || input.productCode || input.artworkId;
+  doc.save(`GalleryZone-CoA-${name}.pdf`);
 }
