@@ -19,7 +19,7 @@ import {
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { getArtistSale, postArtistSale } from "./artist-sales.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
-import { appendArtworkStatus, latestStatusOf } from "./listing-projection.ts";
+import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 import { recordSaleTransfer } from "./ownership.ts";
 import { DbError } from "./errors.ts";
 
@@ -218,6 +218,19 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   if (artworkStatus !== "sold") {
     artworkStateMachine.assertTransition(artworkStatus, "sold");
     await appendArtworkStatus(db, order.artworkId, { status: "sold", changedBy: null, reason: `order:${orderId}` });
+    // Rebuild the listing projection, or the piece stays advertised as
+    // for-sale on the public marketplace after it has been bought.
+    //
+    // Every other path that moves an artwork's status refreshes the
+    // projection; this one did not, and toPublicView() only rebuilds when the
+    // projection is MISSING (`artwork.listing ?? refreshListing(...)`) — a
+    // stale one is present, so it was served unchanged indefinitely. Two sold
+    // pieces sat on the marketplace for 25 hours before this was found.
+    //
+    // No money was ever at risk: createOrder() re-checks the artwork is for
+    // sale before anything is charged, so a second buyer is refused. What it
+    // cost was a marketplace that lied and a buyer who hits that refusal.
+    await refreshListing(db, order.artworkId, version.rates);
   }
   // The inner update() used to be left unawaited inside the .then(), so this
   // function could return — and the "paid" email go out — before the payment
