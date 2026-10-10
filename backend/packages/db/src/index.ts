@@ -41,3 +41,4 @@ export * from "./verification.ts";
 export * from "./early-access.ts";
 export * from "./nfc.ts";
 export * from "./lifecycle.ts";
+export * from "./affiliate-products.ts";
