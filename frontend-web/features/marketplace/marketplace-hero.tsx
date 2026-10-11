@@ -1,17 +1,17 @@
 "use client";
 
-import Image from "next/image";
-import { ArcReel, type ArcReelItem } from "@/components/ui/arc-reel";
+import { HaloReel, type HaloReelItem } from "@/components/ui/halo-reel";
 import { isPlaceholderImage } from "@/lib/api-mappers";
 import { cn, humanize } from "@/lib/utils";
+import { GzIntro } from "@/features/marketplace/gz-intro";
 import { MarketplaceSearchBar } from "@/features/marketplace/marketplace-search-bar";
 import type { ArtworkSummary } from "@/types/artwork";
 
-const REEL_CARDS = 8;
+const REEL_CARDS = 6;
 
 // Brand paintings that pad the reel when the catalogue has too few
 // photographed listings, so it always holds REEL_CARDS distinct works.
-const FALLBACK_REEL: ArcReelItem[] = [
+const FALLBACK_REEL: (HaloReelItem & { src: string })[] = [
   "hero-original-art",
   "landscape",
   "portrait-woman",
@@ -22,9 +22,9 @@ const FALLBACK_REEL: ArcReelItem[] = [
   "framed-painting",
 ].map((name) => ({ src: `/artworks/${name}.png` }));
 
-function reelItems(artworks: ArtworkSummary[]): ArcReelItem[] {
+function reelItems(artworks: ArtworkSummary[]): HaloReelItem[] {
   const seen = new Set<string>();
-  const items: ArcReelItem[] = [];
+  const items: HaloReelItem[] = [];
   for (const a of artworks) {
     if (isPlaceholderImage(a.thumbnailUrl) || seen.has(a.thumbnailUrl)) continue;
     seen.add(a.thumbnailUrl);
@@ -122,37 +122,47 @@ function CategoryPill({
   );
 }
 
-// The column zig-zags: the front card sits left, its neighbours above and below
-// step right and fade out before the edges. The GalleryZone mark fills the gap
-// beside the front card and stays still while the cards turn.
-const REEL_ANCHOR = 0.42;
-const REEL_BOW = 80;
-
+// The ring sits just inside the stage's right edge and is mirrored, so the
+// visible half is an arc bulging toward the headline, front card nearest the
+// text. The spare card waits past the edge until it turns into view.
+//
+// From xl the arc is wide, starting near the middle of the page. Five paintings
+// show, an even distance apart, and the sixth waits off-screen. lg is too narrow
+// for that (the front card would run into the headline), so it gets a smaller arc.
 function ArtworkReel({ artworks }: { artworks: ArtworkSummary[] }) {
+  const items = reelItems(artworks);
+  const label = "Original artworks on GalleryZone";
   return (
     <div className="absolute inset-y-0 right-0 hidden w-[52%] lg:block">
-      <ArcReel
-        items={reelItems(artworks)}
-        gap={28}
-        bow={REEL_BOW}
-        anchorRatio={REEL_ANCHOR}
-        aria-label="Original artworks on GalleryZone"
+      <HaloReel
+        items={items}
+        mirror
+        evenGaps
+        centerXRatio={0.86}
+        minScale={0.6}
+        cardWidth={120}
+        cardHeight={160}
+        radiusXRatio={0.38}
+        radiusYRatio={0.36}
+        maxCards={REEL_CARDS}
+        aria-label={label}
+        className="h-full xl:hidden"
       />
-      {/* 124px clears the neighbours' right edge (bow + half their width) even mid-turn. */}
-      <div
-        aria-hidden
-        style={{ left: `calc(${REEL_ANCHOR * 100}% + 124px)` }}
-        className="pointer-events-none absolute top-1/2 hidden size-[168px] -translate-y-1/2 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_24px_40px_-18px_rgb(0_0_0/0.7)] ring-1 ring-foreground/10 xl:flex"
-      >
-        <Image
-          src="/brand/gz-logo.png"
-          alt=""
-          width={822}
-          height={560}
-          sizes="240px"
-          className="h-full w-full scale-[1.35] object-contain"
-        />
-      </div>
+      <HaloReel
+        items={items}
+        mirror
+        evenGaps
+        centerXRatio={0.9}
+        minScale={0.65}
+        cardWidth={170}
+        cardHeight={227}
+        radiusXRatio={0.68}
+        radiusYRatio={0.34}
+        maxCards={REEL_CARDS}
+        aria-label={label}
+        className="hidden h-full xl:block"
+      />
+      <GzIntro />
     </div>
   );
 }
