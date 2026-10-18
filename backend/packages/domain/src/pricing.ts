@@ -43,8 +43,24 @@ export interface PricingRates {
   artistTdsRate: number;
   /** Aggregator MOU §7 — security deposit paid before taking possession. */
   aggregatorAdvanceRate: number;
-  /** Aggregator MOU §8 — 20% of (selling price − artist price). */
+  /**
+   * Default aggregator commission rate (fraction of the markup). Used only as
+   * a safety fallback — the real rate on each sale is picked from
+   * `aggregatorCommissionSlabs` below, based on the aggregator's lifetime
+   * pre-GST sales total through the end of the previous month. If the slab
+   * list is empty, this flat rate applies to every sale instead.
+   */
   aggregatorCommissionRate: number;
+  /**
+   * Lifetime-sales slabs. Each entry: when the aggregator's cumulative
+   * pre-GST sales are at least `thresholdPaise`, they earn `rate` of the
+   * markup. The list is sorted ascending by threshold; the highest matching
+   * slab wins. Rate changes apply the month AFTER crossing a threshold —
+   * `commissionRateForLifetimeSales()` is called with the lifetime figure
+   * through the previous month-end, not the moment of the sale. Admin
+   * editable via rate-config.
+   */
+  aggregatorCommissionSlabs: readonly { thresholdPaise: number; rate: number }[];
   /** Deducted from the artist's settlement on aggregator sales only. */
   artistConvenienceRate: number;
   /**
@@ -131,6 +147,15 @@ export const DEFAULT_RATE_SEED: PricingRates = {
   artistTdsRate: 0.001,
   aggregatorAdvanceRate: 0.05,
   aggregatorCommissionRate: 0.2,
+  // Client, 18 Oct 2026: 20% up to ₹10 lakh lifetime sales (pre-GST), 35%
+  // from ₹10L to ₹50L, 50% above ₹50L. Measured on the aggregator's own
+  // cumulative sales since inception; new rate applies the month after a
+  // threshold is crossed.
+  aggregatorCommissionSlabs: [
+    { thresholdPaise: 0, rate: 0.2 },
+    { thresholdPaise: 100_000_000, rate: 0.35 }, // ₹10 lakh
+    { thresholdPaise: 500_000_000, rate: 0.5 }, // ₹50 lakh
+  ],
   artistConvenienceRate: 0.02,
   artistTechnologyRate: 0.01,
   artistOtherChargePaise: 0,
@@ -410,9 +435,40 @@ export function aggregatorCommissionOf(
   displayPrice: number,
   artistPrice: number,
   rates: PricingRates,
+  /** The slab rate decided for the sale's billing month, from
+   *  `commissionRateForLifetimeSales()`. Falls back to the flat rate when
+   *  omitted so older callers keep working. */
+  commissionRate?: number,
 ): number {
   const markup = Math.max(0, exGst(displayPrice, rates) - artistPrice);
-  return Math.round(markup * rates.aggregatorCommissionRate);
+  const rate = commissionRate ?? rates.aggregatorCommissionRate;
+  return Math.round(markup * rate);
+}
+
+/**
+ * Pick the commission rate for a sale, from the aggregator's lifetime pre-GST
+ * sales total through the end of the month BEFORE the sale. Crossing a
+ * threshold mid-month doesn't raise this month's rate — the client was
+ * explicit that the new rate only kicks in next month, so callers must pass
+ * the lifetime figure as of the previous month-end, not the current moment.
+ *
+ * Pure, so the admin console and the server can share a single answer.
+ */
+export function commissionRateForLifetimeSales(
+  lifetimePreGstPaise: number,
+  rates: PricingRates,
+): number {
+  const slabs = rates.aggregatorCommissionSlabs;
+  if (!slabs || slabs.length === 0) return rates.aggregatorCommissionRate;
+  // Scan descending so the highest matching threshold wins — tolerates an
+  // admin who pastes thresholds out of order.
+  const sorted = [...slabs].sort((a, b) => b.thresholdPaise - a.thresholdPaise);
+  for (const slab of sorted) {
+    if (lifetimePreGstPaise >= slab.thresholdPaise) return slab.rate;
+  }
+  // Below the lowest threshold — shouldn't happen (the lowest should be 0),
+  // but if an admin removes the ₹0 floor the flat rate catches it.
+  return rates.aggregatorCommissionRate;
 }
 
 /**

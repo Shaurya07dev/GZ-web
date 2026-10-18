@@ -33,6 +33,17 @@ export const pricingRatesSchema = z
     artistTdsRate: percent(0.05),
     aggregatorAdvanceRate: percent(0.5),
     aggregatorCommissionRate: percent(0.5),
+    aggregatorCommissionSlabs: z
+      .array(
+        z
+          .object({
+            thresholdPaise: z.number().int().min(0),
+            rate: percent(1),
+          })
+          .strict(),
+      )
+      .min(1)
+      .optional(),
     artistConvenienceRate: percent(0.2),
     artistTechnologyRate: percent(0.1),
     artistOtherChargePaise: z.number().int().min(0),

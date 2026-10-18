@@ -42,3 +42,4 @@ export * from "./early-access.ts";
 export * from "./nfc.ts";
 export * from "./lifecycle.ts";
 export * from "./affiliate-products.ts";
+export * from "./aggregator-commission.ts";

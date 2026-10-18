@@ -586,6 +586,13 @@ export interface AggregatorSaleDoc {
   deliveredAt: FirebaseFirestore.Timestamp | null;
   courierRef: string | null;
   soldAt: FirebaseFirestore.Timestamp;
+  /** The commission rate (fraction of markup) actually billed on this sale.
+   *  Picked from aggregatorCommissionSlabs at sale time, based on the
+   *  aggregator's lifetime pre-GST total through the end of the previous
+   *  month. Stored for audit so a changed slab table never retroactively
+   *  rewrites what was billed. Absent on sales recorded before the slab
+   *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
+  commissionRate?: number;
 }
 
 export interface GallerySpaceDoc {
