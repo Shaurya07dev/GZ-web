@@ -18,3 +18,4 @@
 /.env
 /.env.*
 .claude/skills/
+.gstack/
