@@ -37,6 +37,9 @@ export interface SubmitArtworkInput {
   insuranceOpted?: boolean | undefined;
   insuranceNumber?: string | null | undefined;
   physical?: ArtworkPhysical | null | undefined;
+  /** Mark the piece exclusive to GalleryZone (MOU §x — one-of-a-kind, no
+   *  sales elsewhere). Once accepted, the flag cannot be cleared. */
+  exclusive?: boolean | undefined;
   rates: PricingRates;
 }
 
@@ -79,6 +82,7 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
     paintingStyle: input.paintingStyle ?? null,
     physical: input.physical ?? null,
     insuranceOpted: input.insuranceOpted ?? false,
+    exclusive: input.exclusive ?? false,
     listingType: input.listingType,
     rarityType: null,
     coaCertificateNumber: null,
@@ -127,6 +131,7 @@ export type UpdateArtworkPatch = {
     | "insuranceOpted"
     | "insuranceNumber"
     | "physical"
+    | "exclusive"
   >]?: SubmitArtworkInput[K] | undefined;
 } & { mode?: "draft" | "review" | undefined };
 
@@ -160,6 +165,15 @@ export async function updateArtwork(
   if (patch.paintingStyle !== undefined) fields.paintingStyle = patch.paintingStyle ?? null;
   if (patch.insuranceOpted !== undefined) fields.insuranceOpted = patch.insuranceOpted;
   if (patch.physical !== undefined) fields.physical = patch.physical ?? null;
+  if (patch.exclusive !== undefined) {
+    // Exclusivity is a one-way flag — once the piece is marked exclusive to
+    // GalleryZone, the artist can't quietly un-mark it on an edit. Flipping
+    // false→true is fine; the reverse is refused.
+    if (artwork.exclusive && !patch.exclusive) {
+      throw new ArtistArtworkError("A piece marked exclusive can't be un-marked. Contact GalleryZone if this needs to change.");
+    }
+    fields.exclusive = patch.exclusive;
+  }
   if (patch.insuranceNumber !== undefined && patch.insuranceNumber !== artwork.insuranceNumber) {
     fields.insuranceNumber = patch.insuranceNumber ?? null;
     // A new number goes back to the admin for verification.
@@ -199,6 +213,7 @@ export interface OwnerArtworkView extends PublicArtworkView, NfcOwnerFields {
   images: ArtworkImage[];
   statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
   insuranceOpted: boolean;
+  exclusive: boolean;
   insuranceNumber: string | null;
   insuranceStatus: string | null;
   artworkType: string | null;
@@ -248,6 +263,7 @@ async function toOwnerView(db: Firestore, artworkId: string, artwork: ArtworkDoc
       return { status: e.status, changedAt: e.changedAt?.toDate().toISOString() ?? new Date(0).toISOString(), reason: e.reason };
     }),
     insuranceOpted: artwork.insuranceOpted ?? false,
+    exclusive: artwork.exclusive ?? false,
     insuranceNumber: artwork.insuranceNumber,
     insuranceStatus: artwork.insuranceStatus,
     ...nfcOwnerFields(artwork, nfc),

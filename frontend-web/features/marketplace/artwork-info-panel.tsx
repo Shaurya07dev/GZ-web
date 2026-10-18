@@ -91,6 +91,15 @@ export function ArtworkInfoPanel({
           <p className="mt-1 text-xs text-muted-foreground">incl. GST</p>
         </div>
 
+        {artwork.exclusive && (
+          <span
+            title="One-of-a-kind original, sold only on GalleryZone"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/60 bg-gold/15 px-3 py-1.5 text-xs font-semibold tracking-[0.06em] text-gold-bright uppercase"
+          >
+            Exclusive
+          </span>
+        )}
+
         {artwork.insured && (
           <div className="relative">
             <button

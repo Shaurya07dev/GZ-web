@@ -243,6 +243,13 @@ export interface ArtworkDoc {
   insuranceOpted?: boolean;
   /** Painting-only sub-classification (e.g. "Abstract"). */
   paintingStyle?: string | null;
+  /**
+   * Marked exclusive to GalleryZone at submission — the piece is a one-of-a-
+   * kind original and the artist agrees not to sell it on any other platform.
+   * Set once at submit; the backend refuses patches that try to clear it (a
+   * one-way flag). Absent on older docs = false.
+   */
+  exclusive?: boolean;
   /** Shipping/packaging facts the artist declares at submission. */
   physical?: ArtworkPhysical | null;
   editableUntil: FirebaseFirestore.Timestamp;

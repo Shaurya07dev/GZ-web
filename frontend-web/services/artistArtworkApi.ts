@@ -15,6 +15,7 @@ export interface OwnerArtworkDto extends ArtworkDto {
   images: (ArtworkDto["images"][number] & { id: string; storagePath: string })[];
   statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
   insuranceOpted: boolean;
+  exclusive: boolean;
   insuranceNumber: string | null;
   insuranceStatus: string | null;
   /** The chip's own ID: for the owning artist and admins only, never public. */
@@ -49,6 +50,7 @@ export function toOwnerArtwork(dto: OwnerArtworkDto): OwnerArtwork {
     artistPrice: paiseToRupees(dto.artistPricePaise),
     artistNet: { marketplace: paiseToRupees(dto.artistNet.marketplace), aggregatorEstimate: paiseToRupees(dto.artistNet.aggregatorEstimate) },
     insured: dto.insuranceOpted || dto.insured,
+    exclusive: dto.exclusive,
     insuranceNumber: dto.insuranceNumber,
     insuranceStatus: dto.insuranceStatus ? INSURANCE_STATUS[dto.insuranceStatus] : "not_submitted",
     nfcTagUid: dto.nfcTagUid,
@@ -84,6 +86,7 @@ export interface ArtworkWritePayload {
   artistPrice: number;
   listingType: Artwork["listingType"];
   insuranceOpted: boolean;
+  exclusive: boolean;
   insuranceNumber: string | null;
   physical: ArtworkPhysical;
   images: SubmitImage[];
@@ -105,6 +108,7 @@ function toBody(p: Omit<ArtworkWritePayload, "images">, mode?: "draft" | "review
     insuranceOpted: p.insuranceOpted,
     insuranceNumber: p.insuranceNumber,
     physical: p.physical,
+    exclusive: p.exclusive,
   };
 }
 

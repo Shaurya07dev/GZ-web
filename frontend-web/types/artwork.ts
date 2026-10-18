@@ -69,6 +69,10 @@ export interface ArtworkSummary {
   customerPrice: number;
   thumbnailUrl: string;
   insured: boolean;
+  /** Marked one-of-a-kind at submission — the piece is exclusive to
+   *  GalleryZone and not sold on any other platform. Absent on fixture
+   *  records = false. */
+  exclusive?: boolean;
   status: ArtworkStatus;
   listingType: ListingType;
   /** GalleryZone's rank. Absent on records nobody has ranked yet. */
