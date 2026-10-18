@@ -22,7 +22,6 @@ import {
   ExternalLink,
   Ruler,
   ChevronsUpDown,
-  LayoutTemplate,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -1271,22 +1270,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 </div>
               </div>
 
-              {/* Placeholder for a preview card of how this piece displays at
-                  the aggregator's premises. Left empty on purpose. */}
-              <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
-                <LayoutTemplate
-                  className="size-5 shrink-0 text-gold-bright"
-                  strokeWidth={1.5}
-                />
-                <div>
-                  <p className="text-xs font-medium text-foreground">
-                    Display card
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Coming soon.
-                  </p>
-                </div>
-              </div>
             </div>
           )}
 
