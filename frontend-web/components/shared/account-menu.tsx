@@ -4,13 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { CircleUserRound, LogOut, Settings } from "lucide-react";
 import { UserAvatar } from "@/components/shared/user-avatar";
+import { SignOutDialog } from "@/components/shared/sign-out-dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { authService } from "@/services/authService";
 
 const ITEM =
   "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-foreground/90 transition-colors hover:bg-muted";
@@ -30,22 +30,10 @@ export function AccountMenu({
 }) {
   const { data: me } = useCurrentUser();
   const [open, setOpen] = useState(false);
-
-  async function handleSignOut() {
-    try {
-      await authService.logout();
-    } finally {
-      // logout() clears the session cookie before it touches Firebase, so
-      // /login is the right place to land even if the Firebase call fails.
-      // A full navigation rather than router.push: it drops every cached
-      // query, so the next person to sign in on this browser can't see this
-      // account's data from the cache.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = "/login";
-    }
-  }
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label="Account menu"
@@ -79,12 +67,21 @@ export function AccountMenu({
           </div>
         )}
         <div className="mt-1 border-t border-border pt-1">
-          <button type="button" onClick={handleSignOut} className={ITEM}>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setSignOutOpen(true);
+            }}
+            className={ITEM}
+          >
             <LogOut className="size-4 text-muted-foreground" strokeWidth={1.75} />
             Sign out
           </button>
         </div>
       </PopoverContent>
     </Popover>
+    <SignOutDialog open={signOutOpen} onOpenChange={setSignOutOpen} />
+    </>
   );
 }
