@@ -31,6 +31,9 @@ export interface OwnProfileDto {
   pickupCity: string | null;
   pickupState: string | null;
   pickupPincode: string | null;
+  /** ISO 3166-1 alpha-2 country code of the pickup address. Null on older
+   *  profiles — the form falls back to "IN" on read. */
+  pickupCountry: string | null;
   earningsAbove5L: boolean;
   socialProofVideoUrl: string | null;
   companyName: string | null;
@@ -66,6 +69,7 @@ export type OwnProfilePatch = Partial<{
   pickupCity: string | null;
   pickupState: string | null;
   pickupPincode: string | null;
+  pickupCountry: string | null;
 }>;
 
 export const profileApi = {

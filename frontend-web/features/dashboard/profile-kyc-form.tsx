@@ -33,6 +33,20 @@ import { Label } from "@/components/ui/label";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { GstStatusBadge } from "@/components/shared/gst-status-badge";
 import { formatINR } from "@/lib/utils";
+import {
+  COUNTRIES,
+  DEFAULT_COUNTRY_CODE,
+  UNKNOWN_POSTAL,
+  isPostalValid,
+  postalFormatFor,
+} from "@/lib/postal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { InstagramGlyph } from "@/components/social-icons";
 import {
   useArtistAccountProfile,
@@ -75,10 +89,8 @@ type PickupFormState = {
   pickupCity: string;
   pickupState: string;
   pickupPincode: string;
+  pickupCountry: string;
 };
-
-// Six digits, and the first can't be 0 — no Indian pincode starts with one.
-const PINCODE_PATTERN = /^[1-9][0-9]{5}$/;
 
 type ArtistAccountProfile = NonNullable<
   ReturnType<typeof useArtistAccountProfile>["data"]
@@ -145,6 +157,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     pickupCity: profile.pickupCity ?? "",
     pickupState: profile.pickupState ?? "",
     pickupPincode: profile.pickupPincode ?? "",
+    pickupCountry: profile.pickupCountry ?? DEFAULT_COUNTRY_CODE,
   });
   const [pickupSaved, setPickupSaved] = useState(false);
 
@@ -156,14 +169,20 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     setPickupSaved(false);
   }
 
+  // The postal rule follows the pickup country — six digits for India, the
+  // country's own format for the rest, and a loose 3–12 alphanumeric fallback
+  // for anywhere that isn't on the list. The regexes and labels live in
+  // lib/postal.ts so the backend and the UI stay roughly in sync on what
+  // "valid" means.
+  const postalFormat = postalFormatFor(pickupForm.pickupCountry);
   const pincodeInvalid =
     pickupForm.pickupPincode.trim().length > 0 &&
-    !PINCODE_PATTERN.test(pickupForm.pickupPincode.trim());
+    !isPostalValid(pickupForm.pickupCountry, pickupForm.pickupPincode);
   const pickupComplete =
     pickupForm.pickupLine1.trim() !== "" &&
     pickupForm.pickupCity.trim() !== "" &&
     pickupForm.pickupState.trim() !== "" &&
-    PINCODE_PATTERN.test(pickupForm.pickupPincode.trim());
+    isPostalValid(pickupForm.pickupCountry, pickupForm.pickupPincode);
 
   function handlePickupSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -748,17 +767,19 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="pickupPincode">PIN code</Label>
+            <Label htmlFor="pickupPincode">{postalFormat.label}</Label>
             <Input
               id="pickupPincode"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="313001"
+              inputMode={pickupForm.pickupCountry === "IN" ? "numeric" : "text"}
+              maxLength={postalFormat.maxLength}
+              placeholder={postalFormat.example}
               value={pickupForm.pickupPincode}
               onChange={(e) =>
                 updatePickup(
                   "pickupPincode",
-                  e.target.value.replace(/[^0-9]/g, ""),
+                  pickupForm.pickupCountry === "IN"
+                    ? e.target.value.replace(/[^0-9]/g, "")
+                    : e.target.value.toUpperCase(),
                 )
               }
               aria-invalid={pincodeInvalid}
@@ -766,10 +787,51 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             />
             {pincodeInvalid && (
               <p className="text-xs text-destructive">
-                A PIN code is six digits.
+                Expected format: {postalFormat.example}
               </p>
             )}
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:max-w-xs">
+          <Label htmlFor="pickupCountry">Country</Label>
+          <Select
+            value={pickupForm.pickupCountry}
+            onValueChange={(value) => {
+              const next = value ?? DEFAULT_COUNTRY_CODE;
+              setPickupForm((prev) => ({
+                ...prev,
+                pickupCountry: next,
+                // Dropping an Indian PIN into UK rules (or vice-versa) always
+                // reads as invalid, so clear it on a country switch — the
+                // placeholder in the field above shows the new expected shape.
+                pickupPincode: prev.pickupCountry === next ? prev.pickupPincode : "",
+              }));
+              setPickupSaved(false);
+            }}
+          >
+            <SelectTrigger id="pickupCountry" className="h-10 w-full">
+              <SelectValue placeholder="Select country">
+                {(value: string | null) => {
+                  const match = COUNTRIES.find((c) => c.code === value);
+                  return match?.name ?? "Select country";
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>
+                  {c.name}
+                </SelectItem>
+              ))}
+              <SelectItem value={UNKNOWN_POSTAL.code}>
+                Other
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            India uses a 6-digit PIN. Other countries follow their own format.
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
