@@ -70,11 +70,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Purchases",
     items: [{ label: "Orders", href: "/account/orders", icon: ShoppingBag }],
   },
-  {
-    id: "finance",
-    label: "Finance",
-    items: [{ label: "Wallet", href: "/account/wallet", icon: Wallet }],
-  },
+  // Finance / Wallet removed (client, 18 Oct 2026): no customer wallet in the
+  // escrow model — refunds go back to the original payment method, not to
+  // store credit a customer could draw against later.
   {
     id: "resale",
     label: "Resale",

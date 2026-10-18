@@ -76,9 +76,12 @@ export interface PricingRates {
    */
   artistOtherChargePaise: number;
   /**
-   * Customer convenience fee, as a fraction of the pre-GST order value, plus
-   * `serviceGstRate` on the fee itself. The invoice sheet carries it at 0.1%
-   * marked "for future — no applicability now", so it ships at zero.
+   * The Razorpay gateway fee, passed through to the customer (and to the
+   * aggregator when they settle a cash sale). Shown as its own line on the
+   * invoice with service GST on top. Client (18 Oct 2026): "the Razorpay fee
+   * (2% + GST) is added in both cases" — i.e. in direct customer sales and
+   * in aggregator-assisted sales. Default 2%; admin can tune if Razorpay
+   * changes the rate.
    */
   customerConvenienceRate: number;
   /** One-off charge when an NFC tag is issued for a piece (+ service GST). */
@@ -159,7 +162,9 @@ export const DEFAULT_RATE_SEED: PricingRates = {
   artistConvenienceRate: 0.02,
   artistTechnologyRate: 0.01,
   artistOtherChargePaise: 0,
-  customerConvenienceRate: 0,
+  // Razorpay charges 2% + 18% GST; the whole fee is added on top of the
+  // customer-facing price so GalleryZone's margin is unaffected.
+  customerConvenienceRate: 0.02,
   nfcTagChargePaise: 10_000, // ₹100
   subscriptionFeePaise: 120_000, // ₹1,200
   deliveryChargePaise: 250_000, // ₹2,500

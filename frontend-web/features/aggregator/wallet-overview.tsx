@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
 import {
   Wallet,
   Clock3,
@@ -10,41 +8,32 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Building2,
-  Check,
-  AlertTriangle,
+  Info,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  useAddAggregatorFundsMutation,
   useAggregatorWallet,
   useAggregatorWalletTransactions,
-  useAggregatorRequestWithdrawalMutation,
 } from "@/hooks/useAggregatorWallet";
 import {
   useAggregatorProfile,
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
 import { GstNumberCard } from "@/components/shared/gst-number-card";
-import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
 
-const MIN_WITHDRAWAL = 1000;
-// One gateway payment. Same bounds as the API (WALLET_TOPUP_MIN/MAX_PAISE).
-const TOPUP_MIN = 1000;
-const TOPUP_MAX = 500_000;
+// Client (18 Oct 2026): there is no wallet, no top-up, no withdrawal flow.
+// The aggregator pays the deposit + delivery per piece through Razorpay at
+// reservation time. Commission earned on sales sits in GalleryZone's escrow
+// and the admin transfers it out directly, marking each payment paid with a
+// bank reference. This view is read-only: what is owed, what is still
+// clearing, and where the money will land.
 
-// Parallel sibling of features/dashboard/wallet-overview.tsx (Artist
-// Dashboard), same layout and rules, aggregator data source.
 export function WalletOverview() {
   const { data: wallet } = useAggregatorWallet();
   const { data: transactions } = useAggregatorWalletTransactions();
   const { data: profile } = useAggregatorProfile();
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
 
-  // Reserving artwork holds money here rather than charging a new payment each
-  // time, so "free" — what is left after the holds — is the number that decides
-  // whether the next piece can be taken.
   const balance = wallet?.balance ?? 0;
   const locked = wallet?.lockedBalance ?? 0;
   const free = balance - locked;
@@ -52,9 +41,9 @@ export function WalletOverview() {
   const summaryCards = [
     {
       key: "free",
-      label: "Free to use",
+      label: "Owed to you",
       value: free,
-      hint: "Available to reserve artwork",
+      hint: "Commission GalleryZone will transfer to your bank",
       icon: Wallet,
       tone: "gold" as const,
     },
@@ -62,15 +51,15 @@ export function WalletOverview() {
       key: "locked",
       label: "Held against reservations",
       value: locked,
-      hint: "Advances and delivery on pieces you are displaying",
+      hint: "Advances and delivery you paid on pieces you are displaying",
       icon: Lock,
       tone: "neutral" as const,
     },
     {
       key: "pending",
-      label: "Commission pending",
+      label: "Commission clearing",
       value: wallet?.pendingBalance ?? 0,
-      hint: "Earned on sales, waiting to be settled",
+      hint: "Earned on sales, waiting for delivery to confirm",
       icon: Clock3,
       tone: "neutral" as const,
     },
@@ -104,10 +93,10 @@ export function WalletOverview() {
         ))}
       </div>
 
-      <AddFundsCard />
+      <EscrowExplainerCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.5fr]">
-        <WithdrawCard balance={free} />
+        <PayoutDestinationCard />
         <TransactionsCard transactions={transactions ?? []} />
       </div>
       {profile && (
@@ -123,198 +112,72 @@ export function WalletOverview() {
   );
 }
 
-// The advance and delivery are held from this balance, so an empty wallet
-// means nothing can be reserved. Money comes in from the aggregator's own bank
-// account, card or UPI through Razorpay.
-function AddFundsCard() {
-  const addFunds = useAddAggregatorFundsMutation();
-  const [amount, setAmount] = useState("");
-  const amountNumber = Number(amount) || 0;
-  const outOfRange = amount !== "" && (!Number.isInteger(amountNumber) || amountNumber < TOPUP_MIN || amountNumber > TOPUP_MAX);
-
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (amountNumber < TOPUP_MIN || outOfRange) return;
-    addFunds.mutate(amountNumber, {
-      onSuccess: () => {
-        toast.success("Added to your wallet", { description: `₹${amountNumber.toLocaleString("en-IN")} is ready to reserve with.` });
-        setAmount("");
-      },
-      onError: (error) => {
-        if (error instanceof PaymentDismissedError) {
-          toast.info("Payment cancelled — nothing was charged.");
-          return;
-        }
-        toast.error(error.message);
-      },
-    });
-  }
-
+// The old AddFundsCard asked the aggregator to top up a wallet balance, which
+// in turn paid out the per-piece deposit and delivery. That whole flow is
+// gone — reservations now charge Razorpay directly, piece by piece — so this
+// card just states the new money flow in one place.
+function EscrowExplainerCard() {
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-lg border border-border bg-card p-5 sm:p-6"
-    >
+    <div className="flex flex-col gap-3 rounded-lg border border-gold/30 bg-gold/5 p-5 sm:p-6">
       <div className="flex items-start gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
           <Wallet className="size-4 text-gold-bright" strokeWidth={1.75} />
         </span>
         <div>
           <h2 className="font-display text-base font-semibold text-foreground">
-            Add funds
+            How the money moves
           </h2>
-          <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-            Pay from your bank account, card or UPI through Razorpay.
-            Reserving artwork holds the advance and delivery from this balance.
-            The advance comes back if a piece doesn&rsquo;t sell; the delivery
-            deposit comes back when it does.
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Pay the deposit and delivery for each piece at the moment you
+            reserve it, through Razorpay. GalleryZone holds the full sale
+            amount in escrow when the piece sells, settles the artist&rsquo;s
+            share, and transfers your commission to your bank. Each transfer
+            carries a bank reference you&rsquo;ll see in the list on the right.
           </p>
         </div>
       </div>
-
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="topUpAmount">Amount (₹)</Label>
-          <Input
-            id="topUpAmount"
-            type="number"
-            min={TOPUP_MIN}
-            max={TOPUP_MAX}
-            step={1}
-            placeholder="25000"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="h-10 w-44"
-            aria-invalid={outOfRange}
-            aria-describedby="topUpHint"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={amountNumber < TOPUP_MIN || outOfRange || addFunds.isPending}
-          className="inline-flex h-10 items-center gap-2 rounded-md border border-gold/50 px-5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
-        >
-          {addFunds.isPending ? "Waiting for payment…" : "Add to wallet"}
-        </button>
-      </div>
-      <p
-        id="topUpHint"
-        className={`text-xs ${outOfRange ? "text-destructive" : "text-muted-foreground"}`}
-      >
-        ₹1,000 to ₹5,00,000 in whole rupees, one payment at a time.
-      </p>
-    </form>
+    </div>
   );
 }
 
-function WithdrawCard({ balance }: { balance: number }) {
+// Replaces the old WithdrawCard. There is nothing to request — payouts leave
+// GalleryZone's escrow on a fixed cadence against the "Owed to you" figure
+// above. This card is a confirmation of where that money lands.
+function PayoutDestinationCard() {
   const { data: profile } = useAggregatorProfile();
-  const withdrawMutation = useAggregatorRequestWithdrawalMutation();
-  const [amount, setAmount] = useState("");
-  const [lastAmount, setLastAmount] = useState(0);
-
-  const amountNumber = Number(amount) || 0;
-  const belowMinimum = amount !== "" && amountNumber < MIN_WITHDRAWAL;
-  const exceedsBalance = amountNumber > balance;
-  const canSubmit = amountNumber >= MIN_WITHDRAWAL && amountNumber <= balance;
-
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!canSubmit) return;
-    withdrawMutation.mutate(amountNumber, {
-      onSuccess: () => setLastAmount(amountNumber),
-    });
-  }
-
-  if (withdrawMutation.isSuccess) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="flex flex-col items-start gap-3 rounded-lg border border-gold/30 bg-card p-6"
-      >
-        <span className="flex size-10 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-          <Check className="size-5 text-gold-bright" />
-        </span>
-        <h2 className="font-display text-lg font-semibold text-foreground">
-          Withdrawal requested.
-        </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          ₹{lastAmount.toLocaleString("en-IN")} will be sent to your bank
-          account ending {profile?.bankAccountMasked.slice(-4)}. This
-          typically takes 1–2 business days.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            withdrawMutation.reset();
-            setAmount("");
-          }}
-          className="mt-1 text-sm font-medium text-gold-bright hover:underline"
-        >
-          Request another withdrawal
-        </button>
-      </motion.div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6">
       <h2 className="font-display text-base font-semibold text-foreground">
-        Withdraw funds
+        Where your commission lands
       </h2>
 
-      <div className="flex items-center gap-3 rounded-md border border-border p-3.5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-          <Building2 className="size-4 text-gold-bright" strokeWidth={1.5} />
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">
-            {profile?.bankAccountMasked}
-          </p>
-          <p className="text-xs text-muted-foreground">{profile?.ifsc}</p>
+      {profile?.bankAccountMasked ? (
+        <div className="flex items-center gap-3 rounded-md border border-border p-3.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
+            <Building2 className="size-4 text-gold-bright" strokeWidth={1.5} />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">
+              {profile.bankAccountMasked}
+            </p>
+            <p className="text-xs text-muted-foreground">{profile.ifsc}</p>
+          </div>
         </div>
+      ) : (
+        <p className="rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+          Add a bank account on your Profile so GalleryZone has somewhere to
+          send your commission.
+        </p>
+      )}
+
+      <div className="flex items-start gap-2.5 rounded-md border border-gold/30 bg-gold/5 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+        <Info className="mt-0.5 size-3.5 shrink-0 text-gold-bright" />
+        <p>
+          GalleryZone transfers your commission after each sale clears, with a
+          bank reference you&rsquo;ll see on the right. No request needed on
+          your side.
+        </p>
       </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <Label htmlFor="withdrawAmount">Amount (₹)</Label>
-        <Input
-          id="withdrawAmount"
-          type="number"
-          min={MIN_WITHDRAWAL}
-          step={1}
-          placeholder="5000"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="h-10"
-          aria-invalid={belowMinimum || exceedsBalance}
-        />
-
-        {belowMinimum ? (
-          <p className="flex items-center gap-1.5 text-xs text-destructive">
-            <AlertTriangle className="size-3" />
-            Minimum withdrawal is ₹1,000
-          </p>
-        ) : exceedsBalance ? (
-          <p className="flex items-center gap-1.5 text-xs text-destructive">
-            <AlertTriangle className="size-3" />
-            Exceeds your available balance
-          </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Minimum ₹1,000 · Available ₹{balance.toLocaleString("en-IN")}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={!canSubmit || withdrawMutation.isPending}
-          className="mt-2 inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-40"
-        >
-          Request withdrawal
-        </button>
-      </form>
     </div>
   );
 }

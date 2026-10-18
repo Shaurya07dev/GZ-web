@@ -84,7 +84,6 @@ const CUSTOMER_MAIN_NAV: NavItem[] = [
 
 const CUSTOMER_MORE_NAV: NavItem[] = [
   { href: "/account/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/account/wallet", label: "Wallet", icon: Wallet },
   { href: "/account/resale", label: "Resell Artwork", icon: Repeat2 },
   { href: "/account/settings", label: "Profile", icon: CircleUserRound },
   { href: "/account/addresses", label: "Addresses", icon: MapPin },

@@ -35,8 +35,8 @@ import type { WithdrawalRequest, WithdrawalStatus } from "@/types/admin";
 const REJECT_PRESETS = [
   "Bank details could not be verified",
   "KYC not complete for this account",
-  "Requested amount exceeds available balance",
-  "Suspected duplicate request",
+  "Amount exceeds the escrow balance",
+  "Duplicate — paid in a different transfer",
 ];
 
 const STATUSES: WithdrawalStatus[] = [
@@ -91,7 +91,7 @@ export function WithdrawalQueueTable() {
     },
     {
       key: "balance",
-      header: "Wallet balance",
+      header: "Escrow balance",
       render: (row) => {
         const insufficient = row.amount > row.walletBalance;
         return (
@@ -198,6 +198,7 @@ function WithdrawalReviewDialog({
   const approveMutation = useApproveWithdrawalMutation();
   const rejectMutation = useRejectWithdrawalMutation();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [reference, setReference] = useState("");
 
   const isBusy = approveMutation.isPending || rejectMutation.isPending;
   const insufficient = request ? request.amount > request.walletBalance : false;
@@ -219,22 +220,28 @@ function WithdrawalReviewDialog({
 
   async function handleApprove() {
     if (!request) return;
+    const ref = reference.trim();
+    if (!ref) {
+      toast.error("Add the bank reference number before marking paid.");
+      return;
+    }
     try {
       await approveMutation.mutateAsync(request.id);
       patchStatus(request.id, "completed");
       appendAudit({
         adminName: adminName,
-        action: "withdrawal.approved",
-        entityType: "withdrawal",
+        action: "payout.marked_paid",
+        entityType: "payout",
         entityId: request.id,
-        entityLabel: `${request.userName} · ${formatINR(request.amount)}`,
+        entityLabel: `${request.userName} · ${formatINR(request.amount)} · ref ${ref}`,
       });
-      toast.success("Withdrawal approved", {
-        description: `${formatINR(request.amount)} released to ${request.userName}.`,
+      toast.success("Payout marked paid", {
+        description: `${formatINR(request.amount)} transferred to ${request.userName}, reference ${ref}.`,
       });
+      setReference("");
       onClose();
     } catch {
-      toast.error("Could not approve withdrawal. Try again.");
+      toast.error("Could not mark the payout paid. Try again.");
     }
   }
 
@@ -271,7 +278,7 @@ function WithdrawalReviewDialog({
           {request ? (
             <>
               <DialogHeader>
-                <DialogTitle>Withdrawal request</DialogTitle>
+                <DialogTitle>Payout to artist / aggregator</DialogTitle>
               </DialogHeader>
 
               <div className="rounded-lg border border-border bg-muted/40 p-4">
@@ -307,8 +314,9 @@ function WithdrawalReviewDialog({
               {insufficient ? (
                 <p className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/[0.06] p-3 text-xs text-foreground">
                   <TriangleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
-                  Requested amount exceeds the available wallet balance.
-                  Approving this would overdraw the account.
+                  Payout exceeds the escrow balance for this user. Mark it paid
+                  only if you are transferring from a different account on
+                  purpose.
                 </p>
               ) : null}
 
@@ -319,14 +327,31 @@ function WithdrawalReviewDialog({
                 </p>
               ) : null}
 
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="payoutRef" className="text-xs font-medium text-foreground">
+                  Bank reference number
+                </label>
+                <input
+                  id="payoutRef"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="RZPYabc123 / NEFT ref / UTR"
+                  disabled={isBusy}
+                  className="h-10 rounded-md border border-input bg-transparent px-3 font-mono text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required — appears in the artist&rsquo;s transaction history so they can match the payout to their bank statement.
+                </p>
+              </div>
+
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <Button
                   onClick={handleApprove}
-                  disabled={isBusy}
+                  disabled={isBusy || !reference.trim()}
                   className="flex-1"
                 >
                   <Check className="size-4" />
-                  {approveMutation.isPending ? "Approving…" : "Approve payout"}
+                  {approveMutation.isPending ? "Marking paid…" : "Mark paid"}
                 </Button>
                 <Button
                   variant="outline"

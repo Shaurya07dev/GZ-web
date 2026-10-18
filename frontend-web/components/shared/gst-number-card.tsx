@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 // literal "Z", then a checksum character.
 export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
-// Shown in every portal's Earnings & Wallet page. Optional for aggregators —
+// Shown on every portal's Earnings page. Optional for aggregators —
 // leaving it blank is a valid answer there. Required for artists, mirroring
 // the same field on their Profile page (GalleryZone won't approve listings
 // without it). When a number IS entered, its shape is checked locally; there
