@@ -42,6 +42,7 @@ interface AdminUserDto {
   website: string | null;
   location: string | null;
   bankAccountMasked: string | null;
+  externalArtist: boolean;
 }
 
 interface AdminWithdrawalDto {
@@ -100,6 +101,7 @@ function toAdminUser(u: AdminUserDto): AdminUser {
     gstin: u.gstin,
     gstStatus: GST[u.gstStatus ?? "not_submitted"] ?? "not_submitted",
     instagramHandle: u.instagram,
+    externalArtist: u.externalArtist,
   };
 }
 
@@ -217,6 +219,11 @@ export const adminApi = {
   async setUserStatus(id: string, status: UserStatus): Promise<{ id: string; status: UserStatus }> {
     await http.patch(`/v1/admin/users/${encodeURIComponent(id)}/status`, { status });
     return { id, status };
+  },
+
+  async setUserExternalArtist(id: string, externalArtist: boolean): Promise<{ id: string; externalArtist: boolean }> {
+    await http.patch(`/v1/admin/users/${encodeURIComponent(id)}/external-artist`, { externalArtist });
+    return { id, externalArtist };
   },
 
   async listKycQueue(): Promise<AdminUser[]> {

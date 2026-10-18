@@ -62,3 +62,17 @@ export function useSetUserStatusMutation() {
   });
 }
 
+// Mark an artist as a TR (external-platform) partner, or clear the flag.
+export function useSetUserExternalArtistMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, externalArtist }: { userId: string; externalArtist: boolean }) =>
+      adminService.setUserExternalArtist(userId, externalArtist),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-artist-portfolio", userId] });
+    },
+  });
+}
+

@@ -27,6 +27,9 @@ export interface AdminUser {
   gstin?: string | null;
   gstStatus?: GstStatus;
   instagramHandle?: string | null;
+  /** TR partner — this artist lists through an external platform rather
+   *  than natively on GalleryZone. Admin-only internal flag. */
+  externalArtist?: boolean;
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";

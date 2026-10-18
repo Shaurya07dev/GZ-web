@@ -125,6 +125,15 @@ export interface UserDoc {
   createdAt: FirebaseFirestore.Timestamp;
   lastLoginAt: FirebaseFirestore.Timestamp | null;
   roleGrants: string[]; // RoleGrant values, kept as string[] for forward-compat with a grant not yet in the RoleGrant union
+  /**
+   * Artists who are listing on GalleryZone through an external platform
+   * rather than directly — the "TR" (technology-register) partners. Admin
+   * sets this by hand; it drives a small TR badge in the admin console so
+   * internal views can tell partner-sourced artists from native ones.
+   * Optional for backward compatibility with user docs written before the
+   * field existed — absent reads as false.
+   */
+  externalArtist?: boolean;
 }
 
 /**
@@ -169,6 +178,9 @@ export interface ProfileDoc {
   pickupCity: string | null;
   pickupState: string | null;
   pickupPincode: string | null;
+  /** ISO 3166-1 alpha-2 country code. Null on profiles written before
+   *  the field existed — those are all Indian and read as "IN". */
+  pickupCountry: string | null;
   earningsAbove5L: boolean;
   socialProofVideoUrl: string | null;
   companyName: string | null;

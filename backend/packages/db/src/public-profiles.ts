@@ -110,3 +110,14 @@ export async function setUserStatus(db: Firestore, userId: string, status: UserS
   if (!snap.exists) throw new ProfileError(`No user ${userId}`);
   await ref.update({ status });
 }
+
+// The "TR" flag: this artist is listing through an external platform, not
+// through GalleryZone directly. Admin-only; drives a badge in internal views
+// so a reviewer can tell at a glance where the artist came from.
+export async function setUserExternalArtist(db: Firestore, userId: string, externalArtist: boolean): Promise<void> {
+  const ref = db.collection(Collections.users).doc(userId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new ProfileError(`No user ${userId}`);
+  if ((snap.data() as UserDoc).role !== "artist") throw new ProfileError(`User ${userId} is not an artist`);
+  await ref.update({ externalArtist });
+}
