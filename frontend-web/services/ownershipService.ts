@@ -24,6 +24,7 @@ interface TransferDto {
   initiatedAt: string;
   acceptedAt: string | null;
   cancelledAt: string | null;
+  displayStartsAt: string | null;
   displayEndsAt: string | null;
   displayEndedAt: string | null;
 }
@@ -41,6 +42,7 @@ function fromDto(dto: TransferDto): OwnershipTransfer {
     cancelledAt: dto.cancelledAt,
     status: dto.status,
     kind: dto.kind,
+    displayStartsAt: dto.displayStartsAt,
     displayEndsAt: dto.displayEndsAt,
     displayEndedAt: dto.displayEndedAt,
   };
@@ -75,11 +77,20 @@ export const ownershipService = {
     toName: string;
     toEmail: string;
     kind?: TransferKind;
+    displayStartsAt?: string | null;
     displayEndsAt?: string | null;
   }): Promise<OwnershipTransfer> => {
     const kind: TransferKind = input.kind ?? "ownership";
     if (kind === "display" && !input.displayEndsAt) {
       throw new Error("Pick the date the display runs to");
+    }
+    if (
+      kind === "display" &&
+      input.displayStartsAt &&
+      input.displayEndsAt &&
+      new Date(input.displayEndsAt).getTime() <= new Date(input.displayStartsAt).getTime()
+    ) {
+      throw new Error("The display end date must come after the start date");
     }
     const dto = await http.post<TransferDto>(
       `/v1/artworks/${encodeURIComponent(input.artworkId)}/transfers`,
@@ -87,6 +98,9 @@ export const ownershipService = {
         kind,
         toName: input.toName.trim(),
         toEmail: input.toEmail.trim(),
+        ...(kind === "display" && input.displayStartsAt
+          ? { displayStartsAt: new Date(input.displayStartsAt).toISOString() }
+          : {}),
         ...(kind === "display" && input.displayEndsAt
           ? { displayEndsAt: new Date(input.displayEndsAt).toISOString() }
           : {}),

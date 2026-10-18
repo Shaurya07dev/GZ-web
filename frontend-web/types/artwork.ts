@@ -460,6 +460,10 @@ export interface OwnershipTransfer {
   /** Absent on records written before display rights existed — those are all
    *  ownership hand-overs. Read it through transferKind(). */
   kind?: TransferKind;
+  /** Display transfers only: the date the display period opens on. Absent
+   *  on records written before start dates were explicit — fall back to
+   *  acceptedAt there. */
+  displayStartsAt?: string | null;
   /** Display transfers only: the date the display period runs to. */
   displayEndsAt?: string | null;
   /** Display transfers only: set when the owner pulls the piece back early. */

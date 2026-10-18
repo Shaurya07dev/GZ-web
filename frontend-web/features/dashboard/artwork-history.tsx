@@ -210,12 +210,13 @@ function displayEvent(transfer: OwnershipTransfer): Event {
   // A loan still running, one that ran its course, and one the owner pulled
   // back early are three different facts.
   if (isDisplayActive(transfer)) {
+    const from = transfer.displayStartsAt ?? at;
     return {
       at,
       icon: CalendarClock,
       label: `With ${transfer.toName}`,
       detail: transfer.displayEndsAt
-        ? `Until ${formatDate(transfer.displayEndsAt)}`
+        ? `${formatDate(from)} — ${formatDate(transfer.displayEndsAt)}`
         : undefined,
       state: "current",
     };

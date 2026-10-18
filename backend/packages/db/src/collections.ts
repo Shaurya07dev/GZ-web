@@ -321,6 +321,10 @@ export interface OwnershipEventDoc {
   initiatedAt: FirebaseFirestore.Timestamp;
   acceptedAt: FirebaseFirestore.Timestamp | null;
   cancelledAt: FirebaseFirestore.Timestamp | null;
+  /** Display transfers: the date the display period opens on. Null for
+   *  ownership events, and for older display events that pre-date explicit
+   *  start dates (fall back to acceptedAt / initiatedAt on read). */
+  displayStartsAt: FirebaseFirestore.Timestamp | null;
   displayEndsAt: FirebaseFirestore.Timestamp | null;
   displayEndedAt: FirebaseFirestore.Timestamp | null;
 }

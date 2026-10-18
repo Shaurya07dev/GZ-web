@@ -34,6 +34,11 @@ export function TransferRightsDialog({
 }) {
   const initiateMutation = useInitiateTransferMutation();
   const [kind, setKind] = useState<TransferKind>("ownership");
+  // Defaults to today — the common case. The owner can push the start out
+  // when the piece is going on display later.
+  const [displayStartsAt, setDisplayStartsAt] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [displayEndsAt, setDisplayEndsAt] = useState("");
   const [toName, setToName] = useState("");
   const [toEmail, setToEmail] = useState("");
@@ -49,6 +54,7 @@ export function TransferRightsDialog({
         toName,
         toEmail,
         kind,
+        displayStartsAt: kind === "display" ? displayStartsAt : null,
         displayEndsAt: kind === "display" ? displayEndsAt : null,
       },
       {
@@ -65,6 +71,7 @@ export function TransferRightsDialog({
     onOpenChange(nextOpen);
     if (!nextOpen) {
       setKind("ownership");
+      setDisplayStartsAt(new Date().toISOString().slice(0, 10));
       setDisplayEndsAt("");
       setToName("");
       setToEmail("");
@@ -176,17 +183,44 @@ export function TransferRightsDialog({
 
             {kind === "display" && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="displayEndsAt">On display until</Label>
-                <Input
-                  id="displayEndsAt"
-                  type="date"
-                  value={displayEndsAt}
-                  onChange={(e) => setDisplayEndsAt(e.target.value)}
-                  className="h-10 sm:max-w-[12rem]"
-                />
+                <Label>On display</Label>
+                <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
+                  <div className="flex flex-col gap-1">
+                    <Label
+                      htmlFor="displayStartsAt"
+                      className="text-xs font-normal text-muted-foreground"
+                    >
+                      From
+                    </Label>
+                    <Input
+                      id="displayStartsAt"
+                      type="date"
+                      value={displayStartsAt}
+                      max={displayEndsAt || undefined}
+                      onChange={(e) => setDisplayStartsAt(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label
+                      htmlFor="displayEndsAt"
+                      className="text-xs font-normal text-muted-foreground"
+                    >
+                      To
+                    </Label>
+                    <Input
+                      id="displayEndsAt"
+                      type="date"
+                      value={displayEndsAt}
+                      min={displayStartsAt || undefined}
+                      onChange={(e) => setDisplayEndsAt(e.target.value)}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  The display ends on its own that day. You can also end it
-                  early from the passport.
+                  The display runs between these dates and ends on its own.
+                  You can also end it early from the passport.
                 </p>
               </div>
             )}
@@ -238,7 +272,11 @@ export function TransferRightsDialog({
               disabled={
                 !toName.trim() ||
                 !toEmail.trim() ||
-                (kind === "display" && !displayEndsAt) ||
+                (kind === "display" &&
+                  (!displayStartsAt ||
+                    !displayEndsAt ||
+                    new Date(displayEndsAt).getTime() <=
+                      new Date(displayStartsAt).getTime())) ||
                 initiateMutation.isPending
               }
               className="inline-flex items-center justify-center gap-2 self-start rounded-md bg-gradient-to-b from-gold-bright to-gold px-5 py-2.5 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-40"

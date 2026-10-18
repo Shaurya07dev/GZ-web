@@ -145,7 +145,13 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
           <Row label="From" value={transfer.fromName} />
           <Row label="To" value={`${transfer.toName} · ${transfer.toEmail}`} />
           {isDisplay && transfer.displayEndsAt && (
-            <Row label="On display until" value={formatDate(transfer.displayEndsAt)} />
+            <Row
+              label="On display"
+              value={displayPeriodLabel(
+                transfer.displayStartsAt ?? transfer.acceptedAt ?? transfer.initiatedAt,
+                transfer.displayEndsAt,
+              )}
+            />
           )}
           {passport?.nfcLinked && (
             <Row label="NFC tag" value={passport.nfcLocked ? "Linked and locked" : "Linked"} />
@@ -195,6 +201,13 @@ function formatDate(iso: string): string {
     month: "short",
     year: "numeric",
   }).format(new Date(iso));
+}
+
+// Fallback to acceptance / initiation when displayStartsAt is missing — older
+// records don't carry it, and leaving a bare "to <date>" would read as if the
+// display began at zero.
+function displayPeriodLabel(fromIso: string, toIso: string): string {
+  return `${formatDate(fromIso)} — ${formatDate(toIso)}`;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

@@ -84,6 +84,7 @@ export async function recordSaleTransfer(
     initiatedAt: serverNow(),
     acceptedAt: serverNow(),
     cancelledAt: null,
+    displayStartsAt: null,
     displayEndsAt: null,
     displayEndedAt: null,
   };
@@ -99,6 +100,9 @@ export interface InitiateTransferInput {
   kind: "ownership" | "display";
   toName: string;
   toEmail: string;
+  /** Display transfers only: open date. Defaults to the acceptance moment
+   *  when omitted, which keeps older call sites working. */
+  displayStartsAt?: Date | undefined;
   /** Display transfers only. */
   displayEndsAt?: Date | undefined;
 }
@@ -117,6 +121,9 @@ export async function initiateTransfer(db: Firestore, input: InitiateTransferInp
     if (!input.displayEndsAt || input.displayEndsAt.getTime() <= Date.now()) {
       throw new OwnershipConflictError("A display transfer needs an end date in the future");
     }
+    if (input.displayStartsAt && input.displayEndsAt.getTime() <= input.displayStartsAt.getTime()) {
+      throw new OwnershipConflictError("The display end date must come after the start date");
+    }
     if (events.some((e) => e.kind === "display" && e.status === "accepted" && !e.displayEndedAt)) {
       throw new OwnershipConflictError("This artwork is already on display elsewhere");
     }
@@ -134,6 +141,7 @@ export async function initiateTransfer(db: Firestore, input: InitiateTransferInp
     initiatedAt: serverNow(),
     acceptedAt: null,
     cancelledAt: null,
+    displayStartsAt: input.displayStartsAt ? Timestamp.fromDate(input.displayStartsAt) : null,
     displayEndsAt: input.displayEndsAt ? Timestamp.fromDate(input.displayEndsAt) : null,
     displayEndedAt: null,
   };
