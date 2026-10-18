@@ -184,6 +184,13 @@ export interface ProfileDoc {
   earningsAbove5L: boolean;
   socialProofVideoUrl: string | null;
   companyName: string | null;
+  /**
+   * GalleryZone's own 0–10 rating of this artist, set by hand by an admin.
+   * One of the three factors in the composite score the artist sees on their
+   * dashboard (customer rating + profile completion + this). Admin-only
+   * input; never shown to buyers. Null until an admin has rated them.
+   */
+  galleryzoneRating?: number | null;
 }
 
 export interface FinancialDoc {

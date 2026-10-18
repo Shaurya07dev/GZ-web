@@ -43,6 +43,7 @@ interface AdminUserDto {
   location: string | null;
   bankAccountMasked: string | null;
   externalArtist: boolean;
+  galleryzoneRating: number | null;
 }
 
 interface AdminWithdrawalDto {
@@ -102,6 +103,7 @@ function toAdminUser(u: AdminUserDto): AdminUser {
     gstStatus: GST[u.gstStatus ?? "not_submitted"] ?? "not_submitted",
     instagramHandle: u.instagram,
     externalArtist: u.externalArtist,
+    galleryzoneRating: u.galleryzoneRating,
   };
 }
 
@@ -224,6 +226,11 @@ export const adminApi = {
   async setUserExternalArtist(id: string, externalArtist: boolean): Promise<{ id: string; externalArtist: boolean }> {
     await http.patch(`/v1/admin/users/${encodeURIComponent(id)}/external-artist`, { externalArtist });
     return { id, externalArtist };
+  },
+
+  async setUserGalleryzoneRating(id: string, galleryzoneRating: number | null): Promise<{ id: string; galleryzoneRating: number | null }> {
+    await http.patch(`/v1/admin/users/${encodeURIComponent(id)}/gz-rating`, { galleryzoneRating });
+    return { id, galleryzoneRating };
   },
 
   async listKycQueue(): Promise<AdminUser[]> {

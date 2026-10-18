@@ -35,6 +35,10 @@ export interface OwnProfileDto {
    *  profiles — the form falls back to "IN" on read. */
   pickupCountry: string | null;
   earningsAbove5L: boolean;
+  /** GalleryZone's own 0–10 rating of the artist, set by an admin. Null
+   *  until an admin has rated them. Only exposed on the artist's own
+   *  profile and in admin views; never shown to buyers. */
+  galleryzoneRating: number | null;
   socialProofVideoUrl: string | null;
   companyName: string | null;
   /** Artists only: the Early Artist Program's free period. Null for every other role. */

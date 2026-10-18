@@ -52,6 +52,7 @@ const EMPTY_PROFILE: ProfileDoc = {
   earningsAbove5L: false,
   socialProofVideoUrl: null,
   companyName: null,
+  galleryzoneRating: null,
 };
 
 export interface OwnProfile extends ProfileDoc {

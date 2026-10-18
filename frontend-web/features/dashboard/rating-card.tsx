@@ -9,7 +9,6 @@ import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 import {
   STAR_VALUES,
-  artworkCountScore,
   profileCompletionScore,
   scoreArtist,
   type StarRating as Stars,
@@ -39,12 +38,15 @@ export function RatingCard() {
     );
   }
 
+  const gzRating = profile.galleryzoneRating;
   const factors = {
     customerRating: rating.average * 2,
     profileCompletion: profileCompletionScore(profile),
-    artworkCount: artworkCountScore(artworks.length),
+    galleryzoneRating: gzRating ?? 0,
   };
   const composite = scoreArtist(factors);
+  // The composite is used as-is; the one-without-the-admin version isn't shown.
+  void artworks; // Still fetched for the loading guard above; no longer part of the score.
 
   return (
     <section className="flex flex-col gap-5 rounded-lg border border-border bg-card p-5 sm:p-6">
@@ -72,9 +74,14 @@ export function RatingCard() {
       <div className="flex flex-col gap-1.5">
         {(
           [
-            { label: "Customer rating", value: factors.customerRating },
-            { label: "Profile completion", value: factors.profileCompletion },
-            { label: "Artworks posted", value: factors.artworkCount },
+            { label: "Customer rating", value: factors.customerRating, missing: rating.count === 0 },
+            { label: "Profile completion", value: factors.profileCompletion, missing: false },
+            {
+              label: "GalleryZone rating",
+              value: factors.galleryzoneRating,
+              // Null is "not rated yet by an admin", distinct from "rated zero".
+              missing: gzRating === null || gzRating === undefined,
+            },
           ] as const
         ).map((factor) => (
           <div key={factor.label} className="flex items-center gap-2.5">
@@ -87,8 +94,8 @@ export function RatingCard() {
                 style={{ width: `${(factor.value / 10) * 100}%` }}
               />
             </span>
-            <span className="w-8 text-right text-xs text-muted-foreground tabular-nums">
-              {factor.value.toFixed(1)}
+            <span className="w-16 text-right text-xs text-muted-foreground tabular-nums">
+              {factor.missing ? "Not rated" : factor.value.toFixed(1)}
             </span>
           </div>
         ))}

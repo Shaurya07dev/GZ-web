@@ -76,3 +76,18 @@ export function useSetUserExternalArtistMutation() {
   });
 }
 
+// Set (or clear) the artist's GalleryZone internal rating.
+export function useSetUserGalleryzoneRatingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, galleryzoneRating }: { userId: string; galleryzoneRating: number | null }) =>
+      adminService.setUserGalleryzoneRating(userId, galleryzoneRating),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-artist-portfolio", userId] });
+      queryClient.invalidateQueries({ queryKey: ["artist-ratings-by-user"] });
+    },
+  });
+}
+
