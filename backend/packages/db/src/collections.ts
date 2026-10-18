@@ -530,6 +530,16 @@ export interface AggregatorHoldingDoc {
   returnedAt: FirebaseFirestore.Timestamp | null;
   /** The latest request to keep the piece past its window. Only the latest is kept; decisions are also in the audit log. */
   extensionRequest?: HoldingExtensionRequest;
+  /**
+   * Artist -> aggregator inbound shipment, when GalleryZone is routing it
+   * through ShipRocket. Mirror of the outbound tracking fields on
+   * AggregatorSaleDoc: the stage comes from ShipRocket webhooks. Absent
+   * until a shipment has been booked.
+   */
+  inboundShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  inboundTrackingId?: string | null;
+  inboundCarrier?: string | null;
+  inboundTrackedAt?: FirebaseFirestore.Timestamp | null;
 }
 
 export interface HoldingExtensionRequest {
@@ -585,6 +595,23 @@ export interface AggregatorSaleDoc {
   dispatchedAt: FirebaseFirestore.Timestamp | null;
   deliveredAt: FirebaseFirestore.Timestamp | null;
   courierRef: string | null;
+  /**
+   * ShipRocket tracking, added alongside the existing manual shipmentStatus
+   * so both can coexist. Updated by the ShipRocket webhook; stays null when
+   * the shipment is handled manually.
+   *   pickup           — waybill issued, courier assigned, awaiting pickup
+   *   in_transit       — picked up, on the way
+   *   out_for_delivery — on the delivery vehicle
+   *   delivered        — handed to the recipient
+   */
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  /** The AWB (waybill) number ShipRocket assigns — what the recipient uses
+   *  to track the parcel on the courier's own website. */
+  trackingId?: string | null;
+  /** Courier picked by ShipRocket (BlueDart, Delhivery, etc). */
+  carrier?: string | null;
+  /** When the ShipRocket webhook last updated the record. */
+  trackedAt?: FirebaseFirestore.Timestamp | null;
   soldAt: FirebaseFirestore.Timestamp;
   /** The commission rate (fraction of markup) actually billed on this sale.
    *  Picked from aggregatorCommissionSlabs at sale time, based on the
