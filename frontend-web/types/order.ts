@@ -40,4 +40,11 @@ export interface Order {
     method: string;
     simulated: boolean;
   } | null;
+  /** ShipRocket's live stage for the final-mile leg (warehouse / aggregator
+   *  → customer). Null until a shipment has been booked. The old `status`
+   *  field above remains the source of truth for everything upstream of
+   *  shipping; this is purely the tracker. */
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  trackingId?: string | null;
+  carrier?: string | null;
 }

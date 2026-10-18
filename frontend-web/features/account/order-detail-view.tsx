@@ -8,6 +8,7 @@ import { useOrder } from "@/hooks/useOrders";
 import { useArtwork } from "@/hooks/useArtwork";
 import { useAddresses } from "@/hooks/useAddresses";
 import { PriceTag } from "@/components/shared/price-tag";
+import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import { OrderStatusTimeline } from "@/features/account/order-status-timeline";
 import { OrderPriceBreakdown } from "@/features/account/order-price-breakdown";
 
@@ -97,6 +98,24 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           </div>
 
           <OrderStatusTimeline history={order.statusHistory} />
+
+          {/* The ShipRocket tracker sits with the order timeline — the
+              timeline shows what WE know about the order, the tracker shows
+              what the courier is doing right now. */}
+          {(order.shiprocketStage || order.status === "transit" || order.status === "packed") && (
+            <div className="rounded-lg border border-border bg-card p-4">
+              <h3 className="font-display text-sm font-semibold text-foreground">
+                Shipment
+              </h3>
+              <div className="mt-3">
+                <ShipmentTracker
+                  stage={order.shiprocketStage ?? null}
+                  trackingId={order.trackingId}
+                  carrier={order.carrier}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-8">

@@ -64,9 +64,10 @@ function InboundSection() {
         Inbound
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Artworks GalleryZone has assigned or you&rsquo;ve reserved, en route
-        to your premises. Detailed transit tracking isn&rsquo;t modeled yet —
-        this reflects your currently reserved holdings.
+        Artworks GalleryZone has assigned or you&rsquo;ve reserved, on their
+        way from the artist&rsquo;s studio to your premises. The courier stage
+        and AWB come from ShipRocket; pieces still awaiting pickup show no
+        tracking yet.
       </p>
 
       {inbound.length === 0 ? (
