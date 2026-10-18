@@ -40,10 +40,13 @@ import { ROLE_SECTION_HOME, type SessionRole } from "@/lib/session";
 
 // A brand-new artist or aggregator account still needs its profile filled in
 // (KYC, bank, GST, agreement) before anything else is useful, so land there
-// instead of the (empty) dashboard. Other roles keep their normal section home.
+// instead of the (empty) dashboard. A new customer lands on the home page —
+// they signed up to shop, not to see an empty orders list. Admin keeps its
+// normal section home.
 function landingAfterRegister(role: SessionRole): string {
   if (role === "artist") return "/dashboard/profile";
   if (role === "aggregator") return "/aggregator/profile";
+  if (role === "customer") return "/";
   return ROLE_SECTION_HOME[role];
 }
 import { buyerInviteService } from "@/services/buyerInviteService";

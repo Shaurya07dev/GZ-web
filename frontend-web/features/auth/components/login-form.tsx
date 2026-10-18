@@ -52,6 +52,11 @@ function landingAfterLogin(role: SessionRole): string {
   }
   if (role === "artist") return "/marketplace";
   if (role === "aggregator") return "/aggregator/profile";
+  // A buyer signs in to go on buying, not to stare at an orders list — the
+  // home page is the piece of the site they actually came for. The "My
+  // account" link in the header still takes them to /account whenever they
+  // want it.
+  if (role === "customer") return "/";
   return ROLE_SECTION_HOME[role];
 }
 import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth-schemas";
