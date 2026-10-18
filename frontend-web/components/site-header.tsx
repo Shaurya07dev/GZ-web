@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SwitchMode } from "./switch-mode";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -129,14 +129,7 @@ export function SiteHeader() {
               href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
               className="flex items-center gap-2.5"
             >
-              <Image
-                src="/brand/gz-logo.png"
-                alt="GalleryZone"
-                width={822}
-                height={560}
-                priority
-                className="h-9 w-auto shrink-0"
-              />
+              <BrandMark priority className="h-9 w-auto shrink-0" />
               <span className="text-sm font-medium tracking-[0.18em] text-foreground">
                 GALLERYZONE
               </span>
@@ -314,13 +307,7 @@ export function SiteHeader() {
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2"
               >
-                <Image
-                  src="/brand/gz-logo.png"
-                  alt="GalleryZone"
-                  width={822}
-                  height={560}
-                  className="h-7 w-auto shrink-0"
-                />
+                <BrandMark className="h-7 w-auto shrink-0" />
                 <span className="text-xs font-medium tracking-[0.18em] text-foreground">
                   GALLERYZONE
                 </span>

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useMarketplaceOverview } from "@/hooks/useArtworks";
+import { BrandMark } from "@/components/shared/brand-mark";
 
 // A small, deliberately varied slice of the fixture set (one painting, one
 // sculpture, one photograph, one textile piece) so the rotating showcase
@@ -46,14 +47,7 @@ export function AuthLayoutPanel() {
 function Wordmark() {
   return (
     <Link href="/" className="flex items-center gap-3">
-      <Image
-        src="/brand/gz-logo.png"
-        alt="GalleryZone"
-        width={822}
-        height={560}
-        priority
-        className="h-14 w-auto shrink-0"
-      />
+      <BrandMark priority className="h-14 w-auto shrink-0" />
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium tracking-[0.18em] text-sidebar-foreground">
           GALLERYZONE

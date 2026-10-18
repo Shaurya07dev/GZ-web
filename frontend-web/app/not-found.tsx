@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 
@@ -32,14 +32,7 @@ export default function NotFound() {
           href="/"
           className="mb-10 flex items-center gap-2.5 transition-opacity hover:opacity-85"
         >
-          <Image
-            src="/brand/gz-logo.png"
-            alt="GalleryZone"
-            width={822}
-            height={560}
-            priority
-            className="h-9 w-auto"
-          />
+          <BrandMark priority className="h-9 w-auto" />
           <span className="text-sm font-medium tracking-[0.18em] text-foreground">
             GALLERYZONE
           </span>

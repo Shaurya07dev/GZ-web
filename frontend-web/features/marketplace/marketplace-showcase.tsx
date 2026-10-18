@@ -18,6 +18,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { isPlaceholderImage } from "@/lib/api-mappers";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { artworkQrDataUrl } from "@/lib/qr";
 import { cn } from "@/lib/utils";
 import {
@@ -300,7 +301,7 @@ function PassportCard({ artwork, qr }: { artwork: ArtworkSummary; qr: string | n
       <div className="pointer-events-none absolute -top-20 -right-20 size-56 rounded-full bg-[radial-gradient(circle,rgb(233_197_122/0.14),transparent_70%)]" />
 
       <div className="relative flex items-center gap-3 border-b border-white/10 pb-3">
-        <Image src="/brand/gz-logo.png" alt="" width={822} height={560} className="h-7 w-auto" />
+        <BrandMark forceDark alt="" className="h-7 w-auto" />
         <p className="font-display text-lg">Digital Passport</p>
       </div>
 

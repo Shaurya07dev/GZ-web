@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { BrandMark } from "@/components/shared/brand-mark";
 import { FOOTER_COLUMNS, SOCIAL_LINKS } from "./site-footer-data";
 import type { FooterLink } from "./site-footer-data";
 
@@ -54,10 +55,8 @@ export function SiteFooter() {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="flex max-w-sm flex-col"
           >
-            <div className="flex items-baseline gap-2.5">
-              <span className="font-display text-2xl font-semibold text-gold-bright italic">
-                GZ
-              </span>
+            <div className="flex items-center gap-2.5">
+              <BrandMark className="h-10 w-auto shrink-0" />
               <span className="text-sm font-medium tracking-[0.18em] text-foreground">
                 GALLERYZONE
               </span>
