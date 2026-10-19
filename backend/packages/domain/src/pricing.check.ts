@@ -49,9 +49,17 @@ const R = (rupees: number) => Math.round(rupees * 100);
   assert.equal(display, R(136_500), "GST inside display price");
   const checkout = checkoutTotal(display, rates);
   assert.equal(checkout.gstIncluded, R(6_500));
-  assert.equal(checkout.convenienceFee, 0, "customer convenience is off during launch");
-  assert.equal(checkout.convenienceGst, 0);
-  assert.equal(checkout.total, R(139_000), "display + flat delivery");
+  // Client, 18 Oct 2026: Razorpay fee (2% of pre-GST + 18% service GST on the
+  // fee itself) is added on top of the customer price in both marketplace and
+  // aggregator sales, rather than absorbed into GalleryZone's margin. 2% of
+  // ₹1,30,000 = ₹2,600; 18% service GST on ₹2,600 = ₹468.
+  assert.equal(checkout.convenienceFee, R(2_600), "Razorpay fee: 2% of pre-GST price");
+  assert.equal(checkout.convenienceGst, R(468), "18% service GST on the Razorpay fee");
+  assert.equal(
+    checkout.total,
+    R(139_000) + R(2_600) + R(468),
+    "display + flat delivery + Razorpay fee + its GST",
+  );
 
   // Payout sheet, marketplace column: nothing comes off but TDS, and TDS only
   // once the artist's sales this financial year pass ₹5 lakh.
@@ -66,7 +74,17 @@ const R = (rupees: number) => Math.round(rupees * 100);
   assert.equal(pastTheLine.net, R(99_900));
   assert.equal(pastTheLine.technologyDeduction, 0, "no technology charge on the marketplace");
 
-  const galleryZoneKeeps = checkout.total - checkout.gstIncluded - checkout.deliveryCharge - underTheLine.net;
+  // GalleryZone's real margin — the Razorpay fee + its GST are added on top
+  // of the price, then paid straight through to Razorpay, so they're
+  // deducted from the residual the same way GST and delivery are. The 30%
+  // markup over the artist's price is what the business actually keeps.
+  const galleryZoneKeeps =
+    checkout.total
+    - checkout.gstIncluded
+    - checkout.deliveryCharge
+    - checkout.convenienceFee
+    - checkout.convenienceGst
+    - underTheLine.net;
   assert.equal(galleryZoneKeeps, R(30_000));
 }
 
@@ -109,29 +127,25 @@ const R = (rupees: number) => Math.round(rupees * 100);
 
 // --- Customer invoice sheet ------------------------------------------------
 // Two columns: an aggregator sale priced at ₹1,50,000 pre-GST, and a plain
-// marketplace sale at ₹1,30,000 pre-GST. Convenience is quoted at 0.1% with
-// 18% GST on it — "for future, no applicability now" — so the sheet's own
-// figures are checked against a future-rate copy, and the live rate is 0.
+// marketplace sale at ₹1,30,000 pre-GST. The Razorpay fee rides on top of
+// the display price at 2% + 18% service GST, per the client (18 Oct 2026).
 {
   const withAggregator = R(157_500); // withGst(1,50,000)
   const marketplaceOnly = R(136_500); // withGst(1,30,000)
 
   const live = checkoutTotal(withAggregator, rates);
   assert.equal(live.gstIncluded, R(7_500), "5% GST on the goods");
-  assert.equal(live.convenienceFee, 0);
-  assert.equal(live.total, R(160_000), "157,500 + 2,500 delivery");
+  // Razorpay fee: 2% of ex-GST (₹1,50,000) = ₹3,000; 18% GST on it = ₹540.
+  assert.equal(live.convenienceFee, R(3_000), "2% Razorpay fee on ₹1,50,000");
+  assert.equal(live.convenienceGst, R(540), "18% service GST on the Razorpay fee");
+  assert.equal(live.total, R(160_000) + R(3_000) + R(540), "157,500 + 2,500 delivery + 3,540 Razorpay");
 
-  const futureRates = { ...rates, customerConvenienceRate: 0.001 };
-  const aggregatorInvoice = checkoutTotal(withAggregator, futureRates);
-  assert.equal(aggregatorInvoice.convenienceFee, R(150), "0.1% of 1,50,000");
-  assert.equal(aggregatorInvoice.convenienceGst, R(27), "18% of 150");
-  assert.equal(aggregatorInvoice.total, R(160_177));
-
-  const marketplaceInvoice = checkoutTotal(marketplaceOnly, futureRates);
+  // The marketplace-only path has a smaller base and so a smaller fee.
+  const marketplaceInvoice = checkoutTotal(marketplaceOnly, rates);
   assert.equal(marketplaceInvoice.gstIncluded, R(6_500));
-  assert.equal(marketplaceInvoice.convenienceFee, R(130));
-  assert.equal(marketplaceInvoice.convenienceGst, R(23.4));
-  assert.equal(marketplaceInvoice.total, R(139_153.4));
+  assert.equal(marketplaceInvoice.convenienceFee, R(2_600), "2% of ₹1,30,000");
+  assert.equal(marketplaceInvoice.convenienceGst, R(468), "18% of 2,600");
+  assert.equal(marketplaceInvoice.total, R(139_000) + R(2_600) + R(468));
 }
 
 // --- Service-charge sheet: everything GalleryZone bills carries 18% GST ----

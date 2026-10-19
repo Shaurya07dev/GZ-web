@@ -110,6 +110,7 @@ export function aggregatorSalePostings({
   tdsApplies = false,
   otherChargesPaise,
   deliveryChargePaise,
+  commissionRate,
 }: {
   artistId: string;
   aggregatorId: string;
