@@ -32,10 +32,15 @@ export interface ArtistProfileView {
   pickupCity: string;
   pickupState: string;
   pickupPincode: string;
+  /** ISO 3166-1 alpha-2. Null on profiles written before #22; readers fall
+   *  back to "IN" at the form level. */
+  pickupCountry: string | null;
   location: string | null;
   headline: string | null;
   joinedAt: string;
   freeAccess: FreeAccess | null;
+  /** 0-10 admin-set rating of this artist; null until an admin has rated them. */
+  galleryzoneRating: number | null;
 }
 
 function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
@@ -59,10 +64,12 @@ function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
     pickupCity: p.pickupCity ?? "",
     pickupState: p.pickupState ?? "",
     pickupPincode: p.pickupPincode ?? "",
+    pickupCountry: p.pickupCountry ?? null,
     location: p.location,
     headline: p.headline,
     joinedAt: p.createdAt,
     freeAccess: p.freeAccess ?? null,
+    galleryzoneRating: p.galleryzoneRating ?? null,
   };
 }
 import { KPI_METRICS } from "@/features/dashboard/dashboard-data";
@@ -98,6 +105,7 @@ export interface SubmitArtworkInput {
   artistPrice: number;
   listingType: Artwork["listingType"];
   insuranceOpted: boolean;
+  exclusive: boolean;
   insuranceNumber: string | null;
   physical: ArtworkPhysical;
   images: SubmitImage[];
