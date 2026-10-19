@@ -36,8 +36,9 @@ export interface PublicArtworkView {
   displayPricePaise: number;
   insured: boolean;
   /** Marked one-of-a-kind, no sales on other platforms. Public — it's part
-   *  of why a buyer would want this piece. */
-  exclusive: boolean;
+   *  of why a buyer would want this piece. Optional so fixtures and docs
+   *  from before the field existed read as `false` without a migration. */
+  exclusive?: boolean;
   status: ArtworkStatus;
   listingType: string;
   rarityType: string | null;
