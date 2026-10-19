@@ -20,8 +20,9 @@ export interface CustomerArtworkDto {
   displayPricePaise: number;
   insured: boolean;
   /** Marked one-of-a-kind at submission — the piece is exclusive to
-   *  GalleryZone and the artist does not sell it anywhere else. */
-  exclusive: boolean;
+   *  GalleryZone and the artist does not sell it anywhere else. Optional
+   *  so docs written before the field read as `exclusive: false`. */
+  exclusive?: boolean;
   status: string;
   listingType: string;
   rarityType: string | null;
