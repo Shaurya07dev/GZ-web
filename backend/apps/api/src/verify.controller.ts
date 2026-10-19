@@ -26,6 +26,7 @@ export function toPublicEvent(e: OwnershipEvent): VerifyPassportDto["events"][nu
     initiatedAt: iso(e.initiatedAt) ?? new Date(0).toISOString(),
     acceptedAt: iso(e.acceptedAt),
     cancelledAt: iso(e.cancelledAt),
+    displayStartsAt: iso(e.displayStartsAt),
     displayEndsAt: iso(e.displayEndsAt),
     displayEndedAt: iso(e.displayEndedAt),
   };

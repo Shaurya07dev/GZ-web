@@ -69,6 +69,7 @@ export interface PassportEvent {
   initiatedAt: string;
   acceptedAt: string | null;
   cancelledAt: string | null;
+  displayStartsAt: string | null;
   displayEndsAt: string | null;
   displayEndedAt: string | null;
 }
@@ -91,6 +92,7 @@ export function passportEventToTransfer(
     cancelledAt: e.cancelledAt,
     status: e.status,
     kind: e.kind,
+    displayStartsAt: e.displayStartsAt,
     displayEndsAt: e.displayEndsAt,
     displayEndedAt: e.displayEndedAt,
   };

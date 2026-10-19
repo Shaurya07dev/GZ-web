@@ -20,12 +20,16 @@ export default function FaqPage() {
               Frequently asked questions.
             </h1>
             <p className="mt-5 max-w-xl text-balance text-base leading-relaxed text-muted-foreground">
-              How pricing privacy, settlements, verification, and buyer rights
-              work on GalleryZone, organized by who&rsquo;s asking.
+              What GalleryZone is, how verification and the digital passport
+              work, and what buyers can expect. Artist and aggregator answers
+              are on your own Support page once you sign in.
             </p>
 
             <div className="mt-12">
-              <FaqTabs />
+              {/* Public page: general + buyer answers only. Profit-sharing,
+                  commission slabs and payout timing live behind login on the
+                  artist's and aggregator's own Support pages. */}
+              <FaqTabs audiences={["general", "buyers"]} />
             </div>
           </div>
         </section>

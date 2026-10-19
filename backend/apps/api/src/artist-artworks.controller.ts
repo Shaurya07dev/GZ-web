@@ -63,6 +63,7 @@ const artworkFields = {
   insuranceOpted: z.boolean().optional(),
   insuranceNumber: z.string().trim().max(80).nullable().optional(),
   physical: physicalSchema.nullable().optional(),
+  exclusive: z.boolean().optional(),
 };
 
 // Retired: a chip is linked from the app through /nfc/link, after it has been

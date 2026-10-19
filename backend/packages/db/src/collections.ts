@@ -125,6 +125,15 @@ export interface UserDoc {
   createdAt: FirebaseFirestore.Timestamp;
   lastLoginAt: FirebaseFirestore.Timestamp | null;
   roleGrants: string[]; // RoleGrant values, kept as string[] for forward-compat with a grant not yet in the RoleGrant union
+  /**
+   * Artists who are listing on GalleryZone through an external platform
+   * rather than directly — the "TR" (technology-register) partners. Admin
+   * sets this by hand; it drives a small TR badge in the admin console so
+   * internal views can tell partner-sourced artists from native ones.
+   * Optional for backward compatibility with user docs written before the
+   * field existed — absent reads as false.
+   */
+  externalArtist?: boolean;
 }
 
 /**
@@ -169,9 +178,19 @@ export interface ProfileDoc {
   pickupCity: string | null;
   pickupState: string | null;
   pickupPincode: string | null;
+  /** ISO 3166-1 alpha-2 country code. Null on profiles written before
+   *  the field existed — those are all Indian and read as "IN". */
+  pickupCountry: string | null;
   earningsAbove5L: boolean;
   socialProofVideoUrl: string | null;
   companyName: string | null;
+  /**
+   * GalleryZone's own 0–10 rating of this artist, set by hand by an admin.
+   * One of the three factors in the composite score the artist sees on their
+   * dashboard (customer rating + profile completion + this). Admin-only
+   * input; never shown to buyers. Null until an admin has rated them.
+   */
+  galleryzoneRating?: number | null;
 }
 
 export interface FinancialDoc {
@@ -231,6 +250,13 @@ export interface ArtworkDoc {
   insuranceOpted?: boolean;
   /** Painting-only sub-classification (e.g. "Abstract"). */
   paintingStyle?: string | null;
+  /**
+   * Marked exclusive to GalleryZone at submission — the piece is a one-of-a-
+   * kind original and the artist agrees not to sell it on any other platform.
+   * Set once at submit; the backend refuses patches that try to clear it (a
+   * one-way flag). Absent on older docs = false.
+   */
+  exclusive?: boolean;
   /** Shipping/packaging facts the artist declares at submission. */
   physical?: ArtworkPhysical | null;
   editableUntil: FirebaseFirestore.Timestamp;
@@ -321,6 +347,10 @@ export interface OwnershipEventDoc {
   initiatedAt: FirebaseFirestore.Timestamp;
   acceptedAt: FirebaseFirestore.Timestamp | null;
   cancelledAt: FirebaseFirestore.Timestamp | null;
+  /** Display transfers: the date the display period opens on. Null for
+   *  ownership events, and for older display events that pre-date explicit
+   *  start dates (fall back to acceptedAt / initiatedAt on read). */
+  displayStartsAt: FirebaseFirestore.Timestamp | null;
   displayEndsAt: FirebaseFirestore.Timestamp | null;
   displayEndedAt: FirebaseFirestore.Timestamp | null;
 }
@@ -500,6 +530,16 @@ export interface AggregatorHoldingDoc {
   returnedAt: FirebaseFirestore.Timestamp | null;
   /** The latest request to keep the piece past its window. Only the latest is kept; decisions are also in the audit log. */
   extensionRequest?: HoldingExtensionRequest;
+  /**
+   * Artist -> aggregator inbound shipment, when GalleryZone is routing it
+   * through ShipRocket. Mirror of the outbound tracking fields on
+   * AggregatorSaleDoc: the stage comes from ShipRocket webhooks. Absent
+   * until a shipment has been booked.
+   */
+  inboundShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  inboundTrackingId?: string | null;
+  inboundCarrier?: string | null;
+  inboundTrackedAt?: FirebaseFirestore.Timestamp | null;
 }
 
 export interface HoldingExtensionRequest {
@@ -555,7 +595,31 @@ export interface AggregatorSaleDoc {
   dispatchedAt: FirebaseFirestore.Timestamp | null;
   deliveredAt: FirebaseFirestore.Timestamp | null;
   courierRef: string | null;
+  /**
+   * ShipRocket tracking, added alongside the existing manual shipmentStatus
+   * so both can coexist. Updated by the ShipRocket webhook; stays null when
+   * the shipment is handled manually.
+   *   pickup           — waybill issued, courier assigned, awaiting pickup
+   *   in_transit       — picked up, on the way
+   *   out_for_delivery — on the delivery vehicle
+   *   delivered        — handed to the recipient
+   */
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  /** The AWB (waybill) number ShipRocket assigns — what the recipient uses
+   *  to track the parcel on the courier's own website. */
+  trackingId?: string | null;
+  /** Courier picked by ShipRocket (BlueDart, Delhivery, etc). */
+  carrier?: string | null;
+  /** When the ShipRocket webhook last updated the record. */
+  trackedAt?: FirebaseFirestore.Timestamp | null;
   soldAt: FirebaseFirestore.Timestamp;
+  /** The commission rate (fraction of markup) actually billed on this sale.
+   *  Picked from aggregatorCommissionSlabs at sale time, based on the
+   *  aggregator's lifetime pre-GST total through the end of the previous
+   *  month. Stored for audit so a changed slab table never retroactively
+   *  rewrites what was billed. Absent on sales recorded before the slab
+   *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
+  commissionRate?: number;
 }
 
 export interface GallerySpaceDoc {

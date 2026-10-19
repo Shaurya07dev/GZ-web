@@ -16,18 +16,36 @@ import {
   type FaqItem,
 } from "./faq-data";
 
-export function FaqTabs() {
+// The public /faq page passes `audiences` with just "general" + "buyers" —
+// profit-sharing, commission, slab and payout answers live behind login on
+// the artist's and aggregator's own Support pages, which pass the full set.
+// Client (18 Oct 2026): a cold visitor should see only general FAQs.
+export function FaqTabs({
+  audiences = FAQ_AUDIENCES.map((a) => a.value),
+}: {
+  audiences?: readonly FaqAudience[];
+} = {}) {
+  const visibleAudiences = useMemo(
+    () => FAQ_AUDIENCES.filter((a) => audiences.includes(a.value)),
+    [audiences],
+  );
   const grouped = useMemo(() => {
     const map = new Map<FaqAudience, FaqItem[]>();
-    for (const audience of FAQ_AUDIENCES) map.set(audience.value, []);
-    for (const item of FAQ_ITEMS) map.get(item.audience)?.push(item);
+    for (const audience of visibleAudiences) map.set(audience.value, []);
+    for (const item of FAQ_ITEMS) {
+      if (visibleAudiences.some((a) => a.value === item.audience)) {
+        map.get(item.audience)?.push(item);
+      }
+    }
     return map;
-  }, []);
+  }, [visibleAudiences]);
+
+  const defaultValue = visibleAudiences[0]?.value ?? "general";
 
   return (
-    <Tabs defaultValue="general">
+    <Tabs defaultValue={defaultValue}>
       <TabsList className="h-auto flex-wrap justify-start gap-2 bg-transparent p-0">
-        {FAQ_AUDIENCES.map((audience) => (
+        {visibleAudiences.map((audience) => (
           <TabsTrigger
             key={audience.value}
             value={audience.value}
@@ -38,7 +56,7 @@ export function FaqTabs() {
         ))}
       </TabsList>
 
-      {FAQ_AUDIENCES.map((audience) => {
+      {visibleAudiences.map((audience) => {
         const items = grouped.get(audience.value) ?? [];
         return (
           <TabsContent

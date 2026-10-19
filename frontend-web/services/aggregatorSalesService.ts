@@ -31,6 +31,11 @@ export interface AggregatorShipment {
   dispatchedAt: string | null;
   deliveredAt: string | null;
   courierRef: string | null;
+  /** ShipRocket's current stage for the OUTBOUND leg (aggregator → buyer).
+   *  Null when the shipment hasn't been booked through ShipRocket yet. */
+  shiprocketStage: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  trackingId: string | null;
+  carrier: string | null;
   /** The piece's NFC tag is locked (or GalleryZone let it ship without), so dispatch won't be refused. */
   nfcReady: boolean;
 }
@@ -67,6 +72,10 @@ interface SaleDto {
   dispatchedAt: Ts;
   deliveredAt: Ts;
   courierRef: string | null;
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  trackingId?: string | null;
+  carrier?: string | null;
+  trackedAt?: Ts;
   soldAt: Ts;
   nfcLocked?: boolean;
   nfcGateOverridden?: boolean;
@@ -97,6 +106,9 @@ function toSale(s: SaleDto): AggregatorSale {
     dispatchedAt: iso(s.dispatchedAt),
     deliveredAt: iso(s.deliveredAt),
     courierRef: s.courierRef,
+    shiprocketStage: s.shiprocketStage ?? null,
+    trackingId: s.trackingId ?? null,
+    carrier: s.carrier ?? null,
     ...(s.nfcLocked === undefined ? {} : { nfcLocked: s.nfcLocked }),
     ...(s.nfcGateOverridden === undefined ? {} : { nfcGateOverridden: s.nfcGateOverridden }),
   };
@@ -114,6 +126,9 @@ const toShipment = (s: AggregatorSale): AggregatorShipment => ({
   dispatchedAt: s.dispatchedAt ?? null,
   deliveredAt: s.deliveredAt ?? null,
   courierRef: s.courierRef ?? null,
+  shiprocketStage: s.shiprocketStage ?? null,
+  trackingId: s.trackingId ?? null,
+  carrier: s.carrier ?? null,
   // Older API responses carry no tag state: don't warn about what can't be known.
   nfcReady: s.nfcLocked === undefined ? true : s.nfcLocked || Boolean(s.nfcGateOverridden),
 });

@@ -16,8 +16,10 @@ export function FreeAccessNote() {
   if (!access?.active) return null;
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-gold/30 bg-gold/5 px-4 py-3 text-sm">
-      <Gift className="mt-0.5 size-4 shrink-0 text-gold-bright" strokeWidth={1.75} />
+    <div className="flex items-start gap-3 rounded-lg border border-gold/30 bg-gold/10 px-4 py-3 text-sm">
+      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-gold/15">
+        <Gift className="size-3.5 text-gold-bright" strokeWidth={1.75} />
+      </span>
       <p className="text-foreground/90">
         {access.surveyRespondent
           ? "A full year of free access to every premium feature, because you filled in our survey. "

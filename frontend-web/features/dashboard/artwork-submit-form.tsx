@@ -22,7 +22,6 @@ import {
   ExternalLink,
   Ruler,
   ChevronsUpDown,
-  LayoutTemplate,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -135,6 +134,7 @@ type FormState = {
   hangingHardwareIncluded: boolean;
   packagingConfirmed: boolean;
   aggregatorTermsAccepted: boolean;
+  exclusive: boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -161,6 +161,7 @@ const EMPTY_FORM: FormState = {
   hangingHardwareIncluded: false,
   packagingConfirmed: false,
   aggregatorTermsAccepted: false,
+  exclusive: false,
 };
 
 // Free-text `dimensions` is only ever machine-written by this form (as
@@ -305,6 +306,7 @@ function formStateFor(artwork: EditableArtwork): FormState {
     hangingHardwareIncluded: artwork.physical?.hangingHardwareIncluded ?? false,
     packagingConfirmed: artwork.physical?.packagingConfirmed ?? false,
     aggregatorTermsAccepted: false,
+    exclusive: artwork.exclusive ?? false,
   };
 }
 
@@ -463,6 +465,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       listingType: form.listingType,
       insuranceOpted: insuranceRequired || form.insuranceOpted,
       insuranceNumber: form.insuranceNumber.trim() || null,
+      exclusive: form.exclusive,
       physical: {
         weightKg: Number(form.weightKg) || null,
         framing: form.framing || null,
@@ -1150,6 +1153,40 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             )}
           </div>
 
+          {/* Exclusivity: a one-way flag. The artist can turn it on at
+              submit time; once accepted, the backend refuses to clear it.
+              On edit of a piece that is already exclusive, the control is
+              shown but locked — the state is still visible, it just can't
+              be undone. */}
+          <label
+            className={cn(
+              "flex cursor-pointer items-start gap-2.5 rounded-md border p-3.5",
+              form.exclusive
+                ? "border-gold/50 bg-gold/10"
+                : "border-border hover:border-gold/30",
+              isEdit && artwork?.exclusive && "cursor-not-allowed opacity-80",
+            )}
+          >
+            <Checkbox
+              checked={form.exclusive}
+              disabled={isEdit && artwork?.exclusive === true}
+              onCheckedChange={(checked) =>
+                updateField("exclusive", checked === true)
+              }
+              className="mt-0.5"
+            />
+            <span className="flex min-w-0 flex-col gap-1 text-xs leading-relaxed">
+              <span className="text-sm font-medium text-foreground">
+                Mark as exclusive to GalleryZone
+              </span>
+              <span className="text-muted-foreground">
+                This piece is a one-of-a-kind original and you agree not to
+                sell it on any other platform. This cannot be undone later —
+                contact GalleryZone if the status needs to change.
+              </span>
+            </span>
+          </label>
+
           <div className="flex gap-3 rounded-md border border-border bg-muted/30 px-3.5 py-3">
             <Nfc className="mt-0.5 size-4 shrink-0 text-gold-bright" strokeWidth={1.75} />
             <div className="text-xs leading-relaxed text-muted-foreground">
@@ -1271,22 +1308,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 </div>
               </div>
 
-              {/* Placeholder for a preview card of how this piece displays at
-                  the aggregator's premises. Left empty on purpose. */}
-              <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
-                <LayoutTemplate
-                  className="size-5 shrink-0 text-gold-bright"
-                  strokeWidth={1.5}
-                />
-                <div>
-                  <p className="text-xs font-medium text-foreground">
-                    Display card
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Coming soon.
-                  </p>
-                </div>
-              </div>
             </div>
           )}
 

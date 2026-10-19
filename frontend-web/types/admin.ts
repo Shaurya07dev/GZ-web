@@ -27,6 +27,12 @@ export interface AdminUser {
   gstin?: string | null;
   gstStatus?: GstStatus;
   instagramHandle?: string | null;
+  /** TR partner — this artist lists through an external platform rather
+   *  than natively on GalleryZone. Admin-only internal flag. */
+  externalArtist?: boolean;
+  /** GalleryZone's own 0–10 rating of the artist. Null until an admin has
+   *  rated them. Never shown to buyers. */
+  galleryzoneRating?: number | null;
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";
@@ -101,8 +107,13 @@ export type AuditAction =
   | "insurance.rejected"
   | "withdrawal.approved"
   | "withdrawal.rejected"
+  | "payout.marked_paid"
   | "user.suspended"
   | "user.activated"
+  | "user.marked_external"
+  | "user.unmarked_external"
+  | "user.gz_rating_set"
+  | "user.gz_rating_cleared"
   | "category.created"
   | "category.updated"
   | "category.deleted"
@@ -114,7 +125,7 @@ export interface AuditLogEntry {
   adminName: string;
   action: AuditAction;
   entityType:
-    "artwork" | "user" | "withdrawal" | "category" | "settlement" | "settings";
+    "artwork" | "user" | "withdrawal" | "payout" | "category" | "settlement" | "settings";
   entityId: string;
   entityLabel: string; // human-readable, e.g. the artwork title
   detail?: string; // e.g. a rejection reason

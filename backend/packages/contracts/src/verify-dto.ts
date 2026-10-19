@@ -44,6 +44,10 @@ export interface VerifyPassportDto {
     initiatedAt: string;
     acceptedAt: string | null;
     cancelledAt: string | null;
+    /** Display transfers only: when the display period opens. Null on
+     *  ownership events and on records written before start dates existed —
+     *  readers fall back to acceptedAt there. */
+    displayStartsAt: string | null;
     displayEndsAt: string | null;
     displayEndedAt: string | null;
   }[];

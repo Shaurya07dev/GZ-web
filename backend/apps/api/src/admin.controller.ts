@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Inject, Logger, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
-import { FirestoreRateConfigStore, addSurveyRespondents, listSurveyRespondents, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
+import { FirestoreRateConfigStore, addSurveyRespondents, listSurveyRespondents, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserExternalArtist, setUserGalleryzoneRating, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import { Emails } from "./mail/emails.ts";
@@ -13,6 +13,12 @@ type NameBody = z.infer<typeof nameSchema>;
 
 const statusSchema = z.object({ status: z.enum([...userStatusValues]) }).strict();
 type StatusBody = z.infer<typeof statusSchema>;
+
+const externalArtistSchema = z.object({ externalArtist: z.boolean() }).strict();
+type ExternalArtistBody = z.infer<typeof externalArtistSchema>;
+
+const gzRatingSchema = z.object({ galleryzoneRating: z.number().min(0).max(10).nullable() }).strict();
+type GzRatingBody = z.infer<typeof gzRatingSchema>;
 
 // 500 is one Firestore batch; send a longer list in several calls.
 const surveyEmailsSchema = z.object({ emails: z.array(z.string().trim().email()).min(1).max(500) }).strict();
@@ -129,5 +135,25 @@ export class AdminController {
     // Being locked out with no explanation is the worst version of this.
     void this.emails.accountStatusChanged({ userId: id, status: body.status }).catch(this.emails.swallow("account status mail"));
     return result;
+  }
+
+  // TR partners: artists listing through an external platform rather than
+  // through GalleryZone directly. Marked by an admin by hand; drives a small
+  // badge in the admin console. Not exposed on any public surface — the
+  // artist's own public page reads the same regardless.
+  @Roles("admin")
+  @Patch("users/:id/external-artist")
+  async setExternalArtist(@Param("id") id: string, @Body(new ZodValidationPipe(externalArtistSchema)) body: ExternalArtistBody) {
+    await setUserExternalArtist(this.db, id, body.externalArtist);
+    return { id, externalArtist: body.externalArtist };
+  }
+
+  // GalleryZone's own 0-10 rating of an artist, admin-set. Feeds into the
+  // composite score the artist sees on their dashboard; never shown to buyers.
+  @Roles("admin")
+  @Patch("users/:id/gz-rating")
+  async setGzRating(@Param("id") id: string, @Body(new ZodValidationPipe(gzRatingSchema)) body: GzRatingBody) {
+    await setUserGalleryzoneRating(this.db, id, body.galleryzoneRating);
+    return { id, galleryzoneRating: body.galleryzoneRating };
   }
 }

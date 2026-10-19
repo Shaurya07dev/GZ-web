@@ -185,13 +185,8 @@ function RemittancesDueCard() {
           </h2>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
             Cash you collected on GalleryZone&rsquo;s behalf. Pay in the full
-            amount within 2 days, either from your wallet (add the cash to it
-            first in{" "}
-            <Link href="/aggregator/wallet" className="text-gold-bright hover:underline">
-              Earnings &amp; Wallet
-            </Link>
-            ) or by transfer to GalleryZone&rsquo;s bank account. Your commission
-            is settled separately, below.
+            amount within 2 days by Razorpay or by transfer to GalleryZone&rsquo;s
+            bank account. Your commission is settled separately, below.
           </p>
         </div>
         <span className="font-display text-2xl font-semibold tabular-nums text-gold-bright">

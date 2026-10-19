@@ -3,11 +3,12 @@
 import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
 
 import Image from "next/image";
-import { Lock, Truck, PackageCheck, PackageSearch } from "lucide-react";
+import { Lock, PackageCheck, PackageSearch } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
+import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import {
   useAggregatorShipments,
   useAdvanceShipmentMutation,
@@ -49,12 +50,10 @@ export function ShippingTable() {
   );
 }
 
-// Illustrative only — the platform's data model has no "in transit from
-// GalleryZone to aggregator" status distinct from a holding's own
-// `reserved` state (see SAD §2.7), so this section isn't backed by a real
-// shipment record the way Outbound is. It surfaces recently-reserved
-// holdings as a stand-in for "due for pickup", not a fabricated tracking
-// state machine.
+// GalleryZone books every artist → aggregator leg through ShipRocket; the
+// stage comes from `inboundShiprocketStage` on the holding. A reserved
+// holding with no booking yet shows the "shipment not booked" placeholder so
+// the aggregator knows the piece is theirs but still with the artist.
 function InboundSection() {
   const { data: holdings } = useAggregatorCollection();
   const inbound = (holdings ?? []).filter((h) => h.status === "reserved").slice(0, 3);
@@ -65,9 +64,10 @@ function InboundSection() {
         Inbound
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Artworks GalleryZone has assigned or you&rsquo;ve reserved, en route
-        to your premises. Detailed transit tracking isn&rsquo;t modeled yet —
-        this reflects your currently reserved holdings.
+        Artworks GalleryZone has assigned or you&rsquo;ve reserved, on their
+        way from the artist&rsquo;s studio to your premises. The courier stage
+        and AWB come from ShipRocket; pieces still awaiting pickup show no
+        tracking yet.
       </p>
 
       {inbound.length === 0 ? (
@@ -78,14 +78,14 @@ function InboundSection() {
           className="mt-4"
         />
       ) : (
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-3">
           {inbound.map((holding) => {
             const artwork = holding.artwork;
             if (!artwork) return null;
             return (
               <div
                 key={holding.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3.5"
+                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center"
               >
                 <div className="relative size-10 shrink-0 overflow-hidden rounded-md bg-muted">
                   <Image
@@ -99,10 +99,12 @@ function InboundSection() {
                 <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                   {artwork.title}
                 </p>
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-400">
-                  <Truck className="size-3" strokeWidth={2} />
-                  Due for pickup
-                </span>
+                <ShipmentTracker
+                  stage={holding.inboundShiprocketStage ?? null}
+                  trackingId={holding.inboundTrackingId}
+                  carrier={holding.inboundCarrier}
+                  className="shrink-0"
+                />
               </div>
             );
           })}
@@ -169,11 +171,19 @@ function OutboundList() {
                     : "Self pickup"}
                 </td>
                 <td className="px-4 py-3.5">
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${STATUS_CLASS[shipment.shipmentStatus]}`}
-                  >
-                    {shipment.shipmentStatus}
-                  </span>
+                  {shipment.shiprocketStage ? (
+                    <ShipmentTracker
+                      stage={shipment.shiprocketStage}
+                      trackingId={shipment.trackingId}
+                      carrier={shipment.carrier}
+                    />
+                  ) : (
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${STATUS_CLASS[shipment.shipmentStatus]}`}
+                    >
+                      {shipment.shipmentStatus}
+                    </span>
+                  )}
                   {shipment.shipmentStatus === "preparing" && !shipment.nfcReady && (
                     <span
                       id={`nfc-unlocked-${shipment.id}`}

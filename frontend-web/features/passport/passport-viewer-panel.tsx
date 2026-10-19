@@ -185,7 +185,10 @@ function PieceRow({ entry, topic }: { entry: MyPassport; topic: PassportTopicSlu
             { label: "Owner of record", value: passport.owner.displayName },
             { label: "Hand-overs recorded", value: String(handovers) },
             ...(display
-              ? [{ label: "On display", value: `${display.toName} until ${formatDate(display.displayEndsAt)}` }]
+              ? [{
+                  label: "On display",
+                  value: `${display.toName} · ${formatDate(display.displayStartsAt ?? display.acceptedAt ?? display.initiatedAt)} — ${formatDate(display.displayEndsAt)}`,
+                }]
               : []),
           ]
         : topic === "legacy"

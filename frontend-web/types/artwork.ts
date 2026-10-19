@@ -69,6 +69,10 @@ export interface ArtworkSummary {
   customerPrice: number;
   thumbnailUrl: string;
   insured: boolean;
+  /** Marked one-of-a-kind at submission — the piece is exclusive to
+   *  GalleryZone and not sold on any other platform. Absent on fixture
+   *  records = false. */
+  exclusive?: boolean;
   status: ArtworkStatus;
   listingType: ListingType;
   /** GalleryZone's rank. Absent on records nobody has ranked yet. */
@@ -460,6 +464,10 @@ export interface OwnershipTransfer {
   /** Absent on records written before display rights existed — those are all
    *  ownership hand-overs. Read it through transferKind(). */
   kind?: TransferKind;
+  /** Display transfers only: the date the display period opens on. Absent
+   *  on records written before start dates were explicit — fall back to
+   *  acceptedAt there. */
+  displayStartsAt?: string | null;
   /** Display transfers only: the date the display period runs to. */
   displayEndsAt?: string | null;
   /** Display transfers only: set when the owner pulls the piece back early. */

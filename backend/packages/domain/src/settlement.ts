@@ -110,6 +110,7 @@ export function aggregatorSalePostings({
   tdsApplies = false,
   otherChargesPaise,
   deliveryChargePaise,
+  commissionRate,
 }: {
   artistId: string;
   aggregatorId: string;
@@ -123,6 +124,10 @@ export function aggregatorSalePostings({
   otherChargesPaise?: number;
   /** The real artist→aggregator delivery leg, when it has been quoted. */
   deliveryChargePaise?: number;
+  /** The slab rate picked for this sale's billing month, from
+   *  commissionRateForLifetimeSales(). Omitted callers fall back to the
+   *  flat rate on PricingRates. */
+  commissionRate?: number;
 }): Posting[] {
   const gstIncluded = displayPricePaise - exGst(displayPricePaise, rates);
   const settlement = artistSettlementOf(artistPricePaise, "aggregator", rates, {
@@ -130,7 +135,7 @@ export function aggregatorSalePostings({
     ...(otherChargesPaise === undefined ? {} : { otherChargesPaise }),
     ...(deliveryChargePaise === undefined ? {} : { deliveryChargePaise }),
   });
-  const commission = aggregatorCommissionOf(displayPricePaise, artistPricePaise, rates);
+  const commission = aggregatorCommissionOf(displayPricePaise, artistPricePaise, rates, commissionRate);
 
   // platform_revenue is the RESIDUAL of the capture — displayPrice minus
   // every other named leg — rather than a separately-derived figure. This

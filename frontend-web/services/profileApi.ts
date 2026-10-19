@@ -31,7 +31,14 @@ export interface OwnProfileDto {
   pickupCity: string | null;
   pickupState: string | null;
   pickupPincode: string | null;
+  /** ISO 3166-1 alpha-2 country code of the pickup address. Null on older
+   *  profiles — the form falls back to "IN" on read. */
+  pickupCountry: string | null;
   earningsAbove5L: boolean;
+  /** GalleryZone's own 0–10 rating of the artist, set by an admin. Null
+   *  until an admin has rated them. Only exposed on the artist's own
+   *  profile and in admin views; never shown to buyers. */
+  galleryzoneRating: number | null;
   socialProofVideoUrl: string | null;
   companyName: string | null;
   /** Artists only: the Early Artist Program's free period. Null for every other role. */
@@ -66,6 +73,7 @@ export type OwnProfilePatch = Partial<{
   pickupCity: string | null;
   pickupState: string | null;
   pickupPincode: string | null;
+  pickupCountry: string | null;
 }>;
 
 export const profileApi = {

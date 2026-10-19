@@ -89,20 +89,20 @@ export interface RatingScoreFactors {
   customerRating: number;
   /** 0-10. Share of profile fields filled in — see profileCompletionScore(). */
   profileCompletion: number;
-  /** 0-10. Linear to 10 listed artworks — see artworkCountScore(). */
-  artworkCount: number;
+  /** 0-10. GalleryZone's own rating, set by an admin on the user's profile.
+   *  Null (no admin rating yet) reads as 0 so the composite stays well
+   *  defined; the UI shows "Not rated yet" rather than a bare zero. */
+  galleryzoneRating: number;
 }
 
+// Customer feedback dominates, with the other two factors shaping the edges.
+// Client confirmed Oct 2026 to use the three factors below as the first cut;
+// more are expected to be added once we have the data to support them.
 export const RATING_SCORE_WEIGHTS: Record<keyof RatingScoreFactors, number> = {
-  customerRating: 0.65,
-  profileCompletion: 0.25,
-  artworkCount: 0.1,
+  customerRating: 0.6,
+  profileCompletion: 0.2,
+  galleryzoneRating: 0.2,
 };
-
-/** Linear to 10 — 0 artworks = 0, 10+ artworks = full marks. */
-export function artworkCountScore(artworkCount: number): number {
-  return Math.min(10, Math.max(0, artworkCount)) * 1;
-}
 
 /**
  * Fraction of a fixed set of profile fields the artist has filled in,
@@ -142,6 +142,6 @@ export function scoreArtist(factors: RatingScoreFactors): number {
   const raw =
     factors.customerRating * RATING_SCORE_WEIGHTS.customerRating +
     factors.profileCompletion * RATING_SCORE_WEIGHTS.profileCompletion +
-    factors.artworkCount * RATING_SCORE_WEIGHTS.artworkCount;
+    factors.galleryzoneRating * RATING_SCORE_WEIGHTS.galleryzoneRating;
   return Math.round(raw * 10) / 10;
 }

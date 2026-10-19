@@ -320,6 +320,12 @@ export const adminService = {
 
   setUserStatus: (id: string, status: UserStatus): Promise<{ id: string; status: UserStatus }> => adminApi.setUserStatus(id, status),
 
+  setUserExternalArtist: (id: string, externalArtist: boolean): Promise<{ id: string; externalArtist: boolean }> =>
+    adminApi.setUserExternalArtist(id, externalArtist),
+
+  setUserGalleryzoneRating: (id: string, galleryzoneRating: number | null): Promise<{ id: string; galleryzoneRating: number | null }> =>
+    adminApi.setUserGalleryzoneRating(id, galleryzoneRating),
+
   getArtistPortfolio: async (userId: string): Promise<{ user: AdminUser; profile: ArtistProfile | undefined; artworks: Artwork[] } | undefined> => {
     const user = await adminApi.getUser(userId);
     if (!user || user.role !== "artist") return undefined;

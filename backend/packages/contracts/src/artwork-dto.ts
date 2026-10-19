@@ -19,6 +19,10 @@ export interface CustomerArtworkDto {
   /** GST-inclusive, what the customer actually pays before delivery. */
   displayPricePaise: number;
   insured: boolean;
+  /** Marked one-of-a-kind at submission — the piece is exclusive to
+   *  GalleryZone and the artist does not sell it anywhere else. Optional
+   *  so docs written before the field read as `exclusive: false`. */
+  exclusive?: boolean;
   status: string;
   listingType: string;
   rarityType: string | null;

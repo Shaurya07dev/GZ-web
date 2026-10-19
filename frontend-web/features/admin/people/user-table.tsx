@@ -65,9 +65,19 @@ export function UserTable({ role }: { role: Exclude<UserRole, "admin"> }) {
     header: role === "aggregator" ? "Company" : "Name",
     render: (row) => (
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-foreground">
-          {role === "aggregator" ? (row.companyName ?? row.name) : row.name}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-foreground">
+            {role === "aggregator" ? (row.companyName ?? row.name) : row.name}
+          </p>
+          {role === "artist" && row.externalArtist && (
+            <span
+              title="External-platform (TR) artist"
+              className="shrink-0 rounded-sm border border-gold/40 bg-gold/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.08em] text-gold-bright uppercase leading-none"
+            >
+              TR
+            </span>
+          )}
+        </div>
         <p className="truncate text-xs text-muted-foreground">{row.email}</p>
       </div>
     ),

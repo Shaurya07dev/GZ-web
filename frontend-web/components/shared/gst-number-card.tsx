@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Receipt, Check, ExternalLink, PlayCircle } from "lucide-react";
+import { Receipt, Check, ClipboardCheck, ExternalLink, PlayCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 // literal "Z", then a checksum character.
 export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 
-// Shown in every portal's Earnings & Wallet page. Optional for aggregators —
+// Shown on every portal's Earnings page. Optional for aggregators —
 // leaving it blank is a valid answer there. Required for artists, mirroring
 // the same field on their Profile page (GalleryZone won't approve listings
 // without it). When a number IS entered, its shape is checked locally; there
@@ -106,6 +106,19 @@ export function GstNumberCard({
           >
             <ExternalLink className="size-3.5" />
             Don&rsquo;t have a GSTIN? Apply on the government GST portal
+          </a>
+
+          {/* GalleryZone-hosted compliance intake, per the client (18 Oct
+              2026) — artists submit the extra details GalleryZone needs for
+              its own records alongside the GSTIN itself. */}
+          <a
+            href="https://surveyheart.com/form/6acfa0ca4d7cc7e3f14012b2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
+          >
+            <ClipboardCheck className="size-3.5" />
+            GST compliance form — submit your details to GalleryZone
           </a>
 
           {/* Placeholder for the GST application walkthrough video — same

@@ -110,3 +110,28 @@ export async function setUserStatus(db: Firestore, userId: string, status: UserS
   if (!snap.exists) throw new ProfileError(`No user ${userId}`);
   await ref.update({ status });
 }
+
+// The "TR" flag: this artist is listing through an external platform, not
+// through GalleryZone directly. Admin-only; drives a badge in internal views
+// so a reviewer can tell at a glance where the artist came from.
+export async function setUserExternalArtist(db: Firestore, userId: string, externalArtist: boolean): Promise<void> {
+  const ref = db.collection(Collections.users).doc(userId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new ProfileError(`No user ${userId}`);
+  if ((snap.data() as UserDoc).role !== "artist") throw new ProfileError(`User ${userId} is not an artist`);
+  await ref.update({ externalArtist });
+}
+
+// GalleryZone's own rating of an artist, 0-10, set by an admin. One of the
+// three factors in the artist's composite score — buyer ratings and profile
+// completion are the other two. Admin-only input; the backend ensures the
+// user is an artist, and the value is clamped to the valid range.
+export async function setUserGalleryzoneRating(db: Firestore, userId: string, rating: number | null): Promise<void> {
+  const userRef = db.collection(Collections.users).doc(userId);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) throw new ProfileError(`No user ${userId}`);
+  if ((userSnap.data() as UserDoc).role !== "artist") throw new ProfileError(`User ${userId} is not an artist`);
+  const clamped = rating === null ? null : Math.max(0, Math.min(10, rating));
+  const profileRef = db.collection(`users/${userId}/profile`).doc("data");
+  await profileRef.set({ galleryzoneRating: clamped }, { merge: true });
+}

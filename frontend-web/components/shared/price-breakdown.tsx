@@ -51,10 +51,10 @@ export function PriceBreakdown({
         <dd className="tabular-nums">{formatINR(gstIncluded)}</dd>
       </div>
       <Row label="Platform fee" amount={platformFee} freeWhenZero />
-      <Row label="Convenience fee" amount={convenienceFee} freeWhenZero />
+      <Row label="Razorpay payment fee" amount={convenienceFee} freeWhenZero />
       {convenienceGst > 0 && (
         <div className="-mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-          <dt>GST on convenience fee (18%)</dt>
+          <dt>GST on payment fee (18%)</dt>
           <dd className="tabular-nums">{formatINR(convenienceGst)}</dd>
         </div>
       )}

@@ -33,6 +33,7 @@ const initiateSchema = z
     kind: z.enum(["ownership", "display"]).default("ownership"),
     toName: z.string().trim().min(2).max(120),
     toEmail: z.string().email(),
+    displayStartsAt: z.string().datetime().optional(),
     displayEndsAt: z.string().datetime().optional(),
   })
   .strict();
@@ -73,6 +74,7 @@ export class OwnershipController {
         kind: body.kind,
         toName: body.toName,
         toEmail: body.toEmail,
+        displayStartsAt: body.displayStartsAt ? new Date(body.displayStartsAt) : undefined,
         displayEndsAt: body.displayEndsAt ? new Date(body.displayEndsAt) : undefined,
       });
       this.cache.invalidate(CacheKeys.verify(artworkId));

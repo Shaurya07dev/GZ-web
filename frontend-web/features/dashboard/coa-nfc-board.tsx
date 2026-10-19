@@ -290,17 +290,23 @@ function CertificateDialog({
           <div className="relative w-full">
             <NfcArtworkPassportView artworkId={artwork.id} />
             {/* First hand-over of the passport: artist to buyer. The buyer can
-                pass it on again later from their own collection. */}
-            <div className="border-t border-border px-5 py-4">
-              <button
-                type="button"
-                onClick={() => onTransfer(artwork)}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
-              >
-                <UserRoundCheck className="size-3.5" />
-                Transfer rights
-              </button>
-            </div>
+                pass it on again later from their own collection. Once the
+                piece has legally changed hands (via a marketplace sale or an
+                earlier hand-over) the button goes away — the artist no longer
+                owns the rights to pass on, and the backend would reject the
+                attempt anyway. */}
+            {resolveCustody(artwork).legalOwner === "artist" && (
+              <div className="border-t border-border px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => onTransfer(artwork)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md border border-gold/60 px-4 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
+                >
+                  <UserRoundCheck className="size-3.5" />
+                  Transfer rights
+                </button>
+              </div>
+            )}
           </div>
         ) : null}
       </DialogContent>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -14,6 +13,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SwitchMode } from "./switch-mode";
+import { BrandMark } from "@/components/shared/brand-mark";
+import { SignOutDialog } from "@/components/shared/sign-out-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -37,7 +38,6 @@ import {
   readSessionRole,
   subscribeToSession,
 } from "@/lib/session";
-import { authService } from "@/services/authService";
 
 function titleCase(value: string): string {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -83,6 +83,7 @@ const SIMPLE_LINKS = [
 export function SiteHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const [signOutOpen, setSignOutOpen] = useState(false);
   // The landing page is pure storytelling/onboarding, not a browsing
   // surface — search and wishlist only make sense once there's a catalog
   // on screen to act on (marketplace, artists, etc.), so both are hidden
@@ -100,11 +101,6 @@ export function SiteHeader() {
     () => null,
   );
 
-  function handleSignOut() {
-    void authService.logout();
-    router.push("/");
-    router.refresh();
-  }
   const [mobileQuery, setMobileQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,14 +125,7 @@ export function SiteHeader() {
               href={sessionRole ? ROLE_SECTION_HOME[sessionRole] : "/"}
               className="flex items-center gap-2.5"
             >
-              <Image
-                src="/brand/gz-logo.png"
-                alt="GalleryZone"
-                width={822}
-                height={560}
-                priority
-                className="h-9 w-auto shrink-0"
-              />
+              <BrandMark priority className="h-9 w-auto shrink-0" />
               <span className="text-sm font-medium tracking-[0.18em] text-foreground">
                 GALLERYZONE
               </span>
@@ -272,7 +261,7 @@ export function SiteHeader() {
                 </Link>
                 <button
                   type="button"
-                  onClick={handleSignOut}
+                  onClick={() => setSignOutOpen(true)}
                   className="text-sm font-medium text-foreground/85 transition-colors hover:text-foreground"
                 >
                   Sign out
@@ -314,13 +303,7 @@ export function SiteHeader() {
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2"
               >
-                <Image
-                  src="/brand/gz-logo.png"
-                  alt="GalleryZone"
-                  width={822}
-                  height={560}
-                  className="h-7 w-auto shrink-0"
-                />
+                <BrandMark className="h-7 w-auto shrink-0" />
                 <span className="text-xs font-medium tracking-[0.18em] text-foreground">
                   GALLERYZONE
                 </span>
@@ -339,7 +322,7 @@ export function SiteHeader() {
                     type="button"
                     onClick={() => {
                       setMobileOpen(false);
-                      handleSignOut();
+                      setSignOutOpen(true);
                     }}
                     className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                   >
@@ -466,6 +449,7 @@ export function SiteHeader() {
           </DialogContent>
         </Dialog>
       </header>
+      <SignOutDialog open={signOutOpen} onOpenChange={setSignOutOpen} />
     </div>
   );
 }

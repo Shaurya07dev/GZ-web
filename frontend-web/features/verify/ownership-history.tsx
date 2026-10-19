@@ -60,8 +60,13 @@ export function OwnershipHistory({
             </p>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Until {formatDate(onDisplay.displayEndsAt!)}. Ownership is unchanged
-            — display rights end on that date on their own.
+            {formatDate(
+              onDisplay.displayStartsAt ??
+                onDisplay.acceptedAt ??
+                onDisplay.initiatedAt,
+            )}{" "}
+            — {formatDate(onDisplay.displayEndsAt!)}. Ownership is unchanged —
+            display rights end on that date on their own.
           </p>
           {sessionRole && (
             <button
@@ -128,7 +133,11 @@ function statusLabel(transfer: OwnershipTransfer): React.ReactNode {
 
   if (transferKind(transfer) === "display") {
     if (isDisplayActive(transfer)) {
-      return `Until ${formatDate(transfer.displayEndsAt!)}`;
+      const from =
+        transfer.displayStartsAt ??
+        transfer.acceptedAt ??
+        transfer.initiatedAt;
+      return `${formatDate(from)} — ${formatDate(transfer.displayEndsAt!)}`;
     }
     const endedOn = transfer.displayEndedAt ?? transfer.displayEndsAt;
     return endedOn ? `Display ended ${formatDate(endedOn)}` : "Display ended";

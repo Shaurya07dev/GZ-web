@@ -17,12 +17,14 @@ import {
   aggregatorSalePostings,
   canPlaceWithAnotherAggregator,
   cashRemittanceDueAt,
+  commissionRateForLifetimeSales,
   holdingStateMachine,
   isPriceWarning,
   placementWindow,
   withGst,
   type PricingRates,
 } from "@galleryzone/domain";
+import { aggregatorLifetimeMarkupPaise, startOfMonthUtc } from "./aggregator-commission.ts";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postArtistSale } from "./artist-sales.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
@@ -199,6 +201,19 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
 
   const rates = await requireActiveRates(db);
 
+  // Commission slab: the rate billed on THIS sale comes from the aggregator's
+  // lifetime pre-GST markup through the end of the previous month. Crossing a
+  // threshold mid-month doesn't raise this month's rate — client was explicit
+  // the new rate only kicks in next month.
+  const soldAt = new Date();
+  const lifetimeThroughLastMonth = await aggregatorLifetimeMarkupPaise(
+    db,
+    holding.aggregatorId,
+    startOfMonthUtc(soldAt),
+    rates,
+  );
+  const commissionRate = commissionRateForLifetimeSales(lifetimeThroughLastMonth, rates);
+
   const buildPostings = (tdsApplies: boolean) =>
     aggregatorSalePostings({
       artistId: pricing.artistId,
@@ -209,13 +224,13 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
       heldPaise: holding.advanceAmountPaise + (holding.deliveryDepositPaise ?? 0),
       rates,
       tdsApplies,
+      commissionRate,
       // The delivery leg the aggregator was actually charged at reservation is
       // what comes off the artist, not the flat fallback.
       ...(holding.deliveryDepositPaise === null ? {} : { deliveryChargePaise: holding.deliveryDepositPaise }),
     });
 
   const saleRef = db.collection(Collections.aggregatorSales).doc();
-  const soldAt = new Date();
   const saleDoc: AggregatorSaleDoc = {
     holdingId,
     artworkId: holding.artworkId,
@@ -235,6 +250,7 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
     deliveredAt: null,
     courierRef: null,
     soldAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+    commissionRate,
   };
   await saleRef.set(saleDoc);
 

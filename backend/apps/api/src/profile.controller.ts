@@ -35,7 +35,10 @@ const patchSchema = z
     pickupLine2: nullableText(120),
     pickupCity: nullableText(80),
     pickupState: nullableText(80),
-    pickupPincode: nullableText(6),
+    // 12 covers the longest common format (US ZIP+4 with hyphen) and the UAE
+    // "PO Box 12345" style; the per-country regex lives in profiles.ts.
+    pickupPincode: nullableText(12),
+    pickupCountry: nullableText(2),
   })
   .strict();
 type PatchBody = z.infer<typeof patchSchema>;

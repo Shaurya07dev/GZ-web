@@ -39,6 +39,11 @@ export interface AggregatorHolding {
   // GalleryZone proactively placing inventory at this aggregator's premises
   // (MOU §4). Drives the My Inventory filter tabs.
   assignmentSource: "self_reserved" | "gz_assigned";
+  /** ShipRocket's live stage for the INBOUND leg (artist → aggregator).
+   *  Null until GalleryZone has booked the shipment through ShipRocket. */
+  inboundShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  inboundTrackingId?: string | null;
+  inboundCarrier?: string | null;
 }
 
 export interface HoldingExtensionRequest {
@@ -107,6 +112,10 @@ export interface AggregatorSale {
   dispatchedAt: string | null;
   deliveredAt: string | null;
   courierRef: string | null; // null when deliveryMode === "self_pickup"
+  /** ShipRocket's live stage for the outbound (aggregator → buyer) leg. */
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  trackingId?: string | null;
+  carrier?: string | null;
 }
 
 // The aggregator's own physical premises (not the Artist Dashboard's

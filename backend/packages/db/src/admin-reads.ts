@@ -81,6 +81,10 @@ export interface AdminUserView {
   bankAccountMasked: string | null;
   /** The §194-O TDS flag an admin has set by hand. */
   earningsAbove5L: boolean;
+  /** True for artists who come from an external platform (TR partners). */
+  externalArtist: boolean;
+  /** GalleryZone's own 0-10 rating of the artist, set by an admin. Null until set. */
+  galleryzoneRating: number | null;
 }
 
 async function toAdminUser(db: Firestore, id: string, u: UserDoc): Promise<AdminUserView> {
@@ -105,6 +109,8 @@ async function toAdminUser(db: Firestore, id: string, u: UserDoc): Promise<Admin
     location: profile?.location ?? null,
     bankAccountMasked: profile?.bankAccountMasked ?? null,
     earningsAbove5L: profile?.earningsAbove5L ?? false,
+    externalArtist: u.externalArtist ?? false,
+    galleryzoneRating: profile?.galleryzoneRating ?? null,
   };
 }
 

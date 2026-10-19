@@ -48,9 +48,11 @@ const EMPTY_PROFILE: ProfileDoc = {
   pickupCity: null,
   pickupState: null,
   pickupPincode: null,
+  pickupCountry: null,
   earningsAbove5L: false,
   socialProofVideoUrl: null,
   companyName: null,
+  galleryzoneRating: null,
 };
 
 export interface OwnProfile extends ProfileDoc {
@@ -103,6 +105,7 @@ export interface ProfilePatch {
   pickupCity?: string | null | undefined;
   pickupState?: string | null | undefined;
   pickupPincode?: string | null | undefined;
+  pickupCountry?: string | null | undefined;
 }
 
 const clean = (v: string | null | undefined): string | null => {
@@ -161,9 +164,28 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
     if (ifsc && !IFSC_RE.test(ifsc)) throw new ProfileUpdateError("IFSC must look like HDFC0001234");
     set("ifsc", ifsc);
   }
+  if (patch.pickupCountry !== undefined) {
+    const country = clean(patch.pickupCountry)?.toUpperCase() ?? null;
+    if (country && !/^[A-Z]{2}$/.test(country)) {
+      throw new ProfileUpdateError("Country must be a 2-letter ISO code");
+    }
+    set("pickupCountry", country);
+  }
   if (patch.pickupPincode !== undefined) {
     const pin = clean(patch.pickupPincode);
-    if (pin && !PINCODE_RE.test(pin)) throw new ProfileUpdateError("Pincode must be 6 digits");
+    // Pincode shape depends on the country. The India-only format stays
+    // strict (every Indian artist today). Elsewhere we accept any 3–12
+    // alphanumeric string with spaces or hyphens — the frontend has the
+    // country-specific pattern that actually guides the artist.
+    const effectiveCountry =
+      (patch.pickupCountry !== undefined ? clean(patch.pickupCountry) : current.pickupCountry)?.toUpperCase() ?? "IN";
+    if (pin) {
+      if (effectiveCountry === "IN") {
+        if (!PINCODE_RE.test(pin)) throw new ProfileUpdateError("PIN code must be 6 digits");
+      } else if (!/^[A-Z0-9][A-Z0-9\s\-]{1,10}[A-Z0-9]$/i.test(pin)) {
+        throw new ProfileUpdateError("Postal code must be 3–12 characters");
+      }
+    }
     set("pickupPincode", pin);
   }
   for (const key of ["pickupLine1", "pickupLine2", "pickupCity", "pickupState"] as const) {
