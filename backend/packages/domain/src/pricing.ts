@@ -60,7 +60,7 @@ export interface PricingRates {
    * through the previous month-end, not the moment of the sale. Admin
    * editable via rate-config.
    */
-  aggregatorCommissionSlabs?: readonly { thresholdPaise: number; rate: number }[];
+  aggregatorCommissionSlabs?: readonly { thresholdPaise: number; rate: number }[] | undefined;
   /** Deducted from the artist's settlement on aggregator sales only. */
   artistConvenienceRate: number;
   /**
