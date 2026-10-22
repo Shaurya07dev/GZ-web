@@ -1,4 +1,5 @@
 import type { ListingType } from "@/types/artwork";
+import { REGIONAL_PAINTING_STYLES } from "@/features/artist-survey/artist-survey-data";
 
 export const ARTWORK_CATEGORIES = [
   { value: "painting", label: "Painting" },
@@ -9,15 +10,15 @@ export const ARTWORK_CATEGORIES = [
   { value: "ceramics", label: "Ceramics" },
 ];
 
-// A different axis from category (painting/sculpture/...) — what kind of
-// piece this instance of the work is. "Other" reveals a free-text field
-// rather than forcing a guess into one of the fixed options.
-export const ARTWORK_TYPES = [
-  { value: "original", label: "Original" },
-  { value: "limited_edition_print", label: "Limited Edition Print" },
-  { value: "open_edition_print", label: "Open Edition Print" },
-  { value: "study_sketch", label: "Study / Sketch" },
-  { value: "commission_piece", label: "Commission Piece" },
+// Artwork type = one of the 28 regional Indian art traditions the survey
+// offers (client, 19 Oct 2026: "use the same list as the artist survey"),
+// plus "Other" with a free-text field for anything not on the list — exactly
+// as the survey works. The label on the submit form says "Type of artwork";
+// the value stored (and printed on the COA) is the full "State: Tradition"
+// string, e.g. "Rajasthan: Phad Painting". Non-Indian or non-painting pieces
+// pick "Other" and type their own.
+export const ARTWORK_TYPES: { value: string; label: string }[] = [
+  ...REGIONAL_PAINTING_STYLES.map((name) => ({ value: name, label: name })),
   { value: "other", label: "Other" },
 ];
 

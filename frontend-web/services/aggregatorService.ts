@@ -59,7 +59,7 @@ interface OfferDto {
   payablePaise: number;
 }
 
-interface HoldingDto {
+export interface HoldingDto {
   id: string;
   artworkId: string;
   /** The public piece plus whether its NFC tag is linked and locked (never the chip's ID). */
@@ -78,6 +78,9 @@ interface HoldingDto {
   appreciated: boolean;
   priceWarning: boolean;
   extensionRequest: HoldingExtensionRequest | null;
+  inboundShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  inboundTrackingId?: string | null;
+  inboundCarrier?: string | null;
 }
 
 function toOffer(o: OfferDto): AggregatorOffer {
@@ -102,7 +105,7 @@ function toOffer(o: OfferDto): AggregatorOffer {
   };
 }
 
-function toHolding(h: HoldingDto): AggregatorHolding {
+export function toHolding(h: HoldingDto): AggregatorHolding {
   return {
     id: h.id,
     artworkId: h.artworkId,
@@ -120,10 +123,13 @@ function toHolding(h: HoldingDto): AggregatorHolding {
     appreciated: h.appreciated,
     priceWarning: h.priceWarning,
     extensionRequest: h.extensionRequest,
+    inboundShiprocketStage: h.inboundShiprocketStage ?? null,
+    inboundTrackingId: h.inboundTrackingId ?? null,
+    inboundCarrier: h.inboundCarrier ?? null,
   };
 }
 
-const withArtwork = (h: HoldingDto) => ({ ...toHolding(h), artwork: h.artwork ? toArtworkSummary(h.artwork) : placeholderSummary(h.artworkId) });
+export const withArtwork = (h: HoldingDto) => ({ ...toHolding(h), artwork: h.artwork ? toArtworkSummary(h.artwork) : placeholderSummary(h.artworkId) });
 
 function placeholderSummary(id: string): ArtworkSummary {
   return { id, title: "Artwork", artistId: "", artistName: "", verifiedArtist: false, category: "", medium: "", customerPrice: 0, thumbnailUrl: "/artworks/framed-painting.png", insured: false, status: "marketplace", listingType: "marketplace_and_aggregator" };

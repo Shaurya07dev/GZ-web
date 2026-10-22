@@ -100,6 +100,7 @@ export const Collections = {
   supportTickets: "supportTickets",
   artistConnections: "artistConnections",
   affiliateProducts: "affiliateProducts",
+  blogs: "blogs",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -721,4 +722,24 @@ export interface ArtistConnectionDoc {
   message: string | null;
   requestedAt: FirebaseFirestore.Timestamp;
   respondedAt: FirebaseFirestore.Timestamp | null;
+}
+
+// Artist-authored blog post. Submitted by an artist, reviewed and published
+// by an admin. The public /blogs page only reads `published` entries.
+export type BlogStatus = "submitted" | "accepted" | "rejected";
+
+export interface BlogDoc {
+  authorId: string; // artist uid
+  authorName: string; // snapshot at submission so public reads need no join
+  title: string;
+  slug: string; // auto-generated from title at submit time, kebab-case, unique
+  excerpt: string; // short summary shown on the blog list
+  body: string; // plain text; newlines preserved for paragraphs
+  coverImageUrl: string | null;
+  status: BlogStatus;
+  decisionNote: string | null; // admin's reason on reject
+  submittedAt: FirebaseFirestore.Timestamp;
+  decidedAt: FirebaseFirestore.Timestamp | null;
+  decidedBy: string | null; // admin uid
+  publishedAt: FirebaseFirestore.Timestamp | null;
 }

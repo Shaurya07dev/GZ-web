@@ -52,7 +52,9 @@ export interface ShipmentParty {
   name: string;
   phone: string;
   line1: string;
-  line2?: string | null;
+  // Explicit `| undefined` is required under exactOptionalPropertyTypes to
+  // accept call sites that may pass undefined (via `profile?.pickupLine2`).
+  line2?: string | null | undefined;
   city: string;
   state: string;
   pincode: string;
@@ -96,10 +98,31 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     };
   }
   const token = await getToken();
+  // `pickup_location` is the ACCOUNT-level nickname ShipRocket uses as a
+  // billing anchor. The actual pickup street address comes from the
+  // per-order `pickup_customer_name` / `pickup_address` fields below — this
+  // is how multi-vendor marketplaces (Meesho, Flipkart, Etsy-style) handle
+  // "pickup from the artist's studio" without registering each artist as a
+  // separate warehouse. The nickname is configurable via env in case the
+  // ShipRocket account uses a non-default one.
+  const pickupLocationNickname = process.env.SHIPROCKET_PICKUP_LOCATION_NAME ?? "Primary";
   const payload = {
     order_id: input.orderReference,
     order_date: new Date().toISOString(),
-    pickup_location: "Primary",
+    pickup_location: pickupLocationNickname,
+
+    // Per-order pickup = artist's studio for an inbound leg, aggregator's
+    // gallery for an outbound leg. ShipRocket's courier is routed to this
+    // address, not to the account-level pickup location.
+    pickup_customer_name: input.pickup.name,
+    pickup_phone: input.pickup.phone,
+    pickup_address: input.pickup.line1,
+    pickup_address_2: input.pickup.line2 ?? "",
+    pickup_city: input.pickup.city,
+    pickup_state: input.pickup.state,
+    pickup_pincode: input.pickup.pincode,
+    pickup_country: "India",
+
     billing_customer_name: input.dropoff.name,
     billing_phone: input.dropoff.phone,
     billing_address: input.dropoff.line1,
@@ -155,7 +178,23 @@ export function stageFromWebhook(currentStatus: string): ShiprocketStage {
   return STATUS_MAP[upper] ?? "in_transit";
 }
 
-export function verifyWebhookSignature(rawBody: string | Buffer, signatureHeader: string | null): boolean {
+// ShipRocket's actual webhook verification is just a shared-secret header
+// (the "Token" you set when configuring the webhook, sent back in whichever
+// header name you chose — usually x-api-key). It is NOT an HMAC signature;
+// their dashboard confirms this with the note "Token will be passed in HTTP
+// header as per selected Auth Token Type". So compare constant-time against
+// WEBHOOK_SECRET directly.
+export function verifyWebhookSignature(_rawBody: string | Buffer, tokenHeader: string | null): boolean {
+  if (!WEBHOOK_SECRET || !tokenHeader) return false;
+  const got = Buffer.from(tokenHeader, "utf8");
+  const exp = Buffer.from(WEBHOOK_SECRET, "utf8");
+  if (got.length !== exp.length) return false;
+  return timingSafeEqual(got, exp);
+}
+
+// Kept exported in case we ever need to go back to HMAC signing (ShipRocket
+// supports it for enterprise plans). Not used by the live webhook path.
+export function verifyWebhookHmac(rawBody: string | Buffer, signatureHeader: string | null): boolean {
   if (!WEBHOOK_SECRET || !signatureHeader) return false;
   const expected = createHmac("sha256", WEBHOOK_SECRET).update(rawBody).digest("hex");
   const got = Buffer.from(signatureHeader, "utf8");

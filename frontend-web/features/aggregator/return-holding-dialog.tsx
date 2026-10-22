@@ -92,7 +92,7 @@ export function ReturnHoldingDialog({
               {holding.artwork.artistName}
             </p>
           </div>
-          <PriceTag amount={holding.displayPrice} className="text-sm" />
+          <PriceTag amount={holding.displayPrice} className="text-sm" showGstNote />
         </div>
 
         <div className="flex flex-col gap-2 rounded-md border border-border px-3.5 py-3 text-sm">

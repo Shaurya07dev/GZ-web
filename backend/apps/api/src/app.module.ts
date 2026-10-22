@@ -41,6 +41,7 @@ import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
 import { AffiliateProductsController, AdminAffiliateProductsController } from "./affiliate-products.controller.ts";
 import { ShiprocketController } from "./shiprocket.controller.ts";
+import { BlogsController } from "./blogs.controller.ts";
 import { Razorpay } from "./payments/razorpay.ts";
 import { CashfreeVerification } from "./verification/cashfree-verification.ts";
 import { VerificationController } from "./verification/verification.controller.ts";
@@ -102,6 +103,7 @@ import { DbModule } from "./db.module.ts";
     AffiliateProductsController,
     AdminAffiliateProductsController,
     ShiprocketController,
+    BlogsController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

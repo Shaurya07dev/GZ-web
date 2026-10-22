@@ -163,7 +163,7 @@ export function RecordSaleDialog({
               Month {holding.cycleMonth ?? 1} of {AGGREGATOR_CYCLE_MONTHS}
               &nbsp;display price
             </p>
-            <PriceTag amount={holding.displayPrice} className="text-sm" />
+            <PriceTag amount={holding.displayPrice} className="text-sm" showGstNote />
           </div>
           <div className="flex items-center justify-between border-t border-gold/20 pt-2">
             <div>

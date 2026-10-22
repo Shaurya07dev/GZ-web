@@ -784,104 +784,47 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            {/* Artwork type = one of the 28 regional Indian art traditions
+                from the artist survey (client, 19 Oct 2026), plus "Other"
+                with a free-text field. The old generic "Type" list (Original
+                / Limited Edition / etc) and the separate 97-tradition
+                "Painting style" picker are both gone — the client was explicit
+                that this list is THE artwork type. Rendered as a searchable
+                combobox so a scroll through 28 entries isn't needed. */}
+            <div className="flex flex-col gap-2 sm:col-span-2">
               <Label htmlFor="artworkType">Type of artwork</Label>
-              <Select
-                value={form.artworkType}
-                onValueChange={(value) =>
-                  updateField("artworkType", value ?? "")
-                }
-              >
-                <SelectTrigger id="artworkType" className="h-10 w-full">
-                  <SelectValue placeholder="Select type">
-                    {(value: string | null) =>
-                      ARTWORK_TYPES.find((t) => t.value === value)?.label ??
-                      "Select type"
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {ARTWORK_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.artworkType === "other" && (
-                <Input
-                  placeholder="Describe the type"
-                  value={form.artworkTypeOther}
-                  onChange={(e) =>
-                    updateField("artworkTypeOther", e.target.value)
-                  }
-                  className="h-10"
-                />
-              )}
-            </div>
-
-            {form.category === "painting" && (
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label htmlFor="paintingStyle">Painting style</Label>
-                <Popover open={openStyleCombo} onOpenChange={setOpenStyleCombo}>
-                  <PopoverTrigger
-                    id="paintingStyle"
-                    aria-expanded={openStyleCombo}
-                    className="flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-3 text-sm whitespace-nowrap outline-none transition-colors select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:max-w-md"
+              <Popover open={openStyleCombo} onOpenChange={setOpenStyleCombo}>
+                <PopoverTrigger
+                  id="artworkType"
+                  aria-expanded={openStyleCombo}
+                  className="flex h-10 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-3 text-sm whitespace-nowrap outline-none transition-colors select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:max-w-md"
+                >
+                  <span
+                    className={cn(
+                      "truncate text-left",
+                      !form.artworkType && "text-muted-foreground",
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "truncate text-left",
-                        !form.paintingStyle && "text-muted-foreground",
-                      )}
-                    >
-                      {form.paintingStyle || "Select painting style"}
-                    </span>
-                    <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[min(320px,calc(100vw-2rem))] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search name, region, or category..." />
-                      <CommandList>
-                        <CommandEmpty>No matching style.</CommandEmpty>
-                        <CommandGroup>
-                          {PAINTING_ART_FORMS.map((style) => (
-                            <CommandItem
-                              key={style.name}
-                              value={style.name}
-                              keywords={[style.region, style.category]}
-                              onSelect={() => {
-                                updateField(
-                                  "paintingStyle",
-                                  form.paintingStyle === style.name
-                                    ? ""
-                                    : style.name,
-                                );
-                                setOpenStyleCombo(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 size-4 shrink-0",
-                                  form.paintingStyle === style.name
-                                    ? "opacity-100"
-                                    : "opacity-0",
-                                )}
-                              />
-                              <span className="flex min-w-0 flex-col">
-                                <span className="truncate">{style.name}</span>
-                                <span className="truncate text-xs text-muted-foreground">
-                                  {style.region} &middot; {style.category}
-                                </span>
-                              </span>
-                            </CommandItem>
-                          ))}
+                    {form.artworkType
+                      ? ARTWORK_TYPES.find((t) => t.value === form.artworkType)?.label ?? form.artworkType
+                      : "Select type"}
+                  </span>
+                  <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+                </PopoverTrigger>
+                <PopoverContent className="w-[min(360px,calc(100vw-2rem))] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search state or tradition…" />
+                    <CommandList>
+                      <CommandEmpty>No matching type.</CommandEmpty>
+                      <CommandGroup>
+                        {ARTWORK_TYPES.map((t) => (
                           <CommandItem
-                            value="Other"
+                            key={t.value}
+                            value={t.label}
                             onSelect={() => {
                               updateField(
-                                "paintingStyle",
-                                form.paintingStyle === "Other" ? "" : "Other",
+                                "artworkType",
+                                form.artworkType === t.value ? "" : t.value,
                               );
                               setOpenStyleCombo(false);
                             }}
@@ -889,34 +832,34 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                             <Check
                               className={cn(
                                 "mr-2 size-4 shrink-0",
-                                form.paintingStyle === "Other"
+                                form.artworkType === t.value
                                   ? "opacity-100"
                                   : "opacity-0",
                               )}
                             />
-                            Other
+                            <span className="truncate">{t.label}</span>
                           </CommandItem>
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <p className="text-xs text-muted-foreground">
-                  One of 97 world painting traditions &mdash; search by name,
-                  region, or category.
-                </p>
-                {form.paintingStyle === "Other" && (
-                  <Input
-                    placeholder="Name the painting style"
-                    value={form.paintingStyleOther}
-                    onChange={(e) =>
-                      updateField("paintingStyleOther", e.target.value)
-                    }
-                    className="h-10 sm:max-w-md"
-                  />
-                )}
-              </div>
-            )}
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                One of 28 regional Indian art traditions &mdash; or pick
+                &ldquo;Other&rdquo; and name your own.
+              </p>
+              {form.artworkType === "other" && (
+                <Input
+                  placeholder="Name the type of artwork"
+                  value={form.artworkTypeOther}
+                  onChange={(e) =>
+                    updateField("artworkTypeOther", e.target.value)
+                  }
+                  className="h-10 sm:max-w-md"
+                />
+              )}
+            </div>
 
             <div className="flex flex-col gap-2">
               <Label htmlFor="year">Year created</Label>
@@ -1181,8 +1124,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </span>
               <span className="text-muted-foreground">
                 This piece is a one-of-a-kind original and you agree not to
-                sell it on any other platform. This cannot be undone later —
-                contact GalleryZone if the status needs to change.
+                sell it on any other platform. This cannot be undone later.
+                Contact GalleryZone if the status needs to change.
               </span>
             </span>
           </label>

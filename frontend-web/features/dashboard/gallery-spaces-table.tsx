@@ -7,11 +7,11 @@ import {
   Undo2,
   GalleryVerticalEnd,
   CalendarRange,
-  MapPin,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
+import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import { ExpiryCountdown } from "@/features/aggregator/expiry-countdown";
 import { useArtistGallerySpaces } from "@/hooks/useArtistGallerySpaces";
 import type { AggregatorHolding } from "@/types/aggregator";
@@ -98,7 +98,7 @@ export function GallerySpacesTable() {
               <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground uppercase">
                 <th className="px-4 py-3 font-medium">Artwork</th>
                 <th className="px-4 py-3 font-medium">Display price</th>
-                <th className="px-4 py-3 font-medium">Current location</th>
+                <th className="px-4 py-3 font-medium">Shipping</th>
                 <th className="px-4 py-3 font-medium">At this location until</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
@@ -130,19 +130,15 @@ export function GallerySpacesTable() {
                     </td>
 
                     <td className="px-4 py-3.5">
-                      <PriceTag amount={holding.displayPrice} className="text-sm" />
+                      <PriceTag amount={holding.displayPrice} className="text-sm" showGstNote />
                     </td>
 
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <MapPin
-                          className="size-3.5 shrink-0 text-muted-foreground"
-                          strokeWidth={1.75}
-                        />
-                        <span className="text-foreground">
-                          Partner gallery
-                        </span>
-                      </div>
+                      <ShipmentTracker
+                        stage={holding.inboundShiprocketStage ?? null}
+                        trackingId={holding.inboundTrackingId}
+                        carrier={holding.inboundCarrier}
+                      />
                     </td>
 
                     <td className="px-4 py-3.5">

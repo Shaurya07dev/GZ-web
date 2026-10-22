@@ -162,7 +162,7 @@ export function CollectionTable() {
                         {holding.artwork.artistName}
                       </p>
                       <div className="flex items-center gap-3 mt-1.5">
-                        <PriceTag amount={holding.displayPrice} className="text-sm font-semibold" />
+                        <PriceTag amount={holding.displayPrice} className="text-sm font-semibold" showGstNote />
                         {isReserved && (
                           <ExpiryCountdown expiresAt={holding.expiresAt} className="text-xs" />
                         )}
@@ -265,7 +265,7 @@ export function CollectionTable() {
                         </Link>
                       </td>
                       <td className="px-4 py-3.5">
-                        <PriceTag amount={holding.displayPrice} className="text-sm" />
+                        <PriceTag amount={holding.displayPrice} className="text-sm" showGstNote />
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
                           {(holding.cycleMonth ?? 1) <= 1 ? "Set by you" : "Set by GalleryZone"}
                         </p>

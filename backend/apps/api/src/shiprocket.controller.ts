@@ -24,20 +24,30 @@ export class ShiprocketController {
 
   constructor(@Inject(DB) private readonly db: Db) {}
 
+  // ShipRocket sends the shared-secret token in whichever HTTP header name
+  // was selected on their webhook config screen. Default is x-api-key; we
+  // also accept x-shiprocket-signature in case an older account was set up
+  // with that name.
+  // Route path intentionally avoids the strings "shiprocket" / "sr" / "kr" —
+  // ShipRocket's own webhook config validator refuses URLs that contain
+  // those keywords (security measure to prevent misconfigured webhooks
+  // targeting their own infra). We call it "courier-webhook" instead.
   @Public()
   @SkipThrottle()
-  @Post("shipping/shiprocket/webhook")
+  @Post("shipping/courier-webhook")
   @HttpCode(200)
   async webhook(
     @Req() req: Request & { rawBody?: Buffer },
-    @Headers("x-shiprocket-signature") signature: string | undefined,
+    @Headers("x-api-key") apiKey: string | undefined,
+    @Headers("x-shiprocket-signature") legacySignature: string | undefined,
     @Body() body: WebhookPayload,
   ) {
     const raw = req.rawBody ?? Buffer.from(JSON.stringify(body ?? {}));
-    if (!verifyWebhookSignature(raw, signature ?? null)) {
+    const token = apiKey ?? legacySignature;
+    if (!verifyWebhookSignature(raw, token ?? null)) {
       // 200 so ShipRocket stops retrying but we don't act on it. Logged so
       // ops can see if a real event is failing on signature config.
-      this.logger.warn(`shiprocket webhook signature mismatch for order ${body.order_id}`);
+      this.logger.warn(`shiprocket webhook token mismatch for order ${body.order_id}`);
       return { received: true, matched: false };
     }
     if (!body.order_id || !body.current_status) {
