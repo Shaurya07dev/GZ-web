@@ -169,7 +169,7 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
               {artwork.artistName}
             </p>
           </div>
-          <PriceTag amount={terms.displayPrice} className="text-base" />
+          <PriceTag amount={terms.displayPrice} className="text-base" showGstNote />
         </div>
 
         <div className="flex flex-col gap-2">

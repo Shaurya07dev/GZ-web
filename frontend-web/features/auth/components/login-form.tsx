@@ -51,7 +51,10 @@ function landingAfterLogin(role: SessionRole): string {
     }
   }
   if (role === "artist") return "/marketplace";
-  if (role === "aggregator") return "/aggregator/profile";
+  // Aggregators work by picking pieces from the GalleryZone catalogue and
+  // reserving them for display, so they land on the browse-and-reserve page
+  // where that work happens (client, 18 Oct 2026).
+  if (role === "aggregator") return "/aggregator/inventory";
   // A buyer signs in to go on buying, not to stare at an orders list — the
   // home page is the piece of the site they actually came for. The "My
   // account" link in the header still takes them to /account whenever they

@@ -210,7 +210,7 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
               {status.label}
             </span>
           </div>
-          <PriceTag amount={holding.displayPrice} className="text-lg" />
+          <PriceTag amount={holding.displayPrice} className="text-lg" showGstNote />
         </div>
 
         {isReserved && (

@@ -95,6 +95,12 @@ export interface CoaPdfInput {
   ownerName: string;
   /** The artist's drawn signature from their MOU, placed above the signature line. Null = the line is left for a wet signature. */
   artistSignatureDataUrl?: string | null;
+  /** Original / Limited Edition Print / etc — one of ARTWORK_TYPES. Appended
+   *  to the Art Form line (client, 19 Oct 2026). Null when unknown. */
+  artworkType?: string | null;
+  /** The piece is exclusive to GalleryZone — the artist agreed not to sell
+   *  it anywhere else. Printed as a suffix on the Art Form line. */
+  exclusive?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -166,10 +172,19 @@ export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
   // The seven ruled fields.
   doc.setTextColor(...INK);
   doc.setFont("times", "normal");
+  // The ART FORM line carries the category (painting / sculpture / …) and,
+  // when relevant, suffixes with the type (Original / Limited Edition / …)
+  // and the "Exclusive to GalleryZone" marker. Client (19 Oct 2026) asked
+  // for both to appear on the certificate without re-designing the template.
+  const artFormBits: string[] = [input.category];
+  if (input.artworkType) artFormBits.push(input.artworkType);
+  if (input.exclusive) artFormBits.push("Exclusive to GalleryZone");
+  const artFormLine = artFormBits.join(" · ");
+
   const fields: [number, string][] = [
     [FIELD_BASELINES.artistName, input.artistName],
     [FIELD_BASELINES.title, input.title],
-    [FIELD_BASELINES.artForm, input.category],
+    [FIELD_BASELINES.artForm, artFormLine],
     [FIELD_BASELINES.medium, input.medium],
     [FIELD_BASELINES.dimensions, input.dimensions ?? "—"],
     [FIELD_BASELINES.yearCreated, input.yearCreated ? String(input.yearCreated) : "—"],

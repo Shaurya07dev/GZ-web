@@ -45,6 +45,9 @@ import { ROLE_SECTION_HOME, type SessionRole } from "@/lib/session";
 // normal section home.
 function landingAfterRegister(role: SessionRole): string {
   if (role === "artist") return "/dashboard/profile";
+  // A brand-new aggregator still needs to see their profile first (bank, GST,
+  // MOU) so they land there on sign-up. Returning sign-ins skip to the
+  // inventory browser — see landingAfterLogin in login-form.tsx.
   if (role === "aggregator") return "/aggregator/profile";
   if (role === "customer") return "/";
   return ROLE_SECTION_HOME[role];

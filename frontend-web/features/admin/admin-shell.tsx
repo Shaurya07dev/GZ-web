@@ -106,7 +106,7 @@ const NAV_GROUPS: AdminNavGroup[] = [
         badge: "gst",
       },
       {
-        label: "Withdrawals",
+        label: "Payouts",
         href: "/admin/moderation/withdrawals",
         icon: Banknote,
         badge: "withdrawals",
