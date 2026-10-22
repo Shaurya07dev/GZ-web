@@ -335,6 +335,7 @@ export function NfcArtworkPassportView({ artworkId }: { artworkId: string }) {
               coaCertificateNumber,
               coaIssueDate,
               ownerName,
+              exclusive: artwork.exclusive,
             }}
           />
         </div>
