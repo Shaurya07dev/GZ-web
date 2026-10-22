@@ -99,7 +99,13 @@ export async function submitBlog(db: Firestore, input: SubmitBlogInput): Promise
 /** Artist edits a draft (only while still `submitted`). */
 export async function updateBlog(
   db: Firestore,
-  { blogId, authorId, patch }: { blogId: string; authorId: string; patch: { title?: string; excerpt?: string; body?: string } },
+  { blogId, authorId, patch }: {
+    blogId: string;
+    authorId: string;
+    // `| undefined` explicit so Zod-inferred types (which carry it) assign
+    // cleanly under exactOptionalPropertyTypes.
+    patch: { title?: string | undefined; excerpt?: string | undefined; body?: string | undefined };
+  },
 ): Promise<BlogRow> {
   const ref = db.collection(Collections.blogs).doc(blogId);
   const snap = await ref.get();

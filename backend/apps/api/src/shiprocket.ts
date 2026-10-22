@@ -52,7 +52,9 @@ export interface ShipmentParty {
   name: string;
   phone: string;
   line1: string;
-  line2?: string | null;
+  // Explicit `| undefined` is required under exactOptionalPropertyTypes to
+  // accept call sites that may pass undefined (via `profile?.pickupLine2`).
+  line2?: string | null | undefined;
   city: string;
   state: string;
   pincode: string;
