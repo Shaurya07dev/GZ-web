@@ -1124,8 +1124,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </span>
               <span className="text-muted-foreground">
                 This piece is a one-of-a-kind original and you agree not to
-                sell it on any other platform. This cannot be undone later —
-                contact GalleryZone if the status needs to change.
+                sell it on any other platform. This cannot be undone later.
+                Contact GalleryZone if the status needs to change.
               </span>
             </span>
           </label>
