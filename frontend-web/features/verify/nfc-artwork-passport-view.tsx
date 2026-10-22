@@ -23,6 +23,7 @@ import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { DownloadCoaButton } from "@/features/coa/download-coa-button";
 import { ArtworkQr } from "./artwork-qr";
 import { NfcLifecycleTimeline } from "./lifecycle-timeline";
+import { OwnershipHistory } from "./ownership-history";
 
 // ─── NFC Banner ────────────────────────────────────────────────────────────────
 // Shown only when the artwork has a linked NFC tag — gives the collector
@@ -339,6 +340,13 @@ export function NfcArtworkPassportView({ artworkId }: { artworkId: string }) {
             }}
           />
         </div>
+
+        {/* ── Ownership + display history ───────────────────────────────────── */}
+        {/* An NFC tap now shows the full hand-over chain, including any
+            active display-rights with their From → To dates (client, 19 Oct):
+            a scanner lands here and immediately sees who holds the piece now
+            and until when. */}
+        <OwnershipHistory artworkId={artwork.id} artistName={artwork.artistName} />
 
         {/* ── Artist Footer ──────────────────────────────────────────────────── */}
         {artwork.artistId && (

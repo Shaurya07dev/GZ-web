@@ -21,9 +21,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
+import { useArtworkTransfers } from "@/hooks/useOwnershipTransfers";
 import { cn } from "@/lib/utils";
 import { NFC_STAGE_LABEL, nfcStageOf, type NfcStage } from "@/lib/nfc";
-import { resolveCustody } from "@/types/artwork";
+import { activeDisplayTransfer, resolveCustody } from "@/types/artwork";
+import { CalendarClock } from "lucide-react";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaQueue } from "./physical-coa-queue";
 import { ArtworkHistory } from "./artwork-history";
@@ -112,6 +114,7 @@ export function CoaNfcBoard() {
                   <p className="truncate text-xs text-muted-foreground">
                     {artwork.coaCertificateNumber}
                   </p>
+                  <ActiveDisplayLine artworkId={artwork.id} />
                 </div>
               </div>
 
@@ -312,4 +315,30 @@ function CertificateDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+// Small per-card line that reads any active display-rights transfer for the
+// artwork and prints its From → To range. Keeps the main list query untouched —
+// each card fires its own cheap read, cached by react-query. Returns null when
+// there is no active display, so an owned-and-with-the-artist piece shows
+// nothing extra.
+function ActiveDisplayLine({ artworkId }: { artworkId: string }) {
+  const { data: transfers } = useArtworkTransfers(artworkId);
+  const active = activeDisplayTransfer(transfers ?? []);
+  if (!active) return null;
+  const from = active.displayStartsAt ?? active.acceptedAt ?? active.initiatedAt;
+  if (!from || !active.displayEndsAt) return null;
+  return (
+    <p className="mt-1 flex items-center gap-1 truncate text-xs text-gold-bright">
+      <CalendarClock className="size-3 shrink-0" strokeWidth={1.75} />
+      On display · {formatShortDate(from)} → {formatShortDate(active.displayEndsAt)}
+    </p>
+  );
+}
+
+function formatShortDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+  }).format(new Date(iso));
 }
