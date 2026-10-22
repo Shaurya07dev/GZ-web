@@ -27,6 +27,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  PenTool,
 } from "lucide-react";
 import { SidebarHeader } from "@/components/shared/sidebar-brand";
 import { cn } from "@/lib/utils";
@@ -110,6 +111,13 @@ const NAV_GROUPS: AdminNavGroup[] = [
         href: "/admin/moderation/withdrawals",
         icon: Banknote,
         badge: "withdrawals",
+      },
+      {
+        // No badge yet — kpis don't carry pending blog count. Admin notices
+        // via a quick glance at this tab.
+        label: "Blog review",
+        href: "/admin/moderation/blogs",
+        icon: PenTool,
       },
       // No badge: the pending count comes from adminService's KPI set, which
       // does not carry deactivations. Adding one there is a change to the

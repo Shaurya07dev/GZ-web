@@ -22,6 +22,7 @@ import {
   Menu,
   X,
   Store,
+  PenTool,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -46,6 +47,7 @@ const NAV_ITEMS = [
   { label: "COA & NFC", href: "/dashboard/coa-nfc", icon: Fingerprint },
   { label: "Analytics", href: "/dashboard/analytics", icon: LineChart },
   { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
+  { label: "Blogs", href: "/dashboard/blogs", icon: PenTool },
   {
     label: "Aggregator Display",
     href: "/dashboard/gallery-spaces",
@@ -283,6 +285,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/coa-nfc": "COA & NFC",
   "/dashboard/analytics": "Analytics",
   "/dashboard/messages": "Messages",
+  "/dashboard/blogs": "Blogs",
+  "/dashboard/blogs/new": "Write a blog",
   "/dashboard/gallery-spaces": "Aggregator Display",
   "/dashboard/support": "Support",
   "/dashboard/settings": "Settings",
