@@ -176,7 +176,23 @@ export function stageFromWebhook(currentStatus: string): ShiprocketStage {
   return STATUS_MAP[upper] ?? "in_transit";
 }
 
-export function verifyWebhookSignature(rawBody: string | Buffer, signatureHeader: string | null): boolean {
+// ShipRocket's actual webhook verification is just a shared-secret header
+// (the "Token" you set when configuring the webhook, sent back in whichever
+// header name you chose — usually x-api-key). It is NOT an HMAC signature;
+// their dashboard confirms this with the note "Token will be passed in HTTP
+// header as per selected Auth Token Type". So compare constant-time against
+// WEBHOOK_SECRET directly.
+export function verifyWebhookSignature(_rawBody: string | Buffer, tokenHeader: string | null): boolean {
+  if (!WEBHOOK_SECRET || !tokenHeader) return false;
+  const got = Buffer.from(tokenHeader, "utf8");
+  const exp = Buffer.from(WEBHOOK_SECRET, "utf8");
+  if (got.length !== exp.length) return false;
+  return timingSafeEqual(got, exp);
+}
+
+// Kept exported in case we ever need to go back to HMAC signing (ShipRocket
+// supports it for enterprise plans). Not used by the live webhook path.
+export function verifyWebhookHmac(rawBody: string | Buffer, signatureHeader: string | null): boolean {
   if (!WEBHOOK_SECRET || !signatureHeader) return false;
   const expected = createHmac("sha256", WEBHOOK_SECRET).update(rawBody).digest("hex");
   const got = Buffer.from(signatureHeader, "utf8");
