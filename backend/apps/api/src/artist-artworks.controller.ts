@@ -17,6 +17,7 @@ import {
   linkNfcTag,
   listArtistOrders,
   listArtistPenalties,
+  listHoldingsForArtist,
   lockNfcTag,
   markSoldElsewhere,
   listArtistArtworksOwned,
@@ -133,6 +134,14 @@ export class ArtistArtworksController {
   @Get("artist/penalties")
   async penalties(@Req() req: AuthenticatedRequest) {
     return { penalties: await listArtistPenalties(this.db, req.authUser.uid) };
+  }
+
+  // Pieces of this artist's that are (or were) with an aggregator — with
+  // the inbound ShipRocket stage so the dashboard can show a tracker.
+  @Roles("artist")
+  @Get("artist/gallery-spaces")
+  async myGallerySpaces(@Req() req: AuthenticatedRequest) {
+    return { holdings: await listHoldingsForArtist(this.db, req.authUser.uid) };
   }
 
   @Roles("artist")

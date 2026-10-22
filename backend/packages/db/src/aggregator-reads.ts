@@ -156,6 +156,11 @@ export interface AggregatorHoldingView {
     note: string | null;
     previousExpiresAt: string;
   } | null;
+  /** ShipRocket tracking for the artist → aggregator leg. Null until a
+   *  shipment has been booked. */
+  inboundShiprocketStage: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  inboundTrackingId: string | null;
+  inboundCarrier: string | null;
 }
 
 async function holdingArtworkOf(db: Firestore, artworkId: string): Promise<{ view: HoldingArtworkView | null; overridden: boolean }> {
@@ -198,7 +203,32 @@ async function toHoldingView(db: Firestore, id: string, h: AggregatorHoldingDoc)
           previousExpiresAt: h.extensionRequest.previousExpiresAt?.toDate().toISOString() ?? new Date(0).toISOString(),
         }
       : null,
+    inboundShiprocketStage: h.inboundShiprocketStage ?? null,
+    inboundTrackingId: h.inboundTrackingId ?? null,
+    inboundCarrier: h.inboundCarrier ?? null,
   };
+}
+
+/**
+ * The artist's own holdings view — pieces of theirs currently with (or
+ * returned by) aggregators. Lets the artist dashboard show "On display at
+ * Rhea's Gallery · In transit, AWB 12345" without needing the aggregator's
+ * perspective. Reads every holding whose underlying artwork belongs to this
+ * artist. Newest first.
+ */
+export async function listHoldingsForArtist(db: Firestore, artistId: string): Promise<AggregatorHoldingView[]> {
+  const artworksSnap = await db.collection(Collections.artworks).where("artistId", "==", artistId).get();
+  if (artworksSnap.empty) return [];
+  const artworkIds = artworksSnap.docs.map((d) => d.id);
+  // Firestore `in` queries are capped at 30 values; chunk larger artist libraries.
+  const batches: string[][] = [];
+  for (let i = 0; i < artworkIds.length; i += 30) batches.push(artworkIds.slice(i, i + 30));
+  const chunked = await Promise.all(
+    batches.map((batch) => db.collection(Collections.aggregatorHoldings).where("artworkId", "in", batch).get()),
+  );
+  const docs = chunked.flatMap((snap) => snap.docs);
+  const views = await Promise.all(docs.map((d) => toHoldingView(db, d.id, d.data() as AggregatorHoldingDoc)));
+  return views.sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
 }
 
 /** Admin: the active holding on a piece, if any. */

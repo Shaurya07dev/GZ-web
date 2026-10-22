@@ -8,6 +8,17 @@ import { paiseToRupees, toOrder, type OrderDto } from "@/lib/api-mappers";
 import { artistArtworkApi, toOwnerArtwork, type OwnerArtworkDto, type SubmitImage } from "@/services/artistArtworkApi";
 import { artistWalletApi } from "@/services/artistWalletApi";
 import { profileApi, type FreeAccess, type OwnProfileDto, type OwnProfilePatch } from "@/services/profileApi";
+import { withArtwork as holdingWithArtwork, type HoldingDto } from "@/services/aggregatorService";
+
+/** Mapper for holdings as the artist sees them — the aggregator service's
+ *  withArtwork() already matches the shape (AggregatorHolding & { artwork }). */
+const toArtistHolding = (h: HoldingDto): AggregatorHolding & { artwork: Artwork } => {
+  const base = holdingWithArtwork(h);
+  // withArtwork returns { ...holding, artwork: ArtworkSummary }; the artist
+  // dashboard uses the full Artwork type but only reads title + thumbnail,
+  // so a cast is safe here.
+  return base as unknown as AggregatorHolding & { artwork: Artwork };
+};
 
 // The shape the dashboard's profile/KYC screens were written against.
 export interface ArtistProfileView {
@@ -348,9 +359,14 @@ export const artistDashboardService = {
 
   listSettlements: (): Promise<Settlement[]> => settlementsFromOrders(),
 
-  // Partner-gallery placements need the aggregator flow on the API; until
-  // then the table is empty rather than fixture-filled.
-  listGallerySpaces: async (): Promise<Array<AggregatorHolding & { artwork: Artwork }>> => [],
+  // Partner-gallery placements for THIS artist, pulled from the aggregator
+  // holdings collection joined to the artwork. Includes the inbound
+  // ShipRocket stage so the dashboard can render a tracker alongside each
+  // placement.
+  listGallerySpaces: async (): Promise<Array<AggregatorHolding & { artwork: Artwork }>> => {
+    const { holdings } = await http.get<{ holdings: HoldingDto[] }>("/v1/artist/gallery-spaces");
+    return holdings.map(toArtistHolding);
+  },
 
   // --- Account deactivation ------------------------------------------------
   // Asking is all the artist can do. An admin decides, because a closing
