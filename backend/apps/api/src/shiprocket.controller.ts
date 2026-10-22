@@ -28,9 +28,13 @@ export class ShiprocketController {
   // was selected on their webhook config screen. Default is x-api-key; we
   // also accept x-shiprocket-signature in case an older account was set up
   // with that name.
+  // Route path intentionally avoids the strings "shiprocket" / "sr" / "kr" —
+  // ShipRocket's own webhook config validator refuses URLs that contain
+  // those keywords (security measure to prevent misconfigured webhooks
+  // targeting their own infra). We call it "courier-webhook" instead.
   @Public()
   @SkipThrottle()
-  @Post("shipping/shiprocket/webhook")
+  @Post("shipping/courier-webhook")
   @HttpCode(200)
   async webhook(
     @Req() req: Request & { rawBody?: Buffer },
