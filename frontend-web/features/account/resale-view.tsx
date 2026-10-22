@@ -159,7 +159,7 @@ export function ResaleView() {
                       <p className="truncate text-sm font-medium text-foreground">
                         {artwork?.title ?? "Artwork"}
                       </p>
-                      <PriceTag amount={l.listedPrice} className="text-sm" />
+                      <PriceTag amount={l.listedPrice} className="text-sm" showGstNote />
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-4">

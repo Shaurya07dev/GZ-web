@@ -130,7 +130,7 @@ export function GallerySpacesTable() {
                     </td>
 
                     <td className="px-4 py-3.5">
-                      <PriceTag amount={holding.displayPrice} className="text-sm" />
+                      <PriceTag amount={holding.displayPrice} className="text-sm" showGstNote />
                     </td>
 
                     <td className="px-4 py-3.5">
