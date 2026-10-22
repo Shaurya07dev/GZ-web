@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from "react";
 import { Mail } from "lucide-react";
-import { InstagramGlyph, XGlyph, LinkedinGlyph, YoutubeGlyph } from "./social-icons";
+import { InstagramGlyph, LinkedinGlyph } from "./social-icons";
 
 export type FooterLink =
   | { label: string; href: string; comingSoon?: false }
@@ -16,7 +16,12 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Artists", href: "/artists" },
       { label: "Collections", href: "/marketplace" },
       { label: "Exhibitions", comingSoon: true },
-      { label: "Magazine", href: "/about" },
+      // Client (19 Oct 2026): the "Magazine" slot becomes the Blogs section —
+      // artists write, GalleryZone accepts and publishes the best. For now the
+      // link resolves to a lightweight "coming soon" page so a cold visitor
+      // sees the surface exists; the real list + admin accept flow lands in a
+      // follow-up PR.
+      { label: "Blogs", href: "/blogs" },
     ],
   },
   {
@@ -90,7 +95,10 @@ export const SOCIAL_LINKS: SocialLink[] = [
     target: "_blank",
     rel: "noopener noreferrer",
   },
-  { icon: XGlyph, href: "#", label: "X" },
+  // X and YouTube were a `href="#"` dead link each until the channel URLs
+  // land from the brand team. Hidden rather than shown-and-broken (client
+  // raised the dead links on 19 Oct). Re-add with the real `href` the moment
+  // the URLs arrive.
   {
     icon: LinkedinGlyph,
     href: "https://www.linkedin.com/company/galleryzone/",
@@ -98,8 +106,6 @@ export const SOCIAL_LINKS: SocialLink[] = [
     target: "_blank",
     rel: "noopener noreferrer",
   },
-  // ponytail: no channel URL yet, "#" like X above — put the real link here.
-  { icon: YoutubeGlyph, href: "#", label: "YouTube" },
   {
     icon: Mail,
     href: "https://mail.google.com/mail/?view=cm&fs=1&to=galleryzone@zohomail.in",

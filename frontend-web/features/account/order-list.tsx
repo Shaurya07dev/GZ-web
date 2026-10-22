@@ -161,7 +161,7 @@ export function OrderList() {
                 <status.icon className="size-3" strokeWidth={2} />
                 {status.label}
               </span>
-              <PriceTag amount={total} className="text-sm" />
+              <PriceTag amount={total} className="text-sm" showGstNote />
             </div>
           </Link>
         );

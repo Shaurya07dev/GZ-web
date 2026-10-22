@@ -139,12 +139,15 @@ const MOBILE_ARTWORKS: ArtworkAnchor[] = [
 export function HeroSection() {
   return (
     <section className="relative flex h-[calc(100dvh-9rem)] w-full flex-col items-center justify-center overflow-hidden lg:h-[calc(100dvh-5rem)]">
-      <div className="absolute inset-0 hidden lg:block">
+      {/* The artwork layer starts below the sticky nav (5rem on both
+          breakpoints) so a piece anchored at top:14-15% centers well below
+          the Sign In row instead of poking up into it. */}
+      <div className="pointer-events-none absolute inset-x-0 top-20 bottom-0 hidden lg:block">
         {ARTWORKS.map((artwork) => (
           <HeroArtwork key={artwork.src} artwork={artwork} />
         ))}
       </div>
-      <div className="absolute inset-0 lg:hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-20 bottom-0 lg:hidden">
         {MOBILE_ARTWORKS.map((artwork) => (
           <HeroArtwork key={artwork.src} artwork={artwork} />
         ))}

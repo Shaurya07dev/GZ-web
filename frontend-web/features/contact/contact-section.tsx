@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   InstagramGlyph,
-  XGlyph,
   LinkedinGlyph,
 } from "@/components/social-icons";
 import { ROLE_OPTIONS, CONTACT_EMAIL } from "./contact-data";
@@ -190,8 +189,9 @@ export function ContactSection() {
                 <div className="mt-5 flex items-center gap-3 border-t border-border pt-5">
                   {[
                     { Glyph: InstagramGlyph, href: "https://www.instagram.com/galleryzone.in", label: "Instagram" },
-                    { Glyph: XGlyph, href: "#", label: "X" },
-                    { Glyph: LinkedinGlyph, href: "#", label: "LinkedIn" },
+                    { Glyph: LinkedinGlyph, href: "https://www.linkedin.com/company/galleryzone/", label: "LinkedIn" },
+                    // X was a `href="#"` dead link; re-add once the handle URL
+                    // is confirmed by the brand team.
                   ].map(({ Glyph, href, label }) => (
                     <Link
                       key={label}

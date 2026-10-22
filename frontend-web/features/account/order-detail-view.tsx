@@ -93,7 +93,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                   {artwork.artistName}
                 </p>
               )}
-              <PriceTag amount={order.amount} className="mt-1.5 text-sm" />
+              <PriceTag amount={order.amount} className="mt-1.5 text-sm" showGstNote />
             </div>
           </div>
 
