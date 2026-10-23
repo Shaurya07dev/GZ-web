@@ -23,8 +23,9 @@ const LOGO_MASK = {
  * light pass over it, then it lifts away and the page is as normal.
  * Skipped entirely for visitors who ask for reduced motion.
  *
- * There is no card behind it: the PNG is transparent, so the G reads as a fine
- * outline on the dark hero and as solid black on the light one.
+ * Two PNGs rendered with `.dark` toggles (same pattern as BrandMark) so the
+ * mark reads clearly on both themes: solid black on the light hero, solid
+ * white on the dark one — not the near-invisible "fine outline" we had before.
  */
 export function GzIntro() {
   const reduceMotion = useReducedMotion();
@@ -68,7 +69,16 @@ export function GzIntro() {
               width={822}
               height={560}
               sizes="256px"
-              className="relative h-auto w-full"
+              className="relative h-auto w-full dark:hidden"
+            />
+            <Image
+              src="/brand/gz-logo-dark.png"
+              alt=""
+              aria-hidden
+              width={565}
+              height={441}
+              sizes="256px"
+              className="relative hidden h-auto w-full dark:block"
             />
             <div style={LOGO_MASK} className="absolute inset-0 overflow-hidden">
               <motion.span

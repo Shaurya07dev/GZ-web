@@ -132,8 +132,12 @@ function CategoryPill({
 function ArtworkReel({ artworks }: { artworks: ArtworkSummary[] }) {
   const items = reelItems(artworks);
   const label = "Original artworks on GalleryZone";
+  // `isolate` creates a stacking context for the reel so its cards'
+  // scale-driven z-indexes (up to ~1000 via useTransform in halo-reel.tsx)
+  // stay scoped here and don't bleed above body-level portals like the
+  // sign-out confirm dialog, which would otherwise render BEHIND a card.
   return (
-    <div className="absolute inset-y-0 right-0 hidden w-[52%] lg:block">
+    <div className="absolute inset-y-0 right-0 hidden w-[52%] isolate lg:block">
       <HaloReel
         items={items}
         mirror

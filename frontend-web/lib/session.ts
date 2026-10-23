@@ -27,11 +27,12 @@ export const ROLE_LANDING: Record<SessionRole, string> = {
   customer: "/marketplace",
 };
 
-// Deliberately NOT the same map as ROLE_LANDING. This one is each role's own
-// portal, used in the two cases where a person is explicitly headed there:
-// right after signing in, and when they are bounced off a section belonging to
-// another role. A buyer lands in their account area both times — dropping them
-// into the shop instead reads as "nothing happened".
+// Each role's own portal. Used by site-header's "My account" / "My
+// dashboard" link and by proxy.ts when it has to bounce someone off a
+// section belonging to another role. Login/register pick their own landing
+// (see landingAfterLogin / landingAfterRegister) — a customer signs in to
+// shop and lands on /marketplace, but their account portal is still /account
+// and the header link has to point there.
 export const ROLE_SECTION_HOME: Record<SessionRole, string> = {
   artist: "/dashboard",
   aggregator: "/aggregator/dashboard",

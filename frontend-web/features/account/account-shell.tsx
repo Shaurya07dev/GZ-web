@@ -15,6 +15,7 @@ import {
   MapPin,
   LifeBuoy,
   Menu,
+  Store,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -174,9 +175,26 @@ function Sidebar() {
           onToggle={() => setCollapsed((c) => !c)}
         />
 
+        {/* View site — pinned above the Collector Portal nav so the collector
+            can jump straight back to the public marketplace from anywhere in
+            their account. Same shape as the artist shell's version. */}
+        <Link
+          href="/marketplace"
+          title={collapsed ? "View site" : undefined}
+          className={cn(
+            "mx-3 mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            collapsed && "lg:justify-center lg:px-2",
+          )}
+        >
+          <Store className="size-4 shrink-0" strokeWidth={1.75} />
+          <span className={cn("flex-1 truncate", collapsed && "lg:hidden")}>
+            View site
+          </span>
+        </Link>
+
         <span
           className={cn(
-            "mx-5 mt-1 mb-3 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase",
+            "mx-5 mt-4 mb-3 text-[11px] font-medium tracking-[0.14em] text-muted-foreground uppercase",
             collapsed && "lg:hidden",
           )}
         >
