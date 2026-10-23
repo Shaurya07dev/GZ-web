@@ -126,7 +126,7 @@ export function RecordSaleDialog({
       {
         onSuccess: () => {
           toast.success("Sale recorded", {
-            description: `"${holding.artwork.title}" is now pending settlement. The buyer's purchase is held against ${values.buyerEmail} — it appears in their collection when they sign up with that address.`,
+            description: `"${holding.artwork.title}" is pending settlement.`,
             action: {
               label: "Settlements",
               onClick: () => router.push("/aggregator/settlements"),
