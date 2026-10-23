@@ -17,7 +17,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PriceTag } from "@/components/shared/price-tag";
 import { useOrders } from "@/hooks/useOrders";
 import { useCollection } from "@/hooks/useCollection";
-import { useCustomerWallet } from "@/hooks/useCustomerWallet";
 import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { CollectorProfileCard } from "./collector-profile-card";
@@ -27,7 +26,6 @@ export function CollectorDashboard() {
   const { data: profile } = useCustomerProfile();
   const { data: orders, isPending: ordersPending } = useOrders();
   const { data: collection } = useCollection();
-  const { data: wallet } = useCustomerWallet();
   const wishlistCount = useWishlistStore((s) => s.ids.length);
 
   const customer = profile ?? { name: me?.name ?? "", email: me?.email ?? "" };

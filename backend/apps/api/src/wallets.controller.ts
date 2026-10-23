@@ -68,13 +68,3 @@ export class AggregatorWalletController {
   }
 }
 
-@Controller("v1/customer/wallet")
-export class CustomerWalletController {
-  constructor(@Inject(DB) private readonly db: Db) {}
-
-  @Roles("customer")
-  @Get()
-  async get(@Req() req: AuthenticatedRequest) {
-    return getWalletBalance(this.db, "customer_wallet", req.authUser.uid);
-  }
-}
