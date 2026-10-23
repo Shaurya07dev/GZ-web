@@ -113,7 +113,7 @@ export function CollectionBoard() {
               <p className="truncate text-xs text-muted-foreground">
                 {item.artwork.artistName}
               </p>
-              <PriceTag amount={item.paidPrice} className="mt-1 text-sm" />
+              <PriceTag amount={item.paidPrice} className="mt-1 text-sm" showGstNote />
             </div>
           </button>
         ))}
