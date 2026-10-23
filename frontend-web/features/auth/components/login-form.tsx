@@ -55,11 +55,10 @@ function landingAfterLogin(role: SessionRole): string {
   // reserving them for display, so they land on the browse-and-reserve page
   // where that work happens (client, 18 Oct 2026).
   if (role === "aggregator") return "/aggregator/inventory";
-  // A buyer signs in to go on buying, not to stare at an orders list — the
-  // home page is the piece of the site they actually came for. The "My
-  // account" link in the header still takes them to /account whenever they
-  // want it.
-  if (role === "customer") return "/";
+  // A buyer signs in to go on buying — straight to the browse grid, not the
+  // home page or an orders list. "My account" in the header still takes them
+  // to /account whenever they want it. (client, 23 Oct 2026)
+  if (role === "customer") return "/marketplace";
   return ROLE_SECTION_HOME[role];
 }
 import { loginSchema, type LoginInput } from "@/features/auth/schemas/auth-schemas";

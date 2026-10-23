@@ -27,16 +27,15 @@ export const ROLE_LANDING: Record<SessionRole, string> = {
   customer: "/marketplace",
 };
 
-// Deliberately NOT the same map as ROLE_LANDING. This one is each role's own
-// portal, used in the two cases where a person is explicitly headed there:
-// right after signing in, and when they are bounced off a section belonging to
-// another role. A buyer lands in their account area both times — dropping them
-// into the shop instead reads as "nothing happened".
+// Each role's own portal — used when a person is explicitly headed there
+// (right after signing in, and when they are bounced off a section belonging
+// to another role). A buyer lands in the marketplace: they signed in to shop,
+// and "My account" stays reachable from the header.
 export const ROLE_SECTION_HOME: Record<SessionRole, string> = {
   artist: "/dashboard",
   aggregator: "/aggregator/dashboard",
   admin: "/admin",
-  customer: "/account",
+  customer: "/marketplace",
 };
 
 export function isSessionRole(value: string | undefined): value is SessionRole {
