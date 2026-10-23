@@ -28,6 +28,7 @@ import {
   X,
   ChevronDown,
   PenTool,
+  AlertTriangle,
 } from "lucide-react";
 import { SidebarHeader } from "@/components/shared/sidebar-brand";
 import { cn } from "@/lib/utils";
@@ -118,6 +119,13 @@ const NAV_GROUPS: AdminNavGroup[] = [
         label: "Blog review",
         href: "/admin/moderation/blogs",
         icon: PenTool,
+      },
+      {
+        // No badge — aggregator-raised reports are low volume. Admin notices
+        // via a glance here.
+        label: "Holding reports",
+        href: "/admin/moderation/holding-reports",
+        icon: AlertTriangle,
       },
       // No badge: the pending count comes from adminService's KPI set, which
       // does not carry deactivations. Adding one there is a change to the

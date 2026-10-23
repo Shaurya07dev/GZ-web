@@ -101,6 +101,7 @@ export const Collections = {
   artistConnections: "artistConnections",
   affiliateProducts: "affiliateProducts",
   blogs: "blogs",
+  holdingReports: "holdingReports",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -742,4 +743,37 @@ export interface BlogDoc {
   decidedAt: FirebaseFirestore.Timestamp | null;
   decidedBy: string | null; // admin uid
   publishedAt: FirebaseFirestore.Timestamp | null;
+}
+
+// An aggregator-raised issue report about a piece they're holding. Opens
+// from /aggregator/holdings/<id> detail page; admin reads them from
+// /admin/moderation/holding-reports. Snapshot fields (artworkTitle,
+// aggregatorName, artistName) are duplicated so the admin list renders
+// without needing joined reads for every row.
+export type HoldingReportIssueType =
+  | "damaged_in_transit"
+  | "wrong_piece"
+  | "quality_issue"
+  | "coa_nfc_problem"
+  | "missing_accessories"
+  | "other";
+
+export type HoldingReportStatus = "open" | "resolved";
+
+export interface HoldingReportDoc {
+  holdingId: string;
+  artworkId: string;
+  artworkTitle: string;
+  aggregatorId: string;
+  aggregatorName: string;
+  aggregatorEmail: string;
+  artistId: string;
+  artistName: string;
+  issueType: HoldingReportIssueType;
+  description: string;
+  status: HoldingReportStatus;
+  reportedAt: FirebaseFirestore.Timestamp;
+  resolvedAt: FirebaseFirestore.Timestamp | null;
+  resolvedBy: string | null; // admin uid
+  resolutionNote: string | null;
 }
