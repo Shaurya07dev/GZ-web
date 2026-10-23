@@ -8,6 +8,7 @@ import {
   Compass,
   Heart,
   Frame,
+  Fingerprint,
   ShoppingBag,
   Wallet,
   Repeat2,
@@ -64,6 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "My Collection",
     items: [
       { label: "My Collection", href: "/account/collection", icon: Frame },
+      { label: "COA & NFC", href: "/account/coa-nfc", icon: Fingerprint },
     ],
   },
   {
