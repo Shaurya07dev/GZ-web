@@ -111,7 +111,7 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           <p className="mt-1.5 truncate text-xs text-muted-foreground">{details}</p>
           {size && <p className="truncate text-xs text-muted-foreground">{size}</p>}
           <p className="mt-2 flex items-baseline gap-2">
-            <PriceTag amount={artwork.customerPrice} className="text-base" />
+            <PriceTag amount={artwork.customerPrice} className="text-base" showGstNote />
             {status && <span className="text-xs text-muted-foreground">{status}</span>}
           </p>
           {artwork.insured && (

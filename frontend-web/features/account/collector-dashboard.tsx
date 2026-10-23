@@ -123,6 +123,7 @@ export function CollectorDashboard() {
                   <PriceTag
                     amount={order.amount + order.gstAmount + order.deliveryCharge}
                     className="text-sm"
+                    showGstNote
                   />
                 </Link>
               );
