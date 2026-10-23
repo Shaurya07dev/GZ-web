@@ -44,3 +44,4 @@ export * from "./lifecycle.ts";
 export * from "./affiliate-products.ts";
 export * from "./aggregator-commission.ts";
 export * from "./blogs.ts";
+export * from "./holding-reports.ts";

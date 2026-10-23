@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   ArrowLeft,
   CircleCheckBig,
   CircleX,
@@ -23,6 +24,7 @@ import { CycleStepper } from "./cycle-stepper";
 import { RecordSaleDialog } from "./record-sale-dialog";
 import { RequestExtensionDialog } from "./request-extension-dialog";
 import { ReturnHoldingDialog } from "./return-holding-dialog";
+import { ReportIssueDialog } from "./report-issue-dialog";
 import { SuggestedArtworks } from "./suggested-artworks";
 import { HOLDING_STATUS_CONFIG } from "./holding-status";
 import {
@@ -53,6 +55,7 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
   const [saleDialogOpen, setSaleDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [extensionDialogOpen, setExtensionDialogOpen] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   // Snapshotted once (react-hooks/purity forbids a bare Date.now() in render
   // — see expiry-countdown.tsx). Only used to notice "the window has already
   // passed" for the banner below; a stale-by-a-few-seconds value doesn't
@@ -280,6 +283,14 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
                 Ask to keep it longer
               </Button>
             )}
+            <Button
+              variant="outline"
+              onClick={() => setReportDialogOpen(true)}
+              className="text-amber-300 hover:text-amber-200"
+            >
+              <AlertTriangle className="size-3.5" strokeWidth={2} />
+              Report issue
+            </Button>
           </div>
         )}
       </div>
@@ -318,6 +329,13 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
         holding={holding}
         open={extensionDialogOpen}
         onOpenChange={setExtensionDialogOpen}
+      />
+
+      <ReportIssueDialog
+        holdingId={holding.id}
+        artworkTitle={artwork.title}
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
       />
     </div>
   );

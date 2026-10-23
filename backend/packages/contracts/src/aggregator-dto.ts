@@ -43,9 +43,12 @@ export const decideHoldingExtensionInputSchema = z.object({ note: z.string().tri
 
 export type DecideHoldingExtensionInput = z.infer<typeof decideHoldingExtensionInputSchema>;
 
+// `holdingId` is NOT in this body — the controller reads it from the URL path
+// via `@Param("id") id`. Including it here would make the schema require a
+// field the frontend never sends and cause `holdingId: Required` 400s on
+// every record-sale attempt.
 export const recordAggregatorSaleInputSchema = z
   .object({
-    holdingId: firestoreId,
     soldPricePaise: z.number().int().positive(),
     buyerName: z.string().min(1),
     buyerEmail: z.string().email(),
@@ -57,6 +60,34 @@ export const recordAggregatorSaleInputSchema = z
   .strict();
 
 export type RecordAggregatorSaleInput = z.infer<typeof recordAggregatorSaleInputSchema>;
+
+/**
+ * Aggregator-raised issue report about a piece they're holding. The
+ * `holdingId` is on the URL path (controller reads it via `@Param`), not in
+ * the body — same shape as the record-sale endpoint next to it.
+ */
+export const createHoldingReportInputSchema = z
+  .object({
+    issueType: z.enum([
+      "damaged_in_transit",
+      "wrong_piece",
+      "quality_issue",
+      "coa_nfc_problem",
+      "missing_accessories",
+      "other",
+    ]),
+    description: z.string().trim().min(10, "Describe the issue in at least a line or two").max(2000),
+  })
+  .strict();
+
+export type CreateHoldingReportInput = z.infer<typeof createHoldingReportInputSchema>;
+
+/** Admin resolves a report; the note is optional and shown back to the aggregator. */
+export const resolveHoldingReportInputSchema = z
+  .object({ note: z.string().trim().max(1000).optional() })
+  .strict();
+
+export type ResolveHoldingReportInput = z.infer<typeof resolveHoldingReportInputSchema>;
 
 export interface HoldingDto {
   id: string;
