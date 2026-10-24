@@ -475,7 +475,7 @@ export const ARTIST_MOU: MouDocument = {
     {"type":"paragraph","text":"42.1 Ownership and risk of physical loss or damage are separate concepts. Risk shall be allocated according to the applicable logistics, custody and arrangements for the relevant transaction as per clause 10."},
     {"type":"paragraph","text":"42.2 The Artist shall disclose known pre-existing damage, defects, restoration, alteration or material condition issues affecting an artwork."},
     {"type":"paragraph","text":"42.3 Galleryzone or an authorized Aggregator may conduct reasonable inspection and may document condition by photographs, videos or condition reports before dispatch, during custody or before delivery."},
-    {"type":"paragraph","text":"42.4 Where damage or loss occurs, the Parties shall cooperate with the relevant logistics provider and insurer in accordance with the applicable policy and this MOU."},
+    {"type":"paragraph","text":"42.4 Where damage or loss occurs, the Parties shall cooperate with the relevant logistics provider in accordance with this MOU."},
     {"type":"heading","text":"43. POST-TERMINATION EFFECTS AND RECORD RETENTION"},
     {"type":"paragraph","text":"43.1 Termination shall not affect rights or obligations accrued before termination."},
     {"type":"paragraph","text":"43.2 Galleryzone may retain transaction, tax, accounting, authenticity, provenance, ownership, dispute, fraud-prevention and other records for the period reasonably required by law or legitimate business purposes."},
