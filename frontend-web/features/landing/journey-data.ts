@@ -175,7 +175,6 @@ export const JOURNEY_STEPS: JourneyStep[] = [
       "A verified aggregator takes physical possession, displays it in their space, and works to find a buyer in person.",
     requirements: [
       { icon: Building2, label: "Displayed by a gallery partner" },
-      { icon: ShieldCheck, label: "Insurance required, at your cost" },
       { icon: Clock3, label: "Held up to 30 days" },
     ],
     ctaLabel: "How Aggregators Work",
@@ -184,8 +183,7 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     previewBadge: { icon: Building2, label: "In display" },
     detailsLabel: "Aggregator Terms",
     detailsRows: [
-      { label: "Delivery & insurance", value: "Deducted from settlement" },
-      { label: "Insurance", value: "Mandatory, your cost" },
+      { label: "Delivery", value: "Deducted from settlement" },
       { label: "Display window", value: "Up to 30 days" },
     ],
     statusLabel: "In Display",
@@ -201,10 +199,10 @@ export const JOURNEY_STEPS: JourneyStep[] = [
     description: "Secure payment, delivery and ownership transfer.",
     badge: "STEP 06 OF 06",
     detailDescription:
-      "Secure payment, insured delivery, and a digital ownership transfer that updates the artwork's history for good.",
+      "Secure payment, tracked delivery, and a digital ownership transfer that updates the artwork's history for good.",
     requirements: [
       { icon: CreditCard, label: "Secure payment captured" },
-      { icon: Truck, label: "Insured, tracked delivery" },
+      { icon: Truck, label: "Tracked delivery" },
       { icon: Handshake, label: "Ownership transferred" },
     ],
     ctaLabel: "View Settlement",

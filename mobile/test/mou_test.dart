@@ -39,8 +39,8 @@ MouParties _parties({
 void main() {
   group('the documents are the website\'s, at the version the API requires', () {
     test('versions match the API', () {
-      expect(mouVersion, '2026.3', reason: 'CURRENT_MOU_VERSION.artist in backend/packages/db/src/mou.ts');
-      expect(aggregatorMouVersion, '2026.2', reason: 'CURRENT_MOU_VERSION.aggregator');
+      expect(mouVersion, '2026.4', reason: 'CURRENT_MOU_VERSION.artist in backend/packages/db/src/mou.ts');
+      expect(aggregatorMouVersion, '2026.3', reason: 'CURRENT_MOU_VERSION.aggregator');
       expect(artistMou.version, mouVersion);
       expect(aggregatorMou.version, aggregatorMouVersion);
       expect(artistMou.party, MouParty.artist);
@@ -49,13 +49,13 @@ void main() {
 
     test('every clause made the trip', () {
       // Counted from the website's generated data when this file was made.
-      expect(artistMou.blocks, hasLength(453));
+      expect(artistMou.blocks, hasLength(497));
       expect(aggregatorMou.blocks, hasLength(264));
       expect(artistMou.blocks.whereType<MouField>(), hasLength(13));
       expect(aggregatorMou.blocks.whereType<MouField>(), hasLength(14));
       expect(artistMou.blocks.first, isA<MouTitle>());
       expect((artistMou.blocks.first as MouTitle).text, 'MEMORANDUM OF UNDERSTANDING');
-      expect((artistMou.blocks.last as MouNote).text, startsWith('LEGAL REVIEW NOTE'));
+      expect((artistMou.blocks.last as MouField).key, MouFieldKey.partyDate);
     });
 
     test('the artist signs for the artist details, the aggregator for the business', () {
@@ -275,7 +275,7 @@ void main() {
     // Sixty paragraphs: taller than any phone, so the reading has to be done.
     final longDocument = MouDocument(
       party: MouParty.artist,
-      version: '2026.3',
+      version: '2026.4',
       title: 'Artist Memorandum of Understanding',
       intro: 'Your agreement with Galleryzone.',
       footer: 'footer',
@@ -289,7 +289,7 @@ void main() {
       ],
     );
 
-    MouState unsigned({List<String> missing = const [], String version = '2026.3'}) => MouState(
+    MouState unsigned({List<String> missing = const [], String version = '2026.4'}) => MouState(
           draft: MouDraft(
             version: version,
             parties: _parties(governmentId: missing.contains('governmentId') ? null : 'PAN ABCDE1234F'),
@@ -406,7 +406,7 @@ void main() {
 
       await tester.tap(find.text('Sign and accept'));
       await tester.pumpAndSettle();
-      expect(signings.single, {'name': 'ananya rao', 'version': '2026.3', 'url': _pngUrl});
+      expect(signings.single, {'name': 'ananya rao', 'version': '2026.4', 'url': _pngUrl});
       expect(find.text('Signed'), findsWidgets);
     });
 
@@ -453,7 +453,7 @@ void main() {
     });
 
     testWidgets('a newer text than this build knows blocks signing', (tester) async {
-      await open(tester, unsigned(version: '2026.4'));
+      await open(tester, unsigned(version: '2026.5'));
       expect(find.textContaining('has been updated since this version of the app was made'), findsOneWidget);
       await scrollToEnd(tester);
       expect(tester.widget<Checkbox>(find.byType(Checkbox)).onChanged, isNull);
@@ -463,7 +463,7 @@ void main() {
   group('once signed', () {
     final longDocument = MouDocument(
       party: MouParty.artist,
-      version: '2026.3',
+      version: '2026.4',
       title: 'Artist Memorandum of Understanding',
       intro: 'intro',
       footer: 'GalleryZone Private Limited — Artist MOU Revised Draft',
@@ -482,9 +482,9 @@ void main() {
     );
 
     final state = MouState(
-      draft: MouDraft(version: '2026.3', parties: _parties(name: 'Changed Since'), asOf: '2026-10-02T00:00:00.000Z'),
+      draft: MouDraft(version: '2026.4', parties: _parties(name: 'Changed Since'), asOf: '2026-10-02T00:00:00.000Z'),
       acceptance: MouAcceptance(
-        version: '2026.3',
+        version: '2026.4',
         acceptedAt: '2026-09-29T13:15:00.000Z',
         signatureName: 'Ananya Rao',
         signatureDataUrl: _pngUrl,
@@ -513,7 +513,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Signed 29 September 2026 at 6:45 pm IST. Version 2026.3.'), findsOneWidget);
+      expect(find.text('Signed 29 September 2026 at 6:45 pm IST. Version 2026.4.'), findsOneWidget);
       expect(find.text('Signed'), findsOneWidget);
       expect(find.text('Signed by'), findsOneWidget);
       expect(find.text('Ananya Rao'), findsOneWidget);
@@ -583,7 +583,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(shared, hasLength(1));
-      expect(shared.single.name, 'Galleryzone-artist-MOU-2026.3-Ananya-Rao.pdf');
+      expect(shared.single.name, 'Galleryzone-artist-MOU-2026.4-Ananya-Rao.pdf');
       expect(String.fromCharCodes(shared.single.bytes.sublist(0, 5)), '%PDF-');
       expect(shared.single.bytes.length, greaterThan(1500));
     });
@@ -617,8 +617,8 @@ void main() {
 
     test('the file is named for the document and the signer', () {
       final fill = MouFill(parties: _parties(), date: 'x', signed: true, signatureName: "Ananya O'Rao-Menon");
-      expect(mouPdfFileName(artistMou, fill), 'Galleryzone-artist-MOU-2026.3-Ananya-O-Rao-Menon.pdf');
-      expect(mouPdfFileName(aggregatorMou, fill), startsWith('Galleryzone-aggregator-MOU-2026.2-'));
+      expect(mouPdfFileName(artistMou, fill), 'Galleryzone-artist-MOU-2026.4-Ananya-O-Rao-Menon.pdf');
+      expect(mouPdfFileName(aggregatorMou, fill), startsWith('Galleryzone-aggregator-MOU-2026.3-'));
     });
   });
 }

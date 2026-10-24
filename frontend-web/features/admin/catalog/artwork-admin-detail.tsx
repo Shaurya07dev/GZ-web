@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { EyeOff, ExternalLink, Send, Check, X, Undo2 } from "lucide-react";
+import { EyeOff, ExternalLink, Send, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
@@ -15,7 +15,6 @@ import {
   useActiveHolding,
   useDelistArtworkMutation,
   usePullBackHoldingMutation,
-  useSetArtworkInsuranceStatusMutation,
   useSetArtworkRarityMutation,
 } from "@/hooks/useAdminCatalog";
 import { RarityBadge } from "@/components/shared/rarity-badge";
@@ -30,7 +29,6 @@ import {
   ARTWORK_RARITY_LABEL,
   ARTWORK_RARITY_OPTIONS,
   CUSTODY_PARTY_LABEL,
-  insuranceStatusOf,
   resolveCustody,
   type Artwork,
   type ArtworkRarity,
@@ -59,7 +57,6 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const appendAudit = useAdminAuditStore((s) => s.append);
   const delistMutation = useDelistArtworkMutation();
   const rarityMutation = useSetArtworkRarityMutation();
-  const insuranceMutation = useSetArtworkInsuranceStatusMutation();
   const { data: activeHolding } = useActiveHolding(artwork.id);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -104,33 +101,6 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
           });
         },
         onError: (error) => toast.error(error.message),
-      },
-    );
-  }
-
-  function handleInsuranceDecision(decision: "approved" | "rejected") {
-    insuranceMutation.mutate(
-      { artworkId: artwork.id, insuranceStatus: decision },
-      {
-        onSuccess: () => {
-          appendAudit({
-            adminName: adminName,
-            action:
-              decision === "approved"
-                ? "insurance.approved"
-                : "insurance.rejected",
-            entityType: "artwork",
-            entityId: artwork.id,
-            entityLabel: artwork.title,
-          });
-          toast.success(
-            decision === "approved"
-              ? "Insurance verified"
-              : "Insurance rejected",
-            { description: `“${artwork.title}”` },
-          );
-        },
-        onError: () => toast.error("Could not update insurance status."),
       },
     );
   }
@@ -267,7 +237,6 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
               label="Customer price"
               value={formatINR(artwork.customerPrice)}
             />
-            <Detail label="Insured" value={artwork.insured ? "Yes" : "No"} />
           </dl>
         </section>
 
@@ -304,47 +273,6 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
         </section>
 
         <NfcAdminPanel artwork={artwork} />
-
-        {artwork.insured && (
-          <section className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-base font-semibold text-foreground">
-                Insurance
-              </h2>
-              <AdminStatusBadge status={insuranceStatusOf(artwork)} size="sm" />
-            </div>
-            <dl className="mt-3">
-              <Detail
-                label="Policy / certificate number"
-                value={artwork.insuranceNumber ?? "Not submitted"}
-                mono
-              />
-            </dl>
-            {insuranceStatusOf(artwork) === "submitted" && (
-              <div className="mt-3 flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleInsuranceDecision("approved")}
-                  disabled={insuranceMutation.isPending}
-                  className="flex-1"
-                >
-                  <Check className="size-4" />
-                  Verify
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleInsuranceDecision("rejected")}
-                  disabled={insuranceMutation.isPending}
-                  className="flex-1"
-                >
-                  <X className="size-4" />
-                  Reject
-                </Button>
-              </div>
-            )}
-          </section>
-        )}
 
         <section className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between gap-3">

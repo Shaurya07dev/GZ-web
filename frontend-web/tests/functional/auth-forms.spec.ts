@@ -84,7 +84,7 @@ test.describe('Register form', () => {
     await page.getByRole('combobox', { name: 'Email Address' }).pressSequentially('testartist@example.com');
     await page.getByRole('textbox', { name: 'Phone number' }).fill('9876543210');
     await page.getByRole('textbox', { name: 'Password' }).fill('password123');
-    await page.getByRole('checkbox', { name: 'I agree to the Terms of Service' }).click();
+    await page.getByRole('checkbox', { name: 'I agree to the Terms & Conditions' }).click();
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page.getByText('Check your email')).toBeVisible();

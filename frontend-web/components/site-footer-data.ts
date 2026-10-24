@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from "react";
 import { Mail } from "lucide-react";
-import { InstagramGlyph, LinkedinGlyph } from "./social-icons";
+import { InstagramGlyph, LinkedinGlyph, XGlyph, YoutubeGlyph } from "./social-icons";
 
 export type FooterLink =
   | { label: string; href: string; comingSoon?: false }
@@ -70,7 +70,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   {
     title: "LEGAL",
     links: [
-      { label: "Terms of Service", href: "/terms" },
+      { label: "Terms & Conditions", href: "/terms" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Cookie Policy", href: "/cookies" },
       { label: "Artist Terms", href: "/artist-terms" },
@@ -95,10 +95,20 @@ export const SOCIAL_LINKS: SocialLink[] = [
     target: "_blank",
     rel: "noopener noreferrer",
   },
-  // X and YouTube were a `href="#"` dead link each until the channel URLs
-  // land from the brand team. Hidden rather than shown-and-broken (client
-  // raised the dead links on 19 Oct). Re-add with the real `href` the moment
-  // the URLs arrive.
+  {
+    icon: XGlyph,
+    href: "https://x.com/Galleryzone_in",
+    label: "X",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  },
+  {
+    icon: YoutubeGlyph,
+    href: "https://youtube.com/@officialgalleryzone",
+    label: "YouTube",
+    target: "_blank",
+    rel: "noopener noreferrer",
+  },
   {
     icon: LinkedinGlyph,
     href: "https://www.linkedin.com/company/galleryzone/",

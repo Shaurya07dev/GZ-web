@@ -40,7 +40,6 @@ const settingsSchema = z.object({
     .min(0, "Cannot be negative")
     .max(100, "Cannot exceed 100%"),
   minWithdrawalAmount: z.coerce.number<number>().min(1, "Must be at least ₹1"),
-  insuranceThreshold: z.coerce.number<number>().min(1, "Must be at least ₹1"),
 });
 
 type SettingsInput = z.infer<typeof settingsSchema>;
@@ -75,12 +74,6 @@ const FIELDS: Array<{
     name: "minWithdrawalAmount",
     label: "Minimum withdrawal",
     description: "Smallest payout an artist or aggregator can request.",
-    suffix: "₹",
-  },
-  {
-    name: "insuranceThreshold",
-    label: "Insurance threshold",
-    description: "Above this value, transit insurance is strongly recommended.",
     suffix: "₹",
   },
 ];

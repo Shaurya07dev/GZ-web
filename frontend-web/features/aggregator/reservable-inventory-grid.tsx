@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShieldCheck, PackageSearch, Heart, LayoutGrid, List } from "lucide-react";
+import { PackageSearch, Heart, LayoutGrid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -233,13 +233,6 @@ function InventoryArtworkCard({
         <button className="absolute top-2 right-2 z-10 flex size-10 items-center justify-center rounded-full border border-border/50 bg-background/90 text-foreground/75 backdrop-blur-sm transition-colors hover:text-foreground hover:border-border">
           <Heart className="size-4.5 transition-colors" strokeWidth={1.75} />
         </button>
-
-        {artwork.insured && (
-          <span className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-background/90 px-2.5 py-1 text-[11px] font-medium text-gold-bright backdrop-blur-sm shadow-sm">
-            <ShieldCheck className="size-3" strokeWidth={2} />
-            Insured
-          </span>
-        )}
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
@@ -321,12 +314,6 @@ function InventoryArtworkListRow({
           sizes="128px"
           className="object-cover"
         />
-        {artwork.insured && (
-          <span className="absolute bottom-1.5 left-1.5 z-10 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-background/90 px-1.5 py-0.5 text-[9px] font-medium text-gold-bright backdrop-blur-sm shadow-sm">
-            <ShieldCheck className="size-2.5" strokeWidth={2} />
-            Insured
-          </span>
-        )}
       </Link>
 
       {/* Right: Content */}

@@ -143,7 +143,6 @@ export interface PlatformSettings {
   markupPercent: number; // 30
   gstPercent: number; // 5
   minWithdrawalAmount: number; // 1000
-  insuranceThreshold: number; // 20000
   aggregatorCommissionPercent: number; // 20 (of the markup)
 }
 

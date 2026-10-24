@@ -132,7 +132,7 @@ export function toHolding(h: HoldingDto): AggregatorHolding {
 export const withArtwork = (h: HoldingDto) => ({ ...toHolding(h), artwork: h.artwork ? toArtworkSummary(h.artwork) : placeholderSummary(h.artworkId) });
 
 function placeholderSummary(id: string): ArtworkSummary {
-  return { id, title: "Artwork", artistId: "", artistName: "", verifiedArtist: false, category: "", medium: "", customerPrice: 0, thumbnailUrl: "/artworks/framed-painting.png", insured: false, status: "marketplace", listingType: "marketplace_and_aggregator" };
+  return { id, title: "Artwork", artistId: "", artistName: "", verifiedArtist: false, category: "", medium: "", customerPrice: 0, thumbnailUrl: "/artworks/framed-painting.png", status: "marketplace", listingType: "marketplace_and_aggregator" };
 }
 
 async function holdings(): Promise<HoldingDto[]> {

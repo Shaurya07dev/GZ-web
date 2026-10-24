@@ -222,7 +222,6 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
               label="Customer price"
               value={formatINR(artwork.customerPrice)}
             />
-            <Detail label="Insured" value={artwork.insured ? "Yes" : "No"} />
             <Detail
               label="Listing"
               value={LISTING_TYPE_LABEL[artwork.listingType]}

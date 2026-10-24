@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import {
   ImagePlus,
   X,
-  ShieldCheck,
   Info,
   Check,
   ArrowLeft,
@@ -19,7 +18,6 @@ import {
   TriangleAlert,
   Clock3,
   Circle,
-  ExternalLink,
   Ruler,
   ChevronsUpDown,
 } from "lucide-react";
@@ -27,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -56,14 +53,10 @@ import {
   DIMENSION_UNITS,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
-  INSURANCE_RECOMMENDED_THRESHOLD,
-  INSURANCE_PARTNER,
-  INSURANCE_PARTNER_URL,
   ARTWORK_FORMATS,
 
 } from "./artwork-submit-data";
 import { PAINTING_ART_FORMS } from "./painting-art-forms";
-import { InsuranceFaqChat } from "./insurance-faq-chat";
 import {
   GST_RATE,
   PLATFORM_MARKUP,
@@ -79,7 +72,6 @@ import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
 import {
   AGGREGATOR_READY_FRAMING,
   FRAMING_LABEL,
-  insuranceStatusOf,
   isAggregatorListed,
   isPenaltyCollectable,
   penaltyStatus,
@@ -87,28 +79,6 @@ import {
   type FramingState,
   type ListingType,
 } from "@/types/artwork";
-
-const INSURANCE_STATUS_LABEL: Record<
-  "not_submitted" | "submitted" | "approved" | "rejected",
-  { label: string; className: string }
-> = {
-  not_submitted: {
-    label: "Not submitted",
-    className: "border-border text-muted-foreground",
-  },
-  submitted: {
-    label: "Pending review",
-    className: "border-gold/40 bg-gold/10 text-gold-bright",
-  },
-  approved: {
-    label: "Verified",
-    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
-  },
-  rejected: {
-    label: "Rejected — resubmit",
-    className: "border-destructive/40 bg-destructive/10 text-destructive",
-  },
-};
 
 type FormState = {
   title: string;
@@ -126,8 +96,6 @@ type FormState = {
   yearCreated: string;
   artistPrice: string;
   listingType: ListingType;
-  insuranceOpted: boolean;
-  insuranceNumber: string;
   weightKg: string;
   framing: FramingState | "";
   format: string;
@@ -153,8 +121,6 @@ const EMPTY_FORM: FormState = {
   yearCreated: "",
   artistPrice: "",
   listingType: "marketplace_and_aggregator",
-  insuranceOpted: false,
-  insuranceNumber: "",
   weightKg: "",
   framing: "",
   format: "",
@@ -296,8 +262,6 @@ function formStateFor(artwork: EditableArtwork): FormState {
     yearCreated: artwork.yearCreated ? String(artwork.yearCreated) : "",
     artistPrice: String(artwork.artistPrice || ""),
     listingType: artwork.listingType,
-    insuranceOpted: artwork.insured,
-    insuranceNumber: artwork.insuranceNumber ?? "",
     weightKg: artwork.physical?.weightKg
       ? String(artwork.physical.weightKg)
       : "",
@@ -354,10 +318,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   );
 
   const artistPriceNumber = Number(form.artistPrice) || 0;
-  // Aggregator display puts the physical piece in someone else's custody, so
-  // insurance stops being a choice the moment that channel is selected.
   const aggregatorSelected = isAggregatorListed(form.listingType);
-  const insuranceRequired = aggregatorSelected;
 
   // MOU §12: work sent to an aggregator must be framed or stretched, ship with
   // hangers, and be packed to GalleryZone's standard. Weight and format matter
@@ -387,10 +348,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   const gstRate = (rules?.gstRate as number | undefined) ?? GST_RATE;
   const serviceGstRate = (rules?.serviceGstRate as number | undefined) ?? SERVICE_GST_RATE;
   const nfcCharge = rules?.nfcTagChargePaise === undefined ? NFC_TAG_CHARGE : (rules.nfcTagChargePaise as number) / 100;
-  const insuranceThreshold =
-    rules?.insuranceThresholdPaise === undefined
-      ? INSURANCE_RECOMMENDED_THRESHOLD
-      : (rules.insuranceThresholdPaise as number) / 100;
 
   const basePrice = useMemo(
     () => Math.round(artistPriceNumber * (1 + markupRate)),
@@ -463,8 +420,6 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       yearCreated: Number(form.yearCreated) || new Date().getFullYear(),
       artistPrice: artistPriceNumber,
       listingType: form.listingType,
-      insuranceOpted: insuranceRequired || form.insuranceOpted,
-      insuranceNumber: form.insuranceNumber.trim() || null,
       exclusive: form.exclusive,
       physical: {
         weightKg: Number(form.weightKg) || null,
@@ -1371,97 +1326,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               GalleryZone&rsquo;s 30% margin and {gstPercent}% GST on top —
               that&rsquo;s what buyers see.
             </p>
-
-            {(insuranceRequired || form.insuranceOpted) && (
-              <div className="mt-4 flex items-center gap-2 rounded-md border border-gold/30 bg-gold/5 px-3 py-2 text-xs text-gold-bright">
-                <ShieldCheck className="size-3.5 shrink-0" />
-                Insured artwork
-              </div>
-            )}
           </div>
         </div>
-
-        <div
-          className={`flex items-start justify-between gap-4 rounded-md border bg-card p-3.5 ${
-            insuranceRequired ? "border-gold/40 bg-gold/5" : "border-border"
-          }`}
-        >
-          <div>
-            <Label htmlFor="insurance">
-              Insure this artwork
-              {insuranceRequired && (
-                <span className="ml-2 text-xs font-medium text-gold-bright">
-                  Required
-                </span>
-              )}
-            </Label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {insuranceRequired
-                ? `Mandatory for aggregator listings — the piece leaves your studio and is held by a partner while on display. Cover is arranged with ${INSURANCE_PARTNER}; the premium is deducted from your settlement.`
-                : artistPriceNumber > insuranceThreshold
-                  ? `Strongly recommended for a piece at this price (${INSURANCE_PARTNER}). Decline it and theft, fire, transit damage and loss are yours alone.`
-                  : `Optional, arranged with ${INSURANCE_PARTNER}. Uninsured artworks carry no platform liability in transit.`}
-            </p>
-          </div>
-          <Switch
-            id="insurance"
-            checked={insuranceRequired || form.insuranceOpted}
-            disabled={insuranceRequired}
-            onCheckedChange={(checked) =>
-              updateField("insuranceOpted", checked)
-            }
-          />
-        </div>
-
-        {(insuranceRequired || form.insuranceOpted) && (
-          <div className="flex flex-col gap-3.5 rounded-md border border-gold/30 bg-gold/5 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium text-foreground">
-                Insurance verification
-              </p>
-              {isEdit && (
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].className}`}
-                >
-                  {INSURANCE_STATUS_LABEL[insuranceStatusOf(artwork)].label}
-                </span>
-              )}
-            </div>
-
-            {INSURANCE_PARTNER_URL && (
-              <a
-                href={INSURANCE_PARTNER_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-gold-bright hover:underline"
-              >
-                <ExternalLink className="size-3.5" />
-                Take out cover with {INSURANCE_PARTNER}
-              </a>
-            )}
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="insuranceNumber">
-                Policy / certificate number
-              </Label>
-              <Input
-                id="insuranceNumber"
-                placeholder="Paste the number once your policy is issued"
-                value={form.insuranceNumber}
-                onChange={(e) =>
-                  updateField("insuranceNumber", e.target.value)
-                }
-                className="h-10 sm:max-w-xs"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter it here once you have it — GalleryZone verifies it
-                before the piece can be marked insured.
-              </p>
-            </div>
-
-            <InsuranceFaqChat />
-          </div>
-        )}
 
         <div className="flex items-start gap-3 rounded-md border border-border bg-card p-3.5">
           <ScrollText

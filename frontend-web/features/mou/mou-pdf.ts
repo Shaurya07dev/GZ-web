@@ -7,7 +7,15 @@ const MARGIN = 18;
 const FOOTER_SPACE = 12;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const PT = 0.3528; // mm per point
-const MINUS = "−"; // U+2212: not in Helvetica's encoding, drawn from Symbol as the source PDF does
+// Characters Helvetica's encoding lacks, drawn from the built-in Symbol font as the
+// source PDF does. Each maps to the code its glyph has in Symbol and that glyph's
+// advance width in em (Symbol's own metrics: jsPDF mismeasures the arrow, which
+// would swallow the space after it).
+const SYMBOL_GLYPHS: Record<string, { code: string; em: number }> = {
+  "−": { code: "-", em: 0.549 }, // U+2212 minus
+  "→": { code: "®", em: 0.987 }, // U+2192 right arrow, 0xAE in Symbol
+};
+const SYMBOL_CHARS = new RegExp(`([${Object.keys(SYMBOL_GLYPHS).join("")}])`);
 
 /**
  * The signed MOU as a PDF: the same blocks the screen shows, the blanks
@@ -32,31 +40,29 @@ export function downloadMouPdf(document_: MouDocument, fill: MouFill) {
     doc.setFontSize(size);
   }
 
-  // One already-wrapped line. Any minus sign is drawn from the Symbol font,
-  // piece by piece, so the line keeps its exact characters.
+  // One already-wrapped line. Any minus sign or arrow is drawn from the Symbol
+  // font, piece by piece, so the line keeps its exact characters.
   function drawLine(line: string, x: number, style: "normal" | "bold" | "italic", center: boolean) {
-    if (!line.includes(MINUS)) {
+    if (!SYMBOL_CHARS.test(line)) {
       doc.text(line, center ? PAGE_WIDTH / 2 : x, y, { baseline: "top", align: center ? "center" : "left" });
       return;
     }
-    const parts = line.split(MINUS);
-    const minusWidth = () => {
-      doc.setFont("symbol", "normal");
-      const w = doc.getTextWidth("-");
-      doc.setFont("helvetica", style);
-      return w;
-    };
-    const total = parts.reduce((w, p) => w + doc.getTextWidth(p), 0) + minusWidth() * (parts.length - 1);
+    // Splitting on a capturing group keeps the symbols, at the odd positions.
+    const parts = line.split(SYMBOL_CHARS);
+    const widthOf = (part: string, i: number) =>
+      i % 2 === 0 ? doc.getTextWidth(part) : SYMBOL_GLYPHS[part].em * doc.getFontSize() * PT;
+    doc.setFont("helvetica", style);
+    const total = parts.reduce((w, part, i) => w + widthOf(part, i), 0);
     let cx = center ? (PAGE_WIDTH - total) / 2 : x;
     parts.forEach((part, i) => {
-      doc.setFont("helvetica", style);
-      doc.text(part, cx, y, { baseline: "top" });
-      cx += doc.getTextWidth(part);
-      if (i < parts.length - 1) {
+      if (i % 2 === 0) {
+        doc.text(part, cx, y, { baseline: "top" });
+      } else {
         doc.setFont("symbol", "normal");
-        doc.text("-", cx, y, { baseline: "top" });
-        cx += doc.getTextWidth("-");
+        doc.text(SYMBOL_GLYPHS[part].code, cx, y, { baseline: "top" });
+        doc.setFont("helvetica", style);
       }
+      cx += widthOf(part, i);
     });
     doc.setFont("helvetica", style);
   }
