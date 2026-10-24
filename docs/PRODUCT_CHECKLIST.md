@@ -20,7 +20,7 @@ honest empty state (artist network, reviews, buyer invites — no routes yet).
 - [x] Rate config v1 approved (2026-09-16).
 - [ ] Add `gz-web-livid.vercel.app` to Firebase Auth authorized domains.
 - [x] Approve → certificate → marketplace → gateway session verified live (on Razorpay, which is the gateway again as of 5 Oct 2026). Browser-side: pay with the test card → transfer → CoA request (see TESTING_GUIDE).
-- [x] Artist MOU v2026.2 generated from `docs/legal/artist-mou-2026.2.txt` (`frontend-web/scripts/gen-mou.mjs`).
+- [x] Artist MOU v2026.4 generated from `docs/legal/artist-mou-2026.4.txt` (the Aggregator MOU is v2026.3) (`frontend-web/scripts/gen-mou.mjs`).
 
 ## 1. Remove every hardcoded thing on the web pages (2–3 weeks)
 Swap each remaining service to the API **and** delete the direct fixture imports in the components that bypass services. Backend routes marked ✅ already exist.

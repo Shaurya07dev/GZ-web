@@ -11,8 +11,8 @@ import { dismissCookieConsent } from '../support/settle';
 // is stubbed, so this covers the page; backend/packages/db/src/mou.check.ts
 // covers how the API fills the blanks.
 
-const ARTIST_TEXT = readFileSync(join(process.cwd(), '../docs/legal/artist-mou-2026.3.txt'), 'utf8');
-const AGGREGATOR_TEXT = readFileSync(join(process.cwd(), '../docs/legal/aggregator-mou-2026.2.txt'), 'utf8');
+const ARTIST_TEXT = readFileSync(join(process.cwd(), '../docs/legal/artist-mou-2026.4.txt'), 'utf8');
+const AGGREGATOR_TEXT = readFileSync(join(process.cwd(), '../docs/legal/aggregator-mou-2026.3.txt'), 'utf8');
 /** Every line of the source except the blanks, which the page fills in. */
 const textLines = (src: string) =>
   src.split('\n').map((l) => l.trim()).filter((l) => l && !/:\s*_{3,}|_+\s*\/\s*_+/.test(l));
@@ -53,14 +53,14 @@ async function open(page: Page, role: 'artist' | 'aggregator', baseURL: string, 
 test('the artist MOU shows the company text word for word, filled from the profile', async ({ page, baseURL }) => {
   const path = await open(page, 'artist', baseURL!, '/dashboard/profile');
   await json(page, '**/v1/me/profile', profile());
-  await json(page, '**/v1/artist/mou', { acceptance: null, draft: { version: '2026.3', parties: { party: artistParty, company }, missing: [], asOf: AS_OF } });
+  await json(page, '**/v1/artist/mou', { acceptance: null, draft: { version: '2026.4', parties: { party: artistParty, company }, missing: [], asOf: AS_OF } });
   await page.goto(path);
 
   const doc = page.getByLabel('Artist Memorandum of Understanding, full text');
   await expect(doc).toBeVisible();
   const rendered = (await doc.innerText()).split('\n').map((l) => l.trim());
   const missingLines = textLines(ARTIST_TEXT).filter((line) => !rendered.includes(line));
-  expect(missingLines, 'lines of docs/legal/artist-mou-2026.3.txt not rendered verbatim').toEqual([]);
+  expect(missingLines, 'lines of docs/legal/artist-mou-2026.4.txt not rendered verbatim').toEqual([]);
 
   for (const value of ['Meera Kulkarni', '12 Banjara Hills Road, Hyderabad, Telangana 500034', '+91 98765 43210', 'meera@example.in', 'PAN ABCDE1234F', 'Anand Rao', 'Director']) {
     await expect(doc.getByText(value, { exact: true }).first()).toBeVisible();
@@ -75,7 +75,7 @@ test('signing is blocked until the profile can fill every required blank', async
   await json(page, '**/v1/me/profile', profile({ phone: null }));
   await json(page, '**/v1/artist/mou', {
     acceptance: null,
-    draft: { version: '2026.3', parties: { party: { ...artistParty, mobile: null }, company }, missing: ['mobile'], asOf: AS_OF },
+    draft: { version: '2026.4', parties: { party: { ...artistParty, mobile: null }, company }, missing: ['mobile'], asOf: AS_OF },
   });
   await page.goto(path);
 
@@ -101,7 +101,7 @@ test('an artist signs, and the signed copy downloads with the same text', async 
   await page.route('**/v1/artist/mou', (route) =>
     route.fulfill({
       status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
-      body: JSON.stringify({ acceptance: signed, draft: { version: '2026.3', parties: { party: artistParty, company }, missing: [], asOf: AS_OF } }),
+      body: JSON.stringify({ acceptance: signed, draft: { version: '2026.4', parties: { party: artistParty, company }, missing: [], asOf: AS_OF } }),
     }),
   );
   await page.goto(path);
@@ -121,13 +121,13 @@ test('an artist signs, and the signed copy downloads with the same text', async 
   const request = page.waitForRequest('**/v1/artist/mou/accept');
   await page.getByRole('button', { name: 'Sign and accept' }).click();
   const body = (await request).postDataJSON();
-  expect(body.version).toBe('2026.3');
+  expect(body.version).toBe('2026.4');
   expect(body.signatureName).toBe('Meera Kulkarni');
   expect(body.signatureDataUrl).toMatch(/^data:image\/png;base64,/);
 
-  await expect(page.getByText('Signed 29 September 2026 at 6:45 pm IST. Version 2026.3.')).toBeVisible();
+  await expect(page.getByText('Signed 29 September 2026 at 6:45 pm IST. Version 2026.4.')).toBeVisible();
   await page.getByText('Read the signed agreement').click();
-  await page.getByText('Signed 29 September 2026 at 6:45 pm IST. Version 2026.3.').locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]').screenshot({ path: testInfo.outputPath('artist-mou-signed.png') });
+  await page.getByText('Signed 29 September 2026 at 6:45 pm IST. Version 2026.4.').locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]').screenshot({ path: testInfo.outputPath('artist-mou-signed.png') });
 
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download signed PDF' }).click();
@@ -139,11 +139,11 @@ test('an artist signs, and the signed copy downloads with the same text', async 
     encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
   }).split(/\r?\n/);
   // Each page carries the source's running footer and a page count.
-  expect(lines).toContain('GalleryZone Private Limited — Artist MOU Revised Draft');
+  expect(lines).toContain('GalleryZone Private Limited — Artist MOU — 22 October 2026');
   expect(lines.some((l) => /^Page \d+ of \d+$/.test(l.trim()))).toBe(true);
   // The footer interrupts a paragraph that crosses a page; read past it.
   const pdfText = lines
-    .filter((l) => l.trim() !== 'GalleryZone Private Limited — Artist MOU Revised Draft' && !/^Page \d+ of \d+$/.test(l.trim()))
+    .filter((l) => l.trim() !== 'GalleryZone Private Limited — Artist MOU — 22 October 2026' && !/^Page \d+ of \d+$/.test(l.trim()))
     .join('\n');
   const squash = (s: string) => s.replace(/\s+/g, '');
   const pdf = squash(pdfText);
@@ -165,7 +165,7 @@ test('the aggregator MOU fills business name, GST and the effective date in IST'
   await json(page, '**/v1/aggregator/mou', {
     acceptance: null,
     draft: {
-      version: '2026.2',
+      version: '2026.3',
       parties: { party: { ...artistParty, governmentId: null, businessName: 'Kulkarni Fine Art', gstNo: '36ABCDE1234F1Z5' }, company: { name: null, designation: null } },
       missing: [],
       asOf: '2026-09-29T19:00:00.000Z',

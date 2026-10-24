@@ -29,9 +29,9 @@ const profile = (over: Record<string, unknown> = {}) => ({
 
 const mou = (signed: boolean) => ({
   acceptance: signed
-    ? { party: 'aggregator', version: '2026.2', signatureName: 'Anand Rao', signatureDataUrl: 'data:image/png;base64,AAAA', acceptedAt: AS_OF, parties: null }
+    ? { party: 'aggregator', version: '2026.3', signatureName: 'Anand Rao', signatureDataUrl: 'data:image/png;base64,AAAA', acceptedAt: AS_OF, parties: null }
     : null,
-  draft: { version: '2026.2', parties: { party: {}, company: { name: null, designation: null } }, missing: [], asOf: AS_OF },
+  draft: { version: '2026.3', parties: { party: {}, company: { name: null, designation: null } }, missing: [], asOf: AS_OF },
 });
 
 const artworkDto = (id: string, over: Record<string, unknown> = {}) => ({

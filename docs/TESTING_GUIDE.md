@@ -29,7 +29,7 @@ Change any password with **Forgot password** on `/login` — the email is real (
 ## Flow 1 — Artist lists a piece
 
 1. Register as an artist (or use the test artist) → `/dashboard`.
-2. Profile → sign the **MOU** (v2026.2). Signature name must match the account name.
+2. Profile → sign the **MOU** (v2026.4 for artists, v2026.3 for aggregators). Signature name must match the account name.
 3. Add artwork → fill details, upload 1–8 photos (JPEG/PNG/WebP), set your price → **Submit for review**.
    - You receive "in review"; every admin receives "Review: …".
 4. Admin → `/admin/moderation/artworks` → open → **Approve** (or reject with a reason).
