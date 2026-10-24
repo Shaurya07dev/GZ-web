@@ -2,6 +2,7 @@
 
 import "@/lib/motion-config";
 import { motion } from "framer-motion";
+import { Check } from "lucide-react";
 
 // Verbatim from the source document ("Gz Mission.pdf") — only "Galleryzone"
 // was normalized to "GalleryZone" to match this site's brand spelling
@@ -14,6 +15,9 @@ import { motion } from "framer-motion";
 // the founding/origin narrative (left), paragraph 6 is the direct lead-in
 // to "We strive to:" in the source, so it opens the right column with the
 // commitments list and closing lines, exactly as the document orders them.
+//
+// Typography follows the rest of the About page: a pill label, a serif
+// heading, sans-serif muted body copy, and gold kept for accents only.
 const MISSION_STORY = [
   "GalleryZone was founded with a simple yet ambitious vision: to create a trusted platform where artists can showcase their creativity, reach more people, and build sustainable careers through their work.",
   "Across India and beyond, countless talented artists create remarkable works of art. However, many face challenges in gaining visibility, finding buyers, receiving fair value, and accessing professional opportunities. GalleryZone was established to help bridge that gap.",
@@ -53,10 +57,7 @@ export function AboutMissionSection() {
   return (
     <section className="relative overflow-hidden py-14 sm:py-20 md:py-28">
       <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
-        <div className="relative grid grid-cols-1 gap-16 lg:grid-cols-2 lg:gap-14">
-          {/* Vertical gold divider (desktop only), centered on the page */}
-          <div className="absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-gradient-to-b from-gold/0 via-gold/30 to-gold/0 lg:block" />
-
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16">
           {/* LEFT: origin story */}
           <motion.div
             initial="hidden"
@@ -65,24 +66,23 @@ export function AboutMissionSection() {
             variants={columnStagger}
           >
             <motion.div variants={fadeUp} transition={{ duration: 0.5, ease: "easeOut" }}>
-              <p className="text-xs font-medium tracking-[0.14em] text-gold uppercase">
+              <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
                 Our Mission
-              </p>
-              <div className="mt-3 h-px w-9 bg-gold/60" />
-              <h2 className="mt-5 text-balance font-display text-4xl leading-[1.08] font-semibold sm:text-5xl">
-                Welcome to
-                <br />
-                <span className="text-gold">Gallery</span>Zone.
+              </span>
+              <h2 className="mt-4 text-balance font-display text-3xl leading-[1.15] font-semibold sm:text-4xl">
+                Welcome to <span className="text-gold-bright">GalleryZone.</span>
               </h2>
             </motion.div>
 
-            <div className="mt-8 flex flex-col gap-5">
+            <div className="mt-6 flex max-w-xl flex-col gap-4">
               {MISSION_STORY.map((paragraph, index) => (
                 <motion.p
                   key={index}
                   variants={fadeUp}
                   transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="text-balance font-display text-base leading-relaxed text-foreground/85"
+                  className={`text-balance leading-relaxed text-muted-foreground ${
+                    index === 0 ? "text-lg" : "text-base"
+                  }`}
                 >
                   {paragraph}
                 </motion.p>
@@ -90,41 +90,40 @@ export function AboutMissionSection() {
             </div>
           </motion.div>
 
-          {/* RIGHT: commitments */}
+          {/* RIGHT: commitments, in a card like the page's other panels */}
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-10%" }}
             variants={columnStagger}
+            className="self-start rounded-2xl border border-border bg-card p-6 sm:p-8"
           >
             <motion.p
               variants={fadeUp}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="text-balance font-display text-lg leading-relaxed text-foreground"
+              className="text-balance font-display text-xl leading-[1.4] font-medium tracking-tight text-foreground sm:text-2xl"
             >
-              <span className="font-semibold text-gold">{MISSION_LEAD_BRAND}</span>
+              <span className="text-gold-bright">{MISSION_LEAD_BRAND}</span>
               {MISSION_LEAD_REST}
             </motion.p>
 
             <motion.div
               variants={fadeUp}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="mt-10"
+              className="mt-8"
             >
-              <div className="flex items-center gap-4">
-                <div className="h-px flex-1 bg-gold/40" />
-                <p className="shrink-0 text-xs font-medium tracking-[0.14em] text-gold uppercase">
-                  We strive to
-                </p>
-                <div className="h-px flex-1 bg-gold/40" />
-              </div>
-              <ul className="mt-6 flex flex-col gap-4">
+              <p className="text-[11px] font-bold tracking-[0.2em] text-gold uppercase">
+                We strive to
+              </p>
+              <ul className="mt-5 flex flex-col gap-4">
                 {MISSION_COMMITMENTS.map((item) => (
-                  <li
-                    key={item}
-                    className="text-balance font-display text-base leading-relaxed text-foreground/85"
-                  >
-                    {item}
+                  <li key={item} className="flex items-start gap-4">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary">
+                      <Check className="size-4 text-gold-bright" strokeWidth={1.75} />
+                    </span>
+                    <p className="pt-1.5 text-base leading-relaxed text-muted-foreground">
+                      {item}
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -134,43 +133,22 @@ export function AboutMissionSection() {
             <motion.div
               variants={fadeUp}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="mt-10"
+              className="mt-8 border-t border-border pt-6"
             >
-              <div className="flex items-center gap-4">
-                <div className="h-px flex-1 bg-gold/30" />
-                <div className="size-1.5 shrink-0 rotate-45 bg-gold/50" />
-                <div className="h-px flex-1 bg-gold/30" />
-              </div>
-
-              <div className="mt-8 flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 {MISSION_CLOSING.map((paragraph, index) => (
                   <p
                     key={index}
-                    className="text-balance font-display text-sm leading-relaxed text-foreground/70"
+                    className="text-sm leading-relaxed text-muted-foreground"
                   >
                     {paragraph}
                   </p>
                 ))}
               </div>
 
-              <p className="mt-8 font-display text-2xl leading-[1.2] font-medium italic text-gold-bright">
+              <p className="mt-5 font-display text-xl font-medium tracking-tight text-gold-bright">
                 &ldquo;Connecting Artists with the World.&rdquo;
               </p>
-              <svg
-                className="mt-2 text-gold/50"
-                width="200"
-                height="12"
-                viewBox="0 0 200 12"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M2 2C40 11 160 11 198 2"
-                  stroke="currentColor"
-                  strokeWidth="1.25"
-                  strokeLinecap="round"
-                />
-              </svg>
             </motion.div>
           </motion.div>
         </div>
