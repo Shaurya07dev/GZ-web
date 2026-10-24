@@ -68,7 +68,6 @@ export interface ArtworkSummary {
   medium: string;
   customerPrice: number;
   thumbnailUrl: string;
-  insured: boolean;
   /** Marked one-of-a-kind at submission — the piece is exclusive to
    *  GalleryZone and not sold on any other platform. Absent on fixture
    *  records = false. */
@@ -101,12 +100,6 @@ export interface Artwork extends ArtworkSummary {
   // PAINTING_ART_FORMS) — only collected when category is "painting". Optional
   // so non-painting categories and pre-existing fixture records need no value.
   paintingStyle?: string | null;
-  // Policy/certificate number the artist pastes back in after buying cover
-  // through the HDFC ERGO link — see INSURANCE_PARTNER_URL. Only meaningful
-  // when `insured` is true.
-  insuranceNumber?: string | null;
-  /** Admin-reviewed, same shape as GstStatus — see admin-status-badge.tsx. */
-  insuranceStatus?: InsuranceStatus;
   // The physical NFC tag on this piece, in three states (see lib/nfc.ts): not
   // linked, linked but unlocked, linked and locked for good. Only the artist's
   // own and admin views carry these; the chip's ID (nfcTagUid) is never public.
@@ -349,16 +342,6 @@ export type ArtworkRarity = "R" | "U" | "O" | "S";
 export function normalizeRarity(value: string | null | undefined): ArtworkRarity | null {
   if (value === "N") return "S";
   return value === "R" || value === "U" || value === "O" || value === "S" ? value : null;
-}
-
-// Same 4 states as GstStatus (types/admin.ts) — reused rather than imported
-// to keep this file's types self-contained from the admin domain; the
-// literal values are what admin-status-badge.tsx's STATUS_CONFIG keys on.
-export type InsuranceStatus =
-  "not_submitted" | "submitted" | "approved" | "rejected";
-
-export function insuranceStatusOf(artwork: Artwork): InsuranceStatus {
-  return artwork.insuranceStatus ?? "not_submitted";
 }
 
 export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {

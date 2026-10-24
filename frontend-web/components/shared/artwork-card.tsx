@@ -35,8 +35,6 @@ const MINIMUM_VERIFICATION = {
   tier3FirstSale: false,
 } as const;
 
-const PILL = "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-tight";
-
 // Icon-sized controls keep a 44px hit area via an invisible ::before.
 const HIT_AREA = "before:absolute before:-inset-1.5 before:content-['']";
 
@@ -114,11 +112,6 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
             <PriceTag amount={artwork.customerPrice} className="text-base" showGstNote />
             {status && <span className="text-xs text-muted-foreground">{status}</span>}
           </p>
-          {artwork.insured && (
-            <div className="mt-auto flex flex-wrap gap-1.5 pt-3 pr-10 pb-1">
-              <span className={cn(PILL, "border-gold/50 text-gold-bright")}>Insured</span>
-            </div>
-          )}
         </div>
       </Link>
 

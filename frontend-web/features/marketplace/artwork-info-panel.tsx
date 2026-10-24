@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   BadgeCheck,
   Heart,
-  Info,
   ScrollText,
-  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWishlistStore } from "@/store/useWishlistStore";
@@ -43,7 +40,7 @@ interface ArtworkInfoPanelProps {
 }
 
 // The single client "island" holding every interactive affordance on the
-// Artwork Detail page (wishlist toggle, insurance explainer disclosure) —
+// Artwork Detail page (wishlist toggle) —
 // per SAD §5.6, static content (title, metadata, description) renders
 // through this same component for simplicity (the page is small enough that
 // splitting it further would be more files than the situation warrants),
@@ -52,7 +49,6 @@ export function ArtworkInfoPanel({
   artwork,
   verification,
 }: ArtworkInfoPanelProps) {
-  const [insuranceOpen, setInsuranceOpen] = useState(false);
   const isWishlisted = useWishlistStore((state) => state.has(artwork.id));
   const toggleWishlist = useWishlistStore((state) => state.toggle);
 
@@ -98,29 +94,6 @@ export function ArtworkInfoPanel({
           >
             Exclusive
           </span>
-        )}
-
-        {artwork.insured && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setInsuranceOpen((open) => !open)}
-              aria-expanded={insuranceOpen}
-              className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-card px-3 py-1.5 text-xs font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
-            >
-              <ShieldCheck className="size-3.5" strokeWidth={2} />
-              Insured
-              <Info className="size-3" strokeWidth={2} />
-            </button>
-
-            {insuranceOpen && (
-              <div className="absolute top-full left-0 z-20 mt-2 w-64 rounded-md border border-border bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-lg">
-                Transit insurance is recommended for artworks valued above
-                ₹20,000, in partnership with HDFC ERGO. This piece qualifies and
-                ships fully covered.
-              </div>
-            )}
-          </div>
         )}
       </div>
 

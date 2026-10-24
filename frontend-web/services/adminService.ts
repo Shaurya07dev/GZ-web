@@ -150,7 +150,7 @@ function toAdminHolding(h: AdminHoldingDto): AggregatorHolding & { artwork: Artw
     appreciated: h.appreciated,
     priceWarning: h.priceWarning,
     extensionRequest: h.extensionRequest,
-    artwork: h.artwork ? toArtworkSummary(h.artwork) : { id: h.artworkId, title: "Artwork", artistId: "", artistName: "", verifiedArtist: false, category: "", medium: "", customerPrice: 0, thumbnailUrl: "/artworks/framed-painting.png", insured: false, status: "marketplace", listingType: "marketplace_and_aggregator" },
+    artwork: h.artwork ? toArtworkSummary(h.artwork) : { id: h.artworkId, title: "Artwork", artistId: "", artistName: "", verifiedArtist: false, category: "", medium: "", customerPrice: 0, thumbnailUrl: "/artworks/framed-painting.png", status: "marketplace", listingType: "marketplace_and_aggregator" },
   };
 }
 
@@ -301,11 +301,6 @@ export const adminService = {
   // an admin reviewing a submission is exactly when they judge it.
   setArtworkRarity: (id: string, rarity: ArtworkRarity): Promise<Artwork> => adminApi.setArtworkRarity(id, rarity),
 
-  setArtworkInsuranceStatus: (id: string, insuranceStatus: NonNullable<Artwork["insuranceStatus"]>): Promise<Artwork> => {
-    if (insuranceStatus !== "approved" && insuranceStatus !== "rejected") return Promise.reject(new Error("Only approve or reject can be recorded"));
-    return adminApi.setArtworkInsuranceStatus(id, insuranceStatus);
-  },
-
   listCategories: (): Promise<Category[]> => adminApi.listCategories(),
 
   createCategory: (name: string): Promise<Category> => adminApi.createCategory(name),
@@ -401,8 +396,6 @@ export const adminService = {
       markupPercent: Math.round((rates.platformMarkup ?? 0) * 100),
       gstPercent: Math.round((rates.gstRate ?? 0) * 100),
       minWithdrawalAmount: paiseToRupees(rates.minWithdrawalPaise ?? 0),
-      // Insurance is recommended above this display price (MOU §10); a policy constant, not a rate.
-      insuranceThreshold: 20000,
       aggregatorCommissionPercent: Math.round((rates.aggregatorCommissionRate ?? 0) * 100),
     };
   },

@@ -22,7 +22,6 @@ export interface ArtworkDto {
   yearCreated: number | null;
   images: { url: string; thumbnailUrl: string | null; altText: string | null; sortOrder: number }[];
   displayPricePaise: number;
-  insured: boolean;
   /** Marked one-of-a-kind at submission. Absent on fixture responses. */
   exclusive?: boolean;
   status: ArtworkStatus;
@@ -113,7 +112,6 @@ export function toArtwork(dto: ArtworkDto): Artwork {
     medium: dto.medium,
     customerPrice: paiseToRupees(dto.displayPricePaise),
     thumbnailUrl: cover?.thumbnailUrl ?? ARTWORK_PLACEHOLDER_IMAGE,
-    insured: dto.insured,
     exclusive: dto.exclusive ?? false,
     status: dto.status,
     listingType: dto.listingType,
@@ -148,7 +146,6 @@ export function toArtworkSummary(dto: ArtworkDto): ArtworkSummary {
     medium: a.medium,
     customerPrice: a.customerPrice,
     thumbnailUrl: a.thumbnailUrl,
-    insured: a.insured,
     exclusive: a.exclusive,
     status: a.status,
     listingType: a.listingType,

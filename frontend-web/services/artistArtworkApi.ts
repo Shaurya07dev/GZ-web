@@ -4,7 +4,7 @@
 // artistDashboardService delegates its artwork methods here so the mock
 // file shrinks instead of growing.
 
-import type { Artwork, ArtworkImage, ArtworkPhysical, ArtworkStatus, InsuranceStatus } from "@/types/artwork";
+import type { Artwork, ArtworkImage, ArtworkPhysical, ArtworkStatus } from "@/types/artwork";
 import { ApiError, http } from "@/lib/api";
 import { paiseToRupees, toArtwork, type ArtworkDto } from "@/lib/api-mappers";
 
@@ -14,10 +14,7 @@ export interface OwnerArtworkDto extends ArtworkDto {
   artistNet: { marketplace: number; aggregatorEstimate: number };
   images: (ArtworkDto["images"][number] & { id: string; storagePath: string })[];
   statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
-  insuranceOpted: boolean;
   exclusive: boolean;
-  insuranceNumber: string | null;
-  insuranceStatus: string | null;
   /** The chip's own ID: for the owning artist and admins only, never public. */
   nfcTagUid: string | null;
   nfcLinkedAt: string | null;
@@ -36,23 +33,13 @@ export type OwnerArtwork = Artwork & {
   imageIds: string[];
 };
 
-const INSURANCE_STATUS: Record<string, InsuranceStatus> = {
-  not_submitted: "not_submitted",
-  submitted: "submitted",
-  approved: "approved",
-  rejected: "rejected",
-};
-
 export function toOwnerArtwork(dto: OwnerArtworkDto): OwnerArtwork {
   const base = toArtwork(dto);
   return {
     ...base,
     artistPrice: paiseToRupees(dto.artistPricePaise),
     artistNet: { marketplace: paiseToRupees(dto.artistNet.marketplace), aggregatorEstimate: paiseToRupees(dto.artistNet.aggregatorEstimate) },
-    insured: dto.insuranceOpted || dto.insured,
     exclusive: dto.exclusive,
-    insuranceNumber: dto.insuranceNumber,
-    insuranceStatus: dto.insuranceStatus ? INSURANCE_STATUS[dto.insuranceStatus] : "not_submitted",
     nfcTagUid: dto.nfcTagUid,
     nfcLinkedAt: dto.nfcLinkedAt,
     nfcLockedAt: dto.nfcLockedAt,
@@ -85,9 +72,7 @@ export interface ArtworkWritePayload {
   yearCreated: number;
   artistPrice: number;
   listingType: Artwork["listingType"];
-  insuranceOpted: boolean;
   exclusive: boolean;
-  insuranceNumber: string | null;
   physical: ArtworkPhysical;
   images: SubmitImage[];
 }
@@ -105,8 +90,6 @@ function toBody(p: Omit<ArtworkWritePayload, "images">, mode?: "draft" | "review
     ...(mode ? { mode } : {}),
     artworkType: p.artworkType,
     paintingStyle: p.paintingStyle,
-    insuranceOpted: p.insuranceOpted,
-    insuranceNumber: p.insuranceNumber,
     physical: p.physical,
     exclusive: p.exclusive,
   };

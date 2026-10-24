@@ -76,7 +76,6 @@ export const RATE_GROUPS: RateGroup[] = [
     fields: [
       { key: "minWithdrawalPaise", label: "Minimum withdrawal", unit: "rupees", hint: "Artists and aggregators." },
       { key: "minCustomerWithdrawalPaise", label: "Minimum withdrawal (collector)", unit: "rupees", hint: "Collector wallets." },
-      { key: "insuranceThresholdPaise", label: "Insurance recommended above", unit: "rupees", hint: "Transit insurance is suggested on the upload form at or above this price." },
       { key: "earningsAbove5LThresholdPaise", label: "TDS tracking threshold", unit: "rupees", hint: "Financial-year (April to March) sales at which TDS starts being withheld from an artist. ₹5,00,000." },
       { key: "externalSalePenaltyRate", label: "External-sale fee", unit: "percent", hint: "Charged when an artist sells a listed piece elsewhere." },
       { key: "artistEditWindowDays", label: "Free edit window", unit: "days", hint: "How long an artist may edit a listing after it goes live." },
@@ -102,9 +101,13 @@ export const RATE_GROUPS: RateGroup[] = [
 
 export const FIELD_BY_KEY = new Map(RATE_GROUPS.flatMap((g) => g.fields.map((f) => [f.key, f] as const)));
 
+// Still sent by the API (its rate config requires it) and handed back unchanged
+// on save, but no longer something an admin sets or sees.
+const RETIRED_KEYS = new Set(["insuranceThresholdPaise"]);
+
 /** Rates the API sends that no group claims — rendered read-only under "Other". */
 export function ungroupedKeys(rates: Record<string, unknown>): string[] {
-  return Object.keys(rates).filter((key) => !FIELD_BY_KEY.has(key));
+  return Object.keys(rates).filter((key) => !FIELD_BY_KEY.has(key) && !RETIRED_KEYS.has(key));
 }
 
 export function formatRate(key: string, value: unknown): string {

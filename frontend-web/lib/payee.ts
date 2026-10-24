@@ -7,9 +7,9 @@
 // commission is settled separately afterwards — they never net it off
 // themselves.
 //
-// Placeholder values until the real account is handed over, same as the logo
-// and the insurance partner URL. `PAYEE_UPI_ID` being null is what keeps the
-// checkout from showing a QR that scans to nowhere.
+// Placeholder values until the real account is handed over, same as the logo.
+// `PAYEE_UPI_ID` being null is what keeps the checkout from showing a QR that
+// scans to nowhere.
 
 export const PAYEE = {
   accountName: "GalleryZone Art Ventures Pvt Ltd",
