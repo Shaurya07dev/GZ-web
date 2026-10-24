@@ -76,12 +76,6 @@ export const ARTWORK_FORMATS = [
 ];
 
 export const MAX_ARTWORK_IMAGES = 8;
-export const INSURANCE_RECOMMENDED_THRESHOLD = 20000;
-// Named in the Artist Onboarding Guide. The buy-link is not published yet —
-// when GalleryZone supplies the partner URL, set it here and the form turns
-// the partner name into a link automatically.
-export const INSURANCE_PARTNER = "HDFC ERGO";
-export const INSURANCE_PARTNER_URL: string | null = "https://www.hdfcergo.com/";
 
 // Stock photos pre-filling every image slot so the upload form is always
 // submittable with zero clicks (there's no backend to actually store a

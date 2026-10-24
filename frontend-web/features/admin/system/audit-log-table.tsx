@@ -28,6 +28,7 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   "kyc.rejected": "KYC rejected",
   "gst.approved": "GST approved",
   "gst.rejected": "GST rejected",
+  // Insurance is no longer offered; these stay so history written before that still reads.
   "insurance.approved": "Insurance verified",
   "insurance.rejected": "Insurance rejected",
   "withdrawal.approved": "Withdrawal approved",

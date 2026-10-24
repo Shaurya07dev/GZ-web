@@ -17,7 +17,6 @@ export interface PricingRules {
   nfcTagChargePaise: number;
   subscriptionFeePaise: number;
   deliveryChargePaise: number;
-  insuranceThresholdPaise: number;
   [key: string]: number | unknown;
 }
 

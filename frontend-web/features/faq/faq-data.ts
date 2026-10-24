@@ -100,12 +100,6 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     audience: "artists",
-    question: "Is transit insurance mandatory?",
-    answer:
-      "No. Transit insurance is optional for marketplace listings. For uninsured artwork, the risk remains with the artist. For sales through the aggregator channel, insurance is mandatory and is purchased at the artist's cost. The insurance cost is approximately 1% of the artwork value.",
-  },
-  {
-    audience: "artists",
     question: "What happens if my artwork is not sold within 30 days?",
     answer:
       "The artwork may be moved to the next available aggregator. The customer selling price is reduced by 10%; the artist's original listed price is not reduced.",
@@ -180,7 +174,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     audience: "artists",
     question: "What happens if my artwork is damaged during transit?",
     answer:
-      "If transit insurance has been selected, the applicable insurance process will apply. Without insurance, the procedures state that GalleryZone, its staff, and aggregators bear no liability for transit damage, loss, or theft.",
+      "Loss or damage is reviewed against the condition records, packaging, custody history and delivery records. The reasonable repair cost or substantiated loss is allocated to the party whose negligence, breach or failure to follow the agreed handling requirements caused it, as set out in the Artist MOU (Clause 10).",
   },
   {
     audience: "artists",
@@ -294,10 +288,9 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     audience: "aggregators",
-    question:
-      "What happens if an uninsured artwork is damaged while in my possession?",
+    question: "What happens if an artwork is damaged while in my possession?",
     answer:
-      "The aggregator bears responsibility for damage to uninsured artwork while it is in their possession. If the loss or damage occurs and insurance is applicable, the relevant insurance process will apply.",
+      "Loss, theft or damage while an artwork is in an aggregator's custody is investigated under the condition-audit process in the Aggregator MOU (Clause 7). No party is held responsible just because an incident happened in its possession: responsibility is decided from the condition reports, photographs, packaging and handover records, and the party found responsible pays the documented repair or loss amount.",
   },
   {
     audience: "aggregators",
@@ -360,11 +353,5 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "How do I know a piece is authentic before I buy it?",
     answer:
       "Every listing links to a Certificate of Authenticity, a signed origin declaration, and the artwork's QR passport page, so you can verify its history independently of the listing itself.",
-  },
-  {
-    audience: "buyers",
-    question: "Is my order insured in transit?",
-    answer:
-      "Artwork valued above ₹20,000 is strongly recommended for transit insurance through GalleryZone's partner HDFC ERGO. Look for the insured badge on a listing; delivery charges are billed separately from the artwork price.",
   },
 ];

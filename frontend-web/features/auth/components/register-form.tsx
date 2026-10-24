@@ -249,7 +249,7 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
                       rel="noopener noreferrer"
                       className="text-gold-bright underline underline-offset-2 hover:text-gold"
                     >
-                      Terms of Service
+                      Terms & Conditions
                     </Link>
                   </FieldLabel>
                   <FieldError errors={[fieldState.error]} />

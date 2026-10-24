@@ -115,9 +115,7 @@ export interface SubmitArtworkInput {
   yearCreated: number;
   artistPrice: number;
   listingType: Artwork["listingType"];
-  insuranceOpted: boolean;
   exclusive: boolean;
-  insuranceNumber: string | null;
   physical: ArtworkPhysical;
   images: SubmitImage[];
   mode: "draft" | "review";

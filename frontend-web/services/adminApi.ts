@@ -197,12 +197,6 @@ export const adminApi = {
     return artwork;
   },
 
-  async setArtworkInsuranceStatus(id: string, decision: "approved" | "rejected", reason?: string): Promise<Artwork> {
-    await http.post(`/v1/artworks/${encodeURIComponent(id)}/insurance/${decision === "approved" ? "approve" : "reject"}`, reason ? { reason } : {});
-    const artwork = await adminApi.getArtwork(id);
-    if (!artwork) throw new Error("Artwork not found");
-    return artwork;
-  },
 
   async listUsers(role?: UserRole): Promise<AdminUser[]> {
     const { users } = await http.get<{ users: AdminUserDto[] }>("/v1/admin/users", { params: role ? { role } : {} });

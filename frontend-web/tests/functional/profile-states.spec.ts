@@ -15,7 +15,7 @@ const PROFILE = {
   bankAccountMasked: null, ifsc: null, pickupLine1: null, pickupLine2: null, pickupCity: null, pickupState: null, pickupPincode: null,
   earningsAbove5L: false, socialProofVideoUrl: null, companyName: null,
 };
-const MOU = { acceptance: null, draft: { version: '2026.3', parties: { party: { name: 'Meera Kulkarni', businessName: null, address: null, mobile: null, email: 'meera@example.in', governmentId: null, gstNo: null }, company: { name: 'Anand Rao', designation: 'Director' } }, missing: [], asOf: '2026-09-29T13:15:00.000Z' } };
+const MOU = { acceptance: null, draft: { version: '2026.4', parties: { party: { name: 'Meera Kulkarni', businessName: null, address: null, mobile: null, email: 'meera@example.in', governmentId: null, gstNo: null }, company: { name: 'Anand Rao', designation: 'Director' } }, missing: [], asOf: '2026-09-29T13:15:00.000Z' } };
 
 const cors = { 'access-control-allow-origin': '*' };
 const ok = (body: unknown) => ({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(body) });
@@ -72,9 +72,10 @@ test('login and register show the GalleryZone logo, not a text stand-in', async 
   }
 });
 
-test('the footer links to YouTube', async ({ page }) => {
+test('the footer links to YouTube and X', async ({ page }) => {
   await page.route('**/v1/**', (route) => route.abort());
   await dismissCookieConsent(page);
   await page.goto('/about');
-  await expect(page.getByRole('link', { name: 'YouTube' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'YouTube' })).toHaveAttribute('href', 'https://youtube.com/@officialgalleryzone');
+  await expect(page.getByRole('link', { name: 'X', exact: true })).toHaveAttribute('href', 'https://x.com/Galleryzone_in');
 });

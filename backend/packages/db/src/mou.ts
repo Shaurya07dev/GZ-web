@@ -28,7 +28,7 @@ export type MouParty = "artist" | "aggregator";
  * scripts/gen-mou.mjs), and bumping the matching version here — every signer
  * then has to sign again, and an aggregator can't reserve until they do.
  */
-export const CURRENT_MOU_VERSION: Record<MouParty, string> = { artist: "2026.3", aggregator: "2026.2" };
+export const CURRENT_MOU_VERSION: Record<MouParty, string> = { artist: "2026.4", aggregator: "2026.3" };
 
 /** The counterparty's blanks. Null where the profile has nothing to fill it with. */
 export interface MouPartyDetails {

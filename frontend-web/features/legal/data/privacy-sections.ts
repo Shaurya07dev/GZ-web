@@ -35,7 +35,6 @@ export const privacySections: LegalSection[] = [
       "Payment gateway: to process payments, settlements, and refunds. GalleryZone does not store your full card or payment credentials.",
       "Resend: our transactional email provider, used to deliver account, order, and settlement emails.",
       "Sentry: our error-monitoring provider, used to detect and diagnose bugs. Sentry receives technical error data, not your KYC or payment details.",
-      "HDFC ERGO: our transit-insurance partner, only for shipments where you've opted into transit insurance.",
       "We do not sell your personal information to third parties.",
     ],
   },
