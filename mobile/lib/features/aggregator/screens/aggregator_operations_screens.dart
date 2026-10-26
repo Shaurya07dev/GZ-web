@@ -15,6 +15,7 @@ import '../../shell/portal_widgets.dart';
 import '../providers/aggregator_providers.dart';
 import '../widgets/aggregator_widgets.dart';
 import '../widgets/list_tools.dart';
+import '../widgets/shipment_tracker.dart';
 import 'aggregator_inventory_screen.dart';
 
 /// A sale with the piece it was of and what it earned. Joined once here so the
@@ -33,14 +34,19 @@ class _SaleRow {
 
 /// Sales joined to their artwork and commission. The three loads start together,
 /// so a sale recorded a second ago is here without waiting on a chain of requests.
-final _saleRowsProvider = FutureProvider.autoDispose<List<_SaleRow>>((ref) async {
+final _saleRowsProvider = FutureProvider.autoDispose<List<_SaleRow>>((
+  ref,
+) async {
   final loaded = await Future.wait<Object>([
     ref.watch(aggregatorSalesProvider.future),
     ref.watch(aggregatorCollectionProvider.future),
     ref.watch(aggregatorSaleCommissionsProvider.future),
   ]);
   final sales = loaded[0] as List<AggregatorSale>;
-  final byHoldingId = {for (final view in loaded[1] as List<AggregatorHoldingView>) view.holding.id: view};
+  final byHoldingId = {
+    for (final view in loaded[1] as List<AggregatorHoldingView>)
+      view.holding.id: view,
+  };
   final commissions = loaded[2] as Map<String, double>;
   return [
     for (final sale in sales)
@@ -66,7 +72,11 @@ void _reloadSales(WidgetRef ref) {
 /// `14 Church Street, Bengaluru, Karnataka 560001` - whichever parts there are.
 String _address(DeliveryAddress address) {
   final regionLine = '${address.state} ${address.pincode}'.trim();
-  return [address.line1, address.city, regionLine].where((part) => part.trim().isNotEmpty).join(', ');
+  return [
+    address.line1,
+    address.city,
+    regionLine,
+  ].where((part) => part.trim().isNotEmpty).join(', ');
 }
 
 // --- Orders & sales -------------------------------------------------------------------
@@ -93,8 +103,8 @@ enum _PaymentStatus {
 
 _PaymentStatus _paymentStatusOf(AggregatorSale sale) =>
     sale.paymentRoute == PaymentRoute.cashAtPremises && sale.remittedAt == null
-        ? _PaymentStatus.owed
-        : _PaymentStatus.settled;
+    ? _PaymentStatus.owed
+    : _PaymentStatus.settled;
 
 const _shipmentLabel = {
   ShipmentStatus.preparing: 'Preparing',
@@ -112,10 +122,12 @@ class AggregatorOrdersScreen extends ConsumerStatefulWidget {
   static const path = '/aggregator/dashboard/orders';
 
   @override
-  ConsumerState<AggregatorOrdersScreen> createState() => _AggregatorOrdersScreenState();
+  ConsumerState<AggregatorOrdersScreen> createState() =>
+      _AggregatorOrdersScreenState();
 }
 
-class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen> {
+class _AggregatorOrdersScreenState
+    extends ConsumerState<AggregatorOrdersScreen> {
   final _search = TextEditingController();
   ShipmentStatus? _shipment;
   _DatePreset? _date;
@@ -127,18 +139,24 @@ class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen>
     super.dispose();
   }
 
-  bool get _filtering => _search.text.trim().isNotEmpty || _shipment != null || _date != null || _payment != null;
+  bool get _filtering =>
+      _search.text.trim().isNotEmpty ||
+      _shipment != null ||
+      _date != null ||
+      _payment != null;
 
   void _clear() => setState(() {
-        _search.clear();
-        _shipment = null;
-        _date = null;
-        _payment = null;
-      });
+    _search.clear();
+    _shipment = null;
+    _date = null;
+    _payment = null;
+  });
 
   List<_SaleRow> _visible(List<_SaleRow> rows) {
     final needle = _search.text.trim().toLowerCase();
-    final cutoff = _date == null ? null : DateTime.now().toUtc().subtract(Duration(days: _date!.days));
+    final cutoff = _date == null
+        ? null
+        : DateTime.now().toUtc().subtract(Duration(days: _date!.days));
     return [
       for (final row in rows)
         if ((needle.isEmpty ||
@@ -147,7 +165,8 @@ class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen>
                     .contains(needle)) &&
             (_shipment == null || row.sale.shipmentStatus == _shipment) &&
             (_payment == null || _paymentStatusOf(row.sale) == _payment) &&
-            (cutoff == null || !DateTime.parse(row.sale.soldAt).isBefore(cutoff)))
+            (cutoff == null ||
+                !DateTime.parse(row.sale.soldAt).isBefore(cutoff)))
           row,
     ];
   }
@@ -175,7 +194,8 @@ class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen>
             return EmptyState(
               icon: LucideIcons.shoppingBag,
               title: 'No sales yet',
-              description: 'Recorded sales from your holdings will show up here. When a customer purchases or a '
+              description:
+                  'Recorded sales from your holdings will show up here. When a customer purchases or a '
                   'reservation is converted to a sale, it will appear in this list.',
               action: FilledButton(
                 onPressed: () => context.go(AggregatorBrowseScreen.path),
@@ -218,7 +238,10 @@ class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen>
                           IconButton.outlined(
                             tooltip: 'Clear search and filters',
                             onPressed: _filtering ? _clear : null,
-                            icon: const Icon(LucideIcons.slidersHorizontal, size: 16),
+                            icon: const Icon(
+                              LucideIcons.slidersHorizontal,
+                              size: 16,
+                            ),
                           ),
                         ],
                       ),
@@ -230,22 +253,34 @@ class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen>
                             PillFilter<ShipmentStatus>(
                               label: 'All Shipment',
                               value: _shipment,
-                              options: [for (final s in ShipmentStatus.values) (s, _shipmentLabel[s]!)],
-                              onChanged: (value) => setState(() => _shipment = value),
+                              options: [
+                                for (final s in ShipmentStatus.values)
+                                  (s, _shipmentLabel[s]!),
+                              ],
+                              onChanged: (value) =>
+                                  setState(() => _shipment = value),
                             ),
                             const SizedBox(width: 8),
                             PillFilter<_DatePreset>(
                               label: 'All Dates',
                               value: _date,
-                              options: [for (final d in _DatePreset.values) (d, d.label)],
-                              onChanged: (value) => setState(() => _date = value),
+                              options: [
+                                for (final d in _DatePreset.values)
+                                  (d, d.label),
+                              ],
+                              onChanged: (value) =>
+                                  setState(() => _date = value),
                             ),
                             const SizedBox(width: 8),
                             PillFilter<_PaymentStatus>(
                               label: 'All Status',
                               value: _payment,
-                              options: [for (final p in _PaymentStatus.values) (p, p.label)],
-                              onChanged: (value) => setState(() => _payment = value),
+                              options: [
+                                for (final p in _PaymentStatus.values)
+                                  (p, p.label),
+                              ],
+                              onChanged: (value) =>
+                                  setState(() => _payment = value),
                             ),
                           ],
                         ),
@@ -253,22 +288,36 @@ class _AggregatorOrdersScreenState extends ConsumerState<AggregatorOrdersScreen>
                       const SizedBox(height: 14),
                       if (shown.isEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 36,
+                            horizontal: 16,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(AppRadius.lg),
-                            border: Border.all(color: theme.colorScheme.outline),
+                            border: Border.all(
+                              color: theme.colorScheme.outline,
+                            ),
                           ),
                           child: Column(
                             children: [
-                              Text('No sales match these filters.', style: theme.textTheme.bodyMedium),
-                              TextButton(onPressed: _clear, child: const Text('Clear filters')),
+                              Text(
+                                'No sales match these filters.',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              TextButton(
+                                onPressed: _clear,
+                                child: const Text('Clear filters'),
+                              ),
                             ],
                           ),
                         ),
                     ],
                   );
                 } else if (index == shown.length + 1) {
-                  child = const Padding(padding: EdgeInsets.only(top: 6), child: WalletMechanicsNotice());
+                  child = const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: SettlementMechanicsNotice(),
+                  );
                 } else {
                   child = Padding(
                     padding: const EdgeInsets.only(bottom: 10),
@@ -306,7 +355,11 @@ class _SaleCard extends StatelessWidget {
               if (row.artwork != null) ...[
                 ClipRRect(
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: SizedBox(width: 56, height: 56, child: ArtworkImageView(url: row.artwork!.thumbnailUrl)),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: ArtworkImageView(url: row.artwork!.thumbnailUrl),
+                  ),
                 ),
                 const SizedBox(width: 12),
               ],
@@ -318,16 +371,26 @@ class _SaleCard extends StatelessWidget {
                       row.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    Text(sale.buyerName, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall),
+                    Text(
+                      sale.buyerName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall,
+                    ),
                     const SizedBox(height: 4),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        PriceTag(amount: sale.soldPrice, style: theme.textTheme.bodyMedium),
+                        PriceTag(
+                          amount: sale.soldPrice,
+                          style: theme.textTheme.bodyMedium,
+                        ),
                         ShipmentStatusPill(status: sale.shipmentStatus),
                       ],
                     ),
@@ -360,20 +423,41 @@ void _openDetail(BuildContext context, _SaleRow row) {
         children: [
           Text(row.title, style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
-          Text('Sold to ${sale.buyerName} for ${formatInr(sale.soldPrice)}', style: theme.textTheme.bodySmall),
+          Text(
+            'Sold to ${sale.buyerName} for ${formatInr(sale.soldPrice)}',
+            style: theme.textTheme.bodySmall,
+          ),
           const Divider(height: 28),
           PortalDetailRow(label: 'Buyer email', value: sale.buyerEmail),
           PortalDetailRow(label: 'Buyer phone', value: sale.buyerPhone),
           PortalDetailRow(
             label: 'Delivery mode',
-            value: sale.deliveryMode == DeliveryMode.courier ? 'Courier' : 'Self pickup',
+            value: sale.deliveryMode == DeliveryMode.courier
+                ? 'Courier'
+                : 'Self pickup',
           ),
-          PortalDetailRow(label: 'Commission', value: formatInr(row.commission), gold: true),
-          PortalDetailRow(label: 'Payment', value: _paymentStatusOf(sale).label),
-          PortalDetailRow(label: 'Sold on', value: formatShortDate(sale.soldAt)),
-          PortalDetailRow(label: 'Delivery address', value: _address(sale.deliveryAddress)),
+          PortalDetailRow(
+            label: 'Commission',
+            value: formatInr(row.commission),
+            gold: true,
+          ),
+          PortalDetailRow(
+            label: 'Payment',
+            value: _paymentStatusOf(sale).label,
+          ),
+          PortalDetailRow(
+            label: 'Sold on',
+            value: formatShortDate(sale.soldAt),
+          ),
+          PortalDetailRow(
+            label: 'Delivery address',
+            value: _address(sale.deliveryAddress),
+          ),
           if (sale.courierRef != null && sale.courierRef!.isNotEmpty)
-            PortalDetailRow(label: 'Courier reference', value: sale.courierRef!),
+            PortalDetailRow(
+              label: 'Courier reference',
+              value: sale.courierRef!,
+            ),
         ],
       ),
     ),
@@ -401,10 +485,12 @@ class AggregatorCustomersScreen extends ConsumerStatefulWidget {
   static const path = '/aggregator/dashboard/customers';
 
   @override
-  ConsumerState<AggregatorCustomersScreen> createState() => _AggregatorCustomersScreenState();
+  ConsumerState<AggregatorCustomersScreen> createState() =>
+      _AggregatorCustomersScreenState();
 }
 
-class _AggregatorCustomersScreenState extends ConsumerState<AggregatorCustomersScreen> {
+class _AggregatorCustomersScreenState
+    extends ConsumerState<AggregatorCustomersScreen> {
   final _search = TextEditingController();
   _CustomerSort? _sort;
   bool _descending = false;
@@ -416,31 +502,41 @@ class _AggregatorCustomersScreenState extends ConsumerState<AggregatorCustomersS
   }
 
   void _pick(_CustomerSort sort) => setState(() {
-        if (_sort != sort) {
-          _sort = sort;
-          _descending = false;
-        } else if (!_descending) {
-          _descending = true;
-        } else {
-          _sort = null;
-          _descending = false;
-        }
-      });
+    if (_sort != sort) {
+      _sort = sort;
+      _descending = false;
+    } else if (!_descending) {
+      _descending = true;
+    } else {
+      _sort = null;
+      _descending = false;
+    }
+  });
 
   List<AggregatorCustomer> _visible(List<AggregatorCustomer> all) {
     final needle = _search.text.trim().toLowerCase();
     final shown = [
       for (final customer in all)
-        if (needle.isEmpty || '${customer.buyerName} ${customer.buyerEmail}'.toLowerCase().contains(needle)) customer,
+        if (needle.isEmpty ||
+            '${customer.buyerName} ${customer.buyerEmail}'
+                .toLowerCase()
+                .contains(needle))
+          customer,
     ];
     final sort = _sort;
-    if (sort == null) return shown; // the service's order: biggest spender first
+    if (sort == null) {
+      return shown; // the service's order: biggest spender first
+    }
     int compare(AggregatorCustomer a, AggregatorCustomer b) => switch (sort) {
-          _CustomerSort.name => a.buyerName.toLowerCase().compareTo(b.buyerName.toLowerCase()),
-          _CustomerSort.email => a.buyerEmail.toLowerCase().compareTo(b.buyerEmail.toLowerCase()),
-          _CustomerSort.orders => a.orderCount.compareTo(b.orderCount),
-          _CustomerSort.spend => a.totalSpend.compareTo(b.totalSpend),
-        };
+      _CustomerSort.name => a.buyerName.toLowerCase().compareTo(
+        b.buyerName.toLowerCase(),
+      ),
+      _CustomerSort.email => a.buyerEmail.toLowerCase().compareTo(
+        b.buyerEmail.toLowerCase(),
+      ),
+      _CustomerSort.orders => a.orderCount.compareTo(b.orderCount),
+      _CustomerSort.spend => a.totalSpend.compareTo(b.totalSpend),
+    };
     shown.sort((a, b) => _descending ? compare(b, a) : compare(a, b));
     return shown;
   }
@@ -502,7 +598,9 @@ class _AggregatorCustomersScreenState extends ConsumerState<AggregatorCustomersS
                                 padding: const EdgeInsets.only(right: 8),
                                 child: ChoiceChip(
                                   label: Text(
-                                    _sort == sort ? '${sort.label} ${_descending ? '↓' : '↑'}' : sort.label,
+                                    _sort == sort
+                                        ? '${sort.label} ${_descending ? '↓' : '↑'}'
+                                        : sort.label,
                                   ),
                                   selected: _sort == sort,
                                   onSelected: (_) => _pick(sort),
@@ -532,7 +630,10 @@ class _AggregatorCustomersScreenState extends ConsumerState<AggregatorCustomersS
                                           customer.buyerName,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                         ),
                                       ),
                                       Text(
@@ -542,9 +643,19 @@ class _AggregatorCustomersScreenState extends ConsumerState<AggregatorCustomersS
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  PortalDetailRow(label: 'Email', value: customer.buyerEmail),
-                                  PortalDetailRow(label: 'Phone', value: customer.buyerPhone),
-                                  PortalDetailRow(label: 'Total spend', value: formatInr(customer.totalSpend), gold: true),
+                                  PortalDetailRow(
+                                    label: 'Email',
+                                    value: customer.buyerEmail,
+                                  ),
+                                  PortalDetailRow(
+                                    label: 'Phone',
+                                    value: customer.buyerPhone,
+                                  ),
+                                  PortalDetailRow(
+                                    label: 'Total spend',
+                                    value: formatInr(customer.totalSpend),
+                                    gold: true,
+                                  ),
                                 ],
                               ),
                             ),
@@ -576,8 +687,13 @@ class AggregatorShippingScreen extends ConsumerWidget {
     final collection = ref.watch(aggregatorCollectionProvider);
     final sales = ref.watch(aggregatorSalesProvider);
     final views = collection.value ?? const <AggregatorHoldingView>[];
-    final inbound = views.where((view) => view.holding.status == HoldingStatus.reserved).take(3).toList();
-    final titleOf = {for (final view in views) view.holding.id: view.artwork.title};
+    final inbound = views
+        .where((view) => view.holding.status == HoldingStatus.reserved)
+        .take(3)
+        .toList();
+    final titleOf = {
+      for (final view in views) view.holding.id: view.artwork.title,
+    };
 
     return Scaffold(
       appBar: AppBar(title: const Text('Shipping & logistics')),
@@ -596,14 +712,11 @@ class AggregatorShippingScreen extends ConsumerWidget {
                 children: [
                   Text('Inbound', style: theme.textTheme.titleLarge),
                   const SizedBox(height: 4),
-                  // Illustrative, and said so on screen: the data model has no "in
-                  // transit to the aggregator" state distinct from a holding being
-                  // reserved, so this shows reserved holdings rather than inventing a
-                  // tracking state machine that nothing writes to.
                   const SectionIntro(
-                    text: "Artworks GalleryZone has assigned or you've reserved, en route to your premises. "
-                        "Detailed transit tracking isn't modeled yet — this reflects your currently reserved "
-                        'holdings.',
+                    text:
+                        "Artworks GalleryZone has assigned or you've reserved, en route to your premises. "
+                        'The courier stage and AWB come from ShipRocket; pieces still awaiting pickup show no '
+                        'tracking yet.',
                   ),
                   if (inbound.isEmpty)
                     const EmptyState(
@@ -616,23 +729,40 @@ class AggregatorShippingScreen extends ConsumerWidget {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: PortalCard(
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
-                                child: SizedBox(width: 40, height: 40, child: ArtworkImageView(url: view.artwork.thumbnailUrl)),
+                              Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.sm,
+                                    ),
+                                    child: SizedBox(
+                                      width: 40,
+                                      height: 40,
+                                      child: ArtworkImageView(
+                                        url: view.artwork.thumbnailUrl,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      view.artwork.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  view.artwork.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
+                              const SizedBox(height: 10),
+                              ShipmentTracker(
+                                stage: view.holding.inboundShiprocketStage,
+                                trackingId: view.holding.inboundTrackingId,
+                                carrier: view.holding.inboundCarrier,
                               ),
-                              const SizedBox(width: 8),
-                              const StatusPill(label: 'Due for pickup', color: Color(0xFF38BDF8), icon: LucideIcons.truck),
                             ],
                           ),
                         ),
@@ -643,14 +773,18 @@ class AggregatorShippingScreen extends ConsumerWidget {
                   const SectionIntro(text: 'Post-sale shipments to buyers.'),
                   sales.when(
                     loading: () => const Center(
-                      child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: CircularProgressIndicator(),
+                      ),
                     ),
                     error: (error, stack) => EmptyState(
                       icon: LucideIcons.triangleAlert,
                       title: "Couldn't load your shipments",
                       description: authErrorMessage(error),
                       action: OutlinedButton(
-                        onPressed: () => ref.invalidate(aggregatorSalesProvider),
+                        onPressed: () =>
+                            ref.invalidate(aggregatorSalesProvider),
                         child: const Text('Try again'),
                       ),
                     ),
@@ -665,7 +799,12 @@ class AggregatorShippingScreen extends ConsumerWidget {
                               for (final sale in list)
                                 Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
-                                  child: _ShipmentCard(sale: sale, title: titleOf[sale.holdingId] ?? sale.artworkId),
+                                  child: _ShipmentCard(
+                                    sale: sale,
+                                    title:
+                                        titleOf[sale.holdingId] ??
+                                        sale.artworkId,
+                                  ),
                                 ),
                             ],
                           ),
@@ -707,17 +846,27 @@ class _ShipmentCardState extends ConsumerState<_ShipmentCard> {
     // Dispatching a courier sale is when a tracking reference exists, so it is
     // asked for here. Optional: the API accepts a dispatch without one.
     String? courierRef;
-    if (sale.shipmentStatus == ShipmentStatus.preparing && sale.deliveryMode == DeliveryMode.courier) {
-      final entered = await showDialog<String>(context: context, builder: (context) => const _CourierRefDialog());
+    if (sale.shipmentStatus == ShipmentStatus.preparing &&
+        sale.deliveryMode == DeliveryMode.courier) {
+      final entered = await showDialog<String>(
+        context: context,
+        builder: (context) => const _CourierRefDialog(),
+      );
       if (entered == null) return;
       courierRef = entered;
     }
 
     setState(() => _busy = true);
     try {
-      final updated = await ref.read(aggregatorRepositoryProvider).advanceShipment(sale.id, courierRef: courierRef);
+      final updated = await ref
+          .read(aggregatorRepositoryProvider)
+          .advanceShipment(sale.id, courierRef: courierRef);
       container.invalidate(aggregatorSalesProvider);
-      messenger.showSnackBar(SnackBar(content: Text('Shipment marked ${updated.shipmentStatus.name}')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Shipment marked ${updated.shipmentStatus.name}'),
+        ),
+      );
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     } finally {
@@ -745,7 +894,9 @@ class _ShipmentCardState extends ConsumerState<_ShipmentCard> {
                       widget.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
                       '${sale.buyerName} · '
@@ -758,26 +909,54 @@ class _ShipmentCardState extends ConsumerState<_ShipmentCard> {
                 ),
               ),
               const SizedBox(width: 8),
-              ShipmentStatusPill(status: sale.shipmentStatus),
+              if (sale.shiprocketStage == null)
+                ShipmentStatusPill(status: sale.shipmentStatus),
             ],
           ),
+          if (sale.shiprocketStage != null) ...[
+            const SizedBox(height: 10),
+            ShipmentTracker(
+              stage: sale.shiprocketStage,
+              trackingId: sale.trackingId,
+              carrier: sale.carrier,
+            ),
+          ],
           const SizedBox(height: 6),
-          PortalDetailRow(label: 'Deliver to', value: _address(sale.deliveryAddress)),
-          if (sale.dispatchedAt != null) PortalDetailRow(label: 'Dispatched', value: formatShortDate(sale.dispatchedAt!)),
-          if (sale.deliveredAt != null) PortalDetailRow(label: 'Delivered', value: formatShortDate(sale.deliveredAt!)),
+          PortalDetailRow(
+            label: 'Deliver to',
+            value: _address(sale.deliveryAddress),
+          ),
+          if (sale.dispatchedAt != null)
+            PortalDetailRow(
+              label: 'Dispatched',
+              value: formatShortDate(sale.dispatchedAt!),
+            ),
+          if (sale.deliveredAt != null)
+            PortalDetailRow(
+              label: 'Delivered',
+              value: formatShortDate(sale.deliveredAt!),
+            ),
           // The piece's NFC tag must be locked before it is dispatched (once the gate
           // is enforced); say so before the button is pressed, not after it fails.
-          if (sale.shipmentStatus == ShipmentStatus.preparing && !sale.nfcReady) ...[
+          if (sale.shipmentStatus == ShipmentStatus.preparing &&
+              !sale.nfcReady) ...[
             const SizedBox(height: 8),
             Row(
               key: Key('nfc-unlocked-${sale.id}'),
               children: [
-                const Icon(LucideIcons.lock, size: 13, color: AppColors.destructive),
+                const Icon(
+                  LucideIcons.lock,
+                  size: 13,
+                  color: AppColors.destructive,
+                ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
                     'Unlocked — lock the tag first (open the piece from My Inventory)',
-                    style: theme.textTheme.labelSmall?.copyWith(color: AppColors.destructive, fontWeight: FontWeight.w600),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.destructive,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -836,12 +1015,17 @@ class _CourierRefDialogState extends State<_CourierRefDialog> {
             controller: _controller,
             autofocus: true,
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(labelText: 'Courier reference (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Courier reference (optional)',
+            ),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
           child: const Text('Mark dispatched'),

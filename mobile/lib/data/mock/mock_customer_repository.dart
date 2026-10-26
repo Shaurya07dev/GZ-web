@@ -12,6 +12,7 @@ import 'seed/customer_seed.dart';
 
 const _profileKey = 'customerProfile';
 const _addressesKey = 'addresses';
+
 /// This balance is refund credit and resale proceeds — the collector's own
 /// money, so they can take it out. Lower floor than the artist and aggregator
 /// wallets, which hold earnings rather than returned payments.
@@ -27,12 +28,19 @@ const _artworksKey = 'artworks';
 
 /// The active resale listing for an artwork, if it is being resold rather
 /// than sold by its artist. The distinction decides who gets paid.
-ResaleListing? activeResaleListing(String artworkId) => MockDb.getCollection(
-  _resaleKey,
-  () => const <ResaleListing>[],
-  ResaleListing.fromJson,
-  (l) => l.toJson(),
-).where((l) => l.artworkId == artworkId && l.status == ResaleListingStatus.active).firstOrNull;
+ResaleListing? activeResaleListing(String artworkId) =>
+    MockDb.getCollection(
+          _resaleKey,
+          () => const <ResaleListing>[],
+          ResaleListing.fromJson,
+          (l) => l.toJson(),
+        )
+        .where(
+          (l) =>
+              l.artworkId == artworkId &&
+              l.status == ResaleListingStatus.active,
+        )
+        .firstOrNull;
 
 /// Credits the reseller's *pending* balance and closes their listing.
 ///
@@ -40,81 +48,71 @@ ResaleListing? activeResaleListing(String artworkId) => MockDb.getCollection(
 /// the artist who made it — crediting the artist twice for one artwork would
 /// be the easy bug here. Released on delivery, like every other credit in
 /// this app.
-void creditSellerForResale({required ResaleListing listing, required double amount}) {
+void creditSellerForResale({
+  required ResaleListing listing,
+  required double amount,
+}) {
   final listings = MockDb.getCollection(
     _resaleKey,
     () => const <ResaleListing>[],
     ResaleListing.fromJson,
     (l) => l.toJson(),
   );
-  MockDb.setCollection(
-    _resaleKey,
-    [
-      for (final l in listings)
-        l.id == listing.id ? l.copyWith(status: ResaleListingStatus.sold) : l,
-    ],
-    (l) => l.toJson(),
-  );
+  MockDb.setCollection(_resaleKey, [
+    for (final l in listings)
+      l.id == listing.id ? l.copyWith(status: ResaleListingStatus.sold) : l,
+  ], (l) => l.toJson());
 
   final now = DateTime.now();
   final wallet = _readCustomerWallet();
-  MockDb.setCollection(
-    _walletKey,
-    [wallet.copyWith(pendingBalance: wallet.pendingBalance + amount)],
-    (w) => w.toJson(),
-  );
-  MockDb.setCollection(
-    _walletTransactionsKey,
-    [
-      WalletTransaction(
-        id: 'wt-${now.microsecondsSinceEpoch}',
-        type: WalletTransactionType.settlement,
-        label: 'Resale pending: listing ${listing.id}',
-        amount: amount,
-        date: now.toIso8601String().substring(0, 10),
-        status: WalletTransactionStatus.pending,
-      ),
-      ..._readCustomerTransactions(),
-    ],
-    (t) => t.toJson(),
-  );
+  MockDb.setCollection(_walletKey, [
+    wallet.copyWith(pendingBalance: wallet.pendingBalance + amount),
+  ], (w) => w.toJson());
+  MockDb.setCollection(_walletTransactionsKey, [
+    WalletTransaction(
+      id: 'wt-${now.microsecondsSinceEpoch}',
+      type: WalletTransactionType.settlement,
+      label: 'Resale pending: listing ${listing.id}',
+      amount: amount,
+      date: now.toIso8601String().substring(0, 10),
+      status: WalletTransactionStatus.pending,
+    ),
+    ..._readCustomerTransactions(),
+  ], (t) => t.toJson());
 }
 
 /// Moves that pending resale credit into the withdrawable balance.
-void settleSellerForResale({required String listingId, required double amount}) {
+void settleSellerForResale({
+  required String listingId,
+  required double amount,
+}) {
   final wallet = _readCustomerWallet();
   if (wallet.pendingBalance < amount) return;
 
-  MockDb.setCollection(
-    _walletKey,
-    [
-      wallet.copyWith(
-        pendingBalance: wallet.pendingBalance - amount,
-        balance: wallet.balance + amount,
-      ),
-    ],
-    (w) => w.toJson(),
-  );
+  MockDb.setCollection(_walletKey, [
+    wallet.copyWith(
+      pendingBalance: wallet.pendingBalance - amount,
+      balance: wallet.balance + amount,
+    ),
+  ], (w) => w.toJson());
 
   final transactions = _readCustomerTransactions();
   final index = transactions.indexWhere(
-    (t) => t.status == WalletTransactionStatus.pending && t.label.contains(listingId),
+    (t) =>
+        t.status == WalletTransactionStatus.pending &&
+        t.label.contains(listingId),
   );
   if (index == -1) return;
-  MockDb.setCollection(
-    _walletTransactionsKey,
-    [
-      for (var i = 0; i < transactions.length; i++)
-        if (i == index)
-          transactions[i].copyWith(
-            status: WalletTransactionStatus.completed,
-            label: 'Resale settled: listing $listingId',
-          )
-        else
-          transactions[i],
-    ],
-    (t) => t.toJson(),
-  );
+  MockDb.setCollection(_walletTransactionsKey, [
+    for (var i = 0; i < transactions.length; i++)
+      if (i == index)
+        transactions[i].copyWith(
+          status: WalletTransactionStatus.completed,
+          label: 'Resale settled: listing $listingId',
+        )
+      else
+        transactions[i],
+  ], (t) => t.toJson());
 }
 
 WalletSummary _readCustomerWallet() => MockDb.getCollection(
@@ -135,52 +133,67 @@ class MockCustomerRepository implements CustomerRepository {
   /// `MockDb` stores collections, and the profile/wallet are single objects —
   /// they go in as one-element lists rather than growing the storage layer a
   /// second shape for two values.
-  T _readSingle<T>(String key, T Function() seed, T Function(Map<String, dynamic>) fromJson,
-          Map<String, dynamic> Function(T) toJson) =>
-      MockDb.getCollection(key, () => [seed()], fromJson, toJson).first;
+  T _readSingle<T>(
+    String key,
+    T Function() seed,
+    T Function(Map<String, dynamic>) fromJson,
+    Map<String, dynamic> Function(T) toJson,
+  ) => MockDb.getCollection(key, () => [seed()], fromJson, toJson).first;
 
-  void _writeSingle<T>(String key, T value, Map<String, dynamic> Function(T) toJson) =>
-      MockDb.setCollection(key, [value], toJson);
+  void _writeSingle<T>(
+    String key,
+    T value,
+    Map<String, dynamic> Function(T) toJson,
+  ) => MockDb.setCollection(key, [value], toJson);
 
-  List<Address> _readAddresses() =>
-      MockDb.getCollection(_addressesKey, seedAddresses, Address.fromJson, (a) => a.toJson());
+  List<Address> _readAddresses() => MockDb.getCollection(
+    _addressesKey,
+    seedAddresses,
+    Address.fromJson,
+    (a) => a.toJson(),
+  );
 
-  List<Order> _readOrders() =>
-      MockDb.getCollection(_ordersKey, seedOrders, Order.fromJson, (o) => o.toJson());
+  List<Order> _readOrders() => MockDb.getCollection(
+    _ordersKey,
+    seedOrders,
+    Order.fromJson,
+    (o) => o.toJson(),
+  );
 
   List<Artwork> _readArtworks() => MockDb.getCollection(
-        _artworksKey,
-        seedArtworksCollection,
-        Artwork.fromJson,
-        (a) => a.toJson(),
-      );
+    _artworksKey,
+    seedArtworksCollection,
+    Artwork.fromJson,
+    (a) => a.toJson(),
+  );
 
   List<ResaleListing> _readResale() => MockDb.getCollection(
-        _resaleKey,
-        () => const <ResaleListing>[],
-        ResaleListing.fromJson,
-        (l) => l.toJson(),
-      );
+    _resaleKey,
+    () => const <ResaleListing>[],
+    ResaleListing.fromJson,
+    (l) => l.toJson(),
+  );
 
   List<SupportTicket> _readTickets() => MockDb.getCollection(
-        _supportKey,
-        seedCustomerSupportTickets,
-        SupportTicket.fromJson,
-        (t) => t.toJson(),
-      );
+    _supportKey,
+    seedCustomerSupportTickets,
+    SupportTicket.fromJson,
+    (t) => t.toJson(),
+  );
 
   @override
   Future<CustomerProfile> getProfile() => mockDelay(
-        () => _readSingle(
-          _profileKey,
-          seedCustomerProfile,
-          CustomerProfile.fromJson,
-          (p) => p.toJson(),
-        ),
-      );
+    () => _readSingle(
+      _profileKey,
+      seedCustomerProfile,
+      CustomerProfile.fromJson,
+      (p) => p.toJson(),
+    ),
+  );
 
   @override
-  Future<CustomerProfile> updateProfile(CustomerProfile profile) => mockDelay(() {
+  Future<CustomerProfile> updateProfile(CustomerProfile profile) =>
+      mockDelay(() {
         // Unlike the web mock — which resolves an updated object without
         // persisting it, forcing every call site to patch its query cache by
         // hand — this writes through. A repository that silently discards a
@@ -194,10 +207,15 @@ class MockCustomerRepository implements CustomerRepository {
 
   @override
   Future<Address> addAddress(Address address) => mockDelay(() {
-        final created = address.copyWith(id: 'addr-${DateTime.now().microsecondsSinceEpoch}');
-        MockDb.setCollection(_addressesKey, [..._readAddresses(), created], (a) => a.toJson());
-        return created;
-      });
+    final created = address.copyWith(
+      id: 'addr-${DateTime.now().microsecondsSinceEpoch}',
+    );
+    MockDb.setCollection(_addressesKey, [
+      ..._readAddresses(),
+      created,
+    ], (a) => a.toJson());
+    return created;
+  });
 
   @override
   Future<Address> updateAddress(Address address) {
@@ -218,7 +236,9 @@ class MockCustomerRepository implements CustomerRepository {
   @override
   Future<void> deleteAddress(String id) {
     final addresses = _readAddresses();
-    if (!addresses.any((a) => a.id == id)) return mockError('Address "$id" not found');
+    if (!addresses.any((a) => a.id == id)) {
+      return mockError('Address "$id" not found');
+    }
     return mockDelay(() {
       MockDb.setCollection(
         _addressesKey,
@@ -230,23 +250,23 @@ class MockCustomerRepository implements CustomerRepository {
 
   @override
   Future<WalletSummary> getWallet() => mockDelay(
-        () => _readSingle(
-          _walletKey,
-          seedCustomerWallet,
-          WalletSummary.fromJson,
-          (w) => w.toJson(),
-        ),
-      );
+    () => _readSingle(
+      _walletKey,
+      seedCustomerWallet,
+      WalletSummary.fromJson,
+      (w) => w.toJson(),
+    ),
+  );
 
   @override
   Future<List<WalletTransaction>> listWalletTransactions() => mockDelay(
-        () => MockDb.getCollection(
-          _walletTransactionsKey,
-          seedCustomerWalletTransactions,
-          WalletTransaction.fromJson,
-          (t) => t.toJson(),
-        ),
-      );
+    () => MockDb.getCollection(
+      _walletTransactionsKey,
+      seedCustomerWalletTransactions,
+      WalletTransaction.fromJson,
+      (t) => t.toJson(),
+    ),
+  );
 
   @override
   Future<WalletTransaction> requestWithdrawal(double amount) {
@@ -266,7 +286,9 @@ class MockCustomerRepository implements CustomerRepository {
 
     final wallet = _readCustomerWallet();
     if (amount < minimumCustomerWithdrawal) {
-      return mockError('Minimum withdrawal is ${formatInr(minimumCustomerWithdrawal)}');
+      return mockError(
+        'Minimum withdrawal is ${formatInr(minimumCustomerWithdrawal)}',
+      );
     }
     if (amount > wallet.balance) return mockError('Exceeds your balance');
 
@@ -281,45 +303,45 @@ class MockCustomerRepository implements CustomerRepository {
       final transaction = WalletTransaction(
         id: 'wt-${now.microsecondsSinceEpoch}',
         type: WalletTransactionType.withdrawal,
-        label: 'Withdrawal to bank '
+        label:
+            'Withdrawal to bank '
             '${account.substring(account.length < 4 ? 0 : account.length - 4)}',
         amount: -amount,
         date: now.toIso8601String().substring(0, 10),
         status: WalletTransactionStatus.pending,
       );
-      MockDb.setCollection(
-        _walletTransactionsKey,
-        [
-          transaction,
-          ...MockDb.getCollection(
-            _walletTransactionsKey,
-            seedCustomerWalletTransactions,
-            WalletTransaction.fromJson,
-            (t) => t.toJson(),
-          ),
-        ],
-        (t) => t.toJson(),
-      );
+      MockDb.setCollection(_walletTransactionsKey, [
+        transaction,
+        ...MockDb.getCollection(
+          _walletTransactionsKey,
+          seedCustomerWalletTransactions,
+          WalletTransaction.fromJson,
+          (t) => t.toJson(),
+        ),
+      ], (t) => t.toJson());
       return transaction;
     });
   }
 
   @override
   Future<List<CollectionItem>> listCollection() => mockDelay(() {
-        final artworks = {for (final artwork in _readArtworks()) artwork.id: artwork};
-        return [
-          for (final order in _readOrders())
-            if (order.status == OrderStatus.delivered && artworks[order.artworkId] != null)
-              CollectionItem(order: order, artwork: artworks[order.artworkId]!),
-        ];
-      });
+    final artworks = {
+      for (final artwork in _readArtworks()) artwork.id: artwork,
+    };
+    return [
+      for (final order in _readOrders())
+        if (order.status == OrderStatus.delivered &&
+            artworks[order.artworkId] != null)
+          CollectionItem(order: order, artwork: artworks[order.artworkId]!),
+    ];
+  });
 
   List<PhysicalCoaRequest> _readCoaRequests() => MockDb.getCollection(
-        _physicalCoaKey,
-        () => const <PhysicalCoaRequest>[],
-        PhysicalCoaRequest.fromJson,
-        (r) => r.toJson(),
-      );
+    _physicalCoaKey,
+    () => const <PhysicalCoaRequest>[],
+    PhysicalCoaRequest.fromJson,
+    (r) => r.toJson(),
+  );
 
   @override
   Future<List<PhysicalCoaRequest>> listPhysicalCoaRequests() =>
@@ -330,13 +352,17 @@ class MockCustomerRepository implements CustomerRepository {
     required String artworkId,
     required DeliveryAddress delivery,
   }) {
-    final deliveryAddress = '${delivery.line1}, ${delivery.city} ${delivery.pincode}';
+    final deliveryAddress =
+        '${delivery.line1}, ${delivery.city} ${delivery.pincode}';
     final artwork = _readArtworks().where((a) => a.id == artworkId).firstOrNull;
     if (artwork == null) return mockError('Artwork not found');
     if (_readCoaRequests().any(
-      (r) => r.artworkId == artworkId && r.status == PhysicalCoaStatus.requested,
+      (r) =>
+          r.artworkId == artworkId && r.status == PhysicalCoaStatus.requested,
     )) {
-      return mockError('A certificate for this piece has already been requested');
+      return mockError(
+        'A certificate for this piece has already been requested',
+      );
     }
 
     return mockDelay(() {
@@ -358,11 +384,10 @@ class MockCustomerRepository implements CustomerRepository {
       );
       // One shared collection, written by the collector and read by the
       // artist — the same arrangement as `artworks` and `holdings`.
-      MockDb.setCollection(
-        _physicalCoaKey,
-        [request, ..._readCoaRequests()],
-        (r) => r.toJson(),
-      );
+      MockDb.setCollection(_physicalCoaKey, [
+        request,
+        ..._readCoaRequests(),
+      ], (r) => r.toJson());
       return request;
     });
   }
@@ -390,7 +415,10 @@ class MockCustomerRepository implements CustomerRepository {
         status: ResaleListingStatus.active,
         listedAt: DateTime.now().toIso8601String(),
       );
-      MockDb.setCollection(_resaleKey, [listing, ..._readResale()], (l) => l.toJson());
+      MockDb.setCollection(_resaleKey, [
+        listing,
+        ..._readResale(),
+      ], (l) => l.toJson());
       // A listed piece goes back on the marketplace at the seller's asking
       // price. Without this the listing would be a private note to nobody —
       // there is no separate resale storefront, and building one to hold a
@@ -407,25 +435,23 @@ class MockCustomerRepository implements CustomerRepository {
     final artwork = artworks.where((a) => a.id == artworkId).firstOrNull;
     if (artwork == null) return;
     final now = DateTime.now().toIso8601String();
-    final status = price == null ? ArtworkStatus.delivered : ArtworkStatus.marketplace;
-    MockDb.setCollection(
-      _artworksKey,
-      [
-        for (final a in artworks)
-          if (a.id != artworkId)
-            a
-          else
-            a.copyWith(
-              status: status,
-              customerPrice: price ?? a.customerPrice,
-              statusHistory: [
-                ...a.statusHistory,
-                ArtworkStatusEvent(status: status, changedAt: now),
-              ],
-            ),
-      ],
-      (a) => a.toJson(),
-    );
+    final status = price == null
+        ? ArtworkStatus.delivered
+        : ArtworkStatus.marketplace;
+    MockDb.setCollection(_artworksKey, [
+      for (final a in artworks)
+        if (a.id != artworkId)
+          a
+        else
+          a.copyWith(
+            status: status,
+            customerPrice: price ?? a.customerPrice,
+            statusHistory: [
+              ...a.statusHistory,
+              ArtworkStatusEvent(status: status, changedAt: now),
+            ],
+          ),
+    ], (a) => a.toJson());
   }
 
   @override
@@ -466,7 +492,10 @@ class MockCustomerRepository implements CustomerRepository {
         status: SupportTicketStatus.open,
         createdAt: DateTime.now().toIso8601String(),
       );
-      MockDb.setCollection(_supportKey, [ticket, ..._readTickets()], (t) => t.toJson());
+      MockDb.setCollection(_supportKey, [
+        ticket,
+        ..._readTickets(),
+      ], (t) => t.toJson());
       return ticket;
     });
   }

@@ -78,53 +78,53 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     return AuthScaffold(
       child: switch (_state) {
         _VerifyState.pending => Column(
-            children: [
-              CircularProgressIndicator(color: theme.colorScheme.tertiary),
-              const SizedBox(height: 20),
-              const AuthFormHeader(
-                title: 'Verifying your email…',
-                description: 'This should only take a moment.',
-                centered: true,
-              ),
-            ],
-          ),
-        _VerifyState.success => AuthResultPanel(
-            icon: LucideIcons.checkCircle2,
-            title: 'Email verified',
-            description: Text('Redirecting you to sign in in ${_countdown}s…'),
-            children: [
-              SizedBox(
-                width: 220,
-                height: 44,
-                child: FilledButton(
-                  onPressed: () => context.go(LoginScreen.path),
-                  child: const Text('Continue to Login'),
-                ),
-              ),
-            ],
-          ),
-        _VerifyState.error => AuthResultPanel(
-            icon: LucideIcons.mailWarning,
-            title: 'This link is invalid or has expired',
-            isError: true,
-            description: const Text(
-              'Verification links only work once. Request a fresh one below.',
+          children: [
+            CircularProgressIndicator(color: theme.colorScheme.tertiary),
+            const SizedBox(height: 20),
+            const AuthFormHeader(
+              title: 'Verifying your email…',
+              description: 'This should only take a moment.',
+              centered: true,
             ),
-            children: [
-              SizedBox(
-                width: 240,
-                height: 44,
-                child: FilledButton(
-                  onPressed: _verify,
-                  child: const Text('Resend verification email'),
-                ),
-              ),
-              TextButton(
+          ],
+        ),
+        _VerifyState.success => AuthResultPanel(
+          icon: LucideIcons.checkCircle2,
+          title: 'Email verified',
+          description: Text('Redirecting you to sign in in ${_countdown}s…'),
+          children: [
+            SizedBox(
+              width: 220,
+              height: 44,
+              child: FilledButton(
                 onPressed: () => context.go(LoginScreen.path),
-                child: const Text('Back to sign in'),
+                child: const Text('Continue to Login'),
               ),
-            ],
+            ),
+          ],
+        ),
+        _VerifyState.error => AuthResultPanel(
+          icon: LucideIcons.mailWarning,
+          title: 'This link is invalid or has expired',
+          isError: true,
+          description: const Text(
+            'Verification links only work once. Request a fresh one below.',
           ),
+          children: [
+            SizedBox(
+              width: 240,
+              height: 44,
+              child: FilledButton(
+                onPressed: _verify,
+                child: const Text('Resend verification email'),
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.go(LoginScreen.path),
+              child: const Text('Back to sign in'),
+            ),
+          ],
+        ),
       },
     );
   }

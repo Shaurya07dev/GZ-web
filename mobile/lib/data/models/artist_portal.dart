@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../core/postal.dart';
 import 'artwork.dart' show ReviewStatus;
 
 // MouAcceptance lives in mou.dart now; re-exported so every file that took it
@@ -36,7 +37,8 @@ abstract class ActivityEntry with _$ActivityEntry {
     required String time,
   }) = _ActivityEntry;
 
-  factory ActivityEntry.fromJson(Map<String, dynamic> json) => _$ActivityEntryFromJson(json);
+  factory ActivityEntry.fromJson(Map<String, dynamic> json) =>
+      _$ActivityEntryFromJson(json);
 }
 
 /// The Early Artist Program: no charge for the first six months after joining,
@@ -53,7 +55,8 @@ abstract class FreeAccess with _$FreeAccess {
     @Default(true) bool active,
   }) = _FreeAccess;
 
-  factory FreeAccess.fromJson(Map<String, dynamic> json) => _$FreeAccessFromJson(json);
+  factory FreeAccess.fromJson(Map<String, dynamic> json) =>
+      _$FreeAccessFromJson(json);
 }
 
 /// The artist's own KYC/payout record. Distinct from [ArtistProfile] in
@@ -109,6 +112,7 @@ abstract class ArtistProfileDetails with _$ArtistProfileDetails {
     @Default('') String pickupLine2,
     @Default('') String pickupCity,
     @Default('') String pickupState,
+    @Default('IN') String pickupCountry,
     @Default('') String pickupPincode,
   }) = _ArtistProfileDetails;
 
@@ -121,7 +125,7 @@ abstract class ArtistProfileDetails with _$ArtistProfileDetails {
       pickupLine1.trim().isNotEmpty &&
       pickupCity.trim().isNotEmpty &&
       pickupState.trim().isNotEmpty &&
-      pickupPincode.trim().length == 6;
+      isPostalValid(pickupCountry, pickupPincode);
 
   factory ArtistProfileDetails.fromJson(Map<String, dynamic> json) =>
       _$ArtistProfileDetailsFromJson(json);
@@ -136,7 +140,8 @@ abstract class ArtistSettings with _$ArtistSettings {
     required bool notifyNewMessage,
   }) = _ArtistSettings;
 
-  factory ArtistSettings.fromJson(Map<String, dynamic> json) => _$ArtistSettingsFromJson(json);
+  factory ArtistSettings.fromJson(Map<String, dynamic> json) =>
+      _$ArtistSettingsFromJson(json);
 }
 
 enum SettlementStatus { pending, processed, failed }
@@ -161,7 +166,8 @@ abstract class Settlement with _$Settlement {
     String? releaseAfter,
   }) = _Settlement;
 
-  factory Settlement.fromJson(Map<String, dynamic> json) => _$SettlementFromJson(json);
+  factory Settlement.fromJson(Map<String, dynamic> json) =>
+      _$SettlementFromJson(json);
 }
 
 @freezed
@@ -176,7 +182,8 @@ abstract class MessageThread with _$MessageThread {
     required String receivedAt,
   }) = _MessageThread;
 
-  factory MessageThread.fromJson(Map<String, dynamic> json) => _$MessageThreadFromJson(json);
+  factory MessageThread.fromJson(Map<String, dynamic> json) =>
+      _$MessageThreadFromJson(json);
 }
 
 enum HoldingStatus {
@@ -199,6 +206,16 @@ enum AssignmentSource {
 }
 
 enum ExtensionStatus { pending, approved, declined }
+
+/// The four public parcel stages GalleryZone receives from ShipRocket.
+enum ShiprocketStage {
+  pickup,
+  @JsonValue('in_transit')
+  inTransit,
+  @JsonValue('out_for_delivery')
+  outForDelivery,
+  delivered,
+}
 
 /// An aggregator's request to keep a piece past its thirty days, with their
 /// written assurance that it will sell. GalleryZone decides each time.
@@ -274,6 +291,11 @@ abstract class AggregatorHolding with _$AggregatorHolding {
     /// The latest request to keep the piece past its window, and GalleryZone's
     /// answer.
     HoldingExtensionRequest? extensionRequest,
+
+    /// Live ShipRocket tracking for the artist-to-aggregator leg.
+    ShiprocketStage? inboundShiprocketStage,
+    String? inboundTrackingId,
+    String? inboundCarrier,
   }) = _AggregatorHolding;
 
   factory AggregatorHolding.fromJson(Map<String, dynamic> json) =>
@@ -282,9 +304,11 @@ abstract class AggregatorHolding with _$AggregatorHolding {
 
 @freezed
 abstract class RevenuePoint with _$RevenuePoint {
-  const factory RevenuePoint({required String month, required double amount}) = _RevenuePoint;
+  const factory RevenuePoint({required String month, required double amount}) =
+      _RevenuePoint;
 
-  factory RevenuePoint.fromJson(Map<String, dynamic> json) => _$RevenuePointFromJson(json);
+  factory RevenuePoint.fromJson(Map<String, dynamic> json) =>
+      _$RevenuePointFromJson(json);
 }
 
 enum VerificationTierStatus { complete, active, locked }

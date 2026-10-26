@@ -39,7 +39,11 @@ class PayeeDetails extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(LucideIcons.landmark, size: 16, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.landmark,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -47,8 +51,9 @@ class PayeeDetails extends StatelessWidget {
                   children: [
                     Text(
                       'Pay GalleryZone directly',
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -64,7 +69,11 @@ class PayeeDetails extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const _CopyRow(label: 'Account name', value: Payee.accountName),
-          const _CopyRow(label: 'Account number', value: Payee.accountNumber, mono: true),
+          const _CopyRow(
+            label: 'Account number',
+            value: Payee.accountNumber,
+            mono: true,
+          ),
           const _CopyRow(label: 'IFSC', value: Payee.ifsc, mono: true),
           _PlainRow(label: 'Bank', value: '${Payee.bankName}, ${Payee.branch}'),
           const Padding(
@@ -84,7 +93,11 @@ class PayeeDetails extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.qrCode, size: 26, color: theme.colorScheme.outline),
+                Icon(
+                  LucideIcons.qrCode,
+                  size: 26,
+                  color: theme.colorScheme.outline,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -92,16 +105,19 @@ class PayeeDetails extends StatelessWidget {
                     children: [
                       Text(
                         upiIntent != null ? 'Scan to pay by UPI' : 'UPI QR',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(fontWeight: FontWeight.w500),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         upiIntent != null
                             ? 'Scan with any UPI app to pay the exact amount.'
                             : 'Appears here once the live UPI ID is connected. '
-                                'Until then, use the account details above.',
-                        style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
+                                  'Until then, use the account details above.',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          height: 1.45,
+                        ),
                       ),
                     ],
                   ),
@@ -116,7 +132,11 @@ class PayeeDetails extends StatelessWidget {
 }
 
 class _PlainRow extends StatelessWidget {
-  const _PlainRow({required this.label, required this.value, this.mono = false});
+  const _PlainRow({
+    required this.label,
+    required this.value,
+    this.mono = false,
+  });
 
   final String label;
   final String value;
@@ -136,11 +156,14 @@ class _PlainRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: (mono ? theme.textTheme.labelSmall : theme.textTheme.bodySmall)
-                  ?.copyWith(
-                fontFamily: mono ? 'monospace' : null,
-                color: theme.colorScheme.onSurface,
-              ),
+              style:
+                  (mono
+                          ? theme.textTheme.labelSmall
+                          : theme.textTheme.bodySmall)
+                      ?.copyWith(
+                        fontFamily: mono ? 'monospace' : null,
+                        color: theme.colorScheme.onSurface,
+                      ),
             ),
           ),
         ],
@@ -198,7 +221,9 @@ class _CopyRowState extends State<_CopyRow> {
             tooltip: 'Copy ${widget.label}',
             icon: Icon(
               _copied ? LucideIcons.check : LucideIcons.copy,
-              color: _copied ? theme.colorScheme.tertiary : theme.colorScheme.outline,
+              color: _copied
+                  ? theme.colorScheme.tertiary
+                  : theme.colorScheme.outline,
             ),
           ),
         ],

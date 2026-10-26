@@ -34,14 +34,14 @@ class LegalDocSpec {
 const legalDocs = <LegalDoc, LegalDocSpec>{
   LegalDoc.terms: LegalDocSpec(
     id: 'terms',
-    title: 'Terms of Service',
-    lastUpdated: 'August 2026',
+    title: 'General Website Terms & Conditions',
+    lastUpdated: 'October 2026',
     sections: termsSections,
   ),
   LegalDoc.privacy: LegalDocSpec(
     id: 'privacy',
     title: 'Privacy Policy',
-    lastUpdated: 'August 2026',
+    lastUpdated: '25 October 2026',
     sections: privacySections,
   ),
   LegalDoc.cookies: LegalDocSpec(
@@ -83,12 +83,17 @@ class LegalDocumentScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Last updated ${spec.lastUpdated}', style: theme.textTheme.labelSmall),
+                Text(
+                  'Last updated ${spec.lastUpdated}',
+                  style: theme.textTheme.labelSmall,
+                ),
                 const SizedBox(height: 20),
                 for (final section in spec.sections) ...[
                   Text(
                     section.heading,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   for (final paragraph in section.body) ...[
@@ -138,7 +143,10 @@ class _CookieTable extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(row.examples, style: theme.textTheme.labelSmall),
                   const SizedBox(height: 6),
-                  Text(row.purpose, style: theme.textTheme.bodySmall?.copyWith(height: 1.5)),
+                  Text(
+                    row.purpose,
+                    style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+                  ),
                 ],
               ),
             ),
@@ -151,7 +159,12 @@ class _CookieTable extends StatelessWidget {
 /// Rows linking into the documents above, shared by the About screen and both
 /// portals' Support screens so the same three taps exist everywhere.
 class LegalDocRow extends StatelessWidget {
-  const LegalDocRow({super.key, required this.doc, required this.icon, required this.subtitle});
+  const LegalDocRow({
+    super.key,
+    required this.doc,
+    required this.icon,
+    required this.subtitle,
+  });
 
   final LegalDoc doc;
   final IconData icon;

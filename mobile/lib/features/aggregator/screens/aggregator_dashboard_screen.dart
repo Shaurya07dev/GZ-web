@@ -70,7 +70,10 @@ class AggregatorDashboardScreen extends ConsumerWidget {
                 children: [
                   Text(name, style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 4),
-                  Text('Reservations, sales and commission at a glance.', style: theme.textTheme.bodySmall),
+                  Text(
+                    'Reservations, sales and commission at a glance.',
+                    style: theme.textTheme.bodySmall,
+                  ),
                   const SizedBox(height: 20),
                   GridView.count(
                     shrinkWrap: true,
@@ -83,20 +86,26 @@ class AggregatorDashboardScreen extends ConsumerWidget {
                       _Kpi(
                         icon: LucideIcons.bookmarkCheck,
                         label: 'Active reservations',
-                        value: figures == null ? null : '${figures.activeReservations}',
+                        value: figures == null
+                            ? null
+                            : '${figures.activeReservations}',
                         failed: failed,
                       ),
                       _Kpi(
                         icon: LucideIcons.indianRupee,
                         label: 'Commission earned',
-                        value: figures == null ? null : formatInr(figures.commissionEarned),
+                        value: figures == null
+                            ? null
+                            : formatInr(figures.commissionEarned),
                         failed: failed,
                         gold: true,
                       ),
                       _Kpi(
                         icon: LucideIcons.banknote,
                         label: 'Pending settlements',
-                        value: figures == null ? null : '${figures.pendingSettlements}',
+                        value: figures == null
+                            ? null
+                            : '${figures.pendingSettlements}',
                         failed: failed,
                       ),
                     ],
@@ -105,16 +114,22 @@ class AggregatorDashboardScreen extends ConsumerWidget {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton(
-                        onPressed: () => ref.invalidate(aggregatorDashboardProvider),
-                        child: const Text("Couldn't load your figures. Try again"),
+                        onPressed: () =>
+                            ref.invalidate(aggregatorDashboardProvider),
+                        child: const Text(
+                          "Couldn't load your figures. Try again",
+                        ),
                       ),
                     ),
                   const SizedBox(height: 20),
                   const _CommissionExplainer(),
                   const SizedBox(height: 12),
-                  _SalesConversion(rate: figures?.conversionRate, loading: figures == null && !failed),
+                  _SalesConversion(
+                    rate: figures?.conversionRate,
+                    loading: figures == null && !failed,
+                  ),
                   const SizedBox(height: 10),
-                  const WalletMechanicsNotice(),
+                  const SettlementMechanicsNotice(),
                   const SizedBox(height: 24),
                   const _RecentActivity(),
                 ],
@@ -160,7 +175,14 @@ class _Kpi extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           if (value == null && !failed)
-            const SizedBox(height: 22, width: 22, child: Padding(padding: EdgeInsets.all(3), child: CircularProgressIndicator(strokeWidth: 2)))
+            const SizedBox(
+              height: 22,
+              width: 22,
+              child: Padding(
+                padding: EdgeInsets.all(3),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
           else
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -170,7 +192,9 @@ class _Kpi extends StatelessWidget {
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   fontFeatures: const [FontFeature.tabularFigures()],
-                  color: value == null ? theme.colorScheme.onSurfaceVariant : (gold ? theme.colorScheme.tertiary : null),
+                  color: value == null
+                      ? theme.colorScheme.onSurfaceVariant
+                      : (gold ? theme.colorScheme.tertiary : null),
                 ),
               ),
             ),
@@ -197,9 +221,18 @@ class _CommissionExplainer extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(LucideIcons.percent, size: 16, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.percent,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 8),
-              Expanded(child: Text('You earn 20% of the 30% markup', style: theme.textTheme.titleMedium)),
+              Expanded(
+                child: Text(
+                  'You earn 20% of the 30% markup',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -238,7 +271,12 @@ class _Figure extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall,
+          ),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -275,13 +313,20 @@ class _SalesConversion extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(LucideIcons.trendingUp, size: 16, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.trendingUp,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Sales conversion', style: theme.textTheme.titleMedium),
+                    Text(
+                      'Sales conversion',
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       "Of the reservations you've concluded, the share that ended in a sale rather than a return.",
@@ -294,14 +339,23 @@ class _SalesConversion extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (loading)
-            const SizedBox(height: 22, width: 22, child: Padding(padding: EdgeInsets.all(3), child: CircularProgressIndicator(strokeWidth: 2)))
+            const SizedBox(
+              height: 22,
+              width: 22,
+              child: Padding(
+                padding: EdgeInsets.all(3),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
           else
             Text(
               rate == null ? '—' : '$rate%',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 fontFeatures: const [FontFeature.tabularFigures()],
-                color: rate == null ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.tertiary,
+                color: rate == null
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.tertiary,
               ),
             ),
         ],
@@ -317,7 +371,8 @@ class _RecentActivity extends ConsumerWidget {
 
   /// "Today", "Yesterday", "3 days ago" - counted to the day, as the website does.
   static String relative(String iso, DateTime now) {
-    final days = (now.difference(DateTime.parse(iso)).inMinutes / (24 * 60)).round();
+    final days = (now.difference(DateTime.parse(iso)).inMinutes / (24 * 60))
+        .round();
     if (days <= 0) return 'Today';
     if (days == 1) return 'Yesterday';
     return '$days days ago';
@@ -328,10 +383,12 @@ class _RecentActivity extends ConsumerWidget {
     final theme = Theme.of(context);
     final collection = ref.watch(aggregatorCollectionProvider);
     final now = displayNow(ref);
-    final recent = ([...(collection.value ?? const <AggregatorHoldingView>[])]
-          ..sort((a, b) => b.holding.assignedAt.compareTo(a.holding.assignedAt)))
-        .take(5)
-        .toList();
+    final recent =
+        ([...(collection.value ?? const <AggregatorHoldingView>[])]..sort(
+              (a, b) => b.holding.assignedAt.compareTo(a.holding.assignedAt),
+            ))
+            .take(5)
+            .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,9 +404,17 @@ class _RecentActivity extends ConsumerWidget {
             ),
           )
         else if (collection.value == null)
-          const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          )
         else if (recent.isEmpty) ...[
-          Text('No activity yet. Reserve an artwork from Inventory to get started.', style: theme.textTheme.bodySmall),
+          Text(
+            'No activity yet. Reserve an artwork from Inventory to get started.',
+            style: theme.textTheme.bodySmall,
+          ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerLeft,
@@ -362,7 +427,10 @@ class _RecentActivity extends ConsumerWidget {
           for (final view in recent)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _ActivityRow(view: view, when: relative(view.holding.assignedAt, now)),
+              child: _ActivityRow(
+                view: view,
+                when: relative(view.holding.assignedAt, now),
+              ),
             ),
       ],
     );
@@ -382,9 +450,15 @@ class _ActivityRow extends StatelessWidget {
     final title = view.artwork.title;
     // The website files a returned piece under "Reserved"; it has gone back.
     final (icon, headline) = switch (holding.status) {
-      HoldingStatus.soldPendingSettlement => (LucideIcons.banknote, 'Sale recorded: "$title"'),
+      HoldingStatus.soldPendingSettlement => (
+        LucideIcons.banknote,
+        'Sale recorded: "$title"',
+      ),
       HoldingStatus.returned => (LucideIcons.undo2, 'Returned: "$title"'),
-      HoldingStatus.reserved => (LucideIcons.bookmarkCheck, 'Reserved: "$title"'),
+      HoldingStatus.reserved => (
+        LucideIcons.bookmarkCheck,
+        'Reserved: "$title"',
+      ),
     };
 
     return PortalCard(
@@ -401,7 +475,9 @@ class _ActivityRow extends StatelessWidget {
                   headline,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 Text(
                   'Display price ${formatInr(holding.displayPrice)} · ${holding.advancePercent}% advance',

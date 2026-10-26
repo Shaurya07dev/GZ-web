@@ -13,8 +13,8 @@ import 'package:dio/dio.dart';
 /// which is the one thing the plugin route buys (decision D1).
 class FirebaseRestAuth {
   FirebaseRestAuth({required this.apiKey, Dio? dio, DateTime Function()? clock})
-      : _dio = dio ?? Dio(),
-        _now = clock ?? DateTime.now {
+    : _dio = dio ?? Dio(),
+      _now = clock ?? DateTime.now {
     _dio.options
       ..connectTimeout = const Duration(seconds: 20)
       ..receiveTimeout = const Duration(seconds: 20)
@@ -28,11 +28,15 @@ class FirebaseRestAuth {
   static const _identity = 'https://identitytoolkit.googleapis.com/v1';
   static const _secureToken = 'https://securetoken.googleapis.com/v1/token';
 
-  Future<FirebaseSession> signInWithPassword(String email, String password) async {
-    final data = await _post(
-      '$_identity/accounts:signInWithPassword',
-      {'email': email, 'password': password, 'returnSecureToken': true},
-    );
+  Future<FirebaseSession> signInWithPassword(
+    String email,
+    String password,
+  ) async {
+    final data = await _post('$_identity/accounts:signInWithPassword', {
+      'email': email,
+      'password': password,
+      'returnSecureToken': true,
+    });
     return FirebaseSession(
       uid: data['localId'] as String,
       email: data['email'] as String?,
@@ -60,7 +64,10 @@ class FirebaseRestAuth {
 
   /// `confirmPasswordReset(oobCode, newPassword)` in the web SDK.
   Future<void> confirmPasswordReset(String oobCode, String newPassword) async {
-    await _post('$_identity/accounts:resetPassword', {'oobCode': oobCode, 'newPassword': newPassword});
+    await _post('$_identity/accounts:resetPassword', {
+      'oobCode': oobCode,
+      'newPassword': newPassword,
+    });
   }
 
   /// `applyActionCode(oobCode)` in the web SDK — confirms an email address.
@@ -69,11 +76,17 @@ class FirebaseRestAuth {
   }
 
   DateTime _expiry(Object? seconds) {
-    final lifetime = seconds is num ? seconds.toInt() : int.tryParse('$seconds') ?? 3600;
+    final lifetime = seconds is num
+        ? seconds.toInt()
+        : int.tryParse('$seconds') ?? 3600;
     return _now().add(Duration(seconds: lifetime));
   }
 
-  Future<Map<String, dynamic>> _post(String url, Object body, {String? contentType}) async {
+  Future<Map<String, dynamic>> _post(
+    String url,
+    Object body, {
+    String? contentType,
+  }) async {
     try {
       final response = await _dio.post<dynamic>(
         url,
@@ -82,7 +95,9 @@ class FirebaseRestAuth {
         options: Options(contentType: contentType),
       );
       final data = response.data;
-      return data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+      return data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
     } on DioException catch (error) {
       throw _toException(error);
     }
@@ -125,12 +140,12 @@ class FirebaseAuthException implements Exception {
   /// The refresh token itself is dead (revoked, expired, account gone or
   /// disabled): the person has to sign in again, retrying will not help.
   bool get endsSession => const {
-        'TOKEN_EXPIRED',
-        'INVALID_REFRESH_TOKEN',
-        'MISSING_REFRESH_TOKEN',
-        'USER_DISABLED',
-        'USER_NOT_FOUND',
-      }.contains(code);
+    'TOKEN_EXPIRED',
+    'INVALID_REFRESH_TOKEN',
+    'MISSING_REFRESH_TOKEN',
+    'USER_DISABLED',
+    'USER_NOT_FOUND',
+  }.contains(code);
 
   bool get isNetwork => code == 'network_error';
 
@@ -146,7 +161,8 @@ const _friendly = {
   'EMAIL_NOT_FOUND': 'Invalid email or password',
   'INVALID_EMAIL': 'Enter a valid email address',
   'USER_DISABLED': 'This account has been disabled.',
-  'TOO_MANY_ATTEMPTS_TRY_LATER': 'Too many attempts. Please wait a moment and try again.',
+  'TOO_MANY_ATTEMPTS_TRY_LATER':
+      'Too many attempts. Please wait a moment and try again.',
   'INVALID_OOB_CODE': 'This link is invalid or has expired. Request a new one.',
   'EXPIRED_OOB_CODE': 'This link is invalid or has expired. Request a new one.',
   'WEAK_PASSWORD': 'That password is too weak. Choose a stronger one.',
@@ -158,10 +174,19 @@ FirebaseAuthException _toException(DioException error) {
     // Firebase sometimes appends detail after the code: "CODE : explanation".
     final raw = (body['error']['message'] as String?) ?? 'UNKNOWN';
     final code = raw.split(' : ').first.trim();
-    return FirebaseAuthException(code, _friendly[code] ?? 'Something went wrong. Please try again.');
+    return FirebaseAuthException(
+      code,
+      _friendly[code] ?? 'Something went wrong. Please try again.',
+    );
   }
   if (error.response == null) {
-    return const FirebaseAuthException('network_error', 'Network error. Check your connection and try again.');
+    return const FirebaseAuthException(
+      'network_error',
+      'Network error. Check your connection and try again.',
+    );
   }
-  return const FirebaseAuthException('UNKNOWN', 'Something went wrong. Please try again.');
+  return const FirebaseAuthException(
+    'UNKNOWN',
+    'Something went wrong. Please try again.',
+  );
 }

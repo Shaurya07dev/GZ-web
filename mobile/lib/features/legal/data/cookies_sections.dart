@@ -13,11 +13,7 @@ const cookiesSections = <LegalSection>[
       'GalleryZone uses a small number of cookies and browser storage entries to keep the site working and to remember your preferences. We do not run any analytics or advertising cookies today; the table below is a complete list, not a partial one.',
     ],
   ),
-  LegalSection(
-    id: 'cookie-categories',
-    heading: 'Cookie Categories',
-    body: [],
-  ),
+  LegalSection(id: 'cookie-categories', heading: 'Cookie Categories', body: []),
   LegalSection(
     id: 'managing-cookies',
     heading: 'Managing Cookies',

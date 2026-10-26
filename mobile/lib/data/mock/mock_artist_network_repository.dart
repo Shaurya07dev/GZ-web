@@ -84,10 +84,9 @@ class MockArtistNetworkRepository implements ArtistNetworkRepository {
   @override
   Future<List<ArtistConnection>> listConnections(String artistId) =>
       mockDelay(() {
-        final mine = _connections()
-            .where((c) => involvesArtist(c, artistId))
-            .toList()
-          ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+        final mine =
+            _connections().where((c) => involvesArtist(c, artistId)).toList()
+              ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
         return mine;
       });
 

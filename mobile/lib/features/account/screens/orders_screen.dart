@@ -54,10 +54,10 @@ class OrdersScreen extends ConsumerWidget {
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   itemCount: list.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => ContentWidth(
-                    child: OrderRow(order: list[index]),
-                  ),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) =>
+                      ContentWidth(child: OrderRow(order: list[index])),
                 ),
               ),
       ),
@@ -81,7 +81,8 @@ class _AdvanceOrderControl extends ConsumerStatefulWidget {
   final Order order;
 
   @override
-  ConsumerState<_AdvanceOrderControl> createState() => _AdvanceOrderControlState();
+  ConsumerState<_AdvanceOrderControl> createState() =>
+      _AdvanceOrderControlState();
 }
 
 class _AdvanceOrderControlState extends ConsumerState<_AdvanceOrderControl> {
@@ -91,13 +92,19 @@ class _AdvanceOrderControlState extends ConsumerState<_AdvanceOrderControl> {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final updated = await ref.read(checkoutRepositoryProvider).advanceOrder(widget.order.id);
+      final updated = await ref
+          .read(checkoutRepositoryProvider)
+          .advanceOrder(widget.order.id);
       ref.invalidate(orderProvider(widget.order.id));
       ref.invalidate(ordersProvider);
       // Delivery is what fills the collection and releases the artist's money.
       ref.invalidate(collectionProvider);
       messenger.showSnackBar(
-        SnackBar(content: Text('Order is now ${OrderStatusStyle.of(updated.status).label}')),
+        SnackBar(
+          content: Text(
+            'Order is now ${OrderStatusStyle.of(updated.status).label}',
+          ),
+        ),
       );
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
@@ -113,7 +120,9 @@ class _AdvanceOrderControlState extends ConsumerState<_AdvanceOrderControl> {
     if (ref.watch(remoteBackendProvider)) return const SizedBox.shrink();
     final theme = Theme.of(context);
     final index = orderProgression.indexOf(widget.order.status);
-    if (index == -1 || index == orderProgression.length - 1) return const SizedBox.shrink();
+    if (index == -1 || index == orderProgression.length - 1) {
+      return const SizedBox.shrink();
+    }
     final next = orderProgression[index + 1];
 
     return Align(
@@ -122,7 +131,9 @@ class _AdvanceOrderControlState extends ConsumerState<_AdvanceOrderControl> {
         onPressed: _busy ? null : _advance,
         icon: const Icon(LucideIcons.fastForward, size: 14),
         label: Text(
-          _busy ? 'Updating…' : 'Demo: advance to ${OrderStatusStyle.of(next).label}',
+          _busy
+              ? 'Updating…'
+              : 'Demo: advance to ${OrderStatusStyle.of(next).label}',
           style: theme.textTheme.bodySmall,
         ),
       ),
@@ -165,7 +176,9 @@ class OrderDetailScreen extends ConsumerWidget {
             );
           }
           final artwork = data.artwork;
-          final address = addresses.value?.where((a) => a.id == data.addressId).firstOrNull;
+          final address = addresses.value
+              ?.where((a) => a.id == data.addressId)
+              .firstOrNull;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
@@ -176,7 +189,9 @@ class OrderDetailScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Order #${data.id.length > 8 ? data.id.substring(data.id.length - 8) : data.id}',
-                      style: theme.textTheme.labelMedium?.copyWith(letterSpacing: 0.6),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        letterSpacing: 0.6,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -188,7 +203,9 @@ class OrderDetailScreen extends ConsumerWidget {
                             child: SizedBox(
                               width: 88,
                               height: 110,
-                              child: ArtworkImageView(url: artwork.thumbnailUrl),
+                              child: ArtworkImageView(
+                                url: artwork.thumbnailUrl,
+                              ),
                             ),
                           ),
                         const SizedBox(width: 14),
@@ -198,12 +215,16 @@ class OrderDetailScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 artwork?.title ?? 'Artwork no longer available',
-                                style: theme.textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               if (artwork != null) ...[
                                 const SizedBox(height: 4),
-                                Text(artwork.artistName, style: theme.textTheme.bodySmall),
+                                Text(
+                                  artwork.artistName,
+                                  style: theme.textTheme.bodySmall,
+                                ),
                               ],
                               const SizedBox(height: 8),
                               OrderStatusChip(status: data.status),
@@ -222,12 +243,17 @@ class OrderDetailScreen extends ConsumerWidget {
                       Row(
                         children: [
                           TextButton.icon(
-                            onPressed: () => context.push('/marketplace/${data.artworkId}'),
-                            icon: const Icon(LucideIcons.externalLink, size: 14),
+                            onPressed: () =>
+                                context.push('/marketplace/${data.artworkId}'),
+                            icon: const Icon(
+                              LucideIcons.externalLink,
+                              size: 14,
+                            ),
                             label: const Text('View listing'),
                           ),
                           TextButton.icon(
-                            onPressed: () => context.push('/verify/${data.artworkId}'),
+                            onPressed: () =>
+                                context.push('/verify/${data.artworkId}'),
                             icon: const Icon(LucideIcons.scanLine, size: 14),
                             label: const Text('Passport'),
                           ),
@@ -251,8 +277,8 @@ class OrderDetailScreen extends ConsumerWidget {
                               '${address.city}, ${address.state} ${address.pincode}',
                             ].whereType<String>().join('\n')
                           : addresses.isLoading
-                              ? 'Loading address…'
-                              : 'This address is no longer on file.',
+                          ? 'Loading address…'
+                          : 'This address is no longer on file.',
                       style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                     ),
                   ],

@@ -19,6 +19,7 @@ final paymentGatewayProvider = Provider<PaymentGateway>((ref) {
 /// rules in force right now — price (GST inside), the convenience fee and its
 /// GST, delivery, total. The review and payment steps show exactly this, so a
 /// preview can never disagree with the order that follows.
-final checkoutQuoteProvider = FutureProvider.autoDispose.family<CheckoutQuote, String>((ref, artworkId) {
-  return ref.watch(checkoutRepositoryProvider).getQuote(artworkId);
-});
+final checkoutQuoteProvider = FutureProvider.autoDispose
+    .family<CheckoutQuote, String>((ref, artworkId) {
+      return ref.watch(checkoutRepositoryProvider).getQuote(artworkId);
+    });

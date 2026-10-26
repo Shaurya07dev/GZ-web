@@ -28,10 +28,16 @@ class DeleteAccountTile extends StatelessWidget {
     final theme = Theme.of(context);
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(LucideIcons.trash2, size: 20, color: theme.colorScheme.error),
+      leading: Icon(
+        LucideIcons.trash2,
+        size: 20,
+        color: theme.colorScheme.error,
+      ),
       title: Text(
         'Delete account',
-        style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.error,
+        ),
       ),
       subtitle: Text(
         'Permanently remove your account and its data',
@@ -55,7 +61,8 @@ class _DeleteAccountSheet extends ConsumerStatefulWidget {
   const _DeleteAccountSheet();
 
   @override
-  ConsumerState<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
+  ConsumerState<_DeleteAccountSheet> createState() =>
+      _DeleteAccountSheetState();
 }
 
 class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
@@ -64,10 +71,10 @@ class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
   /// What goes, in the words that are true for this build: the real backend
   /// takes a request that GalleryZone acts on; the offline demo wipes the device.
   static const _removed = [
-    'Your profile, contact and payout details',
-    'Your orders, wallet balance and settlement history',
-    'Saved artworks, followed artists and support tickets',
-    'Any artwork or listing you have submitted',
+    'Your authentication access and public profile',
+    'Your contact and payout details that are not legally required',
+    'Saved artworks, followed artists and device preferences',
+    'Listings, blogs and support content that can be deleted or de-identified',
   ];
 
   Future<void> _confirm() async {
@@ -77,10 +84,10 @@ class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
         title: const Text('Delete this account?'),
         content: Text(
           ref.read(remoteBackendProvider)
-              ? 'GalleryZone will remove your account and everything in it. It cannot be undone, and nothing is '
-                  'recoverable afterwards.'
+              ? 'GalleryZone will close your account and delete or de-identify its associated personal data, '
+                    'except limited records it must retain. This cannot be undone.'
               : 'This removes your account and everything in it. It cannot be undone, '
-                  'and nothing is recoverable afterwards.',
+                    'and nothing is recoverable afterwards.',
         ),
         actions: [
           TextButton(
@@ -149,7 +156,7 @@ class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
           Text(
             remote
                 ? 'This sends GalleryZone a request to close your account. You are signed out now, and the team '
-                    'confirms by email once everything below has been removed. These go with it:'
+                      'confirms by email once the deletion is complete. These go with it:'
                 : 'Deleting is immediate and permanent. These go with it:',
             style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
           ),
@@ -164,7 +171,11 @@ class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(LucideIcons.minus, size: 14, color: theme.colorScheme.error),
+                        Icon(
+                          LucideIcons.minus,
+                          size: 14,
+                          color: theme.colorScheme.error,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(item, style: theme.textTheme.bodySmall),
@@ -176,23 +187,36 @@ class _DeleteAccountSheetState extends ConsumerState<_DeleteAccountSheet> {
             ),
           ),
           const SizedBox(height: 12),
+          if (remote) ...[
+            Text(
+              'Limited tax, transaction, settlement, provenance, fraud-prevention or dispute records may be '
+              'retained when required by law or a legitimate compliance need.',
+              style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
+            ),
+            const SizedBox(height: 12),
+          ],
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: theme.colorScheme.error.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: theme.colorScheme.error.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(LucideIcons.triangleAlert, size: 15, color: theme.colorScheme.error),
+                Icon(
+                  LucideIcons.triangleAlert,
+                  size: 15,
+                  color: theme.colorScheme.error,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'If you have a wallet balance, withdraw it before deleting — '
-                    'it is removed with everything else and cannot be paid out '
-                    'afterwards.',
+                    'If a refund or payout is still pending, contact Support before deleting so GalleryZone can '
+                    'reconcile it to the original payment method or verified bank account.',
                     style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
                   ),
                 ),

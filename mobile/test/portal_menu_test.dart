@@ -26,7 +26,11 @@ void main() {
 
       for (final route in routes) {
         final match = router.configuration.findMatch(Uri.parse(route));
-        expect(match.isError, isFalse, reason: '$route is not a registered route');
+        expect(
+          match.isError,
+          isFalse,
+          reason: '$route is not a registered route',
+        );
       }
     });
 
@@ -46,7 +50,9 @@ void main() {
           child: MaterialApp(
             home: Scaffold(
               appBar: AppBar(
-                actions: const [PortalAvatarButton(name: 'Devika Rao', badgeCount: 2)],
+                actions: const [
+                  PortalAvatarButton(name: 'Devika Rao', badgeCount: 2),
+                ],
               ),
               endDrawer: PortalMenuDrawer(
                 name: 'Devika Rao',
@@ -72,18 +78,24 @@ void main() {
       expect(find.text('Sign out'), findsOneWidget);
     });
 
-    test('every section is titled, and every portal ends in help and legal', () {
-      for (final menu in [customerMenu, artistMenu, aggregatorMenu]) {
-        for (final section in menu) {
-          expect(section.title.trim(), isNotEmpty);
-          expect(section.items, isNotEmpty);
+    test(
+      'every section is titled, and every portal ends in help and legal',
+      () {
+        for (final menu in [customerMenu, artistMenu, aggregatorMenu]) {
+          for (final section in menu) {
+            expect(section.title.trim(), isNotEmpty);
+            expect(section.items, isNotEmpty);
+          }
+          // Support, FAQs and About & legal are the same three rows everywhere,
+          // and they are always the last thing in the menu.
+          expect(menu.last.items.map((item) => item.label).toList(), [
+            'Support',
+            'FAQs',
+            'About & legal',
+          ]);
         }
-        // Support, FAQs and About & legal are the same three rows everywhere,
-        // and they are always the last thing in the menu.
-        expect(menu.last.items.map((item) => item.label).toList(),
-            ['Support', 'FAQs', 'About & legal']);
-      }
-    });
+      },
+    );
 
     test('initials take at most two letters', () {
       expect(portalInitials('Devika Rao'), 'DR');

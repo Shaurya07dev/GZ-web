@@ -21,13 +21,15 @@ abstract class MouPartyDetails with _$MouPartyDetails {
     String? gstNo,
   }) = _MouPartyDetails;
 
-  factory MouPartyDetails.fromJson(Map<String, dynamic> json) => _$MouPartyDetailsFromJson(json);
+  factory MouPartyDetails.fromJson(Map<String, dynamic> json) =>
+      _$MouPartyDetailsFromJson(json);
 }
 
 /// GalleryZone's side of the signature block (who signs for the company).
 @freezed
 abstract class MouCompanyDetails with _$MouCompanyDetails {
-  const factory MouCompanyDetails({String? name, String? designation}) = _MouCompanyDetails;
+  const factory MouCompanyDetails({String? name, String? designation}) =
+      _MouCompanyDetails;
 
   factory MouCompanyDetails.fromJson(Map<String, dynamic> json) =>
       _$MouCompanyDetailsFromJson(json);
@@ -40,7 +42,8 @@ abstract class MouParties with _$MouParties {
     @Default(MouCompanyDetails()) MouCompanyDetails company,
   }) = _MouParties;
 
-  factory MouParties.fromJson(Map<String, dynamic> json) => _$MouPartiesFromJson(json);
+  factory MouParties.fromJson(Map<String, dynamic> json) =>
+      _$MouPartiesFromJson(json);
 }
 
 /// A party's acceptance of one version of their MOU. Versioned so a later
@@ -65,7 +68,8 @@ abstract class MouAcceptance with _$MouAcceptance {
     MouParties? parties,
   }) = _MouAcceptance;
 
-  factory MouAcceptance.fromJson(Map<String, dynamic> json) => _$MouAcceptanceFromJson(json);
+  factory MouAcceptance.fromJson(Map<String, dynamic> json) =>
+      _$MouAcceptanceFromJson(json);
 }
 
 /// The current version of the agreement with its blanks filled from the

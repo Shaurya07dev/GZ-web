@@ -14,7 +14,8 @@ import '../providers/ownership_providers.dart';
 /// from the deep-link domain (an open decision); until that is settled the
 /// same path works inside the app, and the copyable string is honest about
 /// what it is.
-String transferLink(String transferId) => '$galleryZoneSite/transfer/$transferId';
+String transferLink(String transferId) =>
+    '$galleryZoneSite/transfer/$transferId';
 
 /// Hands a piece to a named buyer.
 ///
@@ -52,7 +53,15 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
   bool _busy = false;
   OwnershipTransfer? _created;
   TransferKind _kind = TransferKind.ownership;
+  DateTime? _displayStartsAt;
   DateTime? _displayEndsAt;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _displayStartsAt = DateTime(now.year, now.month, now.day);
+  }
 
   @override
   void dispose() {
@@ -63,9 +72,21 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_kind == TransferKind.display && _displayEndsAt == null) {
+    if (_kind == TransferKind.display &&
+        (_displayStartsAt == null || _displayEndsAt == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick the date the display runs to')),
+        const SnackBar(
+          content: Text('Pick the dates the display runs from and to'),
+        ),
+      );
+      return;
+    }
+    if (_kind == TransferKind.display &&
+        !_displayEndsAt!.isAfter(_displayStartsAt!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The display end date must be after its start date'),
+        ),
       );
       return;
     }
@@ -80,6 +101,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
             toName: _name.text,
             toEmail: _email.text,
             kind: _kind,
+            displayStartsAt: _displayStartsAt?.toIso8601String(),
             displayEndsAt: _displayEndsAt?.toIso8601String(),
           );
       ref.invalidate(artworkTransfersProvider(widget.artwork.id));
@@ -109,7 +131,11 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(LucideIcons.send, size: 32, color: theme.colorScheme.tertiary),
+                  Icon(
+                    LucideIcons.send,
+                    size: 32,
+                    color: theme.colorScheme.tertiary,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     _kind == TransferKind.display
@@ -122,8 +148,9 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                   Text(
                     _kind == TransferKind.display
                         ? 'Send this link to ${created.toName}. You stay the owner '
-                              'throughout, and the display ends on its own on the '
-                              'date you picked.'
+                              'throughout. The display period runs from '
+                              '${formatLongDate(created.displayStartsAt ?? created.initiatedAt)} '
+                              'to ${formatLongDate(created.displayEndsAt!)}.'
                         : 'Send this link to ${created.toName}. "${widget.artwork.title}" stays '
                               'yours until they accept it.',
                     textAlign: TextAlign.center,
@@ -190,7 +217,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                     Text(
                       _kind == TransferKind.ownership
                           ? 'Permanent. The piece changes hands.'
-                          : 'Runs to a date. You stay the owner.',
+                          : 'Runs between two dates. You stay the owner.',
                       style: theme.textTheme.labelSmall,
                     ),
                     if (_kind == TransferKind.display) ...[
@@ -200,20 +227,52 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                           final now = DateTime.now();
                           final picked = await showDatePicker(
                             context: context,
-                            firstDate: now.add(const Duration(days: 1)),
+                            firstDate: DateTime(now.year, now.month, now.day),
                             lastDate: now.add(const Duration(days: 365)),
-                            initialDate: now.add(const Duration(days: 30)),
+                            initialDate: _displayStartsAt ?? now,
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _displayStartsAt = picked;
+                              if (_displayEndsAt != null &&
+                                  !_displayEndsAt!.isAfter(picked)) {
+                                _displayEndsAt = null;
+                              }
+                            });
+                          }
+                        },
+                        icon: const Icon(LucideIcons.calendar, size: 15),
+                        label: Text(
+                          _displayStartsAt == null
+                              ? 'On display from…'
+                              : 'On display from ${formatShortDate(_displayStartsAt!.toIso8601String())}',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final now = DateTime.now();
+                          final start =
+                              _displayStartsAt ??
+                              DateTime(now.year, now.month, now.day);
+                          final firstEnd = start.add(const Duration(days: 1));
+                          final picked = await showDatePicker(
+                            context: context,
+                            firstDate: firstEnd,
+                            lastDate: now.add(const Duration(days: 730)),
+                            initialDate:
+                                _displayEndsAt ??
+                                start.add(const Duration(days: 30)),
                           );
                           if (picked != null) {
                             setState(() => _displayEndsAt = picked);
                           }
                         },
-                        icon: const Icon(LucideIcons.calendar, size: 15),
+                        icon: const Icon(LucideIcons.calendarCheck, size: 15),
                         label: Text(
                           _displayEndsAt == null
                               ? 'On display until…'
-                              : 'On display until '
-                                    '${formatShortDate(_displayEndsAt!.toIso8601String())}',
+                              : 'On display until ${formatShortDate(_displayEndsAt!.toIso8601String())}',
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -227,8 +286,9 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                     TextFormField(
                       controller: _name,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (value) =>
-                          (value ?? '').trim().isEmpty ? "Enter the new owner's name" : null,
+                      validator: (value) => (value ?? '').trim().isEmpty
+                          ? "Enter the new owner's name"
+                          : null,
                       decoration: InputDecoration(
                         labelText: _kind == TransferKind.display
                             ? 'Who is displaying it'
@@ -241,7 +301,8 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                       keyboardType: TextInputType.emailAddress,
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       validator: (value) =>
-                          RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((value ?? '').trim())
+                          RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                              .hasMatch((value ?? '').trim())
                           ? null
                           : 'Enter a valid email address',
                       decoration: InputDecoration(
@@ -273,7 +334,11 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
 /// which is the truthful state — the artist made it and nobody has handed it
 /// on yet.
 class OwnershipHistory extends ConsumerWidget {
-  const OwnershipHistory({super.key, required this.artworkId, required this.artistName});
+  const OwnershipHistory({
+    super.key,
+    required this.artworkId,
+    required this.artistName,
+  });
 
   final String artworkId;
   final String artistName;
@@ -281,9 +346,14 @@ class OwnershipHistory extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final transfers = ref.watch(artworkTransfersProvider(artworkId)).value ?? const [];
-    final accepted = transfers.where((t) => t.status == TransferStatus.accepted).toList();
-    final pending = transfers.where((t) => t.status == TransferStatus.pending).toList();
+    final transfers =
+        ref.watch(artworkTransfersProvider(artworkId)).value ?? const [];
+    final accepted = transfers
+        .where((t) => t.status == TransferStatus.accepted)
+        .toList();
+    final pending = transfers
+        .where((t) => t.status == TransferStatus.pending)
+        .toList();
     final onDisplay = activeDisplayTransfer(transfers);
     // The passport is public. Ending a display early is the owner's call, so
     // the control only appears for someone signed in — there is no real auth
@@ -303,7 +373,11 @@ class OwnershipHistory extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(LucideIcons.frame, size: 16, color: theme.colorScheme.tertiary),
+                    Icon(
+                      LucideIcons.frame,
+                      size: 16,
+                      color: theme.colorScheme.tertiary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -315,7 +389,7 @@ class OwnershipHistory extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Until ${formatLongDate(onDisplay.displayEndsAt!)}. Ownership is '
+                  '${_displayRange(onDisplay)}. Ownership is '
                   'unchanged — display rights end on that date on their own.',
                   style: theme.textTheme.labelSmall,
                 ),
@@ -378,14 +452,25 @@ class OwnershipHistory extends ConsumerWidget {
 
 String _displayLabel(OwnershipTransfer transfer) {
   if (isDisplayActive(transfer)) {
-    return 'until ${formatLongDate(transfer.displayEndsAt!)}';
+    return _displayRange(transfer).toLowerCase();
   }
   final endedOn = transfer.displayEndedAt ?? transfer.displayEndsAt;
   return endedOn == null ? 'display ended' : 'ended ${formatLongDate(endedOn)}';
 }
 
+String _displayRange(OwnershipTransfer transfer) {
+  final startsAt =
+      transfer.displayStartsAt ?? transfer.acceptedAt ?? transfer.initiatedAt;
+  return 'From ${formatLongDate(startsAt)} to ${formatLongDate(transfer.displayEndsAt!)}';
+}
+
 class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value, this.gold = false, this.muted = false});
+  const _Line({
+    required this.label,
+    required this.value,
+    this.gold = false,
+    this.muted = false,
+  });
 
   final String label;
   final String value;
@@ -403,7 +488,9 @@ class _Line extends StatelessWidget {
           Icon(
             muted ? LucideIcons.clock3 : LucideIcons.arrowRight,
             size: 13,
-            color: muted ? theme.colorScheme.outline : theme.colorScheme.tertiary,
+            color: muted
+                ? theme.colorScheme.outline
+                : theme.colorScheme.tertiary,
           ),
           const SizedBox(width: 10),
           Expanded(

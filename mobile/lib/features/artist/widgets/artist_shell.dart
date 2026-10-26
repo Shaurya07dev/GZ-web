@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shell/portal_widgets.dart';
@@ -70,9 +71,9 @@ class ArtistShell extends ConsumerWidget {
               child: Text(
                 size.isExpanded ? 'GALLERYZONE' : 'GZ',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.tertiary,
-                      letterSpacing: 2,
-                    ),
+                  color: Theme.of(context).colorScheme.tertiary,
+                  letterSpacing: 2,
+                ),
               ),
             ),
             destinations: [

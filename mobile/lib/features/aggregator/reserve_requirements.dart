@@ -22,19 +22,20 @@ class ReserveRequirements {
   final bool? mouSigned;
   final ReviewStatus? gstStatus;
 
-  bool? get gstApproved => gstStatus == null ? null : gstStatus == ReviewStatus.approved;
+  bool? get gstApproved =>
+      gstStatus == null ? null : gstStatus == ReviewStatus.approved;
 
   /// Why Reserve is closed, or null when it is open (or not known yet).
   String? get blockedReason => mouSigned == false
       ? 'Sign your Aggregator MOU first'
       : gstApproved == false
-          ? 'Get your GST number approved first'
-          : null;
+      ? 'Get your GST number approved first'
+      : null;
 
   List<ReserveRequirement> get items => [
-        if (mouSigned == false) _mouRequirement,
-        if (gstApproved == false) _gstRequirements[gstStatus]!,
-      ];
+    if (mouSigned == false) _mouRequirement,
+    if (gstApproved == false) _gstRequirements[gstStatus]!,
+  ];
 }
 
 /// One thing still to do, with where to do it. [route] is null when there is
@@ -85,7 +86,9 @@ const _gstRequirements = {
   ),
 };
 
-final reserveRequirementsProvider = Provider.autoDispose<ReserveRequirements>((ref) {
+final reserveRequirementsProvider = Provider.autoDispose<ReserveRequirements>((
+  ref,
+) {
   final profile = ref.watch(aggregatorProfileProvider).value;
   if (profile == null) return const ReserveRequirements();
   return ReserveRequirements(
@@ -116,7 +119,10 @@ class ReserveRequirementsNotice extends ConsumerWidget {
 
 /// The same message as the notice, shown when someone presses Reserve while a
 /// requirement is still open - a disabled button says nothing when tapped.
-Future<void> showReserveBlockedDialog(BuildContext context, ReserveRequirements requirements) {
+Future<void> showReserveBlockedDialog(
+  BuildContext context,
+  ReserveRequirements requirements,
+) {
   return showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(

@@ -5,7 +5,11 @@
 enum Role { artist, aggregator, customer }
 
 class LoginInput {
-  const LoginInput({required this.email, required this.password, this.rememberMe = false});
+  const LoginInput({
+    required this.email,
+    required this.password,
+    this.rememberMe = false,
+  });
 
   final String email;
   final String password;
@@ -40,7 +44,11 @@ class ForgotPasswordInput {
 }
 
 class ResetPasswordInput {
-  const ResetPasswordInput({required this.password, required this.confirmPassword, this.token});
+  const ResetPasswordInput({
+    required this.password,
+    required this.confirmPassword,
+    this.token,
+  });
   final String password;
   final String confirmPassword;
   final String? token;

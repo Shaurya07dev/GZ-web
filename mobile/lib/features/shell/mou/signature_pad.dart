@@ -56,7 +56,10 @@ Future<String> _png(SignatureStrokes strokes, Size size, double scale) async {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)..scale(scale);
   _paintStrokes(canvas, strokes);
-  final image = await recorder.endRecording().toImage((size.width * scale).ceil(), (size.height * scale).ceil());
+  final image = await recorder.endRecording().toImage(
+    (size.width * scale).ceil(),
+    (size.height * scale).ceil(),
+  );
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
   return 'data:image/png;base64,${base64Encode(data!.buffer.asUint8List())}';

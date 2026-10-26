@@ -19,10 +19,13 @@ class FaqScreen extends StatefulWidget {
   State<FaqScreen> createState() => _FaqScreenState();
 }
 
-class _FaqScreenState extends State<FaqScreen> with SingleTickerProviderStateMixin {
+class _FaqScreenState extends State<FaqScreen>
+    with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(
     length: FaqAudience.values.length,
-    initialIndex: FaqAudience.values.indexOf(widget.initialAudience ?? FaqAudience.general),
+    initialIndex: FaqAudience.values.indexOf(
+      widget.initialAudience ?? FaqAudience.general,
+    ),
     vsync: this,
   );
 
@@ -49,7 +52,8 @@ class _FaqScreenState extends State<FaqScreen> with SingleTickerProviderStateMix
       body: TabBarView(
         controller: _tabs,
         children: [
-          for (final audience in FaqAudience.values) _AudienceList(audience: audience),
+          for (final audience in FaqAudience.values)
+            _AudienceList(audience: audience),
         ],
       ),
     );
@@ -79,10 +83,15 @@ class _AudienceList extends StatelessWidget {
                   expandedCrossAxisAlignment: CrossAxisAlignment.start,
                   title: Text(
                     item.question,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   children: [
-                    Text(item.answer, style: theme.textTheme.bodySmall?.copyWith(height: 1.55)),
+                    Text(
+                      item.answer,
+                      style: theme.textTheme.bodySmall?.copyWith(height: 1.55),
+                    ),
                   ],
                 ),
             ],

@@ -126,11 +126,10 @@ const artistTermsSections = <LegalSection>[
       'Packaging.',
       'Labelling.',
       'Shipping.',
-      'Insurance.',
       'COA.',
       'Artwork quality.',
       'Other mandatory materials or procedures communicated by Galleryzone.',
-      'Applicable GST, taxes, shipment charges, delivery charges, convenience charges, insurance charges, and other agreed charges may be deducted from the Artist\'s final settlement.',
+      'Applicable GST, taxes, shipment charges, delivery charges, convenience charges, and other agreed charges may be deducted from the Artist\'s final settlement.',
     ],
   ),
   LegalSection(
@@ -159,25 +158,8 @@ const artistTermsSections = <LegalSection>[
     ],
   ),
   LegalSection(
-    id: 'shipping-and-transit-insurance',
-    heading: '10. Shipping and Transit Insurance',
-    body: [
-      'Transit insurance is mandatory unless the Artist voluntarily declines it.',
-      'If the Artist declines insurance, the Artist shall bear responsibility for risks including:',
-      'Theft.',
-      'Fire.',
-      'Transit damage.',
-      'Loss.',
-      'Wear and tear.',
-      'Natural disasters.',
-      'Other unforeseen incidents.',
-      'Where insurance has been declined, Galleryzone, its employees, aggregators, logistics partners, and affiliates shall not be responsible for such loss or damage.',
-      'Insurance charges shall be borne by the Artist.',
-    ],
-  ),
-  LegalSection(
     id: 'delivery-and-transportation-charges',
-    heading: '11. Delivery and Transportation Charges',
+    heading: '10. Delivery and Transportation Charges',
     body: [
       'One-time transportation charges for delivering artwork to an assigned Aggregator may be deducted from the Artist\'s final settlement following a successful sale.',
       'Customer delivery charges may be separately payable by the buyer wherever applicable.',
@@ -185,7 +167,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'certificate-of-authenticity',
-    heading: '12. Certificate of Authenticity (COA)',
+    heading: '11. Certificate of Authenticity (COA)',
     body: [
       'The Artist shall complete the Certificate of Authenticity through the official Galleryzone process before shipment.',
       'Galleryzone may retain digital copies of the COA permanently as part of its authenticity and provenance records.',
@@ -194,7 +176,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'packaging-and-artwork-preparation',
-    heading: '13. Packaging and Artwork Preparation',
+    heading: '12. Packaging and Artwork Preparation',
     body: [
       'For artwork displayed through Galleryzone Aggregators:',
       'Artwork must be professionally stretched on canvas or properly framed, as applicable.',
@@ -206,7 +188,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'ownership-before-sale',
-    heading: '14. Ownership Before Sale',
+    heading: '13. Ownership Before Sale',
     body: [
       'Ownership of the artwork shall remain with the Artist until a successful sale is completed.',
       'Where applicable, Galleryzone may retain possession of the artwork for display, marketing, exhibition, and sale purposes.',
@@ -214,7 +196,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'marketing-and-promotional-rights',
-    heading: '15. Marketing and Promotional Rights',
+    heading: '14. Marketing and Promotional Rights',
     body: [
       'The Artist grants Galleryzone a non-exclusive, worldwide right to:',
       'Photograph the artwork.',
@@ -230,7 +212,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'ownership-after-sale',
-    heading: '16. Ownership After Sale',
+    heading: '15. Ownership After Sale',
     body: [
       'Upon successful payment and delivery, ownership of the artwork transfers to the buyer.',
       'The Artist retains moral rights as the original creator unless otherwise agreed between the relevant parties.',
@@ -238,7 +220,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'authenticity-and-provenance-records',
-    heading: '17. Authenticity and Provenance Records',
+    heading: '16. Authenticity and Provenance Records',
     body: [
       'Galleryzone may maintain records relating to an artwork, including:',
       'Digital Certificate of Authenticity.',
@@ -251,7 +233,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'aggregator-display-period',
-    heading: '18. Aggregator Display Period',
+    heading: '17. Aggregator Display Period',
     body: [
       'An artwork may remain with an authorized Galleryzone Aggregator for an initial period of 30 days.',
       'If the artwork remains unsold, Galleryzone may, at its discretion:',
@@ -263,7 +245,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'listing-period',
-    heading: '19. Listing Period',
+    heading: '18. Listing Period',
     body: [
       'An artwork may remain listed with Galleryzone for a period of up to six (6) months.',
       'If the artwork remains unsold after the applicable listing period, Galleryzone shall coordinate its return.',
@@ -272,7 +254,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'artist-responsibilities',
-    heading: '20. Artist Responsibilities',
+    heading: '19. Artist Responsibilities',
     body: [
       'The Artist agrees to:',
       'Provide genuine and original artwork.',
@@ -289,7 +271,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'galleryzone-responsibilities',
-    heading: '21. Galleryzone Responsibilities',
+    heading: '20. Galleryzone Responsibilities',
     body: [
       'Galleryzone may:',
       'Promote the artwork.',
@@ -304,7 +286,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'artist-settlement',
-    heading: '22. Artist Settlement',
+    heading: '21. Artist Settlement',
     body: [
       'Following a successful sale, the Artist shall be entitled to receive the confidential Artist Price, subject to applicable deductions.',
       'Applicable deductions may include:',
@@ -312,7 +294,6 @@ const artistTermsSections = <LegalSection>[
       'Applicable taxes.',
       'Shipment charges.',
       'Delivery charges.',
-      'Insurance charges.',
       'Convenience charges.',
       'Any other applicable or agreed deductions.',
       'Settlement shall normally be processed after successful delivery of the artwork and receipt of payment from the buyer.',
@@ -320,7 +301,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'prohibition-of-fraudulent-or-misleading-information',
-    heading: '23. Prohibition of Fraudulent or Misleading Information',
+    heading: '22. Prohibition of Fraudulent or Misleading Information',
     body: [
       'The Artist shall not submit:',
       'Counterfeit artwork.',
@@ -335,7 +316,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'suspension-and-termination',
-    heading: '24. Suspension and Termination',
+    heading: '23. Suspension and Termination',
     body: [
       'Galleryzone may terminate the Artist\'s agreement and/or remove artwork if:',
       'The artwork is counterfeit.',
@@ -349,18 +330,17 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'limitation-of-liability',
-    heading: '25. Limitation of Liability',
+    heading: '24. Limitation of Liability',
     body: [
       'To the extent permitted by applicable law, Galleryzone shall not be liable for:',
       'Failure to sell an artwork.',
       'Market fluctuations.',
-      'Loss or damage where the Artist has declined applicable insurance.',
       'Indirect or consequential damages.',
     ],
   ),
   LegalSection(
     id: 'no-guarantee-of-sale',
-    heading: '26. No Guarantee of Sale',
+    heading: '25. No Guarantee of Sale',
     body: [
       'Listing or promoting an artwork through Galleryzone does not constitute a guarantee, promise, or assurance that the artwork will be sold.',
       'Sales depend on factors including buyer interest, market conditions, artwork demand, pricing, exhibitions, promotional activity, and other commercial factors. The MOU expressly states that Galleryzone promotes artworks but does not guarantee a sale.',
@@ -368,7 +348,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'intellectual-property',
-    heading: '27. Intellectual Property',
+    heading: '26. Intellectual Property',
     body: [
       'The Artist remains responsible for ensuring that all submitted artwork and related material does not infringe any third-party intellectual property rights.',
       'The Artist represents that they have the necessary rights and authority to submit the artwork to Galleryzone.',
@@ -377,7 +357,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'changes-to-terms',
-    heading: '28. Changes to Terms',
+    heading: '27. Changes to Terms',
     body: [
       'Galleryzone may update its operational requirements, procedures, packaging standards, documentation requirements, or other applicable policies from time to time.',
       'Any amendment to the contractual agreement between Galleryzone and the Artist shall be valid only when made in writing and signed by both parties, as provided in the MOU.',
@@ -385,7 +365,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'governing-law-and-jurisdiction',
-    heading: '29. Governing Law and Jurisdiction',
+    heading: '28. Governing Law and Jurisdiction',
     body: [
       'These Terms shall be governed by and interpreted in accordance with the laws of India.',
       'The courts at Hyderabad, Telangana, India shall have exclusive jurisdiction over matters arising under these Terms, subject to applicable law.',
@@ -393,7 +373,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'entire-agreement',
-    heading: '30. Entire Agreement',
+    heading: '29. Entire Agreement',
     body: [
       'These Terms, together with the applicable Artist MOU and any written documents expressly incorporated into it, constitute the agreement governing the Artist\'s relationship with Galleryzone concerning the submission, listing, promotion, exhibition, and sale of artworks.',
       'Any amendment to the contractual agreement shall be made in writing and signed by both parties.',
@@ -401,7 +381,7 @@ const artistTermsSections = <LegalSection>[
   ),
   LegalSection(
     id: 'artist-declaration-and-acceptance',
-    heading: '31. Artist Declaration and Acceptance',
+    heading: '30. Artist Declaration and Acceptance',
     body: [
       'By accepting these Terms, the Artist confirms that:',
       'They have read and understood these Terms.',
@@ -409,7 +389,7 @@ const artistTermsSections = <LegalSection>[
       'They voluntarily agree to comply with these Terms.',
       'The submitted artworks are original and created entirely by them.',
       'The information provided to Galleryzone is accurate and complete.',
-      'They agree to comply with Galleryzone\'s applicable artwork, documentation, shipping, insurance, pricing, authenticity, and sales procedures.',
+      'They agree to comply with Galleryzone\'s applicable artwork, documentation, shipping, pricing, authenticity, and sales procedures.',
       'The original MOU similarly requires the Artist to confirm that they have read and understood the agreement and voluntarily agreed to its terms.',
       'ARTIST ACCEPTANCE',
       'Artist Name: __',

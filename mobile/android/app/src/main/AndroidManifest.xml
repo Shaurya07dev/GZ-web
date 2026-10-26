@@ -1,5 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Debug/profile manifests also declare this for Flutter tooling, but a
+         Play release only inherits the main manifest. The production API,
+         Firebase Auth, Razorpay checkout and external links all require it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- The artist portal's artwork upload asks for no runtime permissions,
          deliberately. `image_picker` captures through ACTION_IMAGE_CAPTURE and
          reads through the system photo picker; both hand back a result the app

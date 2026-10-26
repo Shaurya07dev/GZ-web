@@ -76,6 +76,7 @@ _ArtistProfileDetails _$ArtistProfileDetailsFromJson(
   pickupLine2: json['pickupLine2'] as String? ?? '',
   pickupCity: json['pickupCity'] as String? ?? '',
   pickupState: json['pickupState'] as String? ?? '',
+  pickupCountry: json['pickupCountry'] as String? ?? 'IN',
   pickupPincode: json['pickupPincode'] as String? ?? '',
 );
 
@@ -104,6 +105,7 @@ Map<String, dynamic> _$ArtistProfileDetailsToJson(
   'pickupLine2': instance.pickupLine2,
   'pickupCity': instance.pickupCity,
   'pickupState': instance.pickupState,
+  'pickupCountry': instance.pickupCountry,
   'pickupPincode': instance.pickupPincode,
 };
 
@@ -241,6 +243,12 @@ _AggregatorHolding _$AggregatorHoldingFromJson(Map<String, dynamic> json) =>
           : HoldingExtensionRequest.fromJson(
               json['extensionRequest'] as Map<String, dynamic>,
             ),
+      inboundShiprocketStage: $enumDecodeNullable(
+        _$ShiprocketStageEnumMap,
+        json['inboundShiprocketStage'],
+      ),
+      inboundTrackingId: json['inboundTrackingId'] as String?,
+      inboundCarrier: json['inboundCarrier'] as String?,
     );
 
 Map<String, dynamic> _$AggregatorHoldingToJson(_AggregatorHolding instance) =>
@@ -262,6 +270,10 @@ Map<String, dynamic> _$AggregatorHoldingToJson(_AggregatorHolding instance) =>
       'appreciated': instance.appreciated,
       'priceWarning': instance.priceWarning,
       'extensionRequest': instance.extensionRequest,
+      'inboundShiprocketStage':
+          _$ShiprocketStageEnumMap[instance.inboundShiprocketStage],
+      'inboundTrackingId': instance.inboundTrackingId,
+      'inboundCarrier': instance.inboundCarrier,
     };
 
 const _$HoldingStatusEnumMap = {
@@ -273,6 +285,13 @@ const _$HoldingStatusEnumMap = {
 const _$AssignmentSourceEnumMap = {
   AssignmentSource.selfReserved: 'self_reserved',
   AssignmentSource.gzAssigned: 'gz_assigned',
+};
+
+const _$ShiprocketStageEnumMap = {
+  ShiprocketStage.pickup: 'pickup',
+  ShiprocketStage.inTransit: 'in_transit',
+  ShiprocketStage.outForDelivery: 'out_for_delivery',
+  ShiprocketStage.delivered: 'delivered',
 };
 
 _RevenuePoint _$RevenuePointFromJson(Map<String, dynamic> json) =>

@@ -18,7 +18,9 @@ class RazorpayGateway implements PaymentGateway {
     final result = Completer<GatewayPayment>();
     final razorpay = Razorpay();
 
-    razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (PaymentSuccessResponse response) {
+    razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (
+      PaymentSuccessResponse response,
+    ) {
       if (result.isCompleted) return;
       result.complete(
         GatewayPayment(
@@ -28,7 +30,9 @@ class RazorpayGateway implements PaymentGateway {
         ),
       );
     });
-    razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse response) {
+    razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (
+      PaymentFailureResponse response,
+    ) {
       if (result.isCompleted) return;
       // Closing the sheet is not a failed payment: nothing was charged and the
       // order stays pending.
@@ -44,7 +48,10 @@ class RazorpayGateway implements PaymentGateway {
     });
     // A wallet app took over (Paytm etc.); Razorpay reports the outcome through
     // the success / error events above, so there is nothing to do here.
-    razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (ExternalWalletResponse response) {});
+    razorpay.on(
+      Razorpay.EVENT_EXTERNAL_WALLET,
+      (ExternalWalletResponse response) {},
+    );
 
     razorpay.open({
       'key': session.keyId,

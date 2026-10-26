@@ -77,7 +77,8 @@ class ImageComingSoon extends StatelessWidget {
           'assets/brand/gz-logo.png',
           width: size,
           height: size,
-          errorBuilder: (context, error, stack) => SizedBox(width: size, height: size),
+          errorBuilder: (context, error, stack) =>
+              SizedBox(width: size, height: size),
         ),
       ),
     );
@@ -88,9 +89,14 @@ class ImageComingSoon extends StatelessWidget {
         builder: (context, constraints) {
           // A thumbnail in a list row is too small to carry the words; it keeps
           // just the faded mark, scaled to the box.
-          final compact = constraints.maxHeight < 120 || constraints.maxWidth < 110;
+          final compact =
+              constraints.maxHeight < 120 || constraints.maxWidth < 110;
           if (compact) {
-            final size = (constraints.biggest.shortestSide.isFinite ? constraints.biggest.shortestSide : 40) * 0.5;
+            final size =
+                (constraints.biggest.shortestSide.isFinite
+                    ? constraints.biggest.shortestSide
+                    : 40) *
+                0.5;
             return Center(child: logo(size));
           }
           return Center(
@@ -204,8 +210,7 @@ class VerifiedBadge extends StatelessWidget {
 ///
 /// What it shows follows the website's card: GalleryZone's rank as a stamp
 /// over the photo, the title, the artist, medium and year, size, the price —
-/// with "Reserved" / "Sold" beside it when it is not on sale — and an
-/// "Insured" tag only when the piece is. There is no certificate or passport
+/// with "Reserved" / "Sold" beside it when it is not on sale. There is no certificate or passport
 /// tag: the marketplace carries none (1 Oct 2026).
 class ArtworkCard extends ConsumerWidget {
   const ArtworkCard({super.key, required this.artwork, this.width});
@@ -330,14 +335,6 @@ class ArtworkCard extends ConsumerWidget {
                               ),
                           ],
                         ),
-                        if (artwork.insured) ...[
-                          const SizedBox(height: 8),
-                          // Clear of the buy button that sits in this corner.
-                          const Padding(
-                            padding: EdgeInsets.only(right: 40),
-                            child: _Pill(label: 'Insured', gold: true),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -443,7 +440,7 @@ class ArtworkGridDelegate extends SliverGridDelegate {
   /// marketplace card, a plainer tile passes less.
   final double contentHeight;
 
-  /// Title, artist, medium and year, size, price and the "Insured" tag, with
+  /// Title, artist, medium and year, size and price, with
   /// the card's padding and border — at the default text size.
   static const textHeight = 170.0;
 
@@ -526,39 +523,6 @@ class ArtworkCardSkeleton extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, this.gold = false});
-
-  final String label;
-  final bool gold;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = gold
-        ? theme.colorScheme.tertiary
-        : theme.colorScheme.onSurface;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.xl4),
-        border: Border.all(
-          color: gold
-              ? theme.colorScheme.primary.withValues(alpha: 0.5)
-              : theme.colorScheme.outline,
-        ),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );

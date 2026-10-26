@@ -7,13 +7,16 @@ import '../models/artist_portal.dart';
 import '../models/artwork.dart';
 import '../models/customer.dart';
 import '../models/mou.dart';
-import '../../features/aggregator/aggregator_mou_data.dart' show aggregatorMouVersion;
-import '../../features/shell/mou/mou_document.dart' show mouDetailLabel, mouPartyDetailsFor;
+import '../../features/aggregator/aggregator_mou_data.dart'
+    show aggregatorMouVersion;
+import '../../features/shell/mou/mou_document.dart'
+    show mouDetailLabel, mouPartyDetailsFor;
 import '../../features/shell/portal_widgets.dart' show gstinPattern;
 import '../repositories/aggregator_repository.dart';
+import '../repositories/artist_repository.dart'
+    show DigiLockerStart, GstinCheckResult;
 import '../storage/mock_db.dart';
-import 'mock_artist_repository.dart'
-    show artistPriceOf, creditArtistForSale;
+import 'mock_artist_repository.dart' show artistPriceOf, creditArtistForSale;
 import 'mock_artwork_repository.dart' show seedArtworksCollection;
 import 'mock_utils.dart';
 import 'seed/aggregator_seed.dart';
@@ -29,6 +32,7 @@ const _messagesKey = 'aggregatorMessages';
 const _supportKey = 'aggregatorSupportTickets';
 const _settingsKey = 'aggregatorSettings';
 const _profileKey = 'aggregatorProfile';
+const _holdingReportsKey = 'aggregatorHoldingReports';
 
 /// Port of `aggregatorService.ts` + `aggregatorSalesService.ts`.
 ///
@@ -39,24 +43,27 @@ const _profileKey = 'aggregatorProfile';
 /// is that an artwork's own `status` stays `marketplace` after this portal
 /// reserves it — so every eligibility check here reads `holdings`, never
 /// `artwork.status`.
-class MockAggregatorRepository implements AggregatorRepository {
+class MockAggregatorRepository
+    implements AggregatorRepository, AggregatorProfileVerificationRepository {
   T _readSingle<T>(
     String key,
     T Function() seed,
     T Function(Map<String, dynamic>) fromJson,
     Map<String, dynamic> Function(T) toJson,
-  ) =>
-      MockDb.getCollection(key, () => [seed()], fromJson, toJson).first;
+  ) => MockDb.getCollection(key, () => [seed()], fromJson, toJson).first;
 
-  void _writeSingle<T>(String key, T value, Map<String, dynamic> Function(T) toJson) =>
-      MockDb.setCollection(key, [value], toJson);
+  void _writeSingle<T>(
+    String key,
+    T value,
+    Map<String, dynamic> Function(T) toJson,
+  ) => MockDb.setCollection(key, [value], toJson);
 
   List<Artwork> _readArtworks() => MockDb.getCollection(
-        _artworksKey,
-        seedArtworksCollection,
-        Artwork.fromJson,
-        (a) => a.toJson(),
-      );
+    _artworksKey,
+    seedArtworksCollection,
+    Artwork.fromJson,
+    (a) => a.toJson(),
+  );
 
   Artwork? _artworkById(String id) {
     for (final artwork in _readArtworks()) {
@@ -66,74 +73,80 @@ class MockAggregatorRepository implements AggregatorRepository {
   }
 
   List<AggregatorHolding> _readHoldings() => MockDb.getCollection(
-        _holdingsKey,
-        seedHoldingsCollection,
-        AggregatorHolding.fromJson,
-        (h) => h.toJson(),
-      );
+    _holdingsKey,
+    seedHoldingsCollection,
+    AggregatorHolding.fromJson,
+    (h) => h.toJson(),
+  );
 
   void _writeHoldings(List<AggregatorHolding> holdings) =>
       MockDb.setCollection(_holdingsKey, holdings, (h) => h.toJson());
 
   List<AggregatorSale> _readSales() => MockDb.getCollection(
-        _salesKey,
-        () => const <AggregatorSale>[],
-        AggregatorSale.fromJson,
-        (s) => s.toJson(),
-      );
+    _salesKey,
+    () => const <AggregatorSale>[],
+    AggregatorSale.fromJson,
+    (s) => s.toJson(),
+  );
 
   void _writeSales(List<AggregatorSale> sales) =>
       MockDb.setCollection(_salesKey, sales, (s) => s.toJson());
 
   WalletSummary _readWallet() => _readSingle(
-        _walletKey,
-        seedAggregatorWallet,
-        WalletSummary.fromJson,
-        (w) => w.toJson(),
-      );
+    _walletKey,
+    seedAggregatorWallet,
+    WalletSummary.fromJson,
+    (w) => w.toJson(),
+  );
 
   List<WalletTransaction> _readTransactions() => MockDb.getCollection(
-        _walletTransactionsKey,
-        () => const <WalletTransaction>[],
-        WalletTransaction.fromJson,
-        (t) => t.toJson(),
-      );
+    _walletTransactionsKey,
+    () => const <WalletTransaction>[],
+    WalletTransaction.fromJson,
+    (t) => t.toJson(),
+  );
 
   void _writeTransactions(List<WalletTransaction> transactions) =>
-      MockDb.setCollection(_walletTransactionsKey, transactions, (t) => t.toJson());
-
-  List<Settlement> _readSettlements() => MockDb.getCollection(
-        _settlementsKey,
-        () => const <Settlement>[],
-        Settlement.fromJson,
-        (s) => s.toJson(),
-      );
-
-  List<MessageThread> _readMessages() => MockDb.getCollection(
-        _messagesKey,
-        seedAggregatorMessages,
-        MessageThread.fromJson,
-        (m) => m.toJson(),
-      );
-
-  List<SupportTicket> _readTickets() => MockDb.getCollection(
-        _supportKey,
-        seedAggregatorSupportTickets,
-        SupportTicket.fromJson,
+      MockDb.setCollection(
+        _walletTransactionsKey,
+        transactions,
         (t) => t.toJson(),
       );
 
+  List<Settlement> _readSettlements() => MockDb.getCollection(
+    _settlementsKey,
+    () => const <Settlement>[],
+    Settlement.fromJson,
+    (s) => s.toJson(),
+  );
+
+  List<MessageThread> _readMessages() => MockDb.getCollection(
+    _messagesKey,
+    seedAggregatorMessages,
+    MessageThread.fromJson,
+    (m) => m.toJson(),
+  );
+
+  List<SupportTicket> _readTickets() => MockDb.getCollection(
+    _supportKey,
+    seedAggregatorSupportTickets,
+    SupportTicket.fromJson,
+    (t) => t.toJson(),
+  );
+
   AggregatorProfile _readProfile() => _readSingle(
-        _profileKey,
-        seedAggregatorProfile,
-        AggregatorProfile.fromJson,
-        (p) => p.toJson(),
-      );
+    _profileKey,
+    seedAggregatorProfile,
+    AggregatorProfile.fromJson,
+    (p) => p.toJson(),
+  );
 
   /// The commission a sale carries: MOU §8's 20% of the holding's markup over
   /// the ARTIST's price. Returns 0 if either record has gone missing.
   double _commissionForSale(AggregatorSale sale) {
-    final holding = _readHoldings().where((h) => h.id == sale.holdingId).firstOrNull;
+    final holding = _readHoldings()
+        .where((h) => h.id == sale.holdingId)
+        .firstOrNull;
     final artwork = _artworkById(sale.artworkId);
     if (holding == null || artwork == null) return 0;
     return aggregatorCommissionFor(
@@ -153,14 +166,15 @@ class MockAggregatorRepository implements AggregatorRepository {
 
   /// Placements this artwork has already been through, in order.
   List<AggregatorHolding> _pastHoldingsFor(String artworkId) => [
-        for (final holding in _readHoldings())
-          if (holding.artworkId == artworkId &&
-              holding.status == HoldingStatus.returned)
-            holding,
-      ]..sort((a, b) => a.assignedAt.compareTo(b.assignedAt));
+    for (final holding in _readHoldings())
+      if (holding.artworkId == artworkId &&
+          holding.status == HoldingStatus.returned)
+        holding,
+  ]..sort((a, b) => a.assignedAt.compareTo(b.assignedAt));
 
   /// Which month of the cycle the NEXT placement of this artwork would be.
-  int _cycleMonthFor(String artworkId) => _pastHoldingsFor(artworkId).length + 1;
+  int _cycleMonthFor(String artworkId) =>
+      _pastHoldingsFor(artworkId).length + 1;
 
   /// When this artwork's 180-day listing started — the first time any
   /// aggregator took it. Null means it has never been placed, so the clock has
@@ -195,7 +209,11 @@ class MockAggregatorRepository implements AggregatorRepository {
 
     // Before GST: the floor an aggregator may not go below, and what the
     // commission is worked from. The price a customer sees adds GST to it.
-    final sellingPrice = aggregatorOfferPriceOf(artistPrice, month, appreciated: appreciated);
+    final sellingPrice = aggregatorOfferPriceOf(
+      artistPrice,
+      month,
+      appreciated: appreciated,
+    );
     final offerPrice = withGst(sellingPrice);
     final standardPrice = withGst(aggregatorOfferPriceOf(artistPrice, 1));
 
@@ -241,56 +259,61 @@ class MockAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<AggregatorDashboardSummary> getDashboardSummary() => mockDelay(() {
-        final holdings = _readHoldings();
-        final sold = holdings
-            .where((h) => h.status == HoldingStatus.soldPendingSettlement)
-            .toList();
-        var commission = 0.0;
-        for (final holding in sold) {
-          final artwork = _artworkById(holding.artworkId);
-          if (artwork == null) continue;
-          commission += aggregatorCommissionFor(
-            displayPrice: holding.displayPrice,
-            artistPrice: artistPriceOf(artwork),
-          );
-        }
-        // Of the pieces that have finished (sold or sent back), the share that sold;
-        // one still on display is neither, so it isn't in the denominator.
-        final returned = holdings.where((h) => h.status == HoldingStatus.returned).length;
-        final finished = sold.length + returned;
-        return AggregatorDashboardSummary(
-          activeReservations:
-              holdings.where((h) => h.status == HoldingStatus.reserved).length,
-          commissionEarned: commission,
-          pendingSettlements: sold.length,
-          conversionRate: finished == 0 ? null : (sold.length / finished * 100).round(),
-        );
-      });
+    final holdings = _readHoldings();
+    final sold = holdings
+        .where((h) => h.status == HoldingStatus.soldPendingSettlement)
+        .toList();
+    var commission = 0.0;
+    for (final holding in sold) {
+      final artwork = _artworkById(holding.artworkId);
+      if (artwork == null) continue;
+      commission += aggregatorCommissionFor(
+        displayPrice: holding.displayPrice,
+        artistPrice: artistPriceOf(artwork),
+      );
+    }
+    // Of the pieces that have finished (sold or sent back), the share that sold;
+    // one still on display is neither, so it isn't in the denominator.
+    final returned = holdings
+        .where((h) => h.status == HoldingStatus.returned)
+        .length;
+    final finished = sold.length + returned;
+    return AggregatorDashboardSummary(
+      activeReservations: holdings
+          .where((h) => h.status == HoldingStatus.reserved)
+          .length,
+      commissionEarned: commission,
+      pendingSettlements: sold.length,
+      conversionRate: finished == 0
+          ? null
+          : (sold.length / finished * 100).round(),
+    );
+  });
 
   @override
   Future<List<ReservableArtwork>> listReservableInventory() => mockDelay(() {
-        // A returned holding no longer claims its artwork — that is the whole
-        // point of the cycle: the piece goes back and the next aggregator can
-        // take it, at the next month's price.
-        final claimed = {
-          for (final holding in _readHoldings())
-            if (holding.status != HoldingStatus.returned) holding.artworkId,
-        };
-        return [
-          for (final artwork in _readArtworks())
-            // Ask the predicate, not the literal: an aggregator-only piece is
-            // reservable here even though it never appears in the marketplace
-            // grid.
-            if (isAggregatorListed(artwork.listingType) &&
-                artwork.status == ArtworkStatus.marketplace &&
-                !claimed.contains(artwork.id) &&
-                // Five placements, or fewer if the 180 days run out first. A
-                // stub of under thirty days is never placed with a new
-                // aggregator — it goes to whoever already has the piece.
-                _isPlaceable(artwork.id))
-              ReservableArtwork(artwork: artwork, offer: _buildOffer(artwork)),
-        ];
-      });
+    // A returned holding no longer claims its artwork — that is the whole
+    // point of the cycle: the piece goes back and the next aggregator can
+    // take it, at the next month's price.
+    final claimed = {
+      for (final holding in _readHoldings())
+        if (holding.status != HoldingStatus.returned) holding.artworkId,
+    };
+    return [
+      for (final artwork in _readArtworks())
+        // Ask the predicate, not the literal: an aggregator-only piece is
+        // reservable here even though it never appears in the marketplace
+        // grid.
+        if (isAggregatorListed(artwork.listingType) &&
+            artwork.status == ArtworkStatus.marketplace &&
+            !claimed.contains(artwork.id) &&
+            // Five placements, or fewer if the 180 days run out first. A
+            // stub of under thirty days is never placed with a new
+            // aggregator — it goes to whoever already has the piece.
+            _isPlaceable(artwork.id))
+          ReservableArtwork(artwork: artwork, offer: _buildOffer(artwork)),
+    ];
+  });
 
   @override
   Future<AggregatorHolding> reserve(
@@ -335,13 +358,17 @@ class MockAggregatorRepository implements AggregatorRepository {
     // Month 1 only: the aggregator may price the piece, once, as they reserve it
     // - whole rupees, before GST, never below GalleryZone's own price. From month
     // 2 the price is GalleryZone's and any figure sent is ignored.
-    final chosen = offer.canSetPrice && sellingPrice != null ? sellingPrice : null;
+    final chosen = offer.canSetPrice && sellingPrice != null
+        ? sellingPrice
+        : null;
     if (chosen != null) {
       if (chosen != chosen.roundToDouble() || chosen <= 0) {
         return mockError('Enter a price in whole rupees.');
       }
       if (chosen < offer.sellingPrice) {
-        return mockError("It can't be lower than GalleryZone's price, ${formatInr(offer.sellingPrice)}.");
+        return mockError(
+          "It can't be lower than GalleryZone's price, ${formatInr(offer.sellingPrice)}.",
+        );
       }
     }
     final price = chosen ?? offer.sellingPrice;
@@ -392,7 +419,8 @@ class MockAggregatorRepository implements AggregatorRepository {
         displayPrice: withGst(price),
         displayPriceSetAt: raised ? assignedAt.toIso8601String() : null,
         appreciated: raised,
-        priceWarning: offer.priceWarnFrom != null && price >= offer.priceWarnFrom!,
+        priceWarning:
+            offer.priceWarnFrom != null && price >= offer.priceWarnFrom!,
         assignedAt: assignedAt.toIso8601String(),
         expiresAt: window.expiresAt.toIso8601String(),
         windowExtended: window.extended,
@@ -448,7 +476,10 @@ class MockAggregatorRepository implements AggregatorRepository {
       final wallet = _readWallet();
       _writeWallet(
         wallet.copyWith(
-          lockedBalance: (wallet.lockedBalance - held).clamp(0, double.infinity),
+          lockedBalance: (wallet.lockedBalance - held).clamp(
+            0,
+            double.infinity,
+          ),
           balance: wallet.balance - deliveryLost,
         ),
       );
@@ -493,11 +524,16 @@ class MockAggregatorRepository implements AggregatorRepository {
   }
 
   @override
-  Future<AggregatorHolding> requestExtension(String holdingId, String assurance) {
+  Future<AggregatorHolding> requestExtension(
+    String holdingId,
+    String assurance,
+  ) {
     final holdings = _readHoldings();
     final holding = holdings.where((h) => h.id == holdingId).firstOrNull;
     if (holding == null) return mockError('Holding not found');
-    if (assurance.trim().length < 10) return mockError('Tell GalleryZone why this piece will sell');
+    if (assurance.trim().length < 10) {
+      return mockError('Tell GalleryZone why this piece will sell');
+    }
     return mockDelay(() {
       final updated = holding.copyWith(
         extensionRequest: HoldingExtensionRequest(
@@ -507,41 +543,52 @@ class MockAggregatorRepository implements AggregatorRepository {
           previousExpiresAt: holding.expiresAt,
         ),
       );
-      _writeHoldings([for (final h in holdings) h.id == holdingId ? updated : h]);
+      _writeHoldings([
+        for (final h in holdings) h.id == holdingId ? updated : h,
+      ]);
       return updated;
     });
   }
 
   @override
   Future<List<AggregatorHoldingView>> listCollection() => mockDelay(() {
-        final byId = {for (final artwork in _readArtworks()) artwork.id: artwork};
-        return [
-          // Returned pieces are history for the cycle counter, not part of
-          // anyone's current collection.
-          for (final holding in _readHoldings())
-            if (holding.status != HoldingStatus.returned &&
-                byId[holding.artworkId] != null)
-              AggregatorHoldingView(holding: holding, artwork: byId[holding.artworkId]!),
-        ];
-      });
+    final byId = {for (final artwork in _readArtworks()) artwork.id: artwork};
+    return [
+      // Returned pieces are history for the cycle counter, not part of
+      // anyone's current collection.
+      for (final holding in _readHoldings())
+        if (holding.status != HoldingStatus.returned &&
+            byId[holding.artworkId] != null)
+          AggregatorHoldingView(
+            holding: holding,
+            artwork: byId[holding.artworkId]!,
+          ),
+    ];
+  });
 
   @override
   Future<AggregatorHoldingView?> getHolding(String holdingId) => mockDelay(() {
-        final holding = _readHoldings().where((h) => h.id == holdingId).firstOrNull;
-        final artwork = holding == null ? null : _artworkById(holding.artworkId);
-        return holding == null || artwork == null
-            ? null
-            : AggregatorHoldingView(holding: holding, artwork: artwork);
-      });
+    final holding = _readHoldings().where((h) => h.id == holdingId).firstOrNull;
+    final artwork = holding == null ? null : _artworkById(holding.artworkId);
+    return holding == null || artwork == null
+        ? null
+        : AggregatorHoldingView(holding: holding, artwork: artwork);
+  });
 
   @override
   Future<AggregatorSale> recordSale(RecordSaleInput input) {
     if (input.soldPrice <= 0) return mockError('Enter the sold price');
-    if (input.buyerName.trim().isEmpty) return mockError("Enter the buyer's name");
+    if (input.buyerName.trim().isEmpty) {
+      return mockError("Enter the buyer's name");
+    }
 
     final holdings = _readHoldings();
     final holding = holdings
-        .where((h) => h.artworkId == input.artworkId && h.status == HoldingStatus.reserved)
+        .where(
+          (h) =>
+              h.artworkId == input.artworkId &&
+              h.status == HoldingStatus.reserved,
+        )
         .firstOrNull;
     if (holding == null) {
       return mockError('No active reservation found for this artwork');
@@ -550,8 +597,12 @@ class MockAggregatorRepository implements AggregatorRepository {
     return mockDelay(() {
       // The holding moves to sold rather than disappearing, so the piece
       // stays visible (and price-locked) in the collection.
-      final updated = holding.copyWith(status: HoldingStatus.soldPendingSettlement);
-      _writeHoldings([for (final h in holdings) h.id == holding.id ? updated : h]);
+      final updated = holding.copyWith(
+        status: HoldingStatus.soldPendingSettlement,
+      );
+      _writeHoldings([
+        for (final h in holdings) h.id == holding.id ? updated : h,
+      ]);
 
       final now = DateTime.now();
       final stamp = now.microsecondsSinceEpoch;
@@ -572,7 +623,9 @@ class MockAggregatorRepository implements AggregatorRepository {
         // aggregator's till until they transfer it.
         remittedAt: null,
         remitDueAt: input.paymentRoute == PaymentRoute.cashAtPremises
-            ? now.add(const Duration(days: cashRemittanceDays)).toIso8601String()
+            ? now
+                  .add(const Duration(days: cashRemittanceDays))
+                  .toIso8601String()
             : null,
         courierRef: input.deliveryMode == DeliveryMode.courier
             ? 'CR-${stamp.toRadixString(36).toUpperCase()}'
@@ -598,7 +651,10 @@ class MockAggregatorRepository implements AggregatorRepository {
         final wallet = _readWallet();
         _writeWallet(
           wallet.copyWith(
-            lockedBalance: (wallet.lockedBalance - held).clamp(0, double.infinity),
+            lockedBalance: (wallet.lockedBalance - held).clamp(
+              0,
+              double.infinity,
+            ),
             pendingBalance: wallet.pendingBalance + commission,
           ),
         );
@@ -613,7 +669,8 @@ class MockAggregatorRepository implements AggregatorRepository {
             WalletTransaction(
               id: 'wt-$stamp',
               type: WalletTransactionType.refund,
-              label: '"${artwork.title}" sold — ${formatInr(held)} '
+              label:
+                  '"${artwork.title}" sold — ${formatInr(held)} '
                   'advance & delivery set off against settlement',
               amount: held,
               date: date,
@@ -644,30 +701,33 @@ class MockAggregatorRepository implements AggregatorRepository {
   }
 
   @override
-  Future<List<AggregatorSale>> listSales() =>
-      mockDelay(() => _readSales()..sort((a, b) => b.soldAt.compareTo(a.soldAt)));
+  Future<List<AggregatorSale>> listSales() => mockDelay(
+    () => _readSales()..sort((a, b) => b.soldAt.compareTo(a.soldAt)),
+  );
 
   @override
   Future<List<AggregatorCustomer>> listCustomers() => mockDelay(() {
-        final byEmail = <String, AggregatorCustomer>{};
-        for (final sale in _readSales()) {
-          final existing = byEmail[sale.buyerEmail];
-          byEmail[sale.buyerEmail] = AggregatorCustomer(
-            // Latest sale wins on name/phone — a buyer who corrects their
-            // details on a second purchase shouldn't stay stale here.
-            buyerName: sale.buyerName,
-            buyerEmail: sale.buyerEmail,
-            buyerPhone: sale.buyerPhone,
-            orderCount: (existing?.orderCount ?? 0) + 1,
-            totalSpend: (existing?.totalSpend ?? 0) + sale.soldPrice,
-          );
-        }
-        return byEmail.values.toList()..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
-      });
+    final byEmail = <String, AggregatorCustomer>{};
+    for (final sale in _readSales()) {
+      final existing = byEmail[sale.buyerEmail];
+      byEmail[sale.buyerEmail] = AggregatorCustomer(
+        // Latest sale wins on name/phone — a buyer who corrects their
+        // details on a second purchase shouldn't stay stale here.
+        buyerName: sale.buyerName,
+        buyerEmail: sale.buyerEmail,
+        buyerPhone: sale.buyerPhone,
+        orderCount: (existing?.orderCount ?? 0) + 1,
+        totalSpend: (existing?.totalSpend ?? 0) + sale.soldPrice,
+      );
+    }
+    return byEmail.values.toList()
+      ..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
+  });
 
   @override
-  Future<Map<String, double>> saleCommissions() =>
-      mockDelay(() => {for (final sale in _readSales()) sale.id: _commissionForSale(sale)});
+  Future<Map<String, double>> saleCommissions() => mockDelay(
+    () => {for (final sale in _readSales()) sale.id: _commissionForSale(sale)},
+  );
 
   @override
   Future<AggregatorSale> advanceShipment(String saleId, {String? courierRef}) {
@@ -684,9 +744,14 @@ class MockAggregatorRepository implements AggregatorRepository {
           ? sale.copyWith(
               shipmentStatus: ShipmentStatus.dispatched,
               dispatchedAt: now,
-              courierRef: courierRef != null && courierRef.trim().isNotEmpty ? courierRef.trim() : sale.courierRef,
+              courierRef: courierRef != null && courierRef.trim().isNotEmpty
+                  ? courierRef.trim()
+                  : sale.courierRef,
             )
-          : sale.copyWith(shipmentStatus: ShipmentStatus.delivered, deliveredAt: now);
+          : sale.copyWith(
+              shipmentStatus: ShipmentStatus.delivered,
+              deliveredAt: now,
+            );
       _writeSales([for (final s in sales) s.id == saleId ? updated : s]);
       return updated;
     });
@@ -694,32 +759,38 @@ class MockAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<List<GallerySpace>> listGallerySpaces() => mockDelay(
-        () => MockDb.getCollection(
-          _gallerySpacesKey,
-          seedGallerySpaces,
-          GallerySpace.fromJson,
-          (s) => s.toJson(),
-        ),
-      );
+    () => MockDb.getCollection(
+      _gallerySpacesKey,
+      seedGallerySpaces,
+      GallerySpace.fromJson,
+      (s) => s.toJson(),
+    ),
+  );
 
   @override
   Future<GallerySpace> addGallerySpace(GallerySpace space) => mockDelay(() {
-        final spaces = MockDb.getCollection(
-          _gallerySpacesKey,
-          seedGallerySpaces,
-          GallerySpace.fromJson,
-          (s) => s.toJson(),
-        );
-        final added = space.copyWith(id: 'space-${DateTime.now().microsecondsSinceEpoch}');
-        MockDb.setCollection(_gallerySpacesKey, [...spaces, added], (s) => s.toJson());
-        return added;
-      });
+    final spaces = MockDb.getCollection(
+      _gallerySpacesKey,
+      seedGallerySpaces,
+      GallerySpace.fromJson,
+      (s) => s.toJson(),
+    );
+    final added = space.copyWith(
+      id: 'space-${DateTime.now().microsecondsSinceEpoch}',
+    );
+    MockDb.setCollection(_gallerySpacesKey, [
+      ...spaces,
+      added,
+    ], (s) => s.toJson());
+    return added;
+  });
 
   @override
   Future<WalletSummary> getWallet() => mockDelay(_readWallet);
 
   @override
-  Future<List<WalletTransaction>> listWalletTransactions() => mockDelay(_readTransactions);
+  Future<List<WalletTransaction>> listWalletTransactions() =>
+      mockDelay(_readTransactions);
 
   @override
   Future<WalletTransaction> addFunds(double amount) {
@@ -740,6 +811,60 @@ class MockAggregatorRepository implements AggregatorRepository {
       _pushTransactions([transaction]);
       return transaction;
     });
+  }
+
+  @override
+  Future<HoldingReport> reportHoldingIssue(
+    String holdingId, {
+    required HoldingReportIssueType issueType,
+    required String description,
+  }) {
+    final text = description.trim();
+    if (text.length < 10) {
+      return mockError('Describe the issue in at least a line or two');
+    }
+    if (text.length > 2000) {
+      return mockError('Keep the report under 2,000 characters');
+    }
+    final holding = _readHoldings()
+        .where((item) => item.id == holdingId)
+        .firstOrNull;
+    if (holding == null) return mockError('Holding not found');
+    final artwork = _artworkById(holding.artworkId);
+    final profile = _readProfile();
+    return mockDelay(() {
+      final report = HoldingReport(
+        id: 'report-${DateTime.now().microsecondsSinceEpoch}',
+        holdingId: holdingId,
+        artworkId: holding.artworkId,
+        artworkTitle: artwork?.title ?? 'Artwork',
+        aggregatorId: 'agg-1',
+        aggregatorName: profile.companyName,
+        aggregatorEmail: profile.email,
+        artistId: artwork?.artistId ?? '',
+        artistName: artwork?.artistName ?? '',
+        issueType: issueType,
+        description: text,
+        status: HoldingReportStatus.open,
+        reportedAt: DateTime.now().toUtc().toIso8601String(),
+      );
+      final reports = MockDb.getCollection(
+        _holdingReportsKey,
+        () => const <HoldingReport>[],
+        HoldingReport.fromJson,
+        (item) => item.toJson(),
+      );
+      MockDb.setCollection(_holdingReportsKey, [
+        report,
+        ...reports,
+      ], (item) => item.toJson());
+      return report;
+    });
+  }
+
+  @override
+  Future<void> payReservation(double amount) async {
+    await addFunds(amount);
   }
 
   @override
@@ -781,22 +906,29 @@ class MockAggregatorRepository implements AggregatorRepository {
   Future<List<Settlement>> listSettlements() => mockDelay(_readSettlements);
 
   @override
-  Future<List<AggregatorSale>> listRemittancesDue() => mockDelay(() => [
-        for (final sale in _readSales())
-          if (sale.paymentRoute == PaymentRoute.cashAtPremises &&
-              sale.remittedAt == null)
-            sale,
-      ]);
+  Future<List<AggregatorSale>> listRemittancesDue() => mockDelay(
+    () => [
+      for (final sale in _readSales())
+        if (sale.paymentRoute == PaymentRoute.cashAtPremises &&
+            sale.remittedAt == null)
+          sale,
+    ],
+  );
 
   @override
-  Future<AggregatorSale> markRemitted(String saleId, {RemitVia via = RemitVia.wallet}) {
+  Future<AggregatorSale> markRemitted(
+    String saleId, {
+    RemitVia via = RemitVia.wallet,
+  }) {
     final sales = _readSales();
     final sale = sales.where((s) => s.id == saleId).firstOrNull;
     if (sale == null) return mockError('Sale not found');
     if (sale.paymentRoute != PaymentRoute.cashAtPremises) {
       return mockError('Only cash sales need paying in to GalleryZone');
     }
-    if (sale.remittedAt != null) return mockError('Already marked as transferred');
+    if (sale.remittedAt != null) {
+      return mockError('Already marked as transferred');
+    }
 
     // From the wallet it is the FREE balance that pays - what is held for pieces
     // on display is not available. Checked here as the API checks it, so a
@@ -812,7 +944,10 @@ class MockAggregatorRepository implements AggregatorRepository {
 
     return mockDelay(() {
       final now = DateTime.now();
-      final updated = sale.copyWith(remittedAt: now.toIso8601String(), remittedVia: via);
+      final updated = sale.copyWith(
+        remittedAt: now.toIso8601String(),
+        remittedVia: via,
+      );
       _writeSales([for (final s in sales) s.id == saleId ? updated : s]);
       // A bank transfer moves no wallet money: the cash the sale already counted
       // has arrived at GalleryZone's account.
@@ -823,7 +958,9 @@ class MockAggregatorRepository implements AggregatorRepository {
           WalletTransaction(
             id: 'wt-${now.microsecondsSinceEpoch}',
             type: WalletTransactionType.adjustment,
-            label: title == null ? 'Cash sale paid to GalleryZone' : 'Cash sale paid to GalleryZone · $title',
+            label: title == null
+                ? 'Cash sale paid to GalleryZone'
+                : 'Cash sale paid to GalleryZone · $title',
             amount: -sale.soldPrice,
             date: now.toIso8601String().substring(0, 10),
             status: WalletTransactionStatus.completed,
@@ -843,7 +980,9 @@ class MockAggregatorRepository implements AggregatorRepository {
     }
 
     final commission = _commissionForSale(sale);
-    if (commission <= 0) return mockError('No commission to settle for this sale');
+    if (commission <= 0) {
+      return mockError('No commission to settle for this sale');
+    }
 
     final wallet = _readWallet();
     if (wallet.pendingBalance < commission) {
@@ -864,11 +1003,13 @@ class MockAggregatorRepository implements AggregatorRepository {
       // The pending commission row becomes the settlement row rather than a
       // second entry appearing beside it — one sale, one line in the ledger.
       final transactions = _readTransactions();
-      final pendingIndex = transactions.indexWhere((t) =>
-          t.type == WalletTransactionType.commission &&
-          t.status == WalletTransactionStatus.pending &&
-          t.amount == commission &&
-          (artwork == null || t.label.contains(artwork.title)));
+      final pendingIndex = transactions.indexWhere(
+        (t) =>
+            t.type == WalletTransactionType.commission &&
+            t.status == WalletTransactionStatus.pending &&
+            t.amount == commission &&
+            (artwork == null || t.label.contains(artwork.title)),
+      );
       if (pendingIndex != -1) {
         _writeTransactions([
           for (var i = 0; i < transactions.length; i++)
@@ -901,72 +1042,78 @@ class MockAggregatorRepository implements AggregatorRepository {
         createdAt: sale.soldAt,
         processedAt: DateTime.now().toIso8601String(),
       );
-      MockDb.setCollection(
-        _settlementsKey,
-        [settlement, ..._readSettlements()],
-        (s) => s.toJson(),
-      );
+      MockDb.setCollection(_settlementsKey, [
+        settlement,
+        ..._readSettlements(),
+      ], (s) => s.toJson());
       return settlement;
     });
   }
 
   @override
   Future<AggregatorAnalyticsSummary> getAnalytics() => mockDelay(() {
-        final sales = _readSales();
-        final holdings = _readHoldings();
-        final wallet = _readWallet();
+    final sales = _readSales();
+    final holdings = _readHoldings();
+    final wallet = _readWallet();
 
-        var revenue = 0.0;
-        var markupTotal = 0.0;
-        for (final sale in sales) {
-          revenue += sale.soldPrice;
-          final holding = holdings.where((h) => h.id == sale.holdingId).firstOrNull;
-          final artwork = _artworkById(sale.artworkId);
-          if (holding == null || artwork == null) continue;
-          final markup = holding.displayPrice - artwork.customerPrice;
-          markupTotal += markup > 0 ? markup : 0;
-        }
+    var revenue = 0.0;
+    var markupTotal = 0.0;
+    for (final sale in sales) {
+      revenue += sale.soldPrice;
+      final holding = holdings.where((h) => h.id == sale.holdingId).firstOrNull;
+      final artwork = _artworkById(sale.artworkId);
+      if (holding == null || artwork == null) continue;
+      final markup = holding.displayPrice - artwork.customerPrice;
+      markupTotal += markup > 0 ? markup : 0;
+    }
 
-        return AggregatorAnalyticsSummary(
-          salesCount: sales.length,
-          totalRevenue: revenue,
-          commissionPending: wallet.pendingBalance,
-          commissionAvailable: wallet.balance,
-          customerCount: sales.map((s) => s.buyerEmail).toSet().length,
-          activeReservations:
-              holdings.where((h) => h.status == HoldingStatus.reserved).length,
-          averageSoldPrice: sales.isEmpty ? 0 : (revenue / sales.length).roundToDouble(),
-          averageDisplayMarkup:
-              sales.isEmpty ? 0 : (markupTotal / sales.length).roundToDouble(),
-        );
-      });
+    return AggregatorAnalyticsSummary(
+      salesCount: sales.length,
+      totalRevenue: revenue,
+      commissionPending: wallet.pendingBalance,
+      commissionAvailable: wallet.balance,
+      customerCount: sales.map((s) => s.buyerEmail).toSet().length,
+      activeReservations: holdings
+          .where((h) => h.status == HoldingStatus.reserved)
+          .length,
+      averageSoldPrice: sales.isEmpty
+          ? 0
+          : (revenue / sales.length).roundToDouble(),
+      averageDisplayMarkup: sales.isEmpty
+          ? 0
+          : (markupTotal / sales.length).roundToDouble(),
+    );
+  });
 
   @override
   Future<List<CategoryPerformance>> getCategoryPerformance() => mockDelay(() {
-        final revenue = <String, double>{};
-        final orders = <String, int>{};
-        for (final sale in _readSales()) {
-          final artwork = _artworkById(sale.artworkId);
-          if (artwork == null) continue;
-          revenue[artwork.category] = (revenue[artwork.category] ?? 0) + sale.soldPrice;
-          orders[artwork.category] = (orders[artwork.category] ?? 0) + 1;
-        }
-        return [
-          for (final entry in revenue.entries)
-            CategoryPerformance(
-              category: entry.key,
-              revenue: entry.value,
-              orders: orders[entry.key] ?? 0,
-            ),
-        ];
-      });
+    final revenue = <String, double>{};
+    final orders = <String, int>{};
+    for (final sale in _readSales()) {
+      final artwork = _artworkById(sale.artworkId);
+      if (artwork == null) continue;
+      revenue[artwork.category] =
+          (revenue[artwork.category] ?? 0) + sale.soldPrice;
+      orders[artwork.category] = (orders[artwork.category] ?? 0) + 1;
+    }
+    return [
+      for (final entry in revenue.entries)
+        CategoryPerformance(
+          category: entry.key,
+          revenue: entry.value,
+          orders: orders[entry.key] ?? 0,
+        ),
+    ];
+  });
 
   @override
   Future<AggregatorProfile> getProfile() => mockDelay(_readProfile);
 
   @override
   Future<AggregatorProfile> updateProfile(AggregatorProfile profile) {
-    if (profile.companyName.trim().isEmpty) return mockError('Enter your company name');
+    if (profile.companyName.trim().isEmpty) {
+      return mockError('Enter your company name');
+    }
     final gst = profile.gstNumber.trim().toUpperCase();
     if (gst.isNotEmpty && !gstinPattern.hasMatch(gst)) {
       return mockError('GSTIN must be the 15-character registration number');
@@ -980,7 +1127,9 @@ class MockAggregatorRepository implements AggregatorRepository {
         gstNumber: gst,
         gstStatus: gst == current.gstNumber
             ? current.gstStatus
-            : (gst.isEmpty ? ReviewStatus.notSubmitted : ReviewStatus.submitted),
+            : (gst.isEmpty
+                  ? ReviewStatus.notSubmitted
+                  : ReviewStatus.submitted),
         mouAcceptance: current.mouAcceptance,
         securityDepositStatus: current.securityDepositStatus,
         bankAccountMasked: current.bankAccountMasked,
@@ -993,16 +1142,52 @@ class MockAggregatorRepository implements AggregatorRepository {
   }
 
   @override
+  Future<GstinCheckResult> verifySavedGstin() => mockDelay(() {
+    final current = _readProfile();
+    final valid = current.gstNumber.trim().isNotEmpty;
+    if (valid) {
+      _writeSingle(
+        _profileKey,
+        current.copyWith(gstStatus: ReviewStatus.submitted),
+        (p) => p.toJson(),
+      );
+    }
+    return GstinCheckResult(
+      valid: valid,
+      legalName: valid ? current.companyName.toUpperCase() : null,
+      tradeName: valid ? current.companyName : null,
+      registrationStatus: valid ? 'Active' : null,
+      status: valid ? 'submitted' : 'not_verified',
+      message: valid
+          ? 'GSTIN found in the demo registry.'
+          : 'Save a GSTIN before checking it.',
+    );
+  });
+
+  @override
+  Future<DigiLockerStart> startAadhaarDigiLocker() => mockDelay(
+    () => const DigiLockerStart(
+      consentUrl: 'https://www.digilocker.gov.in/',
+      verificationId: 'demo-aggregator-digilocker-session',
+      expiresInSeconds: 600,
+    ),
+  );
+
+  @override
   Future<AggregatorProfile> updateBankDetails({
     required String accountNumber,
     required String ifsc,
   }) {
-    if (accountNumber.trim().isEmpty) return mockError('Enter an account number');
+    if (accountNumber.trim().isEmpty) {
+      return mockError('Enter an account number');
+    }
     return mockDelay(() {
       // Only the last four digits are ever stored — the full account number
       // never lands on the device, same contract as the artist side.
       final trimmed = accountNumber.trim();
-      final last4 = trimmed.substring(trimmed.length < 4 ? 0 : trimmed.length - 4);
+      final last4 = trimmed.substring(
+        trimmed.length < 4 ? 0 : trimmed.length - 4,
+      );
       final updated = _readProfile().copyWith(
         bankAccountMasked: '•••• •••• •••• $last4',
         ifsc: ifsc.trim().toUpperCase(),
@@ -1022,17 +1207,24 @@ class MockAggregatorRepository implements AggregatorRepository {
     required String version,
     String signatureDataUrl = '',
   }) async {
-    if (signatureName.trim().isEmpty) throw Exception('Type your full name to sign');
+    if (signatureName.trim().isEmpty) {
+      throw Exception('Type your full name to sign');
+    }
     final state = await getMouState();
     final profile = _readProfile();
     if (version != state.draft.version) {
-      throw Exception('This agreement has been updated. Reload the page to read and sign the current version');
+      throw Exception(
+        'This agreement has been updated. Reload the page to read and sign the current version',
+      );
     }
-    if (signatureName.trim().toLowerCase() != profile.contactPerson.trim().toLowerCase()) {
+    if (signatureName.trim().toLowerCase() !=
+        profile.contactPerson.trim().toLowerCase()) {
       throw Exception('The signature must match the name on your profile');
     }
     if (state.draft.missing.isNotEmpty) {
-      throw Exception('Add your ${state.draft.missing.map((key) => (mouDetailLabel[key] ?? key).toLowerCase()).join(', ')} to your profile before signing');
+      throw Exception(
+        'Add your ${state.draft.missing.map((key) => (mouDetailLabel[key] ?? key).toLowerCase()).join(', ')} to your profile before signing',
+      );
     }
     return mockDelay(() {
       final updated = profile.copyWith(
@@ -1053,46 +1245,50 @@ class MockAggregatorRepository implements AggregatorRepository {
   /// does it ([mouPartyDetailsFor]).
   @override
   Future<MouState> getMouState() => mockDelay(() {
-        final profile = _readProfile();
-        final acceptance = profile.mouAcceptance;
-        final filled = mouPartyDetailsFor(
-          party: MouParty.aggregator,
-          fullName: profile.contactPerson,
-          email: profile.email,
-          phone: profile.phone,
-          gstin: profile.gstNumber,
-          companyName: profile.companyName,
-          pickupLine1: profile.addressLine1,
-          pickupCity: profile.addressCity,
-          pickupState: profile.addressState,
-          pickupPincode: profile.addressPincode,
-        );
-        return MouState(
-          draft: MouDraft(
-            version: aggregatorMouVersion,
-            parties: MouParties(
-              party: filled.details,
-              company: const MouCompanyDetails(name: 'Galleryzone Private Limited'),
-            ),
-            missing: filled.missing,
-            asOf: DateTime.now().toUtc().toIso8601String(),
-          ),
-          acceptance: acceptance != null && acceptance.version == aggregatorMouVersion ? acceptance : null,
-        );
-      });
+    final profile = _readProfile();
+    final acceptance = profile.mouAcceptance;
+    final filled = mouPartyDetailsFor(
+      party: MouParty.aggregator,
+      fullName: profile.contactPerson,
+      email: profile.email,
+      phone: profile.phone,
+      gstin: profile.gstNumber,
+      companyName: profile.companyName,
+      pickupLine1: profile.addressLine1,
+      pickupCity: profile.addressCity,
+      pickupState: profile.addressState,
+      pickupPincode: profile.addressPincode,
+    );
+    return MouState(
+      draft: MouDraft(
+        version: aggregatorMouVersion,
+        parties: MouParties(
+          party: filled.details,
+          company: const MouCompanyDetails(name: 'Galleryzone Private Limited'),
+        ),
+        missing: filled.missing,
+        asOf: DateTime.now().toUtc().toIso8601String(),
+      ),
+      acceptance:
+          acceptance != null && acceptance.version == aggregatorMouVersion
+          ? acceptance
+          : null,
+    );
+  });
 
   @override
   Future<AggregatorSettings> getSettings() => mockDelay(
-        () => _readSingle(
-          _settingsKey,
-          seedAggregatorSettings,
-          AggregatorSettings.fromJson,
-          (s) => s.toJson(),
-        ),
-      );
+    () => _readSingle(
+      _settingsKey,
+      seedAggregatorSettings,
+      AggregatorSettings.fromJson,
+      (s) => s.toJson(),
+    ),
+  );
 
   @override
-  Future<AggregatorSettings> updateSettings(AggregatorSettings settings) => mockDelay(() {
+  Future<AggregatorSettings> updateSettings(AggregatorSettings settings) =>
+      mockDelay(() {
         _writeSingle(_settingsKey, settings, (s) => s.toJson());
         return settings;
       });
@@ -1107,11 +1303,9 @@ class MockAggregatorRepository implements AggregatorRepository {
     if (existing == null) return mockError('Message "$id" not found');
     return mockDelay(() {
       final updated = existing.copyWith(unread: false);
-      MockDb.setCollection(
-        _messagesKey,
-        [for (final m in messages) m.id == id ? updated : m],
-        (m) => m.toJson(),
-      );
+      MockDb.setCollection(_messagesKey, [
+        for (final m in messages) m.id == id ? updated : m,
+      ], (m) => m.toJson());
       return updated;
     });
   }
@@ -1134,7 +1328,10 @@ class MockAggregatorRepository implements AggregatorRepository {
         status: SupportTicketStatus.open,
         createdAt: DateTime.now().toIso8601String(),
       );
-      MockDb.setCollection(_supportKey, [ticket, ..._readTickets()], (t) => t.toJson());
+      MockDb.setCollection(_supportKey, [
+        ticket,
+        ..._readTickets(),
+      ], (t) => t.toJson());
       return ticket;
     });
   }

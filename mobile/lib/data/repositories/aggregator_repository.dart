@@ -4,6 +4,15 @@ import '../models/artist_portal.dart';
 import '../models/artwork.dart';
 import '../models/customer.dart';
 import '../models/mou.dart';
+import 'artist_repository.dart' show DigiLockerStart, GstinCheckResult;
+
+/// Capabilities of real and demo aggregator repositories that can verify the
+/// signed-in business profile. Kept separate so lightweight test repositories
+/// that only exercise sales do not have to fake identity-provider calls.
+abstract interface class AggregatorProfileVerificationRepository {
+  Future<GstinCheckResult> verifySavedGstin();
+  Future<DigiLockerStart> startAadhaarDigiLocker();
+}
 
 /// Business rules, stated once here and applied everywhere this repository is
 /// the source of truth: the reserve preview, the reserve write, dashboard KPI
@@ -29,8 +38,7 @@ int advancePercentFor(int cycleMonth) => cycleMonth <= 2 ? 5 : 3;
 double aggregatorCommissionFor({
   required double displayPrice,
   required double artistPrice,
-}) =>
-    aggregatorCommissionOf(displayPrice, artistPrice);
+}) => aggregatorCommissionOf(displayPrice, artistPrice);
 
 /// The display window a reservation opens. Thirty days, unless the leftover
 /// afterwards would be too short to place with anyone else — see
@@ -194,10 +202,27 @@ abstract class AggregatorRepository {
     bool simulateConflict,
   });
 
+  /// Collects the deposit and delivery amount for one reservation through the
+  /// configured payment gateway. The server records it in its internal ledger
+  /// so the immediately following [reserve] call can atomically hold it; there
+  /// is no user-facing prepaid wallet or top-up flow.
+  Future<void> payReservation(double amount);
+
   /// Asks GalleryZone to let the aggregator keep a piece past its thirty
   /// days, with a written assurance (10-1000 characters) that it will sell.
   /// GalleryZone decides each time.
-  Future<AggregatorHolding> requestExtension(String holdingId, String assurance);
+  Future<AggregatorHolding> requestExtension(
+    String holdingId,
+    String assurance,
+  );
+
+  /// Flags a custody or condition problem on the holding for GalleryZone's
+  /// admin review. The API snapshots the artwork and both parties.
+  Future<HoldingReport> reportHoldingIssue(
+    String holdingId, {
+    required HoldingReportIssueType issueType,
+    required String description,
+  });
 
   Future<List<AggregatorHoldingView>> listCollection();
 
@@ -264,7 +289,10 @@ abstract class AggregatorRepository {
   /// taken from the free wallet balance ([RemitVia.wallet], refused with the
   /// shortfall if there isn't enough), or declared as a bank transfer
   /// ([RemitVia.bank], taken on their word).
-  Future<AggregatorSale> markRemitted(String saleId, {RemitVia via = RemitVia.wallet});
+  Future<AggregatorSale> markRemitted(
+    String saleId, {
+    RemitVia via = RemitVia.wallet,
+  });
 
   /// Manual "simulate settlement": moves this sale's pending commission into
   /// the available balance and writes a settlement row. No background timer

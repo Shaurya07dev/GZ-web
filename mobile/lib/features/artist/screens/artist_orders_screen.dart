@@ -50,7 +50,8 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
           return const EmptyState(
             icon: LucideIcons.shoppingBag,
             title: 'No orders yet',
-            description: 'Sold pieces and their fulfillment status will show up here.',
+            description:
+                'Sold pieces and their fulfillment status will show up here.',
           );
         }
         final needle = _query.trim().toLowerCase();
@@ -58,7 +59,9 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
           for (final entry in list)
             if ((_status == null || entry.order.status == _status) &&
                 (needle.isEmpty ||
-                    '${entry.order.id} ${entry.order.artwork?.title ?? ''}'.toLowerCase().contains(needle)))
+                    '${entry.order.id} ${entry.order.artwork?.title ?? ''}'
+                        .toLowerCase()
+                        .contains(needle)))
               entry,
         ];
 
@@ -87,12 +90,19 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
                       child: ListView(
                         scrollDirection: Axis.horizontal,
                         children: [
-                          _StatusChip(label: 'All', selected: _status == null, onTap: () => setState(() => _status = null)),
+                          _StatusChip(
+                            label: 'All',
+                            selected: _status == null,
+                            onTap: () => setState(() => _status = null),
+                          ),
                           for (final status in OrderStatus.values)
                             _StatusChip(
                               label: OrderStatusStyle.of(status).label,
                               selected: _status == status,
-                              onTap: () => setState(() => _status = _status == status ? null : status),
+                              onTap: () => setState(
+                                () =>
+                                    _status = _status == status ? null : status,
+                              ),
                             ),
                         ],
                       ),
@@ -115,25 +125,41 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     ClipRRect(
-                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.sm,
+                                      ),
                                       child: SizedBox(
                                         width: 56,
                                         height: 56,
                                         child: entry.order.artwork == null
-                                            ? ColoredBox(color: theme.colorScheme.surfaceContainerHighest)
-                                            : ArtworkImageView(url: entry.order.artwork!.thumbnailUrl),
+                                            ? ColoredBox(
+                                                color: theme
+                                                    .colorScheme
+                                                    .surfaceContainerHighest,
+                                              )
+                                            : ArtworkImageView(
+                                                url: entry
+                                                    .order
+                                                    .artwork!
+                                                    .thumbnailUrl,
+                                              ),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            entry.order.artwork?.title ?? entry.order.artworkId,
+                                            entry.order.artwork?.title ??
+                                                entry.order.artworkId,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                                            style: theme.textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
@@ -153,8 +179,15 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
                                   ],
                                 ),
                                 const Divider(height: 20),
-                                PortalDetailRow(label: 'Buyer paid', value: formatInr(entry.order.total)),
-                                PortalDetailRow(label: 'Your payout', value: formatInr(entry.artistPayout), gold: true),
+                                PortalDetailRow(
+                                  label: 'Buyer paid',
+                                  value: formatInr(entry.order.total),
+                                ),
+                                PortalDetailRow(
+                                  label: 'Your payout',
+                                  value: formatInr(entry.artistPayout),
+                                  gold: true,
+                                ),
                               ],
                             ),
                           ),
@@ -171,7 +204,11 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.selected, required this.onTap});
+  const _StatusChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -181,7 +218,11 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => onTap()),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+      ),
     );
   }
 }

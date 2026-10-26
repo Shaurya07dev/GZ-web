@@ -21,7 +21,9 @@ const artistMou = MouDocument(
     MouHeading('GALLERYZONE PRIVATE LIMITED — ARTIST', center: true),
     MouHeading('MEMORANDUM OF UNDERSTANDING BETWEEN'),
     MouHeading('GALLERYZONE PRIVATE LIMITED'),
-    MouParagraph('(hereinafter referred to as “Galleryzone”, “the Company”, or “the Platform”)'),
+    MouParagraph(
+      '(hereinafter referred to as “Galleryzone”, “the Company”, or “the Platform”)',
+    ),
     MouHeading('AND'),
     MouHeading('ARTIST'),
     MouField('Artist Name', MouFieldKey.partyName),
@@ -31,33 +33,82 @@ const artistMou = MouDocument(
     MouField('Government ID', MouFieldKey.partyGovernmentId),
     MouParagraph('(Hereinafter referred to as “the Artist”)'),
     MouHeading('1. PURPOSE'),
-    MouParagraph('1.1 This Memorandum of Understanding (“MOU”) is entered into between Galleryzone Private Limited and the Artist for the listing, promotion, exhibition, marketing, facilitation of sale, and sale of artworks through the Galleryzone platform and its authorized sales and distribution channels.'),
-    MouParagraph('1.2 Galleryzone operates as a digital art marketplace and art management platform connecting Artist, aggregators, collectors, investors, institutions, and art enthusiasts.'),
+    MouParagraph(
+      '1.1 This Memorandum of Understanding (“MOU”) is entered into between Galleryzone Private Limited and the Artist for the listing, promotion, exhibition, marketing, facilitation of sale, and sale of artworks through the Galleryzone platform and its authorized sales and distribution channels.',
+    ),
+    MouParagraph(
+      '1.2 Galleryzone operates as a digital art marketplace and art management platform connecting Artist, aggregators, collectors, investors, institutions, and art enthusiasts.',
+    ),
     MouParagraph('1.3 The objectives of Galleryzone include:'),
-    MouItem('a.', 'establishing and maintaining a permanent digital footprint for artworks;'),
-    MouItem('b.', 'enhancing the recognition, visibility, and credibility of artists;'),
+    MouItem(
+      'a.',
+      'establishing and maintaining a permanent digital footprint for artworks;',
+    ),
+    MouItem(
+      'b.',
+      'enhancing the recognition, visibility, and credibility of artists;',
+    ),
     MouItem('c.', 'creating and maintaining verified digital portfolios;'),
     MouItem('d.', 'facilitating artworks as collectible assets;'),
     MouItem('e.', 'maintaining secure ownership and provenance records;'),
-    MouItem('f.', 'promoting artworks through online and offline sales and exhibition channels; and'),
-    MouItem('g.', 'facilitating subsequent resale of eligible artworks through Galleryzone, subject to the terms of this MOU and applicable policies.'),
-    MouParagraph('1.4 Galleryzone shall use reasonable commercial efforts to promote and facilitate the sale of artworks; however, Galleryzone does not guarantee the sale of any artwork, any minimum level of sales or revenue, any actual market appreciation, resale value, or investment return. Any minimum pricing/appreciation component expressly stated in Clause 23 is a pricing and commercial arrangement of Galleryzone and is not a guarantee of market appreciation or investment return.'),
+    MouItem(
+      'f.',
+      'promoting artworks through online and offline sales and exhibition channels; and',
+    ),
+    MouItem(
+      'g.',
+      'facilitating subsequent resale of eligible artworks through Galleryzone, subject to the terms of this MOU and applicable policies.',
+    ),
+    MouParagraph(
+      '1.4 Galleryzone shall use reasonable commercial efforts to promote and facilitate the sale of artworks; however, Galleryzone does not guarantee the sale of any artwork, any minimum level of sales or revenue, any actual market appreciation, resale value, or investment return. Any minimum pricing/appreciation component expressly stated in Clause 23 is a pricing and commercial arrangement of Galleryzone and is not a guarantee of market appreciation or investment return.',
+    ),
     MouHeading('2. ARTWORK ELIGIBILITY'),
     MouParagraph('2.1 The Artist represents, warrants, and confirms that:'),
-    MouItem('a.', 'every artwork submitted to Galleryzone is original, handmade, and created by the Artist;'),
-    MouItem('b.', 'once an artwork has been created and submitted/listed, the Artist shall not reproduce, replicate, or create another substantially identical copy of the same art work unless expressly permitted in writing by Galleryzone;'),
-    MouItem('c.', 'unauthorized replication or reproduction of an artwork may adversely affect its uniqueness, authenticity, collectible value, and market value and may result in delisting of the artwork and/or termination of this MOU;'),
-    MouItem('d.', 'no AI-generated, AI-assisted, machine-generated, digitally reproduced, NFT-based, copied, or otherwise non-original art work shall be submitted unless expressly approved in writing by Galleryzone;'),
-    MouItem('e.', 'the Artist is the lawful and exclusive owner of the artwork has full authority to submit, display, market, and sell the artwork;'),
-    MouItem('f.', 'the artwork does not infringe or violate any copyright, trademark, design right, intellectual property right, moral right, contractual right, or other proprietary right of any third party; and'),
-    MouItem('g.', 'all information and documentation submitted to Galleryzone in relation to the artwork is true, complete, accurate, and not misleading.'),
+    MouItem(
+      'a.',
+      'every artwork submitted to Galleryzone is original, handmade, and created by the Artist;',
+    ),
+    MouItem(
+      'b.',
+      'once an artwork has been created and submitted/listed, the Artist shall not reproduce, replicate, or create another substantially identical copy of the same art work unless expressly permitted in writing by Galleryzone;',
+    ),
+    MouItem(
+      'c.',
+      'unauthorized replication or reproduction of an artwork may adversely affect its uniqueness, authenticity, collectible value, and market value and may result in delisting of the artwork and/or termination of this MOU;',
+    ),
+    MouItem(
+      'd.',
+      'no AI-generated, AI-assisted, machine-generated, digitally reproduced, NFT-based, copied, or otherwise non-original art work shall be submitted unless expressly approved in writing by Galleryzone;',
+    ),
+    MouItem(
+      'e.',
+      'the Artist is the lawful and exclusive owner of the artwork has full authority to submit, display, market, and sell the artwork;',
+    ),
+    MouItem(
+      'f.',
+      'the artwork does not infringe or violate any copyright, trademark, design right, intellectual property right, moral right, contractual right, or other proprietary right of any third party; and',
+    ),
+    MouItem(
+      'g.',
+      'all information and documentation submitted to Galleryzone in relation to the artwork is true, complete, accurate, and not misleading.',
+    ),
     MouSubheading('2.1(b) Originality and Restriction on Physical Recreation'),
-    MouParagraph('The Artist represents and warrants that each Original Artwork submitted to Galleryzone is an original, handmade work created by the Artist and that the same Original Artwork shall not be physically recreated, replicated, copied, or reproduced as another physical artwork of substantially the same design, composition, dimensions, and artistic execution.'),
-    MouParagraph('For the avoidance of doubt, this restriction applies only to the physical recreation or replication of the Original Artwork itself and shall not prohibit any digital reproduction, digital print, merchandise, derivative work, promotional material, licensing activity, or other commercial exploitation that is expressly permitted under Clause 16, provided that such activity does not represent or pass off the reproduction as the Original Artwork.'),
-    MouParagraph('Unless otherwise expressly agreed in writing, no reproduction shall be represented as an Original Artwork or issued with the same status, authenticity, provenance record, or Certificate of Authenticity as the Original Artwork.'),
-    MouParagraph('2.2 Galleryzone reserves the right to review, approve, reject, suspend, restrict, or remove any artwork from its platform or sales channels at its sole discretion, including where the artwork does not satisfy Galleryzone\'s quality, authenticity, documentation, commercial, or compliance requirements.'),
+    MouParagraph(
+      'The Artist represents and warrants that each Original Artwork submitted to Galleryzone is an original, handmade work created by the Artist and that the same Original Artwork shall not be physically recreated, replicated, copied, or reproduced as another physical artwork of substantially the same design, composition, dimensions, and artistic execution.',
+    ),
+    MouParagraph(
+      'For the avoidance of doubt, this restriction applies only to the physical recreation or replication of the Original Artwork itself and shall not prohibit any digital reproduction, digital print, merchandise, derivative work, promotional material, licensing activity, or other commercial exploitation that is expressly permitted under Clause 16, provided that such activity does not represent or pass off the reproduction as the Original Artwork.',
+    ),
+    MouParagraph(
+      'Unless otherwise expressly agreed in writing, no reproduction shall be represented as an Original Artwork or issued with the same status, authenticity, provenance record, or Certificate of Authenticity as the Original Artwork.',
+    ),
+    MouParagraph(
+      '2.2 Galleryzone reserves the right to review, approve, reject, suspend, restrict, or remove any artwork from its platform or sales channels at its sole discretion, including where the artwork does not satisfy Galleryzone\'s quality, authenticity, documentation, commercial, or compliance requirements.',
+    ),
     MouHeading('3. ARTWORK SUBMISSION REQUIREMENTS'),
-    MouParagraph('3.1 The Artist shall provide all information and documentation reasonably required by Galleryzone, including:'),
+    MouParagraph(
+      '3.1 The Artist shall provide all information and documentation reasonably required by Galleryzone, including:',
+    ),
     MouItem('a.', 'name/title of the artwork;'),
     MouItem('b.', 'dimensions;'),
     MouItem('c.', 'medium/materials used;'),
@@ -68,46 +119,100 @@ const artistMou = MouDocument(
     MouItem('h.', 'high-resolution photographs;'),
     MouItem('i.', 'Artist profile and relevant professional information;'),
     MouItem('j.', 'Certificate of Authenticity (“COA”);'),
-    MouItem('k.', 'Government-issued identification, where required for verification;'),
+    MouItem(
+      'k.',
+      'Government-issued identification, where required for verification;',
+    ),
     MouItem('l.', 'Artist\'s signature; and'),
-    MouItem('m.', 'any other information or documentation reasonably requested by Galleryzone.'),
-    MouParagraph('3.2 Galleryzone may require additional verification or supporting documentation before approving an artwork for listing, exhibition, or sale.'),
+    MouItem(
+      'm.',
+      'any other information or documentation reasonably requested by Galleryzone.',
+    ),
+    MouParagraph(
+      '3.2 Galleryzone may require additional verification or supporting documentation before approving an artwork for listing, exhibition, or sale.',
+    ),
     MouHeading('4. DIGITAL FOOTPRINT AND PORTFOLIO'),
-    MouParagraph('Artwork images and related information may be used by Galleryzone for marketing, advertising, exhibitions, publications, catalogues, social media, websites, promotional campaigns, provenance, authentication, record-keeping, and other legitimate business and promotional activities, subject to applicable law and Galleryzone\'s privacy and data-protection policies.'),
-    MouParagraph('The Artist authorizes Galleryzone to use photographs, descriptions, artwork information, Artist information, and other submitted materials for the purpose of creating and maintaining the Artist\'s digital portfolio and promoting the artwork.'),
-    MouParagraph('Where a QR/NFC tag is damaged, lost, or becomes technically unusable, Galleryzone may require the Artist, Aggregator, custodian, or other responsible party to replace or restore the identification mechanism in accordance with Galleryzone\'s applicable procedures.'),
-    MouParagraph('The Artist shall not intentionally remove, replace, tamper with, deactivate, duplicate, or alter an assigned QR/NFC identification mechanism or its associated records without Galleryzone\'s prior approval, except where such action is necessary for legitimate restoration, repair, or replacement and is promptly notified to Galleryzone.'),
+    MouParagraph(
+      'Artwork images and related information may be used by Galleryzone for marketing, advertising, exhibitions, publications, catalogues, social media, websites, promotional campaigns, provenance, authentication, record-keeping, and other legitimate business and promotional activities, subject to applicable law and Galleryzone\'s privacy and data-protection policies.',
+    ),
+    MouParagraph(
+      'The Artist authorizes Galleryzone to use photographs, descriptions, artwork information, Artist information, and other submitted materials for the purpose of creating and maintaining the Artist\'s digital portfolio and promoting the artwork.',
+    ),
+    MouParagraph(
+      'Where a QR/NFC tag is damaged, lost, or becomes technically unusable, Galleryzone may require the Artist, Aggregator, custodian, or other responsible party to replace or restore the identification mechanism in accordance with Galleryzone\'s applicable procedures.',
+    ),
+    MouParagraph(
+      'The Artist shall not intentionally remove, replace, tamper with, deactivate, duplicate, or alter an assigned QR/NFC identification mechanism or its associated records without Galleryzone\'s prior approval, except where such action is necessary for legitimate restoration, repair, or replacement and is promptly notified to Galleryzone.',
+    ),
     MouSubheading('4.1 Protection of QR/NFC and Digital Records'),
-    MouParagraph('The QR/NFC tag and associated digital identity shall not, by themselves, constitute legal title to the artwork. Ownership and transfer of ownership shall be determined in accordance with the applicable sale, payment, delivery, and ownership provisions of this MOU and the relevant transaction documents.'),
-    MouParagraph('Where an artwork is displayed by an Aggregator or other authorized custodian, Galleryzone may record and update applicable display, custody, or display-right information associated with the artwork\'s digital identity.'),
-    MouParagraph('Following a permitted transfer of ownership, Galleryzone may update the digital record to reflect the new owner\'s ownership status, subject to the applicable transaction, payment, delivery, and verification requirements.'),
+    MouParagraph(
+      'The QR/NFC tag and associated digital identity shall not, by themselves, constitute legal title to the artwork. Ownership and transfer of ownership shall be determined in accordance with the applicable sale, payment, delivery, and ownership provisions of this MOU and the relevant transaction documents.',
+    ),
+    MouParagraph(
+      'Where an artwork is displayed by an Aggregator or other authorized custodian, Galleryzone may record and update applicable display, custody, or display-right information associated with the artwork\'s digital identity.',
+    ),
+    MouParagraph(
+      'Following a permitted transfer of ownership, Galleryzone may update the digital record to reflect the new owner\'s ownership status, subject to the applicable transaction, payment, delivery, and verification requirements.',
+    ),
     MouSubheading('4.2 Ownership and Provenance Updates'),
-    MouParagraph('The QR/NFC identification mechanism is intended to remain associated with the relevant physical artwork throughout its applicable lifecycle and may be updated to reflect permitted changes in ownership, custody, display rights, provenance, or other relevant records.'),
-    MouParagraph('Where a QR code or NFC tag is assigned to an artwork, the Artist shall affix or integrate the applicable identification mechanism in accordance with Galleryzone\'s prescribed operational and packaging instructions. Unless otherwise instructed by Galleryzone, the NFC tag shall be positioned behind or adjacent to the Artist\'s signature in the prescribed location, that is on the back in the left corner of artwork.'),
+    MouParagraph(
+      'The QR/NFC identification mechanism is intended to remain associated with the relevant physical artwork throughout its applicable lifecycle and may be updated to reflect permitted changes in ownership, custody, display rights, provenance, or other relevant records.',
+    ),
+    MouParagraph(
+      'Where a QR code or NFC tag is assigned to an artwork, the Artist shall affix or integrate the applicable identification mechanism in accordance with Galleryzone\'s prescribed operational and packaging instructions. Unless otherwise instructed by Galleryzone, the NFC tag shall be positioned behind or adjacent to the Artist\'s signature in the prescribed location, that is on the back in the left corner of artwork.',
+    ),
     MouSubheading('4.3 QR/NFC Identification'),
-    MouParagraph('The digital identity may be linked to the artwork\'s relevant information, including the Artist\'s identity, artwork details, Certificate of Authenticity (COA), verification records, ownership information, provenance, transaction history, and other records maintained by Galleryzone.'),
-    MouParagraph('Galleryzone may create and maintain digital certificates, ownership records, QR-code records, NFC records, provenance information, transaction history, verification records, and other relevant digital records relating to the artwork.'),
-    MouParagraph('Upon approval of an artwork, Galleryzone may assign or connect the artwork to a unique Galleryzone Digital Identity.'),
+    MouParagraph(
+      'The digital identity may be linked to the artwork\'s relevant information, including the Artist\'s identity, artwork details, Certificate of Authenticity (COA), verification records, ownership information, provenance, transaction history, and other records maintained by Galleryzone.',
+    ),
+    MouParagraph(
+      'Galleryzone may create and maintain digital certificates, ownership records, QR-code records, NFC records, provenance information, transaction history, verification records, and other relevant digital records relating to the artwork.',
+    ),
+    MouParagraph(
+      'Upon approval of an artwork, Galleryzone may assign or connect the artwork to a unique Galleryzone Digital Identity.',
+    ),
     MouSubheading('4.4 Digital Identity and Lifecycle Records'),
-    MouParagraph('Artist owns artwork → Galleryzone creates/maintains digital identity → QR/NFC links to the artwork record → ownership/provenance information can be updated when a permitted transfer occurs.'),
+    MouParagraph(
+      'Artist owns artwork → Galleryzone creates/maintains digital identity → QR/NFC links to the artwork record → ownership/provenance information can be updated when a permitted transfer occurs.',
+    ),
     MouHeading('5. ARTIST VERIFICATION'),
-    MouParagraph('Specific verification documents, procedures, eligibility requirements, and operational timelines may be communicated through Galleryzone\'s onboarding materials, operational policies, or other official communications, as updated from time to time.'),
-    MouParagraph('Galleryzone may modify, suspend, withdraw, or update verification status where the Artist\'s information, documentation, participation status, or compliance subsequently changes, or where Galleryzone identifies a material discrepancy, subject to applicable law and this MOU.'),
+    MouParagraph(
+      'Specific verification documents, procedures, eligibility requirements, and operational timelines may be communicated through Galleryzone\'s onboarding materials, operational policies, or other official communications, as updated from time to time.',
+    ),
+    MouParagraph(
+      'Galleryzone may modify, suspend, withdraw, or update verification status where the Artist\'s information, documentation, participation status, or compliance subsequently changes, or where Galleryzone identifies a material discrepancy, subject to applicable law and this MOU.',
+    ),
     MouSubheading('5.1 Verification Updates'),
-    MouParagraph('Verification status or a verified badge indicates completion of Galleryzone\'s applicable verification requirements only. It shall not constitute a guarantee of future sales, artwork appreciation, investment return, market value, or future performance.'),
-    MouParagraph('Where the Artist satisfies the applicable requirements of all three verification tiers, Galleryzone may provide a verified status or verified badge on the Artist\'s Galleryzone profile.'),
+    MouParagraph(
+      'Verification status or a verified badge indicates completion of Galleryzone\'s applicable verification requirements only. It shall not constitute a guarantee of future sales, artwork appreciation, investment return, market value, or future performance.',
+    ),
+    MouParagraph(
+      'Where the Artist satisfies the applicable requirements of all three verification tiers, Galleryzone may provide a verified status or verified badge on the Artist\'s Galleryzone profile.',
+    ),
     MouSubheading('5.2 Verified Status / Badge'),
     MouParagraph('The badges are provided to verified artist.'),
     MouSubheading('5.3 Tier 1 – First Sale Verification'),
-    MouParagraph('Tier 1 may be completed upon successful completion of the Artist\'s first qualifying sale through Galleryzone, subject to successful completion of the applicable transaction, payment, delivery, verification, and settlement requirements.'),
+    MouParagraph(
+      'Tier 1 may be completed upon successful completion of the Artist\'s first qualifying sale through Galleryzone, subject to successful completion of the applicable transaction, payment, delivery, verification, and settlement requirements.',
+    ),
     MouSubheading('5.4 Tier 2 – Profile Completion'),
-    MouParagraph('Tier 2 may be completed through verification of at least one official Artist social media or professional profile or handle provided by the Artist.'),
+    MouParagraph(
+      'Tier 2 may be completed through verification of at least one official Artist social media or professional profile or handle provided by the Artist.',
+    ),
     MouSubheading('5.5 Tier 3 – Social Media Verification'),
-    MouParagraph('Where applicable, the Artist may be requested to provide evidence of studio work, artwork creation, work-in-progress, or other supporting material for verification purposes.'),
-    MouParagraph('The Artist is encouraged to provide links or details of relevant social media profiles, including Instagram, Facebook, YouTube, X (formerly Twitter), TikTok, and any other relevant professional or social media platform. Such information may be used to support Artist verification, portfolio development, marketing, and buyer confidence.'),
+    MouParagraph(
+      'Where applicable, the Artist may be requested to provide evidence of studio work, artwork creation, work-in-progress, or other supporting material for verification purposes.',
+    ),
+    MouParagraph(
+      'The Artist is encouraged to provide links or details of relevant social media profiles, including Instagram, Facebook, YouTube, X (formerly Twitter), TikTok, and any other relevant professional or social media platform. Such information may be used to support Artist verification, portfolio development, marketing, and buyer confidence.',
+    ),
     MouHeading('6. CONFIDENTIALITY OF ARTIST PRICING'),
-    MouParagraph('6.1 The Artist\'s quoted price, confidential Artist Price, and other commercially sensitive pricing information shall be treated as confidential, subject to disclosure where required by law, regulatory authorities, tax authorities, auditors, payment processors, logistics providers, or other authorized service providers.'),
-    MouParagraph('6.2 Unless otherwise expressly authorized in writing by Galleryzone, the Artist shall not publicly disclose or publish the confidential Artist Price through:'),
+    MouParagraph(
+      '6.1 The Artist\'s quoted price, confidential Artist Price, and other commercially sensitive pricing information shall be treated as confidential, subject to disclosure where required by law, regulatory authorities, tax authorities, auditors, payment processors, logistics providers, or other authorized service providers.',
+    ),
+    MouParagraph(
+      '6.2 Unless otherwise expressly authorized in writing by Galleryzone, the Artist shall not publicly disclose or publish the confidential Artist Price through:',
+    ),
     MouItem('a.', 'social media;'),
     MouItem('b.', 'websites;'),
     MouItem('c.', 'videos;'),
@@ -116,32 +221,62 @@ const artistMou = MouDocument(
     MouItem('f.', 'promotional materials;'),
     MouItem('g.', 'public comments; or'),
     MouItem('h.', 'any other public communication channel.'),
-    MouParagraph('6.3 A material breach of this clause may result in suspension or removal of the artwork and/or termination of this MOU, subject to the circumstances of the breach.'),
+    MouParagraph(
+      '6.3 A material breach of this clause may result in suspension or removal of the artwork and/or termination of this MOU, subject to the circumstances of the breach.',
+    ),
     MouHeading('7. ARTWORK LISTING AND SUBSCRIPTION'),
     MouSubheading('7.1 Initial Free Listing Period'),
-    MouParagraph('The listing of eligible artworks on the Galleryzone platform shall be completely free of any technology, platform, or listing fees for the initial period of Six (6) months from the date of approval and activation of the artwork listing.'),
+    MouParagraph(
+      'The listing of eligible artworks on the Galleryzone platform shall be completely free of any technology, platform, or listing fees for the initial period of Six (6) months from the date of approval and activation of the artwork listing.',
+    ),
     MouSubheading('7.2 Subscription Not Required for Continued Listing'),
-    MouParagraph('The initial Six (6) month free listing period shall apply irrespective of whether or not the Artist subscribes to any Galleryzone subscription plan.'),
-    MouParagraph('Expiry of the initial Six (6) month free listing period shall not, by itself, result in delisting before the end of the applicable listing period under Clause 19. Continue delisting or relisting after the applicable listing period shall be subject to Galleryzone\'s then-applicable procedures.'),
-    MouParagraph('The Artist shall not be required to maintain an active subscription merely to keep an eligible artwork listed during its applicable listing period under Clause 19.'),
+    MouParagraph(
+      'The initial Six (6) month free listing period shall apply irrespective of whether or not the Artist subscribes to any Galleryzone subscription plan.',
+    ),
+    MouParagraph(
+      'Expiry of the initial Six (6) month free listing period shall not, by itself, result in delisting before the end of the applicable listing period under Clause 19. Continue delisting or relisting after the applicable listing period shall be subject to Galleryzone\'s then-applicable procedures.',
+    ),
+    MouParagraph(
+      'The Artist shall not be required to maintain an active subscription merely to keep an eligible artwork listed during its applicable listing period under Clause 19.',
+    ),
     MouSubheading('7.3 Purpose of Subscription'),
-    MouParagraph('Galleryzone may offer subscription plans providing access to specified technology, platform, management, marketing, listing-related benefits, or other services.'),
-    MouParagraph('Subscription shall be an optional service arrangement and shall not constitute a mandatory condition for continued listing of an eligible artwork on the Galleryzone marketplace, unless otherwise expressly agreed in writing for a specific service or program.'),
+    MouParagraph(
+      'Galleryzone may offer subscription plans providing access to specified technology, platform, management, marketing, listing-related benefits, or other services.',
+    ),
+    MouParagraph(
+      'Subscription shall be an optional service arrangement and shall not constitute a mandatory condition for continued listing of an eligible artwork on the Galleryzone marketplace, unless otherwise expressly agreed in writing for a specific service or program.',
+    ),
     MouSubheading('7.4 Subscription Benefits'),
-    MouParagraph('An Artist having an active and valid Galleryzone subscription shall receive the technology, platform, listing-related or other benefits included in the applicable subscription plan.'),
-    MouParagraph('Where expressly provided under the applicable subscription plan, technology or platform-related charges otherwise applicable to specified services may be waived during the active subscription period.'),
+    MouParagraph(
+      'An Artist having an active and valid Galleryzone subscription shall receive the technology, platform, listing-related or other benefits included in the applicable subscription plan.',
+    ),
+    MouParagraph(
+      'Where expressly provided under the applicable subscription plan, technology or platform-related charges otherwise applicable to specified services may be waived during the active subscription period.',
+    ),
     MouSubheading('7.5 Subscription Terms'),
-    MouParagraph('Subscription fees, validity periods, included services, usage limits, exclusions, and other applicable conditions shall be communicated through the Galleryzone platform or other official communication channels.'),
+    MouParagraph(
+      'Subscription fees, validity periods, included services, usage limits, exclusions, and other applicable conditions shall be communicated through the Galleryzone platform or other official communication channels.',
+    ),
     MouSubheading('7.6 No Automatic Delisting Due to Subscription Expiry'),
-    MouParagraph('The expiry, cancellation, non-renewal, or discontinuation of an Artist\'s subscription shall not automatically result in the removal or delisting of the Artist\'s artwork from the Galleryzone marketplace. An artwork may continue to remain listed in accordance with Clause 19, subject to Galleryzone\'s right to suspend, remove, or delist the artwork for reasons expressly permitted under this MOU.'),
+    MouParagraph(
+      'The expiry, cancellation, non-renewal, or discontinuation of an Artist\'s subscription shall not automatically result in the removal or delisting of the Artist\'s artwork from the Galleryzone marketplace. An artwork may continue to remain listed in accordance with Clause 19, subject to Galleryzone\'s right to suspend, remove, or delist the artwork for reasons expressly permitted under this MOU.',
+    ),
     MouSubheading('7.7 Charges Separate from Subscription'),
-    MouParagraph('Subscription charges, where applicable, shall be separate from logistics, taxes, GST, delivery, withdrawal, handling, payment gateway, or other transaction-related charges unless expressly stated otherwise in the applicable subscription plan.'),
+    MouParagraph(
+      'Subscription charges, where applicable, shall be separate from logistics, taxes, GST, delivery, withdrawal, handling, payment gateway, or other transaction-related charges unless expressly stated otherwise in the applicable subscription plan.',
+    ),
     MouSubheading('7.8 Compliance'),
-    MouParagraph('The Artist shall comply with all applicable terms, conditions, policies, procedures, and operational requirements prescribed by Galleryzone.'),
+    MouParagraph(
+      'The Artist shall comply with all applicable terms, conditions, policies, procedures, and operational requirements prescribed by Galleryzone.',
+    ),
     MouSubheading('7.9 Modification of Subscription Plans'),
-    MouParagraph('Galleryzone may modify, introduce, discontinue, or revise subscription plans upon reasonable notice. Any such modification shall not by itself terminate an Artist\'s right to keep an eligible artwork listed on the Galleryzone marketplace.'),
+    MouParagraph(
+      'Galleryzone may modify, introduce, discontinue, or revise subscription plans upon reasonable notice. Any such modification shall not by itself terminate an Artist\'s right to keep an eligible artwork listed on the Galleryzone marketplace.',
+    ),
     MouHeading('8. MANDATORY MATERIALS, PACKAGING AND DISPATCH REQUIREMENTS'),
-    MouParagraph('8.1 The Artist shall ensure that all mandatory materials, documentation, labels, accessories, and other items specified by Galleryzone are provided with the artwork at the time of shipment.'),
+    MouParagraph(
+      '8.1 The Artist shall ensure that all mandatory materials, documentation, labels, accessories, and other items specified by Galleryzone are provided with the artwork at the time of shipment.',
+    ),
     MouParagraph('8.2 Such requirements may include, where applicable:'),
     MouItem('a.', 'Certificate of Authenticity;'),
     MouItem('b.', 'artwork display accessories;'),
@@ -151,11 +286,19 @@ const artistMou = MouDocument(
     MouItem('f.', 'QR code or QR label;'),
     MouItem('g.', 'framing or canvas requirements; and'),
     MouItem('h.', 'any other materials specified by Galleryzone.'),
-    MouParagraph('8.3 The Artist shall complete all documentation, packaging, labeling, and shipment requirements prescribed by Galleryzone before dispatch.'),
-    MouParagraph('8.4 Any applicable shipment, logistics, GST, taxes, convenience charges, handling charges, or other agreed charges may be deducted from the Artist\'s final settlement or otherwise recovered in accordance with this MOU.'),
-    MouParagraph('For the purposes of calculating any Galleryzone deduction or settlement amount under this MOU, “Artist Price” means the gross price quoted, agreed, or recorded for the Artist\'s artwork for the applicable transaction, before deduction of any Galleryzone deduction, statutory taxes, GST, logistics, shipping, transportation, payment gateway charges, or other permitted charges.'),
+    MouParagraph(
+      '8.3 The Artist shall complete all documentation, packaging, labeling, and shipment requirements prescribed by Galleryzone before dispatch.',
+    ),
+    MouParagraph(
+      '8.4 Any applicable shipment, logistics, GST, taxes, convenience charges, handling charges, or other agreed charges may be deducted from the Artist\'s final settlement or otherwise recovered in accordance with this MOU.',
+    ),
+    MouParagraph(
+      'For the purposes of calculating any Galleryzone deduction or settlement amount under this MOU, “Artist Price” means the gross price quoted, agreed, or recorded for the Artist\'s artwork for the applicable transaction, before deduction of any Galleryzone deduction, statutory taxes, GST, logistics, shipping, transportation, payment gateway charges, or other permitted charges.',
+    ),
     MouHeading('9. SELLING CHANNELS'),
-    MouParagraph('9.1 Galleryzone may market, promote, display, and facilitate the sale of artworks through:'),
+    MouParagraph(
+      '9.1 Galleryzone may market, promote, display, and facilitate the sale of artworks through:',
+    ),
     MouItem('a.', 'the online marketplace on a B2C basis;'),
     MouItem('b.', 'authorized Galleryzone Aggregators;'),
     MouItem('c.', 'art exhibitions;'),
@@ -164,157 +307,366 @@ const artistMou = MouDocument(
     MouItem('f.', 'private collectors;'),
     MouItem('g.', 'international buyers;'),
     MouItem('h.', 'galleries and other authorized sales partners; and'),
-    MouItem('i.', 'any other sales channel developed or authorized by Galleryzone.'),
+    MouItem(
+      'i.',
+      'any other sales channel developed or authorized by Galleryzone.',
+    ),
     MouSubheading('9.2 Independent Promotion by Artist'),
-    MouParagraph('The Artist may independently promote an artwork listed on Galleryzone through the Artist\'s own social media, website, professional network, exhibitions, or other promotional channels.'),
-    MouParagraph('However, during the period in which an artwork is actively listed with Galleryzone, the Artist shall not knowingly complete, facilitate, or redirect a sale of that artwork through another platform, gallery, aggregator, or sales channel where such transaction conflicts with the active Galleryzone listing or circumvents a Galleryzone-facilitated transaction.'),
+    MouParagraph(
+      'The Artist may independently promote an artwork listed on Galleryzone through the Artist\'s own social media, website, professional network, exhibitions, or other promotional channels.',
+    ),
+    MouParagraph(
+      'However, during the period in which an artwork is actively listed with Galleryzone, the Artist shall not knowingly complete, facilitate, or redirect a sale of that artwork through another platform, gallery, aggregator, or sales channel where such transaction conflicts with the active Galleryzone listing or circumvents a Galleryzone-facilitated transaction.',
+    ),
     MouSubheading('9.3 Galleryzone-Facilitated Transactions'),
-    MouParagraph('Where a prospective buyer, enquiry, order, or transaction is generated, introduced, facilitated, or processed through Galleryzone, the applicable purchase shall be completed through the Galleryzone-approved purchasing and settlement process.'),
+    MouParagraph(
+      'Where a prospective buyer, enquiry, order, or transaction is generated, introduced, facilitated, or processed through Galleryzone, the applicable purchase shall be completed through the Galleryzone-approved purchasing and settlement process.',
+    ),
     MouSubheading('9.4 Aggregator Selection and Display'),
-    MouParagraph('Once an artwork has been selected by an authorized Aggregator for display, the Artist shall not remove, withdraw, or independently sell the artwork during the applicable Aggregator display period without prior approval from Galleryzone, except as otherwise expressly permitted under this MOU.'),
+    MouParagraph(
+      'Once an artwork has been selected by an authorized Aggregator for display, the Artist shall not remove, withdraw, or independently sell the artwork during the applicable Aggregator display period without prior approval from Galleryzone, except as otherwise expressly permitted under this MOU.',
+    ),
     MouSubheading('9.5 No Circumvention'),
-    MouParagraph('The Artist shall not knowingly circumvent Galleryzone in respect of a buyer, collector, institution, Aggregator, gallery, or other customer introduced or connected to the Artist through Galleryzone for the purpose of avoiding applicable Galleryzone charges or transaction procedures.'),
+    MouParagraph(
+      'The Artist shall not knowingly circumvent Galleryzone in respect of a buyer, collector, institution, Aggregator, gallery, or other customer introduced or connected to the Artist through Galleryzone for the purpose of avoiding applicable Galleryzone charges or transaction procedures.',
+    ),
     MouHeading('10. DAMAGE, LOSS AND RESPONSIBILITY'),
-    MouParagraph('The Artist shall reasonably cooperate with Galleryzone, Aggregators, logistics partners, including providing documents, photographs, declarations, ownership records, COA information, and other information reasonably required for processing.'),
+    MouParagraph(
+      'The Artist shall reasonably cooperate with Galleryzone, Aggregators, logistics partners, including providing documents, photographs, declarations, ownership records, COA information, and other information reasonably required for processing.',
+    ),
     MouSubheading('10.1 — No Coverage Arrangement'),
-    MouParagraph('Galleryzone is not arranging insurance coverage for loss or damage under this MOU. Responsibility is determined under Clause 10.'),
+    MouParagraph(
+      'Galleryzone is not arranging insurance coverage for loss or damage under this MOU. Responsibility is determined under Clause 10.',
+    ),
     MouSubheading('10.2 Condition Records'),
-    MouParagraph('The parties may document the artwork\'s condition with dated photographs, videos, written condition reports, packaging records and handover acknowledgements.'),
+    MouParagraph(
+      'The parties may document the artwork\'s condition with dated photographs, videos, written condition reports, packaging records and handover acknowledgements.',
+    ),
     MouSubheading('10.3 Notice of Damage or Loss'),
-    MouParagraph('Anyone discovering loss, theft, breakage, deterioration or other damage must promptly notify Galleryzone and relevant parties, preserve evidence where practicable and provide available records.'),
+    MouParagraph(
+      'Anyone discovering loss, theft, breakage, deterioration or other damage must promptly notify Galleryzone and relevant parties, preserve evidence where practicable and provide available records.',
+    ),
     MouSubheading('10.4 Inspection and Responsibility Audit'),
-    MouParagraph('Galleryzone coordinates a review of the artwork\'s condition, custody history, packaging, movement, delivery records and evidence. An independent qualified assessor may be requested where necessary.'),
+    MouParagraph(
+      'Galleryzone coordinates a review of the artwork\'s condition, custody history, packaging, movement, delivery records and evidence. An independent qualified assessor may be requested where necessary.',
+    ),
     MouSubheading('10.5 Allocation and Disbursement'),
-    MouParagraph('The reasonable repair cost or substantiated loss in value is allocated to the party whose negligence, wilful misconduct, breach of the MOU or failure to follow agreed handling requirements caused the damage. Shared responsibility is allocated proportionately.'),
+    MouParagraph(
+      'The reasonable repair cost or substantiated loss in value is allocated to the party whose negligence, wilful misconduct, breach of the MOU or failure to follow agreed handling requirements caused the damage. Shared responsibility is allocated proportionately.',
+    ),
     MouSubheading('10.6 Payment to Affected Party'),
-    MouParagraph('The responsible party must pay the determined amount within 15 business days after written confirmation of the audit outcome and amount, unless the parties agree otherwise in writing. Galleryzone may facilitate payment but is not automatically required to fund it for a responsible third party.'),
+    MouParagraph(
+      'The responsible party must pay the determined amount within 15 business days after written confirmation of the audit outcome and amount, unless the parties agree otherwise in writing. Galleryzone may facilitate payment but is not automatically required to fund it for a responsible third party.',
+    ),
     MouSubheading('10.7 Disagreement or Unclear Responsibility'),
-    MouParagraph('The parties first seek a good-faith resolution and may jointly appoint an independent assessor. The assessor\'s reasonable fee is initially shared equally, subject to later reallocation by agreement or a competent dispute-resolution forum.'),
+    MouParagraph(
+      'The parties first seek a good-faith resolution and may jointly appoint an independent assessor. The assessor\'s reasonable fee is initially shared equally, subject to later reallocation by agreement or a competent dispute-resolution forum.',
+    ),
     MouSubheading('10.8 Pre-existing Damage and Exclusions'),
-    MouParagraph('The Artist must disclose known pre-existing damage or defects before dispatch. A party is not liable for damage proven to predate its custody, or for loss caused solely by an event beyond its reasonable control, subject to applicable law and that party\'s own acts or omissions.'),
+    MouParagraph(
+      'The Artist must disclose known pre-existing damage or defects before dispatch. A party is not liable for damage proven to predate its custody, or for loss caused solely by an event beyond its reasonable control, subject to applicable law and that party\'s own acts or omissions.',
+    ),
     MouHeading('11. DELIVERY AND TRANSPORTATION CHARGES'),
-    MouParagraph('11.1 The Artist shall not be required to make any upfront payment for delivery or transportation of an artwork to a designated Aggregator unless otherwise specifically agreed in writing.'),
-    MouParagraph('11.2 Applicable transportation charges for delivery of the artwork to the designated Aggregator shall be settled through the Artist\'s Galleryzone wallet or deducted from the Artist\'s final settlement, as applicable.'),
-    MouParagraph('11.3 Where sufficient funds are available in the Artist\'s Galleryzone wallet, applicable delivery charges may be deducted directly from such wallet.'),
-    MouParagraph('11.4 If an art work remains unsold and is required to be returned to the Artist, applicable return transportation charges may also be settled through the Artist\'s Galleryzone wallet or deducted from any amount payable to the Artist.'),
-    MouParagraph('11.5 Unless otherwise agreed in writing, a maximum of two (2) delivery movements may be chargeable in relation to an unsold artwork, being:'),
+    MouParagraph(
+      '11.1 The Artist shall not be required to make any upfront payment for delivery or transportation of an artwork to a designated Aggregator unless otherwise specifically agreed in writing.',
+    ),
+    MouParagraph(
+      '11.2 Applicable transportation charges for delivery of the artwork to the designated Aggregator shall be settled through the Artist\'s Galleryzone wallet or deducted from the Artist\'s final settlement, as applicable.',
+    ),
+    MouParagraph(
+      '11.3 Where sufficient funds are available in the Artist\'s Galleryzone wallet, applicable delivery charges may be deducted directly from such wallet.',
+    ),
+    MouParagraph(
+      '11.4 If an art work remains unsold and is required to be returned to the Artist, applicable return transportation charges may also be settled through the Artist\'s Galleryzone wallet or deducted from any amount payable to the Artist.',
+    ),
+    MouParagraph(
+      '11.5 Unless otherwise agreed in writing, a maximum of two (2) delivery movements may be chargeable in relation to an unsold artwork, being:',
+    ),
     MouItem('a.', 'the original delivery to the designated location; and'),
     MouItem('b.', 'the return delivery to the Artist.'),
-    MouParagraph('11.6 Customer delivery charges arising after a successful sale shall, wherever applicable, be separately payable by the buyer.'),
-    MouParagraph('11.7 Applicable delivery and transportation charges shall be communicated to or made available to the Artist through the Galleryzone platform or other official communication channels.'),
+    MouParagraph(
+      '11.6 Customer delivery charges arising after a successful sale shall, wherever applicable, be separately payable by the buyer.',
+    ),
+    MouParagraph(
+      '11.7 Applicable delivery and transportation charges shall be communicated to or made available to the Artist through the Galleryzone platform or other official communication channels.',
+    ),
     MouHeading('12. CERTIFICATE OF AUTHENTICITY'),
-    MouParagraph('12.1 The Artist shall complete the Certificate of Authenticity (“COA”) through the official Galleryzone platform or website before shipment of the artwork.'),
-    MouParagraph('12.2 Galleryzone may retain digital copies of the COA and related authenticity records for as long as reasonably required for verification, provenance, record-keeping, resale, compliance, and business purposes.'),
-    MouParagraph('12.3 If a customer subsequently requires a physical COA, the Artist shall, upon request, print, sign, and dispatch the COA through the process specified by Galleryzone.'),
+    MouParagraph(
+      '12.1 The Artist shall complete the Certificate of Authenticity (“COA”) through the official Galleryzone platform or website before shipment of the artwork.',
+    ),
+    MouParagraph(
+      '12.2 Galleryzone may retain digital copies of the COA and related authenticity records for as long as reasonably required for verification, provenance, record-keeping, resale, compliance, and business purposes.',
+    ),
+    MouParagraph(
+      '12.3 If a customer subsequently requires a physical COA, the Artist shall, upon request, print, sign, and dispatch the COA through the process specified by Galleryzone.',
+    ),
     MouSubheading('12.4 Physical COA Provided by Artist'),
-    MouParagraph('The Artist may, at the Artist\'s own discretion, provide a separate physical Certificate of Authenticity directly with the artwork or subsequently to the Buyer.'),
-    MouParagraph('Any physical COA independently provided by the Artist shall contain accurate information relating to the Original Artwork and shall not contradict or materially differ from the authenticity, ownership, provenance, dimensions, medium, or other official records maintained by Galleryzone.'),
-    MouParagraph('The provision of a physical COA by the Artist shall not affect Galleryzone\'s right to maintain its own digital COA, authenticity records, provenance records, QR records, NFC records, or other verification records relating to the artwork.'),
+    MouParagraph(
+      'The Artist may, at the Artist\'s own discretion, provide a separate physical Certificate of Authenticity directly with the artwork or subsequently to the Buyer.',
+    ),
+    MouParagraph(
+      'Any physical COA independently provided by the Artist shall contain accurate information relating to the Original Artwork and shall not contradict or materially differ from the authenticity, ownership, provenance, dimensions, medium, or other official records maintained by Galleryzone.',
+    ),
+    MouParagraph(
+      'The provision of a physical COA by the Artist shall not affect Galleryzone\'s right to maintain its own digital COA, authenticity records, provenance records, QR records, NFC records, or other verification records relating to the artwork.',
+    ),
     MouHeading('13. PACKAGING AND DISPLAY REQUIREMENTS'),
-    MouParagraph('13.1 For artworks displayed through Galleryzone Aggregators, the artwork shall:'),
-    MouItem('a.', 'be professionally stretched on canvas or properly framed, as applicable;'),
-    MouItem('b.', 'comply with Galleryzone\'s packaging and shipping standards;'),
+    MouParagraph(
+      '13.1 For artworks displayed through Galleryzone Aggregators, the artwork shall:',
+    ),
+    MouItem(
+      'a.',
+      'be professionally stretched on canvas or properly framed, as applicable;',
+    ),
+    MouItem(
+      'b.',
+      'comply with Galleryzone\'s packaging and shipping standards;',
+    ),
     MouItem('c.', 'include required hanging/display accessories;'),
-    MouItem('d.', 'include the required display card and NFC sticker/device, where applicable; and'),
-    MouItem('e.', 'comply with any additional packaging, labeling, or display requirements communicated by Galleryzone.'),
-    MouParagraph('13.2 Galleryzone or an authorized Aggregator may reject an artwork if it is improperly packaged, inadequately protected, damaged, or otherwise fails to meet the prescribed standards.'),
-    MouParagraph('13.3 The Artist shall be responsible for ensuring that the artwork is securely packed and adequately protected against reasonably foreseeable transportation risks.'),
-    MouParagraph('13.4 For the avoidance of doubt, all loss or damage matters arising from marketplace sales or Aggregator placements sales shall be governed exclusively by Clause 10.'),
+    MouItem(
+      'd.',
+      'include the required display card and NFC sticker/device, where applicable; and',
+    ),
+    MouItem(
+      'e.',
+      'comply with any additional packaging, labeling, or display requirements communicated by Galleryzone.',
+    ),
+    MouParagraph(
+      '13.2 Galleryzone or an authorized Aggregator may reject an artwork if it is improperly packaged, inadequately protected, damaged, or otherwise fails to meet the prescribed standards.',
+    ),
+    MouParagraph(
+      '13.3 The Artist shall be responsible for ensuring that the artwork is securely packed and adequately protected against reasonably foreseeable transportation risks.',
+    ),
+    MouParagraph(
+      '13.4 For the avoidance of doubt, all loss or damage matters arising from marketplace sales or Aggregator placements sales shall be governed exclusively by Clause 10.',
+    ),
     MouHeading('14. OWNERSHIP BEFORE SALE'),
-    MouParagraph('14.1 Legal ownership and title to an artwork shall remain solely with the Artist until the artwork is successfully sold and the applicable ownership transfer conditions have been satisfied.'),
-    MouParagraph('14.2 Where an artwork is delivered to Galleryzone or an authorized Aggregator for display, exhibition, marketing, logistics, or sale, Galleryzone or such Aggregator shall have only possession and custody of the artwork for the purposes authorized under this MOU.'),
-    MouParagraph('14.3 Possession or custody of the art work by Galleryzone or an authorized Aggregator shall not constitute, and shall not be deemed to constitute, a transfer, assignment, sale, or relinquishment of ownership of the artwork.'),
-    MouParagraph('14.4 The Artist shall retain ownership of the physical artwork until ownership is transferred to the buyer in accordance with Clause 16.'),
+    MouParagraph(
+      '14.1 Legal ownership and title to an artwork shall remain solely with the Artist until the artwork is successfully sold and the applicable ownership transfer conditions have been satisfied.',
+    ),
+    MouParagraph(
+      '14.2 Where an artwork is delivered to Galleryzone or an authorized Aggregator for display, exhibition, marketing, logistics, or sale, Galleryzone or such Aggregator shall have only possession and custody of the artwork for the purposes authorized under this MOU.',
+    ),
+    MouParagraph(
+      '14.3 Possession or custody of the art work by Galleryzone or an authorized Aggregator shall not constitute, and shall not be deemed to constitute, a transfer, assignment, sale, or relinquishment of ownership of the artwork.',
+    ),
+    MouParagraph(
+      '14.4 The Artist shall retain ownership of the physical artwork until ownership is transferred to the buyer in accordance with Clause 16.',
+    ),
     MouHeading('15. RIGHTS AND LICENCE BEFORE SALE'),
-    MouParagraph('15.1 The Artist grants Galleryzone a non-exclusive, worldwide, royalty-free license to photograph, digitally reproduce, publish, advertise, display, exhibit, catalogue, distribute for promotional purposes, and otherwise use the artwork and related artwork materials solely for the purposes contemplated under this MOU.'),
-    MouParagraph('15.2 The license granted under this Clause is limited to listing, marketing, advertising, promotion, exhibition, portfolio development, provenance, authentication, record-keeping, and facilitation of sale of the artwork.'),
-    MouParagraph('15.3 Galleryzone may create digital representations, promotional reproductions, catalogue images, website images, social-media content, advertisements, and other digital or promotional materials based on the artwork.'),
-    MouParagraph('15.4 Nothing contained in this MOU shall be construed as a transfer or assignment of the Artist\'s copyright in the artwork to Galleryzone.'),
-    MouParagraph('15.5 The Artist shall retain copyright in the artwork, subject to the license granted to Galleryzone under this MOU and subject to the rights expressly granted to a buyer under the applicable sale transaction.'),
-    MouParagraph('15.6 The Artist may independently promote the artwork, provided that such promotion does not conflict with an active Galleryzone listing, Aggregator placement, exhibition commitment, confirmed transaction, or other obligation under this MOU.'),
-    MouParagraph('15.7 Nothing in this Clause shall grant Galleryzone ownership of the physical artwork or the Artist\'s copyright. The license granted to Galleryzone is limited to the legitimate purposes expressly stated in this Clause.'),
+    MouParagraph(
+      '15.1 The Artist grants Galleryzone a non-exclusive, worldwide, royalty-free license to photograph, digitally reproduce, publish, advertise, display, exhibit, catalogue, distribute for promotional purposes, and otherwise use the artwork and related artwork materials solely for the purposes contemplated under this MOU.',
+    ),
+    MouParagraph(
+      '15.2 The license granted under this Clause is limited to listing, marketing, advertising, promotion, exhibition, portfolio development, provenance, authentication, record-keeping, and facilitation of sale of the artwork.',
+    ),
+    MouParagraph(
+      '15.3 Galleryzone may create digital representations, promotional reproductions, catalogue images, website images, social-media content, advertisements, and other digital or promotional materials based on the artwork.',
+    ),
+    MouParagraph(
+      '15.4 Nothing contained in this MOU shall be construed as a transfer or assignment of the Artist\'s copyright in the artwork to Galleryzone.',
+    ),
+    MouParagraph(
+      '15.5 The Artist shall retain copyright in the artwork, subject to the license granted to Galleryzone under this MOU and subject to the rights expressly granted to a buyer under the applicable sale transaction.',
+    ),
+    MouParagraph(
+      '15.6 The Artist may independently promote the artwork, provided that such promotion does not conflict with an active Galleryzone listing, Aggregator placement, exhibition commitment, confirmed transaction, or other obligation under this MOU.',
+    ),
+    MouParagraph(
+      '15.7 Nothing in this Clause shall grant Galleryzone ownership of the physical artwork or the Artist\'s copyright. The license granted to Galleryzone is limited to the legitimate purposes expressly stated in this Clause.',
+    ),
     MouHeading('16. RIGHTS AFTER SALE'),
-    MouParagraph('16.1 Transfer of Ownership: Upon successful completion of the sale, receipt of the applicable purchase consideration and fulfillment of all applicable delivery and transaction conditions, legal ownership and title to the physical original artwork shall transfer from the Artist to the Buyer.'),
-    MouParagraph('16.2 Rights of Buyer: Upon transfer of ownership, the Buyer shall have the right to possess, display, use, and subsequently resell the physical original artwork, subject to applicable law and the terms and conditions of the relevant sale transaction.'),
-    MouParagraph('16.3 No Reproduction of the Original Artwork: Upon sale of the original artwork, the Artist shall not reproduce or recreate the same original artwork as an identical or substantially identical physical artwork, particularly in the same dimensions, specifications, and form as the original artwork sold to the Buyer.'),
-    MouParagraph('16.4 Digital Prints and Other Commercial Activities: The Artist shall be permitted to create and commercially distribute digital prints, reproductions in different formats, merchandise, publications, promotional materials, digital content, or other derivative or commercial works based on the artwork, provided that such reproductions are not represented or sold as the original artwork and are not created in the same dimensions and specifications as the original artwork sold to the Buyer.'),
-    MouParagraph('16.5 Distinction between Original Artwork and Reproductions: Any digital print, reproduction, merchandise, derivative work, or other commercial format created by the Artist shall be clearly distinguishable from the original artwork and shall not be represented as the original physical art work sold through Galleryzone.'),
+    MouParagraph(
+      '16.1 Transfer of Ownership: Upon successful completion of the sale, receipt of the applicable purchase consideration and fulfillment of all applicable delivery and transaction conditions, legal ownership and title to the physical original artwork shall transfer from the Artist to the Buyer.',
+    ),
+    MouParagraph(
+      '16.2 Rights of Buyer: Upon transfer of ownership, the Buyer shall have the right to possess, display, use, and subsequently resell the physical original artwork, subject to applicable law and the terms and conditions of the relevant sale transaction.',
+    ),
+    MouParagraph(
+      '16.3 No Reproduction of the Original Artwork: Upon sale of the original artwork, the Artist shall not reproduce or recreate the same original artwork as an identical or substantially identical physical artwork, particularly in the same dimensions, specifications, and form as the original artwork sold to the Buyer.',
+    ),
+    MouParagraph(
+      '16.4 Digital Prints and Other Commercial Activities: The Artist shall be permitted to create and commercially distribute digital prints, reproductions in different formats, merchandise, publications, promotional materials, digital content, or other derivative or commercial works based on the artwork, provided that such reproductions are not represented or sold as the original artwork and are not created in the same dimensions and specifications as the original artwork sold to the Buyer.',
+    ),
+    MouParagraph(
+      '16.5 Distinction between Original Artwork and Reproductions: Any digital print, reproduction, merchandise, derivative work, or other commercial format created by the Artist shall be clearly distinguishable from the original artwork and shall not be represented as the original physical art work sold through Galleryzone.',
+    ),
     MouSubheading('16.6 Copy right and Commercial Rights'),
-    MouParagraph('Except for the restriction on physically recreating or reproducing the sold Original Artwork as an identical or substantially identical physical artwork, the Artist shall retain the copy right and the right to commercially exploit the artwork through permitted formats, including digital prints, merchandise, publications, licensing, promotional materials, and other derivative or commercial works.'),
-    MouParagraph('For the avoidance of doubt, such permitted commercial activities shall not include the creation of another physical artwork that is identical or substantially identical to the sold Original Artwork in its design, composition, dimensions, specifications, and artistic execution, and no reproduction shall be represented or sold as the Original Artwork.'),
-    MouParagraph('16.7 Moral Rights: The Artist shall retain such moral rights and other non-economic rights as are available under applicable law.'),
+    MouParagraph(
+      'Except for the restriction on physically recreating or reproducing the sold Original Artwork as an identical or substantially identical physical artwork, the Artist shall retain the copy right and the right to commercially exploit the artwork through permitted formats, including digital prints, merchandise, publications, licensing, promotional materials, and other derivative or commercial works.',
+    ),
+    MouParagraph(
+      'For the avoidance of doubt, such permitted commercial activities shall not include the creation of another physical artwork that is identical or substantially identical to the sold Original Artwork in its design, composition, dimensions, specifications, and artistic execution, and no reproduction shall be represented or sold as the Original Artwork.',
+    ),
+    MouParagraph(
+      '16.7 Moral Rights: The Artist shall retain such moral rights and other non-economic rights as are available under applicable law.',
+    ),
     MouHeading('17. AUTHENTICITY AND PROVENANCE RECORDS'),
-    MouParagraph('17.1 Galleryzone may create, maintain, update, and preserve records relating to the artwork, including:'),
+    MouParagraph(
+      '17.1 Galleryzone may create, maintain, update, and preserve records relating to the artwork, including:',
+    ),
     MouItem('a.', 'digital Certificate of Authenticity;'),
     MouItem('b.', 'ownership history;'),
     MouItem('c.', 'QR verification records;'),
     MouItem('d.', 'NFC records;'),
     MouItem('e.', 'artwork provenance;'),
     MouItem('f.', 'transaction history; and'),
-    MouItem('g.', 'other records reasonably required to establish authenticity and provenance.'),
-    MouParagraph('17.2 The Artist agrees to reasonably cooperate with Galleryzone in maintaining accurate authenticity and provenance records.'),
+    MouItem(
+      'g.',
+      'other records reasonably required to establish authenticity and provenance.',
+    ),
+    MouParagraph(
+      '17.2 The Artist agrees to reasonably cooperate with Galleryzone in maintaining accurate authenticity and provenance records.',
+    ),
     MouHeading('18. AGGREGATOR DISPLAY PERIOD'),
-    MouParagraph('18.1 An artwork placed with an authorized Galleryzone Aggregator shall have an overall Aggregator channel period of upto six (6) months, unless otherwise agreed in writing between Galleryzone and the Artist.'),
-    MouParagraph('18.2 Within the overall six (6) month Aggregator period, each individual authorized Aggregator shall ordinarily display the artwork for an initial period of thirty (30) days.'),
-    MouParagraph('18.3 After completion of the applicable thirty (30) day display period, Galleryzone may, at its discretion:'),
+    MouParagraph(
+      '18.1 An artwork placed with an authorized Galleryzone Aggregator shall have an overall Aggregator channel period of upto six (6) months, unless otherwise agreed in writing between Galleryzone and the Artist.',
+    ),
+    MouParagraph(
+      '18.2 Within the overall six (6) month Aggregator period, each individual authorized Aggregator shall ordinarily display the artwork for an initial period of thirty (30) days.',
+    ),
+    MouParagraph(
+      '18.3 After completion of the applicable thirty (30) day display period, Galleryzone may, at its discretion:',
+    ),
     MouItem('a.', 'continue the display with the same Aggregator;'),
     MouItem('b.', 'relocate the artwork to another authorized Aggregator;'),
     MouItem('c.', 'place the artwork in an exhibition;'),
     MouItem('d.', 'move the artwork to another approved sales channel; or'),
     MouItem('e.', 'revise the marketing and sales strategy.'),
-    MouParagraph('18.4 The thirty (30) day period applicable to an individual Aggregator shall not be interpreted as limiting the overall six (6) month Aggregator channel period.'),
-    MouParagraph('18.5 The Artist shall cooperate with reasonable relocation, collection, packaging, and logistics requirements arising under this Clause.'),
+    MouParagraph(
+      '18.4 The thirty (30) day period applicable to an individual Aggregator shall not be interpreted as limiting the overall six (6) month Aggregator channel period.',
+    ),
+    MouParagraph(
+      '18.5 The Artist shall cooperate with reasonable relocation, collection, packaging, and logistics requirements arising under this Clause.',
+    ),
     MouHeading('19. MARKETPLACE AND AGGREGATOR LISTING PERIOD'),
-    MouParagraph('Any applicable return shipment, packaging, handling, or other charges shall be governed by the applicable provisions of this MOU and communicated to the Artist wherever reasonably practicable.'),
-    MouParagraph('If an artwork reaches the end of its applicable six (6) month listing period and remains unsold, Galleryzone may coordinate its return to the Artist or, with the Artist\'s consent, continue the artwork through another applicable Galleryzone sales arrangement.'),
+    MouParagraph(
+      'Any applicable return shipment, packaging, handling, or other charges shall be governed by the applicable provisions of this MOU and communicated to the Artist wherever reasonably practicable.',
+    ),
+    MouParagraph(
+      'If an artwork reaches the end of its applicable six (6) month listing period and remains unsold, Galleryzone may coordinate its return to the Artist or, with the Artist\'s consent, continue the artwork through another applicable Galleryzone sales arrangement.',
+    ),
     MouSubheading('19.1 End of Listing Period'),
-    MouParagraph('Within the overall six (6) month Aggregator period, each individual authorized Aggregator shall ordinarily display the artwork for an initial period of thirty (30) days. After completion of the applicable display period, Galleryzone may, at its discretion, continue the display, relocate the artwork, place it in an exhibition, move it to another approved sales channel, or revise the marketing and sales strategy.'),
-    MouParagraph('An artwork placed through the Galleryzone Aggregator channel may remain within the Aggregator channel for a maximum period of six (6) months, subject to the applicable thirty (30) day display period for each individual Aggregator.'),
+    MouParagraph(
+      'Within the overall six (6) month Aggregator period, each individual authorized Aggregator shall ordinarily display the artwork for an initial period of thirty (30) days. After completion of the applicable display period, Galleryzone may, at its discretion, continue the display, relocate the artwork, place it in an exhibition, move it to another approved sales channel, or revise the marketing and sales strategy.',
+    ),
+    MouParagraph(
+      'An artwork placed through the Galleryzone Aggregator channel may remain within the Aggregator channel for a maximum period of six (6) months, subject to the applicable thirty (30) day display period for each individual Aggregator.',
+    ),
     MouSubheading('19.2 Aggregator Listing Period'),
-    MouParagraph('The expiry of an Artist\'s subscription shall not, by itself, cause an artwork to be removed before the end of its applicable listing period. Continued listing or relisting after the applicable period shall be subject to Galleryzone\'s then-applicable listing, renewal, or relisting procedures.'),
-    MouParagraph('Unless otherwise agreed, or unless the artwork is suspended, removed, or delisted in accordance with this MOU, an approved artwork may remain listed on the Galleryzone online marketplace for a maximum period of six (6) months from the date of activation.'),
+    MouParagraph(
+      'The expiry of an Artist\'s subscription shall not, by itself, cause an artwork to be removed before the end of its applicable listing period. Continued listing or relisting after the applicable period shall be subject to Galleryzone\'s then-applicable listing, renewal, or relisting procedures.',
+    ),
+    MouParagraph(
+      'Unless otherwise agreed, or unless the artwork is suspended, removed, or delisted in accordance with this MOU, an approved artwork may remain listed on the Galleryzone online marketplace for a maximum period of six (6) months from the date of activation.',
+    ),
     MouSubheading('19.3 Marketplace Listing'),
-    MouParagraph('Unless otherwise agreed or unless the artwork is suspended, removed, or delisted in accordance with this MOU, an approved artwork may remain listed on the Galleryzone online marketplace for an unlimited period.'),
+    MouParagraph(
+      'Unless otherwise agreed or unless the artwork is suspended, removed, or delisted in accordance with this MOU, an approved artwork may remain listed on the Galleryzone online marketplace for an unlimited period.',
+    ),
     MouHeading('20. ARTWORK WITHDRAWAL'),
-    MouParagraph('20.1 The Artist may request withdrawal of an artwork from the Galleryzone marketplace or Aggregator channel, subject to the terms of this MOU and any obligations already arising in respect of the artwork.'),
-    MouParagraph('20.2 The Artist\'s request for withdrawal shall not automatically require immediate removal where the artwork is subject to an active Aggregator display period, exhibition commitment, confirmed buyer transaction, logistics commitment, or other binding commercial obligation.'),
-    MouParagraph('20.3 Where withdrawal is requested before completion of an applicable Aggregator display period, exhibition period, agreed placement period, or other committed arrangement; Galleryzone may defer processing of the withdrawal request until completion of the relevant commitment or until suitable arrangements for withdrawal is made.'),
-    MouParagraph('20.4 A withdrawal fee may apply only to the extent of reasonable costs actually incurred by Galleryzone in connection with the withdrawal, including applicable administrative, logistics, handling, packaging, transportation, Aggregator, processing, or other third-party costs.'),
-    MouParagraph('20.5 The applicable withdrawal fee shall be communicated to the Artist before processing the withdrawal request, wherever reasonably practicable.'),
-    MouParagraph('20.6 Any applicable withdrawal costs may be deducted from the Artist\'s Galleryzone wallet or from any amount otherwise payable to the Artist.'),
-    MouParagraph('20.7 Withdrawal shall not affect any rights or obligations that have already arisen in connection with a completed sale, buyer transaction, ownership transfer, logistics commitment, or other binding transaction.'),
-    MouParagraph('20.8 Where an artwork has been selected by an authorized Aggregator or is subject to an active exhibition, confirmed sale, logistics commitment, or agreed display period, withdrawal shall remain subject to Galleryzone\'s approval and the applicable terms and conditions.'),
+    MouParagraph(
+      '20.1 The Artist may request withdrawal of an artwork from the Galleryzone marketplace or Aggregator channel, subject to the terms of this MOU and any obligations already arising in respect of the artwork.',
+    ),
+    MouParagraph(
+      '20.2 The Artist\'s request for withdrawal shall not automatically require immediate removal where the artwork is subject to an active Aggregator display period, exhibition commitment, confirmed buyer transaction, logistics commitment, or other binding commercial obligation.',
+    ),
+    MouParagraph(
+      '20.3 Where withdrawal is requested before completion of an applicable Aggregator display period, exhibition period, agreed placement period, or other committed arrangement; Galleryzone may defer processing of the withdrawal request until completion of the relevant commitment or until suitable arrangements for withdrawal is made.',
+    ),
+    MouParagraph(
+      '20.4 A withdrawal fee may apply only to the extent of reasonable costs actually incurred by Galleryzone in connection with the withdrawal, including applicable administrative, logistics, handling, packaging, transportation, Aggregator, processing, or other third-party costs.',
+    ),
+    MouParagraph(
+      '20.5 The applicable withdrawal fee shall be communicated to the Artist before processing the withdrawal request, wherever reasonably practicable.',
+    ),
+    MouParagraph(
+      '20.6 Any applicable withdrawal costs may be deducted from the Artist\'s Galleryzone wallet or from any amount otherwise payable to the Artist.',
+    ),
+    MouParagraph(
+      '20.7 Withdrawal shall not affect any rights or obligations that have already arisen in connection with a completed sale, buyer transaction, ownership transfer, logistics commitment, or other binding transaction.',
+    ),
+    MouParagraph(
+      '20.8 Where an artwork has been selected by an authorized Aggregator or is subject to an active exhibition, confirmed sale, logistics commitment, or agreed display period, withdrawal shall remain subject to Galleryzone\'s approval and the applicable terms and conditions.',
+    ),
     MouHeading('21. RESPONSIBILITIES OF THE ARTIST'),
     MouParagraph('The Artist shall:'),
     MouItem('a.', 'provide genuine and original artwork;'),
     MouItem('b.', 'provide accurate, complete, and truthful information;'),
-    MouItem('c.', 'cooperate with Galleryzone\'s verification and authentication procedures;'),
+    MouItem(
+      'c.',
+      'cooperate with Galleryzone\'s verification and authentication procedures;',
+    ),
     MouItem('d.', 'complete and maintain the required COA;'),
-    MouItem('e.', 'respond promptly to reasonable communications from Galleryzone;'),
-    MouItem('f.', 'maintain professional conduct in dealings with Galleryzone, buyers, Aggregators, logistics partners, and other authorized parties;'),
-    MouItem('g.', 'ensure that the quality and condition of the artwork correspond substantially with the photographs and descriptions submitted to Galleryzone;'),
-    MouItem('h.', 'comply with applicable packaging, shipping, documentation, and display requirements; and'),
-    MouItem('i.', 'promptly inform Galleryzone of any material change affecting the ownership, authenticity, condition, availability, or legal status of the artwork.'),
+    MouItem(
+      'e.',
+      'respond promptly to reasonable communications from Galleryzone;',
+    ),
+    MouItem(
+      'f.',
+      'maintain professional conduct in dealings with Galleryzone, buyers, Aggregators, logistics partners, and other authorized parties;',
+    ),
+    MouItem(
+      'g.',
+      'ensure that the quality and condition of the artwork correspond substantially with the photographs and descriptions submitted to Galleryzone;',
+    ),
+    MouItem(
+      'h.',
+      'comply with applicable packaging, shipping, documentation, and display requirements; and',
+    ),
+    MouItem(
+      'i.',
+      'promptly inform Galleryzone of any material change affecting the ownership, authenticity, condition, availability, or legal status of the artwork.',
+    ),
     MouHeading('22. RESPONSIBILITIES OF GALLERYZONE'),
-    MouParagraph('Galleryzone shall, subject to this MOU and its applicable policies:'),
-    MouItem('a.', 'promote and market the artwork through its available channels;'),
+    MouParagraph(
+      'Galleryzone shall, subject to this MOU and its applicable policies:',
+    ),
+    MouItem(
+      'a.',
+      'promote and market the artwork through its available channels;',
+    ),
     MouItem('b.', 'maintain relevant digital records;'),
-    MouItem('c.', 'facilitate connections between Artists and prospective buyers;'),
-    MouItem('d.', 'facilitate settlement of amounts payable to the Artist following successful transactions;'),
+    MouItem(
+      'c.',
+      'facilitate connections between Artists and prospective buyers;',
+    ),
+    MouItem(
+      'd.',
+      'facilitate settlement of amounts payable to the Artist following successful transactions;',
+    ),
     MouItem('e.', 'generate or maintain authenticity and provenance records;'),
-    MouItem('f.', 'coordinate logistics and authorized Aggregator arrangements, where applicable; and'),
-    MouItem('g.', 'coordinate the return of unsold artworks, where applicable.'),
-    MouParagraph('22.2 Galleryzone does not guarantee the sale of any artwork, minimum sales volume, minimum income, appreciation in value, or investment return.'),
+    MouItem(
+      'f.',
+      'coordinate logistics and authorized Aggregator arrangements, where applicable; and',
+    ),
+    MouItem(
+      'g.',
+      'coordinate the return of unsold artworks, where applicable.',
+    ),
+    MouParagraph(
+      '22.2 Galleryzone does not guarantee the sale of any artwork, minimum sales volume, minimum income, appreciation in value, or investment return.',
+    ),
     MouHeading('23. SETTLEMENT'),
     MouSubheading('23.1 Artist Price'),
-    MouParagraph('For the purposes of this MOU, “Artist Price” means the gross price applicable to the Artist for the relevant artwork and recorded or agreed for the applicable transaction, before deduction of Galleryzone\'s permitted deductions and other separately identified charges.'),
+    MouParagraph(
+      'For the purposes of this MOU, “Artist Price” means the gross price applicable to the Artist for the relevant artwork and recorded or agreed for the applicable transaction, before deduction of Galleryzone\'s permitted deductions and other separately identified charges.',
+    ),
     MouSubheading('23.2 Marketplace Sales'),
-    MouParagraph('For sales completed through the Galleryzone online marketplace, Galleryzone shall not deduct any technology, platform, service, facilitation, or similar Galleryzone commercial fee from the Artist Price, subject only to deductions expressly permitted under this MOU, excluding applicable statutory taxes, GST, logistics, shipping, transportation, payment gateway charges, or other applicable third-party/pass-through charges.'),
+    MouParagraph(
+      'For sales completed through the Galleryzone online marketplace, Galleryzone shall not deduct any technology, platform, service, facilitation, or similar Galleryzone commercial fee from the Artist Price, subject only to deductions expressly permitted under this MOU, excluding applicable statutory taxes, GST, logistics, shipping, transportation, payment gateway charges, or other applicable third-party/pass-through charges.',
+    ),
     MouSubheading('23.3 Aggregator Sales'),
-    MouParagraph('For sales completed through an authorized Galleryzone Aggregator, Galleryzone may deduct an amount for its technology, platform, service, facilitation, or other internal commercial charges, provided that such Galleryzone deduction shall not exceed ten percent (10%) of the Artist Price applicable to that transaction.'),
+    MouParagraph(
+      'For sales completed through an authorized Galleryzone Aggregator, Galleryzone may deduct an amount for its technology, platform, service, facilitation, or other internal commercial charges, provided that such Galleryzone deduction shall not exceed ten percent (10%) of the Artist Price applicable to that transaction.',
+    ),
     MouSubheading('23.4 Exclusion from Ten Percent Cap'),
-    MouParagraph('The ten percent (10%) cap specified in Clause 23.3 shall apply only to Galleryzone\'s own internal commercial deductions.'),
-    MouParagraph('The ten percent (10%) cap shall not include statutory taxes, GST, logistics charges, shipping charges, delivery charges, transportation charges, payment gateway charges, Aggregator charges, or other third-party/pass-through costs incurred or payable in connection with the transaction.'),
+    MouParagraph(
+      'The ten percent (10%) cap specified in Clause 23.3 shall apply only to Galleryzone\'s own internal commercial deductions.',
+    ),
+    MouParagraph(
+      'The ten percent (10%) cap shall not include statutory taxes, GST, logistics charges, shipping charges, delivery charges, transportation charges, payment gateway charges, Aggregator charges, or other third-party/pass-through costs incurred or payable in connection with the transaction.',
+    ),
     MouSubheading('23.5 Permitted Deductions'),
     MouParagraph('Applicable deductions may include, where applicable:'),
     MouItem('a.', 'GST and other statutory taxes;'),
@@ -323,187 +675,477 @@ const artistMou = MouDocument(
     MouItem('d.', 'payment gateway or transaction processing charges;'),
     MouItem('e.', 'withdrawal or handling charges, where applicable;'),
     MouItem('f.', 'Aggregator or third-party charges; and'),
-    MouItem('g.', 'other charges expressly communicated to or agreed with the Artist.'),
+    MouItem(
+      'g.',
+      'other charges expressly communicated to or agreed with the Artist.',
+    ),
     MouSubheading('23.6 No Galleryzone Fee on Marketplace Sales'),
-    MouParagraph('For the avoidance of doubt, the ten percent (10%) Galleryzone deduction under Clause 23.3 shall not apply to sales completed through the Galleryzone online marketplace.'),
+    MouParagraph(
+      'For the avoidance of doubt, the ten percent (10%) Galleryzone deduction under Clause 23.3 shall not apply to sales completed through the Galleryzone online marketplace.',
+    ),
     MouSubheading('23.7 Pricing and Minimum Appreciation Component'),
-    MouParagraph('Where Galleryzone applies its appreciation-based pricing or curation model to an artwork, the Listed Selling Price shall ordinarily include a minimum thirty percent (30%) pricing/appreciation component over the Artist Price, such that the Listed Selling Price is not less than one hundred thirty percent (130%) of the applicable Artist Price, subject to applicable taxes, charges, commissions, or other transaction-specific amounts.'),
-    MouParagraph('The Artist\'s entitlement for the relevant transaction shall remain the Artist Price, subject to the deductions expressly permitted under this MOU. The appreciation/pricing component above the Artist Price is retained by Galleryzone as part of its pricing, curation, platform, marketing, and commercial model.'),
-    MouParagraph('The thirty percent (30%) is a minimum pricing/appreciation component used by Galleryzone and does not constitute a guarantee that the artwork will appreciate in actual market value, nor does it constitute a guarantee of resale value, investment return, future demand, or future selling price. Galleryzone may apply a higher pricing/appreciation component where justified by its curation, positioning, market strategy, or other commercial considerations.'),
+    MouParagraph(
+      'Where Galleryzone applies its appreciation-based pricing or curation model to an artwork, the Listed Selling Price shall ordinarily include a minimum thirty percent (30%) pricing/appreciation component over the Artist Price, such that the Listed Selling Price is not less than one hundred thirty percent (130%) of the applicable Artist Price, subject to applicable taxes, charges, commissions, or other transaction-specific amounts.',
+    ),
+    MouParagraph(
+      'The Artist\'s entitlement for the relevant transaction shall remain the Artist Price, subject to the deductions expressly permitted under this MOU. The appreciation/pricing component above the Artist Price is retained by Galleryzone as part of its pricing, curation, platform, marketing, and commercial model.',
+    ),
+    MouParagraph(
+      'The thirty percent (30%) is a minimum pricing/appreciation component used by Galleryzone and does not constitute a guarantee that the artwork will appreciate in actual market value, nor does it constitute a guarantee of resale value, investment return, future demand, or future selling price. Galleryzone may apply a higher pricing/appreciation component where justified by its curation, positioning, market strategy, or other commercial considerations.',
+    ),
     MouSubheading('23.8 Settlement Timing'),
-    MouParagraph('Settlement shall ordinarily be processed after successful delivery of the artwork and receipt of the applicable payment from the buyer, subject to completion of applicable verification, transaction, reconciliation, and settlement procedures. Generally happens within 7 business days.'),
+    MouParagraph(
+      'Settlement shall ordinarily be processed after successful delivery of the artwork and receipt of the applicable payment from the buyer, subject to completion of applicable verification, transaction, reconciliation, and settlement procedures. Generally happens within 7 business days.',
+    ),
     MouHeading('24. TERMINATION'),
-    MouSubheading('24.1 Immediate Suspension or Termination for Serious Violations'),
-    MouParagraph('Notwithstanding anything contained elsewhere in this MOU, Galleryzone may, without any prior notice or cure period, immediately suspend the Artist’s account, disable or delist any Artwork, restrict access to the Galleryzone platform, and/or terminate this MOU, in whole or in part, where Galleryzone reasonably determines that the Artist has:'),
-    MouItem('a.', 'submitted, listed, sold, or represented any counterfeit, copied, fraudulent, unauthorized, or materially misrepresented Artwork;'),
-    MouItem('b.', 'provided false, fraudulent, materially incomplete, or misleading information or documentation relating to the Artist, Artwork, ownership, authenticity, provenance, pricing, or transaction;'),
-    MouItem('c.', 'infringed or allegedly materially infringed any intellectual property, copyright, trademark, moral right, privacy right, or other third-party right;'),
-    MouItem('d.', 'engaged in fraud, deception, unlawful activity, or conduct reasonably likely to expose Galleryzone to legal, regulatory, financial, reputational, or commercial risk;'),
-    MouItem('e.', 'materially breached any obligation relating to authenticity, ownership, provenance, custody, packaging, delivery, or other obligations where immediate action is reasonably necessary to protect Galleryzone, the buyer, the Artwork, or any third party; or'),
-    MouItem('f.', 'caused or reasonably appears likely to cause material harm to Galleryzone, its customers, Aggregators, business partners, or the integrity of the Galleryzone platform.'),
-    MouParagraph('In such circumstances, Galleryzone shall not be required to provide the Artist with an advance termination notice or an opportunity to cure the breach before taking such action, to the extent permitted by applicable law.'),
-    MouParagraph('Any suspension or termination under this Clause shall be without prejudice to Galleryzone’s accrued rights, remedies, claims, payment adjustments, indemnities, or other rights under this MOU or applicable law.'),
+    MouSubheading(
+      '24.1 Immediate Suspension or Termination for Serious Violations',
+    ),
+    MouParagraph(
+      'Notwithstanding anything contained elsewhere in this MOU, Galleryzone may, without any prior notice or cure period, immediately suspend the Artist’s account, disable or delist any Artwork, restrict access to the Galleryzone platform, and/or terminate this MOU, in whole or in part, where Galleryzone reasonably determines that the Artist has:',
+    ),
+    MouItem(
+      'a.',
+      'submitted, listed, sold, or represented any counterfeit, copied, fraudulent, unauthorized, or materially misrepresented Artwork;',
+    ),
+    MouItem(
+      'b.',
+      'provided false, fraudulent, materially incomplete, or misleading information or documentation relating to the Artist, Artwork, ownership, authenticity, provenance, pricing, or transaction;',
+    ),
+    MouItem(
+      'c.',
+      'infringed or allegedly materially infringed any intellectual property, copyright, trademark, moral right, privacy right, or other third-party right;',
+    ),
+    MouItem(
+      'd.',
+      'engaged in fraud, deception, unlawful activity, or conduct reasonably likely to expose Galleryzone to legal, regulatory, financial, reputational, or commercial risk;',
+    ),
+    MouItem(
+      'e.',
+      'materially breached any obligation relating to authenticity, ownership, provenance, custody, packaging, delivery, or other obligations where immediate action is reasonably necessary to protect Galleryzone, the buyer, the Artwork, or any third party; or',
+    ),
+    MouItem(
+      'f.',
+      'caused or reasonably appears likely to cause material harm to Galleryzone, its customers, Aggregators, business partners, or the integrity of the Galleryzone platform.',
+    ),
+    MouParagraph(
+      'In such circumstances, Galleryzone shall not be required to provide the Artist with an advance termination notice or an opportunity to cure the breach before taking such action, to the extent permitted by applicable law.',
+    ),
+    MouParagraph(
+      'Any suspension or termination under this Clause shall be without prejudice to Galleryzone’s accrued rights, remedies, claims, payment adjustments, indemnities, or other rights under this MOU or applicable law.',
+    ),
     MouSubheading('24.2 Ordinary Material Breach – Notice + Cure Period'),
-    MouParagraph('Except in circumstances covered by Clause 24.1, where either Party commits a material breach of this MOU, the non-breaching Party may issue a written notice describing the breach and requiring the breaching Party to remedy such breach.'),
-    MouParagraph('The breaching Party shall have 15 (fifteen) days from receipt of such written notice to cure the breach, unless:'),
-    MouItem('a.', 'a shorter period is reasonably necessary due to the nature of the breach or the protection of an Artwork, buyer, third party, or Galleryzone’s legal or commercial interests; or'),
+    MouParagraph(
+      'Except in circumstances covered by Clause 24.1, where either Party commits a material breach of this MOU, the non-breaching Party may issue a written notice describing the breach and requiring the breaching Party to remedy such breach.',
+    ),
+    MouParagraph(
+      'The breaching Party shall have 15 (fifteen) days from receipt of such written notice to cure the breach, unless:',
+    ),
+    MouItem(
+      'a.',
+      'a shorter period is reasonably necessary due to the nature of the breach or the protection of an Artwork, buyer, third party, or Galleryzone’s legal or commercial interests; or',
+    ),
     MouItem('b.', 'the Parties agree in writing to a different cure period.'),
-    MouParagraph('If the breach is not cured within the applicable cure period, the non-breaching Party may terminate this MOU by written notice, without prejudice to any rights, remedies, claims, or obligations accrued before the effective date of termination.'),
-    MouParagraph('Where the breach is capable of immediate correction and has been satisfactorily cured within the applicable cure period, termination solely on account of that breach shall not be required.'),
-    MouParagraph('Nothing in this Clause shall limit Galleryzone’s rights to suspend an account, temporarily restrict listing or sales activity, or take other protective measures where reasonably necessary pending cure or investigation.'),
+    MouParagraph(
+      'If the breach is not cured within the applicable cure period, the non-breaching Party may terminate this MOU by written notice, without prejudice to any rights, remedies, claims, or obligations accrued before the effective date of termination.',
+    ),
+    MouParagraph(
+      'Where the breach is capable of immediate correction and has been satisfactorily cured within the applicable cure period, termination solely on account of that breach shall not be required.',
+    ),
+    MouParagraph(
+      'Nothing in this Clause shall limit Galleryzone’s rights to suspend an account, temporarily restrict listing or sales activity, or take other protective measures where reasonably necessary pending cure or investigation.',
+    ),
     MouSubheading('24.3 Artist Voluntary Termination – 30 Days\' Notice'),
-    MouParagraph('The Artist may request termination of this MOU by providing Galleryzone with at least 30 (thirty) days’ prior written notice.'),
-    MouParagraph('Such termination shall be subject to completion, cancellation, withdrawal, or appropriate resolution of any existing or pending:'),
+    MouParagraph(
+      'The Artist may request termination of this MOU by providing Galleryzone with at least 30 (thirty) days’ prior written notice.',
+    ),
+    MouParagraph(
+      'Such termination shall be subject to completion, cancellation, withdrawal, or appropriate resolution of any existing or pending:',
+    ),
     MouItem('a.', 'confirmed customer transactions or sales;'),
-    MouItem('b.', 'Artwork placed with or committed to an Aggregator, exhibition, corporate/institutional display, or other approved sales or display channel;'),
-    MouItem('c.', 'logistics, delivery, return, custody, or packaging arrangements;'),
-    MouItem('d.', 'payment, settlement, refund, return, chargeback, or reconciliation obligations; and'),
-    MouItem('e.', 'other obligations or commitments that arose before the effective date of termination.'),
-    MouParagraph('During the notice period, the Artist shall continue to comply with this MOU and shall not independently withdraw, sell, transfer, or otherwise deal with any Artwork where such action would interfere with an existing transaction, customer commitment, Aggregator arrangement, claim, logistics arrangement, or other binding obligation.'),
-    MouParagraph('Galleryzone shall process the Artist’s termination request after completion or appropriate resolution of the applicable pending obligations. Termination shall not affect any rights, liabilities, payments, claims, confidentiality obligations, intellectual property rights, provenance records, or other obligations that accrued before the effective date of termination or which are intended by their nature to survive termination.'),
-    MouParagraph('Galleryzone may waive or shorten the 30-day notice period at its discretion by written confirmation to the Artist.'),
-    MouParagraph('24.4 Termination shall not affect any rights or obligations that accrued before the effective date of termination.'),
-    MouParagraph('24.5 Clauses relating to confidentiality, intellectual property, ownership, provenance, settlement, liability, resale royalty, dispute resolution, and any other provisions intended by their nature to survive termination shall continue to apply after termination.'),
+    MouItem(
+      'b.',
+      'Artwork placed with or committed to an Aggregator, exhibition, corporate/institutional display, or other approved sales or display channel;',
+    ),
+    MouItem(
+      'c.',
+      'logistics, delivery, return, custody, or packaging arrangements;',
+    ),
+    MouItem(
+      'd.',
+      'payment, settlement, refund, return, chargeback, or reconciliation obligations; and',
+    ),
+    MouItem(
+      'e.',
+      'other obligations or commitments that arose before the effective date of termination.',
+    ),
+    MouParagraph(
+      'During the notice period, the Artist shall continue to comply with this MOU and shall not independently withdraw, sell, transfer, or otherwise deal with any Artwork where such action would interfere with an existing transaction, customer commitment, Aggregator arrangement, claim, logistics arrangement, or other binding obligation.',
+    ),
+    MouParagraph(
+      'Galleryzone shall process the Artist’s termination request after completion or appropriate resolution of the applicable pending obligations. Termination shall not affect any rights, liabilities, payments, claims, confidentiality obligations, intellectual property rights, provenance records, or other obligations that accrued before the effective date of termination or which are intended by their nature to survive termination.',
+    ),
+    MouParagraph(
+      'Galleryzone may waive or shorten the 30-day notice period at its discretion by written confirmation to the Artist.',
+    ),
+    MouParagraph(
+      '24.4 Termination shall not affect any rights or obligations that accrued before the effective date of termination.',
+    ),
+    MouParagraph(
+      '24.5 Clauses relating to confidentiality, intellectual property, ownership, provenance, settlement, liability, resale royalty, dispute resolution, and any other provisions intended by their nature to survive termination shall continue to apply after termination.',
+    ),
     MouHeading('25. APPRECIATION ON SALE AND RESALE ROYALTY'),
     MouSubheading('25.1 Eligibility'),
-    MouParagraph('Where an artwork previously sold through Galleryzone is subsequently resold through Galleryzone, the Artist shall be entitled to a resale royalty equal to two percent (2%) of the positive difference between the subsequent Resale Price and the Original Purchase Price, subject to the terms of this Clause.'),
+    MouParagraph(
+      'Where an artwork previously sold through Galleryzone is subsequently resold through Galleryzone, the Artist shall be entitled to a resale royalty equal to two percent (2%) of the positive difference between the subsequent Resale Price and the Original Purchase Price, subject to the terms of this Clause.',
+    ),
     MouSubheading('25.2 Calculation'),
     MouParagraph('For the purposes of this Clause:'),
-    MouParagraph('“Original Purchase Price” means the price actually paid by the buyer for the artwork in the immediately preceding qualifying transaction, excluding applicable taxes, delivery charges, platform charges, and other separately identified charges.'),
-    MouParagraph('“Resale Price” means the price actually paid by the subsequent buyer for the artwork in the subsequent qualifying transaction, excluding applicable taxes, delivery charges, platform charges, and other separately identified charges.'),
+    MouParagraph(
+      '“Original Purchase Price” means the price actually paid by the buyer for the artwork in the immediately preceding qualifying transaction, excluding applicable taxes, delivery charges, platform charges, and other separately identified charges.',
+    ),
+    MouParagraph(
+      '“Resale Price” means the price actually paid by the subsequent buyer for the artwork in the subsequent qualifying transaction, excluding applicable taxes, delivery charges, platform charges, and other separately identified charges.',
+    ),
     MouSubheading('25.3 Royalty Calculation'),
     MouParagraph('The resale royalty shall be calculated as follows:'),
     MouParagraph('2% × (Resale Price - Original Purchase Price)'),
-    MouParagraph('Where the difference between the Resale Price and the Original Purchase Price is zero or negative, no resale royalty shall be payable.'),
+    MouParagraph(
+      'Where the difference between the Resale Price and the Original Purchase Price is zero or negative, no resale royalty shall be payable.',
+    ),
     MouSubheading('25.4 Payment'),
-    MouParagraph('The applicable resale royalty shall be calculated and settled by Galleryzone upon completion of the qualifying subsequent resale transaction and receipt of the applicable resale consideration.'),
+    MouParagraph(
+      'The applicable resale royalty shall be calculated and settled by Galleryzone upon completion of the qualifying subsequent resale transaction and receipt of the applicable resale consideration.',
+    ),
     MouSubheading('25.5 Appreciation and sale Value'),
-    MouParagraph('The Artist shall receive the applicable Artist Price/Listed Price agreed for the artwork at the time of its sale, subject to the deductions and settlement terms specified under this Agreement. Any subsequent increase in the market or sale value of the artwork shall not create any additional payment entitlement for the Artist unless expressly agreed otherwise in writing. Galleryzone may curate, promote, position, market, and subsequently resell an artwork with the objective of increasing its market and resale value. For artworks selected for such curation and resale, Galleryzone may target a minimum appreciation benchmark of 30% over the Original Purchase Price. The artwork may appreciate by more than 30%, depending upon factors including the quality and uniqueness of the artwork, artist profile and recognition, provenance, curation, market demand, collector interest, exhibition exposure, promotional activities, scarcity, historical sales, and prevailing market conditions. The 30% appreciation benchmark is applicable to the potential sale value of the artwork for Galleryzone\'s sale purposes and does not represent an additional amount payable to the Artist. The Artist\'s entitlement shall remain limited to the applicable Artist Price/Listed Price agreed under this Agreement, unless otherwise expressly agreed in writing. For avoidance of doubt, the 30% appreciation benchmark is not a guarantee of appreciation, resale value, investment return, profit, or future market price. Actual appreciation may be higher, lower, or may not occur, depending on market conditions and the circumstances applicable at the time of sale. Galleryzone shall have the discretion to determine the applicable sale pricing, curation strategy, and timing of sale, subject to the ownership, settlement, and other applicable provisions of this Agreement.'),
+    MouParagraph(
+      'The Artist shall receive the applicable Artist Price/Listed Price agreed for the artwork at the time of its sale, subject to the deductions and settlement terms specified under this Agreement. Any subsequent increase in the market or sale value of the artwork shall not create any additional payment entitlement for the Artist unless expressly agreed otherwise in writing. Galleryzone may curate, promote, position, market, and subsequently resell an artwork with the objective of increasing its market and resale value. For artworks selected for such curation and resale, Galleryzone may target a minimum appreciation benchmark of 30% over the Original Purchase Price. The artwork may appreciate by more than 30%, depending upon factors including the quality and uniqueness of the artwork, artist profile and recognition, provenance, curation, market demand, collector interest, exhibition exposure, promotional activities, scarcity, historical sales, and prevailing market conditions. The 30% appreciation benchmark is applicable to the potential sale value of the artwork for Galleryzone\'s sale purposes and does not represent an additional amount payable to the Artist. The Artist\'s entitlement shall remain limited to the applicable Artist Price/Listed Price agreed under this Agreement, unless otherwise expressly agreed in writing. For avoidance of doubt, the 30% appreciation benchmark is not a guarantee of appreciation, resale value, investment return, profit, or future market price. Actual appreciation may be higher, lower, or may not occur, depending on market conditions and the circumstances applicable at the time of sale. Galleryzone shall have the discretion to determine the applicable sale pricing, curation strategy, and timing of sale, subject to the ownership, settlement, and other applicable provisions of this Agreement.',
+    ),
     MouHeading('26. LIMITATION OF LIABILITY'),
-    MouParagraph('26.1 To the maximum extent permitted by applicable law, Galleryzone shall not be liable for:'),
+    MouParagraph(
+      '26.1 To the maximum extent permitted by applicable law, Galleryzone shall not be liable for:',
+    ),
     MouItem('a.', 'failure to sell an artwork;'),
     MouItem('b.', 'market fluctuations or changes in market demand;'),
-    MouItem('c.', 'changes in the perceived or actual market value of an artwork;'),
-    MouItem('d.', 'loss, damage, theft, or deterioration to the extent the loss was not caused by Galleryzone’s or another relevant party’s negligence, wilful misconduct, or breach of this MOU, subject always to the damage review and responsibility allocation procedure in Clause 10 and applicable law;'),
+    MouItem(
+      'c.',
+      'changes in the perceived or actual market value of an artwork;',
+    ),
+    MouItem(
+      'd.',
+      'loss, damage, theft, or deterioration to the extent the loss was not caused by Galleryzone’s or another relevant party’s negligence, wilful misconduct, or breach of this MOU, subject always to the damage review and responsibility allocation procedure in Clause 10 and applicable law;',
+    ),
     MouItem('e.', 'otherwise have been covered by the relevant insurance;'),
-    MouItem('f.', 'indirect, incidental, special, punitive, or consequential damages; or'),
-    MouItem('g.', 'losses arising from events beyond Galleryzone\'s reasonable control.'),
+    MouItem(
+      'f.',
+      'indirect, incidental, special, punitive, or consequential damages; or',
+    ),
+    MouItem(
+      'g.',
+      'losses arising from events beyond Galleryzone\'s reasonable control.',
+    ),
     MouSubheading('26.2 Loss or Damage'),
-    MouParagraph('Any loss or damage to an artwork shall be assessed in accordance with Clause 10. Liability shall be determined by the available evidence and the extent to which a Party’s act, omission, negligence, wilful misconduct, or breach of this MOU caused or contributed to the loss or damage.'),
+    MouParagraph(
+      'Any loss or damage to an artwork shall be assessed in accordance with Clause 10. Liability shall be determined by the available evidence and the extent to which a Party’s act, omission, negligence, wilful misconduct, or breach of this MOU caused or contributed to the loss or damage.',
+    ),
     MouSubheading('26.3 Responsibility of Custodians and Logistics Providers'),
-    MouParagraph('A Party or third-party provider having custody or control of an artwork shall take reasonable care of it and comply with the agreed packaging, handling, storage, display, and transportation requirements. Where the audit establishes that a logistics provider, Aggregator, Galleryzone, or Artist caused or contributed to the loss or damage, the responsible party shall bear the allocated amount under Clause 10.'),
-    MouParagraph('Nothing in this MOU shall make Galleryzone automatically liable for loss or damage caused by an independent third party, except to the extent Galleryzone’s own act or omission, negligence, wilful misconduct, breach of this MOU, or applicable law makes it liable.'),
-    MouParagraph('26.4 Nothing in this MOU shall exclude or limit any liability to the extent that such exclusion or limitation is prohibited under applicable law.'),
+    MouParagraph(
+      'A Party or third-party provider having custody or control of an artwork shall take reasonable care of it and comply with the agreed packaging, handling, storage, display, and transportation requirements. Where the audit establishes that a logistics provider, Aggregator, Galleryzone, or Artist caused or contributed to the loss or damage, the responsible party shall bear the allocated amount under Clause 10.',
+    ),
+    MouParagraph(
+      'Nothing in this MOU shall make Galleryzone automatically liable for loss or damage caused by an independent third party, except to the extent Galleryzone’s own act or omission, negligence, wilful misconduct, breach of this MOU, or applicable law makes it liable.',
+    ),
+    MouParagraph(
+      '26.4 Nothing in this MOU shall exclude or limit any liability to the extent that such exclusion or limitation is prohibited under applicable law.',
+    ),
     MouHeading('27. PERSONAL DATA PROTECTION AND PRIVACY'),
-    MouParagraph('27.1 Galleryzone may collect and process the Artist’s personal data, including identity, contact, address, tax, payment, verification, transaction, artwork-provenance and other information reasonably necessary for on boarding, KYC/verification, listing, sale, settlement, logistics, customer support, fraud prevention, legal compliance, record keeping and other legitimate business purposes.'),
-    MouParagraph('27.2 Galleryzone shall process such personal data in accordance with applicable data-protection and privacy laws, including the Digital Personal Data Protection Act, 2023 and applicable rules, as and when applicable to the relevant processing.'),
-    MouParagraph('27.3 Galleryzone may share relevant information with authorized service providers, payment processors, logistics providers, Aggregators, professional advisers, auditors, regulators, tax authorities and other parties where reasonably necessary for the purposes stated in this MOU or where required by law.'),
-    MouParagraph('27.4 Galleryzone shall take reasonable technical and organizational measures appropriate to the nature of the personal data to protect it against unauthorized access, disclosure, alteration, loss or misuse, subject to applicable law.'),
-    MouParagraph('27.5 Personal data may be retained for as long as reasonably necessary for the purposes for which it was collected, for contractual, tax, accounting, fraud-prevention, dispute-resolution, provenance, legal or regulatory requirements, or as otherwise permitted or required by law.'),
-    MouParagraph('27.6 The Artist may exercise applicable rights relating to personal data in accordance with Galleryzone’s privacy policy and applicable law. Where consent is the applicable legal basis, any withdrawal of consent shall not affect processing lawfully carried out before withdrawal and shall not prevent processing required or permitted by law.'),
-    MouParagraph('27.7 Galleryzone’s then-current privacy policy, together with any legally required notice, shall form part of the privacy framework applicable to the Artist. In the event of conflict, mandatory law shall prevail.'),
+    MouParagraph(
+      '27.1 Galleryzone may collect and process the Artist’s personal data, including identity, contact, address, tax, payment, verification, transaction, artwork-provenance and other information reasonably necessary for on boarding, KYC/verification, listing, sale, settlement, logistics, customer support, fraud prevention, legal compliance, record keeping and other legitimate business purposes.',
+    ),
+    MouParagraph(
+      '27.2 Galleryzone shall process such personal data in accordance with applicable data-protection and privacy laws, including the Digital Personal Data Protection Act, 2023 and applicable rules, as and when applicable to the relevant processing.',
+    ),
+    MouParagraph(
+      '27.3 Galleryzone may share relevant information with authorized service providers, payment processors, logistics providers, Aggregators, professional advisers, auditors, regulators, tax authorities and other parties where reasonably necessary for the purposes stated in this MOU or where required by law.',
+    ),
+    MouParagraph(
+      '27.4 Galleryzone shall take reasonable technical and organizational measures appropriate to the nature of the personal data to protect it against unauthorized access, disclosure, alteration, loss or misuse, subject to applicable law.',
+    ),
+    MouParagraph(
+      '27.5 Personal data may be retained for as long as reasonably necessary for the purposes for which it was collected, for contractual, tax, accounting, fraud-prevention, dispute-resolution, provenance, legal or regulatory requirements, or as otherwise permitted or required by law.',
+    ),
+    MouParagraph(
+      '27.6 The Artist may exercise applicable rights relating to personal data in accordance with Galleryzone’s privacy policy and applicable law. Where consent is the applicable legal basis, any withdrawal of consent shall not affect processing lawfully carried out before withdrawal and shall not prevent processing required or permitted by law.',
+    ),
+    MouParagraph(
+      '27.7 Galleryzone’s then-current privacy policy, together with any legally required notice, shall form part of the privacy framework applicable to the Artist. In the event of conflict, mandatory law shall prevail.',
+    ),
     MouHeading('27.8 CONFIDENTIALITY'),
-    MouParagraph('27.9 Each Party shall keep confidential non-public commercial, financial, technical, operational, customer, pricing, business, security and other proprietary information received from the other Party in connection with this MOU.'),
-    MouParagraph('27.10 Confidential information may be disclosed to employees, professional advisers, auditors, insurers, payment processors, logistics providers, Aggregators, contractors and other authorized representatives who have a legitimate need to know, subject to appropriate confidentiality obligations, or where disclosure is required by law or a competent authority.'),
-    MouParagraph('27.11 Confidentiality obligations shall not apply to information that is already public without breach, was lawfully known before disclosure, is independently developed, or is lawfully received from a third party without a confidentiality obligation.'),
-    MouParagraph('27.12 The confidentiality obligations shall survive termination for so long as the information remains confidential or for such longer period as required by law.'),
+    MouParagraph(
+      '27.9 Each Party shall keep confidential non-public commercial, financial, technical, operational, customer, pricing, business, security and other proprietary information received from the other Party in connection with this MOU.',
+    ),
+    MouParagraph(
+      '27.10 Confidential information may be disclosed to employees, professional advisers, auditors, insurers, payment processors, logistics providers, Aggregators, contractors and other authorized representatives who have a legitimate need to know, subject to appropriate confidentiality obligations, or where disclosure is required by law or a competent authority.',
+    ),
+    MouParagraph(
+      '27.11 Confidentiality obligations shall not apply to information that is already public without breach, was lawfully known before disclosure, is independently developed, or is lawfully received from a third party without a confidentiality obligation.',
+    ),
+    MouParagraph(
+      '27.12 The confidentiality obligations shall survive termination for so long as the information remains confidential or for such longer period as required by law.',
+    ),
     MouHeading('28. INDEMNIFICATION'),
-    MouParagraph('28.1 The Artist shall indemnify and hold harmless Galleryzone, its directors, officers, employees and authorized service providers from third-party claims, losses, liabilities, penalties, reasonable costs and expenses arising from or relating to: (a) breach of the Artist’s representations, warranties or obligations; (b) infringement or alleged infringement of intellectual-property or other third-party rights in artwork or materials supplied by the Artist; (c) false, forged or misleading documents or information supplied by the Artist; (d) counterfeit, unauthorized or unlawfully sourced artwork; (e) unlawful conduct attributable to the Artist; or (f) taxes or statutory liabilities attributable to the Artist that Galleryzone is required to bear because of the Artist’s acts or omissions.'),
-    MouParagraph('28.2 Galleryzone shall remain responsible for liabilities that cannot lawfully be transferred to the Artist and for loss directly caused by Galleryzone’s proven fraud, wilful misconduct or negligence, subject to Clause 26 and applicable law.'),
-    MouParagraph('28.3 The indemnified Party shall, where reasonably practicable, provide notice of a claim and reasonable cooperation in its defense. No settlement imposing an admission or continuing obligation on the indemnified Party shall be entered without its consent, not to be unreasonably withheld.'),
+    MouParagraph(
+      '28.1 The Artist shall indemnify and hold harmless Galleryzone, its directors, officers, employees and authorized service providers from third-party claims, losses, liabilities, penalties, reasonable costs and expenses arising from or relating to: (a) breach of the Artist’s representations, warranties or obligations; (b) infringement or alleged infringement of intellectual-property or other third-party rights in artwork or materials supplied by the Artist; (c) false, forged or misleading documents or information supplied by the Artist; (d) counterfeit, unauthorized or unlawfully sourced artwork; (e) unlawful conduct attributable to the Artist; or (f) taxes or statutory liabilities attributable to the Artist that Galleryzone is required to bear because of the Artist’s acts or omissions.',
+    ),
+    MouParagraph(
+      '28.2 Galleryzone shall remain responsible for liabilities that cannot lawfully be transferred to the Artist and for loss directly caused by Galleryzone’s proven fraud, wilful misconduct or negligence, subject to Clause 26 and applicable law.',
+    ),
+    MouParagraph(
+      '28.3 The indemnified Party shall, where reasonably practicable, provide notice of a claim and reasonable cooperation in its defense. No settlement imposing an admission or continuing obligation on the indemnified Party shall be entered without its consent, not to be unreasonably withheld.',
+    ),
     MouHeading('29. DISPUTE RESOLUTION AND ARBITRATION'),
-    MouParagraph('29.1 The Parties shall first attempt in good faith to resolve any dispute, controversy or claim arising out of or relating to this MOU through written notice and good-faith discussions for a period of thirty (30) days.'),
-    MouParagraph('29.2 If the dispute is not resolved within that period, it shall be finally resolved by arbitration in accordance with the Arbitration and Conciliation Act, 1996, as amended from time to time.'),
-    MouParagraph('29.3 The arbitration shall be conducted by a sole arbitrator mutually appointed by the Parties. If the Parties cannot agree on the arbitrator within thirty (30) days, appointment shall be made in accordance with applicable law.'),
-    MouParagraph('29.4 The seat and legal place of arbitration shall be Hyderabad, Telangana, India. The language of arbitration shall be English.'),
-    MouParagraph('29.5 The arbitral award shall be final and binding on the Parties, subject to applicable law.'),
-    MouParagraph('29.6 Nothing in this clause shall prevent either Party from seeking urgent interim, protective or injunctive relief from a competent court. Subject to applicable law, courts at Hyderabad, Telangana shall have jurisdiction over applications relating to interim relief, appointment where applicable, and enforcement of an arbitral award.'),
-    MouParagraph('29.7 The arbitration proceedings and related documents shall be treated as confidential except to the extent disclosure is required for enforcement, legal compliance or professional advice.'),
+    MouParagraph(
+      '29.1 The Parties shall first attempt in good faith to resolve any dispute, controversy or claim arising out of or relating to this MOU through written notice and good-faith discussions for a period of thirty (30) days.',
+    ),
+    MouParagraph(
+      '29.2 If the dispute is not resolved within that period, it shall be finally resolved by arbitration in accordance with the Arbitration and Conciliation Act, 1996, as amended from time to time.',
+    ),
+    MouParagraph(
+      '29.3 The arbitration shall be conducted by a sole arbitrator mutually appointed by the Parties. If the Parties cannot agree on the arbitrator within thirty (30) days, appointment shall be made in accordance with applicable law.',
+    ),
+    MouParagraph(
+      '29.4 The seat and legal place of arbitration shall be Hyderabad, Telangana, India. The language of arbitration shall be English.',
+    ),
+    MouParagraph(
+      '29.5 The arbitral award shall be final and binding on the Parties, subject to applicable law.',
+    ),
+    MouParagraph(
+      '29.6 Nothing in this clause shall prevent either Party from seeking urgent interim, protective or injunctive relief from a competent court. Subject to applicable law, courts at Hyderabad, Telangana shall have jurisdiction over applications relating to interim relief, appointment where applicable, and enforcement of an arbitral award.',
+    ),
+    MouParagraph(
+      '29.7 The arbitration proceedings and related documents shall be treated as confidential except to the extent disclosure is required for enforcement, legal compliance or professional advice.',
+    ),
     MouHeading('30. NOTICES'),
-    MouParagraph('30.1 Formal notices under this MOU shall be sent to the email address and/or physical address recorded for the relevant Party in the MOU or subsequently notified in writing.'),
-    MouParagraph('30.2 Operational communications may also be made through the Galleryzone platform or other official communication channels designated by Galleryzone.'),
-    MouParagraph('30.3 An email notice shall be treated as received when transmitted without a delivery failure notification, subject to applicable law. A physical notice shall be treated as received upon delivery or attempted delivery in accordance with applicable law.'),
-    MouParagraph('30.4 Each Party shall promptly notify the other of any change in its contact details.'),
+    MouParagraph(
+      '30.1 Formal notices under this MOU shall be sent to the email address and/or physical address recorded for the relevant Party in the MOU or subsequently notified in writing.',
+    ),
+    MouParagraph(
+      '30.2 Operational communications may also be made through the Galleryzone platform or other official communication channels designated by Galleryzone.',
+    ),
+    MouParagraph(
+      '30.3 An email notice shall be treated as received when transmitted without a delivery failure notification, subject to applicable law. A physical notice shall be treated as received upon delivery or attempted delivery in accordance with applicable law.',
+    ),
+    MouParagraph(
+      '30.4 Each Party shall promptly notify the other of any change in its contact details.',
+    ),
     MouHeading('31. ELECTRONIC EXECUTION AND RECORDS'),
-    MouParagraph('31.1 To the extent permitted by applicable law, this MOU may be executed and accepted electronically, including through electronic signatures, digital signatures, electronic acceptance or other legally valid electronic means.'),
-    MouParagraph('31.2 Galleryzone may maintain electronic records of the version of the MOU accepted, date and time of acceptance, authentication/verification records and related audit information, subject to applicable law.'),
-    MouParagraph('31.3 Electronic copies and records maintained in the ordinary course of business may be used as evidence of acceptance and execution, subject to applicable law.'),
+    MouParagraph(
+      '31.1 To the extent permitted by applicable law, this MOU may be executed and accepted electronically, including through electronic signatures, digital signatures, electronic acceptance or other legally valid electronic means.',
+    ),
+    MouParagraph(
+      '31.2 Galleryzone may maintain electronic records of the version of the MOU accepted, date and time of acceptance, authentication/verification records and related audit information, subject to applicable law.',
+    ),
+    MouParagraph(
+      '31.3 Electronic copies and records maintained in the ordinary course of business may be used as evidence of acceptance and execution, subject to applicable law.',
+    ),
     MouHeading('32. FORCE MAJEURE'),
-    MouParagraph('32.1 Neither Party shall be liable for delay or failure to perform an obligation to the extent caused by circumstances beyond its reasonable control, including natural disasters, fire, flood, epidemic or pandemic, war, terrorism, civil disturbance, governmental action, strikes, major logistics disruption, widespread telecommunications or internet failure, cyber incidents, utility failure or material third-party infrastructure failure.'),
-    MouParagraph('32.2 The affected Party shall use reasonable efforts to mitigate the effect of the event and resume performance as soon as reasonably practicable.'),
-    MouParagraph('32.3 Force majeure shall not excuse payment obligations for amounts already due, obligations relating to ownership of artwork already sold, or obligations that by their nature survive the events.'),
-    MouParagraph('32.4 If a force-majeure event materially prevents performance for more than sixty (60) consecutive days, either Party may request termination of the affected arrangement, subject to settlement of accrued rights and obligations.'),
+    MouParagraph(
+      '32.1 Neither Party shall be liable for delay or failure to perform an obligation to the extent caused by circumstances beyond its reasonable control, including natural disasters, fire, flood, epidemic or pandemic, war, terrorism, civil disturbance, governmental action, strikes, major logistics disruption, widespread telecommunications or internet failure, cyber incidents, utility failure or material third-party infrastructure failure.',
+    ),
+    MouParagraph(
+      '32.2 The affected Party shall use reasonable efforts to mitigate the effect of the event and resume performance as soon as reasonably practicable.',
+    ),
+    MouParagraph(
+      '32.3 Force majeure shall not excuse payment obligations for amounts already due, obligations relating to ownership of artwork already sold, or obligations that by their nature survive the events.',
+    ),
+    MouParagraph(
+      '32.4 If a force-majeure event materially prevents performance for more than sixty (60) consecutive days, either Party may request termination of the affected arrangement, subject to settlement of accrued rights and obligations.',
+    ),
     MouHeading('33. COMPLIANCE WITH APPLICABLE LAWS'),
-    MouParagraph('33.1 Each Party shall comply with applicable laws and regulations relevant to its obligations under this MOU.'),
-    MouParagraph('33.2 The Artist shall provide accurate KYC, tax, ownership, authenticity and other information reasonably required for lawful on boarding and transactions.'),
-    MouParagraph('33.3 The Artist shall not submit artwork or materials that are unlawful, counterfeit, infringing, misleading, fraudulent or otherwise prohibited by applicable law.'),
-    MouParagraph('33.4 Galleryzone may suspend, restrict, hold, delist or terminate an artwork or account where reasonably necessary to comply with law, regulatory direction, fraud-prevention requirements or material compliance obligations, subject to applicable law.'),
+    MouParagraph(
+      '33.1 Each Party shall comply with applicable laws and regulations relevant to its obligations under this MOU.',
+    ),
+    MouParagraph(
+      '33.2 The Artist shall provide accurate KYC, tax, ownership, authenticity and other information reasonably required for lawful on boarding and transactions.',
+    ),
+    MouParagraph(
+      '33.3 The Artist shall not submit artwork or materials that are unlawful, counterfeit, infringing, misleading, fraudulent or otherwise prohibited by applicable law.',
+    ),
+    MouParagraph(
+      '33.4 Galleryzone may suspend, restrict, hold, delist or terminate an artwork or account where reasonably necessary to comply with law, regulatory direction, fraud-prevention requirements or material compliance obligations, subject to applicable law.',
+    ),
     MouHeading('34. TAX, GST AND STATUTORY DEDUCTIONS'),
-    MouParagraph('34.1 Each Party shall be responsible for taxes imposed on it by applicable law in relation to its income, activities and obligations.'),
-    MouParagraph('34.2 The Artist shall provide accurate GST, PAN, tax residency and other tax information where required.'),
-    MouParagraph('34.3 Galleryzone may deduct or withhold amounts where required by applicable tax law, including GST, TDS, TCS or other statutory deductions, and shall provide relevant records where legally required.'),
-    MouParagraph('34.4 Tax treatment may vary depending on the transaction structure, channel, location of supply and applicable law, The Parties shall cooperate in providing documents reasonably required to determine and comply with the applicable tax treatment.'),
-    MouParagraph('34.5 If an Artist provides incorrect tax information resulting in additional liability, interest, penalty or loss attributable to that incorrect information, the Artist shall be responsible to the extent permitted by law.'),
+    MouParagraph(
+      '34.1 Each Party shall be responsible for taxes imposed on it by applicable law in relation to its income, activities and obligations.',
+    ),
+    MouParagraph(
+      '34.2 The Artist shall provide accurate GST, PAN, tax residency and other tax information where required.',
+    ),
+    MouParagraph(
+      '34.3 Galleryzone may deduct or withhold amounts where required by applicable tax law, including GST, TDS, TCS or other statutory deductions, and shall provide relevant records where legally required.',
+    ),
+    MouParagraph(
+      '34.4 Tax treatment may vary depending on the transaction structure, channel, location of supply and applicable law, The Parties shall cooperate in providing documents reasonably required to determine and comply with the applicable tax treatment.',
+    ),
+    MouParagraph(
+      '34.5 If an Artist provides incorrect tax information resulting in additional liability, interest, penalty or loss attributable to that incorrect information, the Artist shall be responsible to the extent permitted by law.',
+    ),
     MouHeading('35. RETURNS, REFUNDS, CANCELLATIONS AND PAYMENT REVERSALS'),
-    MouParagraph('35.1 Buyer returns, refunds, cancellations and failed deliveries shall be handled in accordance with Galleryzone’s applicable buyer/return/refund policies and applicable law.'),
-    MouParagraph('35.2 Where a transaction is cancelled, refunded, reversed or subject to a payment gateway charge back, Galleryzone may hold, reverse or adjust the corresponding settlement amount, including reasonable applicable third-party charges, subject to applicable law.'),
-    MouParagraph('35.3 Gallery zone may recover an amount incorrectly paid to the Artist by adjustment against future amounts payable, wallet balances or other lawful recovery mechanisms, after providing reasonable details of the adjustment.'),
-    MouParagraph('35.4 Responsibility for return shipping, damage during return, customer-caused damage, and other return-related costs shall be determined under Clause 10, the applicable logistics terms, and applicable law.'),
+    MouParagraph(
+      '35.1 Buyer returns, refunds, cancellations and failed deliveries shall be handled in accordance with Galleryzone’s applicable buyer/return/refund policies and applicable law.',
+    ),
+    MouParagraph(
+      '35.2 Where a transaction is cancelled, refunded, reversed or subject to a payment gateway charge back, Galleryzone may hold, reverse or adjust the corresponding settlement amount, including reasonable applicable third-party charges, subject to applicable law.',
+    ),
+    MouParagraph(
+      '35.3 Gallery zone may recover an amount incorrectly paid to the Artist by adjustment against future amounts payable, wallet balances or other lawful recovery mechanisms, after providing reasonable details of the adjustment.',
+    ),
+    MouParagraph(
+      '35.4 Responsibility for return shipping, damage during return, customer-caused damage, and other return-related costs shall be determined under Clause 10, the applicable logistics terms, and applicable law.',
+    ),
     MouHeading('36. WALLET AND SETTLEMENT LEDGER'),
-    MouParagraph('36.1 Any Galleryzone wallet or account balance referred to in this MOU shall, unless expressly stated otherwise, constitute an internal transaction and settlement ledger used to record amounts payable, receivable, deductions and adjustments relating to the Artist.'),
-    MouParagraph('36.2 The wallet shall not be interpreted as a deposit, bank account, payment instrument or regulated financial product unless Galleryzone expressly establishes it as such in accordance with applicable law.'),
-    MouParagraph('36.3 Galleryzone may record legitimate deductions, refunds, charge backs, logistics costs, taxes and other amounts permitted under this MOU.'),
-    MouParagraph('36.4 The Artist may raise a written reconciliation query within a reasonable period after receiving a settlement statement.'),
+    MouParagraph(
+      '36.1 Any Galleryzone wallet or account balance referred to in this MOU shall, unless expressly stated otherwise, constitute an internal transaction and settlement ledger used to record amounts payable, receivable, deductions and adjustments relating to the Artist.',
+    ),
+    MouParagraph(
+      '36.2 The wallet shall not be interpreted as a deposit, bank account, payment instrument or regulated financial product unless Galleryzone expressly establishes it as such in accordance with applicable law.',
+    ),
+    MouParagraph(
+      '36.3 Galleryzone may record legitimate deductions, refunds, charge backs, logistics costs, taxes and other amounts permitted under this MOU.',
+    ),
+    MouParagraph(
+      '36.4 The Artist may raise a written reconciliation query within a reasonable period after receiving a settlement statement.',
+    ),
     MouHeading('37. INDEPENDENT RELATIONSHIP; NO PARTNERSHIP OR AGENCY'),
-    MouParagraph('37.1 The Parties are independent contracting parties. Nothing in this MOU creates a partnership, joint venture, employment relationship or general agency between the Parties.'),
-    MouParagraph('37.2 Neither Party shall have authority to bind the other Party except where expressly authorized in writing.'),
-    MouParagraph('37.3 Galleryzone may act as a marketplace, facilitator or authorized intermediary only to the extent expressly described in this MOU, applicable transaction terms or applicable law.'),
+    MouParagraph(
+      '37.1 The Parties are independent contracting parties. Nothing in this MOU creates a partnership, joint venture, employment relationship or general agency between the Parties.',
+    ),
+    MouParagraph(
+      '37.2 Neither Party shall have authority to bind the other Party except where expressly authorized in writing.',
+    ),
+    MouParagraph(
+      '37.3 Galleryzone may act as a marketplace, facilitator or authorized intermediary only to the extent expressly described in this MOU, applicable transaction terms or applicable law.',
+    ),
     MouHeading('38. THIRD-PARTY SERVICE PROVIDERS AND SUB CONTRACTING'),
-    MouParagraph('38.1 Gallery zone may use authorized third-party service providers for technology, hosting, verification, KYC, payment processing, logistics, insurance, marketing, customer support, exhibitions, storage and other operational functions.'),
-    MouParagraph('38.2 The Artist authorizes Galleryzone to share information reasonably necessary for such services, subject to applicable law and the privacy provisions of this MOU.'),
-    MouParagraph('38.3 Galleryzone may appoint or change service providers where reasonably necessary for business or compliance purposes.'),
+    MouParagraph(
+      '38.1 Gallery zone may use authorized third-party service providers for technology, hosting, verification, KYC, payment processing, logistics, insurance, marketing, customer support, exhibitions, storage and other operational functions.',
+    ),
+    MouParagraph(
+      '38.2 The Artist authorizes Galleryzone to share information reasonably necessary for such services, subject to applicable law and the privacy provisions of this MOU.',
+    ),
+    MouParagraph(
+      '38.3 Galleryzone may appoint or change service providers where reasonably necessary for business or compliance purposes.',
+    ),
     MouHeading('39. ASSIGNMENT'),
-    MouParagraph('39.1 The Artist shall not assign or transfer this MOU or material rights under it without Galleryzone’s prior written consent, except where such restriction is prohibited by law.'),
-    MouParagraph('39.2 Galleryzone may assign or transfer this MOU to an affiliate, successor, purchaser of substantially all relevant business/assets, or other lawful successor, provided the assignment does not unlawfully prejudice the Artist’s accrued rights.'),
+    MouParagraph(
+      '39.1 The Artist shall not assign or transfer this MOU or material rights under it without Galleryzone’s prior written consent, except where such restriction is prohibited by law.',
+    ),
+    MouParagraph(
+      '39.2 Galleryzone may assign or transfer this MOU to an affiliate, successor, purchaser of substantially all relevant business/assets, or other lawful successor, provided the assignment does not unlawfully prejudice the Artist’s accrued rights.',
+    ),
     MouHeading('40. WAIVER; CUMULATIVE REMEDIES'),
-    MouParagraph('40.1 Failure or delay by either Party in exercising any right or remedy shall not constitute a waiver of that right or remedy.'),
-    MouParagraph('40.2 Rights and remedies under this MOU are cumulative and, subject to applicable law, are in addition to rights and remedies otherwise available to a Party.'),
+    MouParagraph(
+      '40.1 Failure or delay by either Party in exercising any right or remedy shall not constitute a waiver of that right or remedy.',
+    ),
+    MouParagraph(
+      '40.2 Rights and remedies under this MOU are cumulative and, subject to applicable law, are in addition to rights and remedies otherwise available to a Party.',
+    ),
     MouHeading('41. ARTIST CAPACITY AND AUTHORITY'),
-    MouParagraph('41.1 The Artist represents that the Artist has the legal capacity and authority to enter into this MOU and perform the obligations contained herein.'),
-    MouParagraph('41.2 The Artist shall not knowingly submit an artwork subject to a conflicting ownership, licensing, consignment, security, contractual or other restriction that would prevent Galleryzone from performing the activities contemplated by this MOU.'),
-    MouParagraph('41.3 Where the Artist acts through a representative, entity, guardian or authorized person, appropriate authority documentation shall be provided where reasonably required.'),
+    MouParagraph(
+      '41.1 The Artist represents that the Artist has the legal capacity and authority to enter into this MOU and perform the obligations contained herein.',
+    ),
+    MouParagraph(
+      '41.2 The Artist shall not knowingly submit an artwork subject to a conflicting ownership, licensing, consignment, security, contractual or other restriction that would prevent Galleryzone from performing the activities contemplated by this MOU.',
+    ),
+    MouParagraph(
+      '41.3 Where the Artist acts through a representative, entity, guardian or authorized person, appropriate authority documentation shall be provided where reasonably required.',
+    ),
     MouHeading('42. RISK OF LOSS AND CONDITION'),
-    MouParagraph('42.1 Ownership and risk of physical loss or damage are separate concepts. Risk shall be allocated according to the applicable logistics, custody and arrangements for the relevant transaction as per clause 10.'),
-    MouParagraph('42.2 The Artist shall disclose known pre-existing damage, defects, restoration, alteration or material condition issues affecting an artwork.'),
-    MouParagraph('42.3 Galleryzone or an authorized Aggregator may conduct reasonable inspection and may document condition by photographs, videos or condition reports before dispatch, during custody or before delivery.'),
-    MouParagraph('42.4 Where damage or loss occurs, the Parties shall cooperate with the relevant logistics provider in accordance with this MOU.'),
+    MouParagraph(
+      '42.1 Ownership and risk of physical loss or damage are separate concepts. Risk shall be allocated according to the applicable logistics, custody and arrangements for the relevant transaction as per clause 10.',
+    ),
+    MouParagraph(
+      '42.2 The Artist shall disclose known pre-existing damage, defects, restoration, alteration or material condition issues affecting an artwork.',
+    ),
+    MouParagraph(
+      '42.3 Galleryzone or an authorized Aggregator may conduct reasonable inspection and may document condition by photographs, videos or condition reports before dispatch, during custody or before delivery.',
+    ),
+    MouParagraph(
+      '42.4 Where damage or loss occurs, the Parties shall cooperate with the relevant logistics provider in accordance with this MOU.',
+    ),
     MouHeading('43. POST-TERMINATION EFFECTS AND RECORD RETENTION'),
-    MouParagraph('43.1 Termination shall not affect rights or obligations accrued before termination.'),
-    MouParagraph('43.2 Galleryzone may retain transaction, tax, accounting, authenticity, provenance, ownership, dispute, fraud-prevention and other records for the period reasonably required by law or legitimate business purposes.'),
-    MouParagraph('43.3 Following termination, Galleryzone shall cease new marketing or listing activities where required by the applicable withdrawal/termination terms, except that Galleryzone may retain historical records, sold-artwork provenance, transaction records and legally required records.'),
-    MouParagraph('43.4 Clauses concerning confidentiality, data protection, intellectual property, payment obligations, indemnity, and limitation of liability, dispute resolution, resale royalty, record retention and other provisions intended by their nature to survive shall continue after termination.'),
+    MouParagraph(
+      '43.1 Termination shall not affect rights or obligations accrued before termination.',
+    ),
+    MouParagraph(
+      '43.2 Galleryzone may retain transaction, tax, accounting, authenticity, provenance, ownership, dispute, fraud-prevention and other records for the period reasonably required by law or legitimate business purposes.',
+    ),
+    MouParagraph(
+      '43.3 Following termination, Galleryzone shall cease new marketing or listing activities where required by the applicable withdrawal/termination terms, except that Galleryzone may retain historical records, sold-artwork provenance, transaction records and legally required records.',
+    ),
+    MouParagraph(
+      '43.4 Clauses concerning confidentiality, data protection, intellectual property, payment obligations, indemnity, and limitation of liability, dispute resolution, resale royalty, record retention and other provisions intended by their nature to survive shall continue after termination.',
+    ),
     MouHeading('44. ORDER OF PRECEDENCE AND POLICIES'),
-    MouParagraph('44.1 In the event of conflict, the following order shall apply unless expressly stated otherwise: (a) mandatory applicable law; (b) this signed MOU and any signed amendment; (c) transaction-specific written terms accepted by the Parties; and (d) applicable operational policies published by Galleryzone.'),
-    MouParagraph('44.2 Operational policies may supplement procedures and requirements but shall not materially amend the core commercial rights and obligations of this MOU unless amended in accordance with Clause 46 or otherwise expressly permitted by this MOU and applicable law.'),
+    MouParagraph(
+      '44.1 In the event of conflict, the following order shall apply unless expressly stated otherwise: (a) mandatory applicable law; (b) this signed MOU and any signed amendment; (c) transaction-specific written terms accepted by the Parties; and (d) applicable operational policies published by Galleryzone.',
+    ),
+    MouParagraph(
+      '44.2 Operational policies may supplement procedures and requirements but shall not materially amend the core commercial rights and obligations of this MOU unless amended in accordance with Clause 46 or otherwise expressly permitted by this MOU and applicable law.',
+    ),
     MouHeading('45. GOVERNING LAW AND JURISDICTION'),
-    MouParagraph('45.1 This MOU shall be governed by and construed in accordance with the laws of India.'),
-    MouParagraph('45.2 Subject to applicable law, the competent courts at Hyderabad, Telangana, India shall have exclusive jurisdiction over any dispute arising out of or relating to this MOU.'),
+    MouParagraph(
+      '45.1 This MOU shall be governed by and construed in accordance with the laws of India.',
+    ),
+    MouParagraph(
+      '45.2 Subject to applicable law, the competent courts at Hyderabad, Telangana, India shall have exclusive jurisdiction over any dispute arising out of or relating to this MOU.',
+    ),
     MouHeading('46. ENTIRE AGREEMENT'),
-    MouParagraph('46.1 This MOU constitutes the entire understanding and agreement between Galleryzone and the Artist with respect to its subject matter and supersedes all prior discussions, communications, understandings, or representations relating to the same subject matter, unless expressly incorporated herein.'),
-    MouParagraph('46.2 Any amendment, modification, or variation to this MOU shall be valid only if made in writing and'),
-    MouParagraph('46.3 Duly accepted or signed by both Parties, unless there Levant provision expressly permits modification through the Galleryzone platform or applicable published terms.'),
-    MouParagraph('46.4 If any provision of this MOU is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, such provision shall, to the extent necessary, be severed or modified without affecting the validity and enforceability of the remaining provisions.'),
+    MouParagraph(
+      '46.1 This MOU constitutes the entire understanding and agreement between Galleryzone and the Artist with respect to its subject matter and supersedes all prior discussions, communications, understandings, or representations relating to the same subject matter, unless expressly incorporated herein.',
+    ),
+    MouParagraph(
+      '46.2 Any amendment, modification, or variation to this MOU shall be valid only if made in writing and',
+    ),
+    MouParagraph(
+      '46.3 Duly accepted or signed by both Parties, unless there Levant provision expressly permits modification through the Galleryzone platform or applicable published terms.',
+    ),
+    MouParagraph(
+      '46.4 If any provision of this MOU is held to be invalid, illegal, or unenforceable by a court of competent jurisdiction, such provision shall, to the extent necessary, be severed or modified without affecting the validity and enforceability of the remaining provisions.',
+    ),
     MouHeading('47. LANGUAGE AND INTERPRETATION'),
-    MouParagraph('47.1 This MOU is executed in English. If a translated version is provided for convenience, the English version shall prevail to the extent permitted by law in the event of inconsistency.'),
-    MouParagraph('47.2 Headings are for convenience only and shall not affect interpretation.'),
+    MouParagraph(
+      '47.1 This MOU is executed in English. If a translated version is provided for convenience, the English version shall prevail to the extent permitted by law in the event of inconsistency.',
+    ),
+    MouParagraph(
+      '47.2 Headings are for convenience only and shall not affect interpretation.',
+    ),
     MouHeading('DECLARATION'),
     MouParagraph('I, the undersigned Artist, hereby declare and confirm that:'),
-    MouItem('a.', 'I have read and understood this Memorandum of Understanding;'),
-    MouItem('b.', 'I have had the opportunity to understand the terms and conditions contained herein;'),
-    MouItem('c.', 'I voluntarily agree to comply with the terms and conditions of this MOU;'),
-    MouItem('d.', 'I confirm that the artworks submitted by me are original and have been created by me;'),
-    MouItem('e.', 'I confirm that the information and documentation provided by me are true and accurate to the best of my knowledge; and'),
-    MouItem('f.', 'I confirm that I have the lawful right and authority to submit the artworks to Galleryzone for listing, promotion, exhibition, and sale.'),
+    MouItem(
+      'a.',
+      'I have read and understood this Memorandum of Understanding;',
+    ),
+    MouItem(
+      'b.',
+      'I have had the opportunity to understand the terms and conditions contained herein;',
+    ),
+    MouItem(
+      'c.',
+      'I voluntarily agree to comply with the terms and conditions of this MOU;',
+    ),
+    MouItem(
+      'd.',
+      'I confirm that the artworks submitted by me are original and have been created by me;',
+    ),
+    MouItem(
+      'e.',
+      'I confirm that the information and documentation provided by me are true and accurate to the best of my knowledge; and',
+    ),
+    MouItem(
+      'f.',
+      'I confirm that I have the lawful right and authority to submit the artworks to Galleryzone for listing, promotion, exhibition, and sale.',
+    ),
     MouSigner('FOR GALLERYZONE PRIVATE LIMITED'),
     MouField('Authorized Signatory', MouFieldKey.companySignatory),
     MouField('Name', MouFieldKey.companyName),

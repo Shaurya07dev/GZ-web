@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/auth.dart';
 import '../providers/auth_providers.dart';
 import '../role_options.dart';
@@ -56,7 +57,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _isSubmitting = true;
     });
     try {
-      final ack = await ref.read(authRepositoryProvider).login(
+      final ack = await ref
+          .read(authRepositoryProvider)
+          .login(
             LoginInput(
               email: _email.text.trim(),
               password: _password.text,
@@ -67,7 +70,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // The server decides the role; only the offline mock falls back to the
       // "sign in as" choice.
       final role = ack.role ?? _demoRole;
-      await ref.read(sessionProvider.notifier).signIn(role, rememberMe: _rememberMe);
+      await ref
+          .read(sessionProvider.notifier)
+          .signIn(role, rememberMe: _rememberMe);
       ref.invalidate(accountProvider);
       if (!mounted) return;
       context.go(landingAfterLogin(role, next: widget.next));
@@ -77,6 +82,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// One tap into a role's sample-data home, no form. Offline demo only (the
+  /// buttons are not drawn against the real API): the same fake-session write
+  /// [_submit] performs, minus the email and password.
+  Future<void> _demoSignIn(Role role) async {
+    await ref.read(sessionProvider.notifier).signIn(role);
+    ref.invalidate(accountProvider);
+    if (!mounted) return;
+    context.go(role.home);
   }
 
   @override
@@ -91,6 +106,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           const AuthCrest(),
           const SizedBox(height: 24),
           if (!remote) ...[
+            _DemoSignIn(onPick: _demoSignIn),
+            const SizedBox(height: 24),
             RoleToggle<Role>(
               options: [
                 for (final option in roleOptions)
@@ -110,7 +127,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
           if (sessionEnded && _formError == null) ...[
             const SizedBox(height: 20),
-            const AuthErrorBanner(message: 'You were signed out. Sign in again to continue.'),
+            const AuthErrorBanner(
+              message: 'You were signed out. Sign in again to continue.',
+            ),
           ],
           if (_formError != null) ...[
             const SizedBox(height: 20),
@@ -178,10 +197,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   DevPanel(
                     child: Row(
                       children: [
-                        const Expanded(child: Text('Simulate invalid credentials')),
+                        const Expanded(
+                          child: Text('Simulate invalid credentials'),
+                        ),
                         Switch(
                           value: _simulateError,
-                          onChanged: (value) => setState(() => _simulateError = value),
+                          onChanged: (value) =>
+                              setState(() => _simulateError = value),
                         ),
                       ],
                     ),
@@ -211,6 +233,71 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: () => context.push(RegisterScreen.path),
                 child: const Text('Create one'),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Demo Artist / Demo Aggregator / Demo Customer": one tap into each portal
+/// with sample data. Drawn only in the offline demo build.
+class _DemoSignIn extends StatelessWidget {
+  const _DemoSignIn({required this.onPick});
+
+  final ValueChanged<Role> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Try the demo', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 2),
+          Text(
+            'One tap, no account. Sample data only.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final option in roleOptions) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => onPick(option.role),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          option.icon,
+                          size: 18,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Demo ${option.label}',
+                          style: theme.textTheme.labelSmall,
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (option != roleOptions.last) const SizedBox(width: 8),
+              ],
             ],
           ),
         ],

@@ -9,7 +9,11 @@ import 'package:gallery_zone/data/repositories/ownership_repository.dart';
 /// A catalogue that serves whatever it is handed - for screens that read the
 /// public catalogue and nothing else.
 class FakeCatalog implements ArtworkRepository {
-  FakeCatalog({this.artworks = const [], this.artists = const [], this.failArtists = false});
+  FakeCatalog({
+    this.artworks = const [],
+    this.artists = const [],
+    this.failArtists = false,
+  });
 
   final List<Artwork> artworks;
   final List<ArtistProfile> artists;
@@ -17,29 +21,34 @@ class FakeCatalog implements ArtworkRepository {
 
   @override
   Future<MarketplacePage> list(ArtworkFilters filters) async => MarketplacePage(
-        artworks: artworks,
-        total: artworks.length,
-        page: 1,
-        pageSize: filters.pageSize,
-      );
+    artworks: artworks,
+    total: artworks.length,
+    page: 1,
+    pageSize: filters.pageSize,
+  );
 
   @override
-  Future<Artwork?> get(String id) async => artworks.where((a) => a.id == id).firstOrNull;
+  Future<Artwork?> get(String id) async =>
+      artworks.where((a) => a.id == id).firstOrNull;
 
   @override
   Future<List<Artwork>> getMany(Iterable<String> ids) async => [
-        for (final a in artworks) if (ids.contains(a.id)) a,
-      ];
+    for (final a in artworks)
+      if (ids.contains(a.id)) a,
+  ];
 
   @override
   Future<List<ArtistCard>> listArtistCards() async => const [];
 
   @override
-  Future<List<Artwork>> listByArtist(String artistId) async =>
-      [for (final a in artworks) if (a.artistId == artistId) a];
+  Future<List<Artwork>> listByArtist(String artistId) async => [
+    for (final a in artworks)
+      if (a.artistId == artistId) a,
+  ];
 
   @override
-  Future<ArtistProfile?> getArtistProfile(String id) async => artists.where((a) => a.id == id).firstOrNull;
+  Future<ArtistProfile?> getArtistProfile(String id) async =>
+      artists.where((a) => a.id == id).firstOrNull;
 
   @override
   Future<List<ArtistProfile>> listArtists() async {
@@ -71,8 +80,10 @@ class FakeOwnership implements OwnershipRepository {
   }
 
   @override
-  Future<List<OwnershipTransfer>> listForArtwork(String artworkId) async =>
-      [for (final t in transfers) if (t.artworkId == artworkId) t];
+  Future<List<OwnershipTransfer>> listForArtwork(String artworkId) async => [
+    for (final t in transfers)
+      if (t.artworkId == artworkId) t,
+  ];
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

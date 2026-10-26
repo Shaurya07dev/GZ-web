@@ -72,12 +72,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final artworkId = widget.artworkId;
-    if (artworkId == null || artworkId.isEmpty) return _nothingToCheckOut(context);
+    if (artworkId == null || artworkId.isEmpty) {
+      return _nothingToCheckOut(context);
+    }
 
     // Orders are placed from a collector account (the API refuses anyone
     // else); without this a signed-in artist would reach a payment that fails.
     final role = ref.watch(sessionProvider);
-    if (ref.watch(remoteBackendProvider) && role != null && role != Role.customer) {
+    if (ref.watch(remoteBackendProvider) &&
+        role != null &&
+        role != Role.customer) {
       return Scaffold(
         appBar: AppBar(title: const Text('Checkout')),
         body: _CollectorOnly(artworkId: artworkId),
@@ -106,7 +110,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _artwork ??= data;
           final piece = _artwork;
           // A piece that is not on the marketplace any more cannot be bought.
-          if (piece == null || (piece.status != ArtworkStatus.marketplace && _placedOrder == null)) {
+          if (piece == null ||
+              (piece.status != ArtworkStatus.marketplace &&
+                  _placedOrder == null)) {
             return _nothingToCheckOutBody(context);
           }
           return _flow(piece);
@@ -163,7 +169,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               artwork: artwork,
               isPlacing: _isPlacing,
               onBack: () => _goTo(_Step.review),
-              onPay: (method, simulateFailure) => _placeOrder(artwork, method, simulateFailure),
+              onPay: (method, simulateFailure) =>
+                  _placeOrder(artwork, method, simulateFailure),
             ),
             _Step.confirm => _ConfirmStep(
               artwork: artwork,
@@ -180,7 +187,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Future<void> _placeOrder(Artwork artwork, PaymentMethod method, bool simulateFailure) async {
+  Future<void> _placeOrder(
+    Artwork artwork,
+    PaymentMethod method,
+    bool simulateFailure,
+  ) async {
     setState(() => _isPlacing = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -210,7 +221,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       ref.invalidate(artworksByArtistProvider);
     } on PaymentDismissedException {
       // Closing the sheet is not an error: nothing was charged.
-      messenger.showSnackBar(const SnackBar(content: Text('Payment cancelled — nothing was charged.')));
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Payment cancelled — nothing was charged.'),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
@@ -237,12 +252,18 @@ class _CollectorOnly extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.userRound, size: 32, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.userRound,
+                size: 32,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Buying needs a collector account',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -253,7 +274,9 @@ class _CollectorOnly extends ConsumerWidget {
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: () async {
-                  final next = Uri.encodeComponent('/checkout?artworkId=${Uri.encodeComponent(artworkId)}');
+                  final next = Uri.encodeComponent(
+                    '/checkout?artworkId=${Uri.encodeComponent(artworkId)}',
+                  );
                   await ref.read(sessionProvider.notifier).signOut();
                   if (context.mounted) context.go('/login?next=$next');
                 },
@@ -314,13 +337,21 @@ class _StepIndicator extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: i < currentIndex || locked ? theme.colorScheme.tertiary : Colors.transparent,
+                    color: i < currentIndex || locked
+                        ? theme.colorScheme.tertiary
+                        : Colors.transparent,
                     border: Border.all(
-                      color: i <= currentIndex ? theme.colorScheme.tertiary : theme.colorScheme.outline,
+                      color: i <= currentIndex
+                          ? theme.colorScheme.tertiary
+                          : theme.colorScheme.outline,
                     ),
                   ),
                   child: i < currentIndex || locked
-                      ? Icon(LucideIcons.check, size: 13, color: theme.colorScheme.onTertiary)
+                      ? Icon(
+                          LucideIcons.check,
+                          size: 13,
+                          color: theme.colorScheme.onTertiary,
+                        )
                       : Text('${i + 1}', style: theme.textTheme.labelSmall),
                 ),
                 if (showAllLabels || steps[i] == current) ...[
@@ -328,7 +359,9 @@ class _StepIndicator extends StatelessWidget {
                   Text(
                     labels[steps[i]]!,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: steps[i] == current ? theme.colorScheme.onSurface : null,
+                      color: steps[i] == current
+                          ? theme.colorScheme.onSurface
+                          : null,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -341,7 +374,9 @@ class _StepIndicator extends StatelessWidget {
               child: Container(
                 height: 1,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
-                color: i < currentIndex ? theme.colorScheme.primary.withValues(alpha: 0.5) : theme.colorScheme.outline,
+                color: i < currentIndex
+                    ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                    : theme.colorScheme.outline,
               ),
             ),
         ],
@@ -355,7 +390,11 @@ class _StepIndicator extends StatelessWidget {
 /// it rather than tracking a parallel session-only copy the way the web has
 /// to.
 class _AddressStep extends ConsumerStatefulWidget {
-  const _AddressStep({required this.selectedId, required this.onSelect, required this.onContinue});
+  const _AddressStep({
+    required this.selectedId,
+    required this.onSelect,
+    required this.onContinue,
+  });
 
   final String? selectedId;
   final ValueChanged<Address> onSelect;
@@ -427,7 +466,10 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Where should we deliver this?', style: theme.textTheme.titleLarge),
+        Text(
+          'Where should we deliver this?',
+          style: theme.textTheme.titleLarge,
+        ),
         const SizedBox(height: 4),
         Text(
           'Choose a saved address, or add a new one for this order.',
@@ -436,7 +478,10 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
         const SizedBox(height: 16),
         addresses.when(
           loading: () => const Center(
-            child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
           ),
           error: (error, stack) => EmptyState(
             icon: LucideIcons.triangleAlert,
@@ -469,7 +514,10 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
               onPressed: () => setState(() => _isAdding = true),
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Add a new address'),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: theme.colorScheme.tertiary),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                foregroundColor: theme.colorScheme.tertiary,
+              ),
             ),
           )
         else
@@ -481,10 +529,16 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
                 _field(
                   _line1,
                   'Address line 1',
-                  (v) => (v ?? '').trim().length < 3 ? 'Enter the address line' : null,
+                  (v) => (v ?? '').trim().length < 3
+                      ? 'Enter the address line'
+                      : null,
                 ),
                 _field(_line2, 'Address line 2 (optional)', null),
-                _field(_city, 'City', (v) => (v ?? '').trim().length < 2 ? 'Enter the city' : null),
+                _field(
+                  _city,
+                  'City',
+                  (v) => (v ?? '').trim().length < 2 ? 'Enter the city' : null,
+                ),
                 _field(
                   _state,
                   'State',
@@ -503,7 +557,9 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
                   value: _makeDefault,
-                  onChanged: _isSaving ? null : (value) => setState(() => _makeDefault = value == true),
+                  onChanged: _isSaving
+                      ? null
+                      : (value) => setState(() => _makeDefault = value == true),
                   title: const Text('Set as default address'),
                 ),
                 const SizedBox(height: 12),
@@ -511,7 +567,9 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _isSaving ? null : () => setState(() => _isAdding = false),
+                        onPressed: _isSaving
+                            ? null
+                            : () => setState(() => _isAdding = false),
                         child: const Text('Cancel'),
                       ),
                     ),
@@ -561,7 +619,11 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
 }
 
 class _AddressTile extends StatelessWidget {
-  const _AddressTile({required this.address, required this.selected, required this.onTap});
+  const _AddressTile({
+    required this.address,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Address address;
   final bool selected;
@@ -579,10 +641,14 @@ class _AddressTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: selected ? theme.colorScheme.primary.withValues(alpha: 0.08) : theme.cardTheme.color,
+            color: selected
+                ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                : theme.cardTheme.color,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: selected ? theme.colorScheme.tertiary : theme.colorScheme.outline,
+              color: selected
+                  ? theme.colorScheme.tertiary
+                  : theme.colorScheme.outline,
               width: selected ? 1.5 : 1,
             ),
           ),
@@ -592,7 +658,9 @@ class _AddressTile extends StatelessWidget {
               Icon(
                 selected ? LucideIcons.circleCheckBig : LucideIcons.mapPin,
                 size: 18,
-                color: selected ? theme.colorScheme.tertiary : theme.colorScheme.onSurface,
+                color: selected
+                    ? theme.colorScheme.tertiary
+                    : theme.colorScheme.onSurface,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -601,9 +669,12 @@ class _AddressTile extends StatelessWidget {
                   children: [
                     Text(
                       address.line1,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    if (address.line2 != null) Text(address.line2!, style: theme.textTheme.bodySmall),
+                    if (address.line2 != null)
+                      Text(address.line2!, style: theme.textTheme.bodySmall),
                     Text(
                       '${address.city}, ${address.state} ${address.pincode}',
                       style: theme.textTheme.bodySmall,
@@ -611,7 +682,8 @@ class _AddressTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (address.isDefault) Text('Default', style: theme.textTheme.labelSmall),
+              if (address.isDefault)
+                Text('Default', style: theme.textTheme.labelSmall),
             ],
           ),
         ),
@@ -663,7 +735,11 @@ class _ReviewStep extends ConsumerWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                child: SizedBox(width: 76, height: 95, child: ArtworkImageView(url: artwork.thumbnailUrl)),
+                child: SizedBox(
+                  width: 76,
+                  height: 95,
+                  child: ArtworkImageView(url: artwork.thumbnailUrl),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -672,12 +748,16 @@ class _ReviewStep extends ConsumerWidget {
                   children: [
                     Text(
                       humanize(artwork.category),
-                      style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.tertiary),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       artwork.title,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(artwork.artistName, style: theme.textTheme.bodySmall),
@@ -700,15 +780,26 @@ class _ReviewStep extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(LucideIcons.mapPin, size: 14, color: theme.colorScheme.tertiary),
+                  Icon(
+                    LucideIcons.mapPin,
+                    size: 14,
+                    color: theme.colorScheme.tertiary,
+                  ),
                   const SizedBox(width: 6),
-                  Text('DELIVERING TO', style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 0.8)),
+                  Text(
+                    'DELIVERING TO',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
                 [
-                  address.line2 == null ? address.line1 : '${address.line1}, ${address.line2}',
+                  address.line2 == null
+                      ? address.line1
+                      : '${address.line1}, ${address.line2}',
                   '${address.city}, ${address.state} ${address.pincode}',
                 ].join('\n'),
                 style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
@@ -736,7 +827,10 @@ class _ReviewStep extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(onPressed: onBack, child: const Text('Back')),
+              child: OutlinedButton(
+                onPressed: onBack,
+                child: const Text('Back'),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -773,7 +867,8 @@ class _QuoteNote extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(text, style: theme.textTheme.bodySmall),
-          if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Try again')),
+          if (onRetry != null)
+            TextButton(onPressed: onRetry, child: const Text('Try again')),
         ],
       ),
     );
@@ -810,7 +905,11 @@ class _ConfirmStep extends ConsumerWidget {
       final payment = order.payment;
       return Column(
         children: [
-          Icon(LucideIcons.circleCheckBig, size: 40, color: theme.colorScheme.tertiary),
+          Icon(
+            LucideIcons.circleCheckBig,
+            size: 40,
+            color: theme.colorScheme.tertiary,
+          ),
           const SizedBox(height: 16),
           Text('Order placed', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
@@ -832,7 +931,9 @@ class _ConfirmStep extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               '${payment.paymentId}${payment.simulated ? ' · simulated payment' : ''}',
-              style: theme.textTheme.labelSmall?.copyWith(fontFamily: 'monospace'),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontFamily: 'monospace',
+              ),
             ),
           ],
           const SizedBox(height: 24),
@@ -862,7 +963,10 @@ class _ConfirmStep extends ConsumerWidget {
             style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
           ),
           const SizedBox(height: 24),
-          OutlinedButton(onPressed: isPlacing ? null : onBack, child: const Text('Back')),
+          OutlinedButton(
+            onPressed: isPlacing ? null : onBack,
+            child: const Text('Back'),
+          ),
         ],
       );
     }
@@ -883,7 +987,10 @@ class _ConfirmStep extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(onPressed: isPlacing ? null : onBack, child: const Text('Back')),
+              child: OutlinedButton(
+                onPressed: isPlacing ? null : onBack,
+                child: const Text('Back'),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -895,12 +1002,20 @@ class _ConfirmStep extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
                           SizedBox(width: 10),
                           Text('Waiting for payment…'),
                         ],
                       )
-                    : Text(total == null ? 'Working out your total…' : 'Pay ${formatInr(total)}'),
+                    : Text(
+                        total == null
+                            ? 'Working out your total…'
+                            : 'Pay ${formatInr(total)}',
+                      ),
               ),
             ),
           ],
@@ -911,7 +1026,8 @@ class _ConfirmStep extends ConsumerWidget {
         // and never for themselves.
         PayeeDetails(
           amount: total ?? artwork.customerPrice,
-          note: 'GZ ${artwork.title.length > 24 ? artwork.title.substring(0, 24) : artwork.title}',
+          note:
+              'GZ ${artwork.title.length > 24 ? artwork.title.substring(0, 24) : artwork.title}',
         ),
       ],
     );
@@ -954,7 +1070,12 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
   final _cvv = TextEditingController(text: '123');
   String _bank = 'HDFC Bank';
 
-  static const _banks = ['HDFC Bank', 'ICICI Bank', 'State Bank of India', 'Axis Bank'];
+  static const _banks = [
+    'HDFC Bank',
+    'ICICI Bank',
+    'State Bank of India',
+    'Axis Bank',
+  ];
 
   @override
   void dispose() {
@@ -967,7 +1088,9 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
   bool get _canPay => switch (_method) {
     PaymentMethod.upi => _upi.text.trim().isNotEmpty,
     PaymentMethod.card =>
-      _card.text.trim().isNotEmpty && _expiry.text.trim().isNotEmpty && _cvv.text.trim().isNotEmpty,
+      _card.text.trim().isNotEmpty &&
+          _expiry.text.trim().isNotEmpty &&
+          _cvv.text.trim().isNotEmpty,
     PaymentMethod.netbanking => true,
   };
 
@@ -1013,7 +1136,10 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
           PaymentMethod.upi => TextField(
             controller: _upi,
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(labelText: 'UPI ID', hintText: 'name@bank'),
+            decoration: const InputDecoration(
+              labelText: 'UPI ID',
+              hintText: 'name@bank',
+            ),
           ),
           PaymentMethod.card => Column(
             children: [
@@ -1052,7 +1178,8 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Bank'),
             items: [
-              for (final bank in _banks) DropdownMenuItem(value: bank, child: Text(bank)),
+              for (final bank in _banks)
+                DropdownMenuItem(value: bank, child: Text(bank)),
             ],
             onChanged: (value) => setState(() => _bank = value!),
           ),
@@ -1094,8 +1221,12 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
             Expanded(
               flex: 2,
               child: FilledButton(
-                onPressed: widget.isPlacing || !_canPay ? null : () => widget.onPay(_method, _simulateFailure),
-                child: Text(widget.isPlacing ? 'Processing…' : 'Pay ${formatInr(total)}'),
+                onPressed: widget.isPlacing || !_canPay
+                    ? null
+                    : () => widget.onPay(_method, _simulateFailure),
+                child: Text(
+                  widget.isPlacing ? 'Processing…' : 'Pay ${formatInr(total)}',
+                ),
               ),
             ),
           ],

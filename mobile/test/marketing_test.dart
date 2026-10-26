@@ -12,14 +12,19 @@ void main() {
     // galleryzone.art" button rather than a row. If a page is renamed on the
     // web, this list changes with it — `frontend-web/app/<name>/page.tsx` is
     // the source of truth.
-    expect(
-      AboutScreen.companyLinks.map((link) => link.path).toSet(),
-      {'/about', '/contact', '/artist-survey'},
-    );
+    expect(AboutScreen.companyLinks.map((link) => link.path).toSet(), {
+      '/about',
+      '/contact',
+      '/artist-survey',
+    });
 
     for (final link in AboutScreen.companyLinks) {
       final url = Uri.parse('$galleryZoneSite${link.path}');
-      expect(url.scheme, 'https', reason: '${link.label} must not open over http');
+      expect(
+        url.scheme,
+        'https',
+        reason: '${link.label} must not open over http',
+      );
       expect(url.host, 'www.galleryzone.art');
       expect(link.label.trim(), isNotEmpty);
       expect(link.subtitle.trim(), isNotEmpty);
@@ -36,7 +41,9 @@ void main() {
     }
   });
 
-  testWidgets('the About screen offers every page and contact point', (tester) async {
+  testWidgets('the About screen offers every page and contact point', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(theme: AppTheme.light, home: const AboutScreen()),
     );

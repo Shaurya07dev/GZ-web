@@ -17,7 +17,9 @@ class AppColors {
   static const darkGold = Color(0xFFC89A4A);
   static const darkGoldBright = Color(0xFFE9C57A);
   static const darkGoldDeep = Color(0xFF8A6423);
-  static const darkBorder = Color(0xFF211F1B); // foreground ~10% over background
+  static const darkBorder = Color(
+    0xFF211F1B,
+  ); // foreground ~10% over background
 
   // Warm Greige (website, 10 Sep 2026): the light palette moved from cream to
   // a calmer stone, with the card now a shade darker than the page.
@@ -30,9 +32,13 @@ class AppColors {
   static const lightGold = Color(0xFFA9782C);
   static const lightGoldBright = Color(0xFF8A6423);
   static const lightGoldDeep = Color(0xFF6E4F1B);
-  static const lightBorder = Color(0xFFD8D4CE); // foreground ~13% over background
+  static const lightBorder = Color(
+    0xFFD8D4CE,
+  ); // foreground ~13% over background
 
-  static const destructive = Color(0xFFDC5B4A); // oklch(0.577 0.245 27.325), same both themes
+  static const destructive = Color(
+    0xFFDC5B4A,
+  ); // oklch(0.577 0.245 27.325), same both themes
 }
 
 /// Single proportional radius scale, base 12 — every other value is that
@@ -88,7 +94,13 @@ class AppTheme {
       error: AppColors.destructive,
       outline: AppColors.darkBorder,
     );
-    return _build(scheme, AppColors.darkCard, AppColors.darkMuted, AppColors.darkForeground, AppColors.darkMutedForeground);
+    return _build(
+      scheme,
+      AppColors.darkCard,
+      AppColors.darkMuted,
+      AppColors.darkForeground,
+      AppColors.darkMutedForeground,
+    );
   }
 
   static ThemeData get light {
@@ -104,10 +116,22 @@ class AppTheme {
       error: AppColors.destructive,
       outline: AppColors.lightBorder,
     );
-    return _build(scheme, AppColors.lightCard, AppColors.lightMuted, AppColors.lightForeground, AppColors.lightMutedForeground);
+    return _build(
+      scheme,
+      AppColors.lightCard,
+      AppColors.lightMuted,
+      AppColors.lightForeground,
+      AppColors.lightMutedForeground,
+    );
   }
 
-  static ThemeData _build(ColorScheme scheme, Color card, Color muted, Color foreground, Color mutedForeground) {
+  static ThemeData _build(
+    ColorScheme scheme,
+    Color card,
+    Color muted,
+    Color foreground,
+    Color mutedForeground,
+  ) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
@@ -135,7 +159,9 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(0, 32),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
         ),
       ),
       // Inputs match the reference's `Input` primitive: filled card
@@ -146,7 +172,10 @@ class AppTheme {
         hintStyle: TextStyle(color: mutedForeground),
         prefixIconColor: mutedForeground,
         suffixIconColor: mutedForeground,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: BorderSide(color: scheme.outline),
@@ -172,7 +201,9 @@ class AppTheme {
         side: BorderSide(color: scheme.outline),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
         fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? scheme.primary : Colors.transparent,
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.primary
+              : Colors.transparent,
         ),
         checkColor: WidgetStateProperty.all(scheme.onPrimary),
       ),
@@ -182,10 +213,12 @@ class AppTheme {
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : muted,
+          (states) =>
+              states.contains(WidgetState.selected) ? scheme.onPrimary : muted,
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? scheme.primary : muted,
+          (states) =>
+              states.contains(WidgetState.selected) ? scheme.primary : muted,
         ),
       ),
     );

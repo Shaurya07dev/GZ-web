@@ -41,18 +41,34 @@ class ArtworkHistoryView extends ConsumerWidget {
   };
 
   static const displayStatus = <ArtworkStatus, (String, IconData)>{
-    ArtworkStatus.reserved: ('Reserved for aggregator display', LucideIcons.clock3),
-    ArtworkStatus.preparingDispatch: ('Being prepared for dispatch', LucideIcons.packageCheck),
-    ArtworkStatus.inTransit: ('In transit to the display space', LucideIcons.truck),
-    ArtworkStatus.withAggregator: ('On display with an aggregator', LucideIcons.building2),
+    ArtworkStatus.reserved: (
+      'Reserved for aggregator display',
+      LucideIcons.clock3,
+    ),
+    ArtworkStatus.preparingDispatch: (
+      'Being prepared for dispatch',
+      LucideIcons.packageCheck,
+    ),
+    ArtworkStatus.inTransit: (
+      'In transit to the display space',
+      LucideIcons.truck,
+    ),
+    ArtworkStatus.withAggregator: (
+      'On display with an aggregator',
+      LucideIcons.building2,
+    ),
     ArtworkStatus.returned: ('Came back from display', LucideIcons.undo2),
   };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transfers = ref.watch(artworkTransfersProvider(artwork.id)).value ?? const <OwnershipTransfer>[];
+    final transfers =
+        ref.watch(artworkTransfersProvider(artwork.id)).value ??
+        const <OwnershipTransfer>[];
     final requests = [
-      for (final request in ref.watch(artistPhysicalCoaProvider).value ?? const <PhysicalCoaRequest>[])
+      for (final request
+          in ref.watch(artistPhysicalCoaProvider).value ??
+              const <PhysicalCoaRequest>[])
         if (request.artworkId == artwork.id) request,
     ];
     final history = buildHistory(artwork, transfers, requests);
@@ -94,12 +110,20 @@ class ArtworkHistoryView extends ConsumerWidget {
     for (final event in artwork.statusHistory) {
       final owned = ownershipStatus[event.status];
       if (owned != null) {
-        ownership.add(HistoryEvent(at: event.changedAt, icon: LucideIcons.fileEdit, label: owned));
+        ownership.add(
+          HistoryEvent(
+            at: event.changedAt,
+            icon: LucideIcons.fileEdit,
+            label: owned,
+          ),
+        );
         continue;
       }
       final shown = displayStatus[event.status];
       if (shown != null) {
-        display.add(HistoryEvent(at: event.changedAt, icon: shown.$2, label: shown.$1));
+        display.add(
+          HistoryEvent(at: event.changedAt, icon: shown.$2, label: shown.$1),
+        );
       }
     }
 
@@ -155,7 +179,8 @@ class ArtworkHistoryView extends ConsumerWidget {
           detail: 'By ${request.requestedByName}',
         ),
       );
-      if (request.status == PhysicalCoaStatus.dispatched && request.dispatchedAt != null) {
+      if (request.status == PhysicalCoaStatus.dispatched &&
+          request.dispatchedAt != null) {
         ownership.add(
           HistoryEvent(
             at: request.dispatchedAt!,
@@ -168,7 +193,9 @@ class ArtworkHistoryView extends ConsumerWidget {
     }
 
     int newestFirst(HistoryEvent a, HistoryEvent b) =>
-        (DateTime.tryParse(b.at) ?? DateTime(0)).compareTo(DateTime.tryParse(a.at) ?? DateTime(0));
+        (DateTime.tryParse(b.at) ?? DateTime(0)).compareTo(
+          DateTime.tryParse(a.at) ?? DateTime(0),
+        );
     ownership.sort(newestFirst);
     display.sort(newestFirst);
     return ArtworkHistory(
@@ -214,7 +241,10 @@ class ArtworkHistoryView extends ConsumerWidget {
         at: at,
         icon: LucideIcons.calendarClock,
         label: 'With ${transfer.toName}',
-        detail: transfer.displayEndsAt == null ? null : 'Until ${formatShortDate(transfer.displayEndsAt!)}',
+        detail: transfer.displayEndsAt == null
+            ? null
+            : 'From ${formatShortDate(transfer.displayStartsAt ?? transfer.acceptedAt ?? transfer.initiatedAt)} '
+                  'to ${formatShortDate(transfer.displayEndsAt!)}',
         state: HistoryState.current,
       );
     }
@@ -233,7 +263,13 @@ class ArtworkHistoryView extends ConsumerWidget {
 enum HistoryState { current, pending }
 
 class HistoryEvent {
-  const HistoryEvent({required this.at, required this.icon, required this.label, this.detail, this.state});
+  const HistoryEvent({
+    required this.at,
+    required this.icon,
+    required this.label,
+    this.detail,
+    this.state,
+  });
 
   final String at;
   final IconData icon;
@@ -245,7 +281,11 @@ class HistoryEvent {
 }
 
 class ArtworkHistory {
-  const ArtworkHistory({required this.ownership, required this.display, required this.ownerName});
+  const ArtworkHistory({
+    required this.ownership,
+    required this.display,
+    required this.ownerName,
+  });
 
   final List<HistoryEvent> ownership;
   final List<HistoryEvent> display;
@@ -298,13 +338,26 @@ class _Panel extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                         color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
                       ),
-                      child: Icon(icon, size: 14, color: theme.colorScheme.tertiary),
+                      child: Icon(
+                        icon,
+                        size: 14,
+                        color: theme.colorScheme.tertiary,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      child: Text(
+                        title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                     Text('${events.length}', style: theme.textTheme.labelSmall),
                   ],
@@ -318,7 +371,10 @@ class _Panel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(caption, style: theme.textTheme.labelSmall?.copyWith(height: 1.4)),
+                Text(
+                  caption,
+                  style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                ),
               ],
             ),
           ),
@@ -326,7 +382,11 @@ class _Panel extends StatelessWidget {
           if (events.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(emptyText, textAlign: TextAlign.center, style: theme.textTheme.labelMedium),
+              child: Text(
+                emptyText,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelMedium,
+              ),
             )
           else
             Padding(
@@ -346,10 +406,13 @@ class _Panel extends StatelessWidget {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: events[i].state == HistoryState.current
-                                      ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                                      ? theme.colorScheme.primary.withValues(
+                                          alpha: 0.15,
+                                        )
                                       : theme.colorScheme.surface,
                                   border: Border.all(
-                                    color: events[i].state == HistoryState.current
+                                    color:
+                                        events[i].state == HistoryState.current
                                         ? theme.colorScheme.primary
                                         : theme.colorScheme.outline,
                                   ),
@@ -363,7 +426,12 @@ class _Panel extends StatelessWidget {
                                 ),
                               ),
                               if (i < events.length - 1)
-                                Expanded(child: Container(width: 1, color: theme.colorScheme.outline)),
+                                Expanded(
+                                  child: Container(
+                                    width: 1,
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
                             ],
                           ),
                           const SizedBox(width: 12),
@@ -374,19 +442,27 @@ class _Panel extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Wrap(
-                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
                                     spacing: 8,
                                     runSpacing: 4,
                                     children: [
-                                      Text(events[i].label, style: theme.textTheme.bodyMedium?.copyWith(height: 1.25)),
-                                      if (events[i].state != null) _StateChip(state: events[i].state!),
+                                      Text(
+                                        events[i].label,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(height: 1.25),
+                                      ),
+                                      if (events[i].state != null)
+                                        _StateChip(state: events[i].state!),
                                     ],
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     [
                                       formatShortDate(events[i].at),
-                                      if (events[i].detail != null && events[i].detail!.isNotEmpty) events[i].detail!,
+                                      if (events[i].detail != null &&
+                                          events[i].detail!.isNotEmpty)
+                                        events[i].detail!,
                                     ].join(' · '),
                                     style: theme.textTheme.labelSmall,
                                   ),
@@ -419,8 +495,14 @@ class _StateChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: current ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.colorScheme.surfaceContainerHighest,
-        border: Border.all(color: current ? theme.colorScheme.primary.withValues(alpha: 0.5) : theme.colorScheme.outline),
+        color: current
+            ? theme.colorScheme.primary.withValues(alpha: 0.1)
+            : theme.colorScheme.surfaceContainerHighest,
+        border: Border.all(
+          color: current
+              ? theme.colorScheme.primary.withValues(alpha: 0.5)
+              : theme.colorScheme.outline,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -428,7 +510,9 @@ class _StateChip extends StatelessWidget {
           Icon(
             LucideIcons.circleDot,
             size: 10,
-            color: current ? theme.colorScheme.tertiary : theme.textTheme.bodySmall?.color,
+            color: current
+                ? theme.colorScheme.tertiary
+                : theme.textTheme.bodySmall?.color,
           ),
           const SizedBox(width: 4),
           Text(

@@ -52,8 +52,17 @@ const artistListingFeeRate = 0.0;
 /// Aggregator MOU §7 — security deposit paid before taking possession.
 const aggregatorAdvanceRate = 0.05;
 
-/// Aggregator MOU §8 — 20% of (selling price − artist price).
+/// Aggregator MOU 2026.3 §9 — Tier 1 fallback, 20% of the Markup Pool.
 const aggregatorCommissionRate = 0.2;
+
+/// The current calendar month's incentive rate comes from the immediately
+/// previous calendar month's successful, pre-tax listed selling prices.
+/// Exact ₹10L and ₹50L ceilings remain in the lower tier.
+double commissionRateForPreviousMonthSales(double previousMonthEligibleSales) {
+  if (previousMonthEligibleSales > 5000000) return 0.50;
+  if (previousMonthEligibleSales > 1000000) return 0.35;
+  return aggregatorCommissionRate;
+}
 
 /// Deducted from the artist's settlement on aggregator sales only. Confirmed
 /// by the client (25 Aug): "in the marketplace we pay 100% of the artist
@@ -189,9 +198,13 @@ ArtistSettlement artistSettlementOf(double artistPrice, SaleChannel channel) {
 
 /// Aggregator MOU §8. Both prices are compared before GST, because the
 /// aggregator sets a pre-tax price and GST is applied to it afterwards.
-double aggregatorCommissionOf(double displayPrice, double artistPrice) {
+double aggregatorCommissionOf(
+  double displayPrice,
+  double artistPrice, {
+  double commissionRate = aggregatorCommissionRate,
+}) {
   final markup = math.max(0.0, exGst(displayPrice) - artistPrice);
-  return (markup * aggregatorCommissionRate).round().toDouble();
+  return (markup * commissionRate).round().toDouble();
 }
 
 // --- The aggregator cycle ---------------------------------------------------
@@ -267,7 +280,9 @@ PlacementWindow placementWindow({
   required DateTime assignedAt,
 }) {
   final listingEnd = listingEndsAt(cycleStartedAt);
-  final naturalEnd = assignedAt.add(const Duration(days: aggregatorPlacementDays));
+  final naturalEnd = assignedAt.add(
+    const Duration(days: aggregatorPlacementDays),
+  );
   final leftover = listingEnd.difference(naturalEnd);
 
   if (leftover < const Duration(days: aggregatorPlacementDays)) {
@@ -302,9 +317,15 @@ double aggregatorDiscountRateOf(int month) =>
 /// Client, 30 Sep 2026: if the month-1 aggregator priced above the offer
 /// ([appreciated]), the next one is back at the full price and the monthly
 /// drops start a month later.
-double aggregatorOfferPriceOf(double artistPrice, int month, {bool appreciated = false}) {
+double aggregatorOfferPriceOf(
+  double artistPrice,
+  int month, {
+  bool appreciated = false,
+}) {
   final steps = appreciated ? math.max(1, month - 1) : month;
-  final reduction = (artistPrice * aggregatorDiscountRateOf(steps)).round().toDouble();
+  final reduction = (artistPrice * aggregatorDiscountRateOf(steps))
+      .round()
+      .toDouble();
   return basePriceOf(artistPrice) - reduction;
 }
 
@@ -374,14 +395,22 @@ const _artworkGstRate = gstRate;
 /// [aggregatorCommissionRate] of the markup over the artist's price, both before
 /// GST, whoever set the price; the rest of the markup is GalleryZone's.
 /// Port of `aggregatorTermsAt`.
-({double displayPrice, double gst, double markup, double commission, double galleryZoneShare}) aggregatorTermsAt({
+({
+  double displayPrice,
+  double gst,
+  double markup,
+  double commission,
+  double galleryZoneShare,
+})
+aggregatorTermsAt({
   required double sellingPrice,
   required double artistPrice,
   double gstRate = _artworkGstRate,
+  double commissionRate = aggregatorCommissionRate,
 }) {
   final displayPrice = (sellingPrice * (1 + gstRate)).round().toDouble();
   final markup = math.max(0.0, sellingPrice - artistPrice);
-  final commission = (markup * aggregatorCommissionRate).round().toDouble();
+  final commission = (markup * commissionRate).round().toDouble();
   return (
     displayPrice: displayPrice,
     gst: displayPrice - sellingPrice,

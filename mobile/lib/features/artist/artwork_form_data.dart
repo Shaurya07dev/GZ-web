@@ -24,15 +24,74 @@ const artworkCategories = [
   FormOption('ceramics', 'Ceramics'),
 ];
 
-/// A different axis from category (painting, sculpture...): what kind of piece
-/// this instance of the work is. "Other" asks for a few words rather than
-/// forcing a guess into one of the fixed options.
+/// The same 28 state-wise Indian traditions offered by the artist survey.
+/// Values are the complete labels because that is what the API stores and the
+/// COA prints. "Other" asks for free text.
 const artworkTypes = [
-  FormOption('original', 'Original'),
-  FormOption('limited_edition_print', 'Limited Edition Print'),
-  FormOption('open_edition_print', 'Open Edition Print'),
-  FormOption('study_sketch', 'Study / Sketch'),
-  FormOption('commission_piece', 'Commission Piece'),
+  FormOption('Andhra Pradesh: Kalamkari', 'Andhra Pradesh: Kalamkari'),
+  FormOption('Arunachal Pradesh: Thangka', 'Arunachal Pradesh: Thangka'),
+  FormOption(
+    'Assam: Assamese Scroll Painting',
+    'Assam: Assamese Scroll Painting',
+  ),
+  FormOption(
+    'Bihar: Madhubani (Mithila) Painting',
+    'Bihar: Madhubani (Mithila) Painting',
+  ),
+  FormOption('Chhattisgarh: Godna', 'Chhattisgarh: Godna'),
+  FormOption('Goa: Folk & Christian Art', 'Goa: Folk & Christian Art'),
+  FormOption('Gujarat: Pithora Painting', 'Gujarat: Pithora Painting'),
+  FormOption(
+    'Haryana: Sculptural & Chitra Art',
+    'Haryana: Sculptural & Chitra Art',
+  ),
+  FormOption(
+    'Himachal Pradesh: Kangra Painting',
+    'Himachal Pradesh: Kangra Painting',
+  ),
+  FormOption(
+    'Jharkhand: Sohrai & Khovar Painting',
+    'Jharkhand: Sohrai & Khovar Painting',
+  ),
+  FormOption(
+    'Karnataka: Chittara / Mysore Painting',
+    'Karnataka: Chittara / Mysore Painting',
+  ),
+  FormOption('Kerala: Kalamezhuthu', 'Kerala: Kalamezhuthu'),
+  FormOption('Madhya Pradesh: Gond Art', 'Madhya Pradesh: Gond Art'),
+  FormOption('Maharashtra: Warli Art', 'Maharashtra: Warli Art'),
+  FormOption(
+    'Manipur: Manipuri Scroll & Tribal Art',
+    'Manipur: Manipuri Scroll & Tribal Art',
+  ),
+  FormOption(
+    'Meghalaya: Tribal Motif Painting',
+    'Meghalaya: Tribal Motif Painting',
+  ),
+  FormOption(
+    'Mizoram: Tribal Decorative Art',
+    'Mizoram: Tribal Decorative Art',
+  ),
+  FormOption('Nagaland: Cloth Painting', 'Nagaland: Cloth Painting'),
+  FormOption('Odisha: Pattachitra', 'Odisha: Pattachitra'),
+  FormOption(
+    'Punjab: Mud-Work & Chowk Poorana',
+    'Punjab: Mud-Work & Chowk Poorana',
+  ),
+  FormOption('Rajasthan: Phad Painting', 'Rajasthan: Phad Painting'),
+  FormOption('Sikkim: Thangka Art', 'Sikkim: Thangka Art'),
+  FormOption('Tamil Nadu: Tanjore Painting', 'Tamil Nadu: Tanjore Painting'),
+  FormOption(
+    'Telangana: Cheriyal Scroll Painting',
+    'Telangana: Cheriyal Scroll Painting',
+  ),
+  FormOption('Tripura: Tribal Wall Art', 'Tripura: Tribal Wall Art'),
+  FormOption('Uttar Pradesh: Sanjhi Art', 'Uttar Pradesh: Sanjhi Art'),
+  FormOption('Uttarakhand: Aipan Art', 'Uttarakhand: Aipan Art'),
+  FormOption(
+    'West Bengal: Kalighat Painting',
+    'West Bengal: Kalighat Painting',
+  ),
   FormOption('other', 'Other'),
 ];
 
@@ -95,17 +154,11 @@ const maxArtworkImages = 8;
 /// it uploads, this is so the artist hears about a bad file when they pick it.
 const maxImageBytes = 15 * 1024 * 1024;
 
-/// Fallback for the "strongly recommended" nudge before the published rules
-/// have loaded.
-const insuranceRecommendedThreshold = 20000.0;
-
-/// Named in the Artist Onboarding Guide.
-const insurancePartner = 'HDFC ERGO';
-const insurancePartnerUrl = 'https://www.hdfcergo.com/';
-
 /// Why [name] can't be uploaded, or null when it can.
 String? imageProblem(String name, int bytes) {
-  final extension = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+  final extension = name.contains('.')
+      ? name.split('.').last.toLowerCase()
+      : '';
   if (!const {'jpg', 'jpeg', 'png', 'webp'}.contains(extension)) {
     return '"$name" isn\'t a JPEG, PNG or WebP image.';
   }
@@ -117,7 +170,12 @@ String? imageProblem(String name, int bytes) {
 
 // --- Dimensions --------------------------------------------------------------
 
-typedef Dimensions = ({String length, String width, String height, String unit});
+typedef Dimensions = ({
+  String length,
+  String width,
+  String height,
+  String unit,
+});
 
 /// The API derives the size band from `L x W [x H] unit`, and this form is the
 /// only thing that ever writes it, so splitting it back round-trips an edit
@@ -143,9 +201,11 @@ final _dimensionsShape = RegExp(
 /// `24 x 36 in` / `24 x 36 x 2 in`, or empty when there is no length and width.
 String composeDimensions(Dimensions dimensions) {
   if (dimensions.length.isEmpty || dimensions.width.isEmpty) return '';
-  final parts = [dimensions.length, dimensions.width, dimensions.height]
-      .where((part) => part.isNotEmpty)
-      .join(' x ');
+  final parts = [
+    dimensions.length,
+    dimensions.width,
+    dimensions.height,
+  ].where((part) => part.isNotEmpty).join(' x ');
   return '$parts ${dimensions.unit}';
 }
 
@@ -154,7 +214,9 @@ String composeDimensions(Dimensions dimensions) {
 String? tidyMeasurement(String raw) {
   final value = double.tryParse(raw.trim());
   if (value == null || value <= 0) return null;
-  return value == value.roundToDouble() ? value.round().toString() : value.toString();
+  return value == value.roundToDouble()
+      ? value.round().toString()
+      : value.toString();
 }
 
 // --- Stored values back into the form ----------------------------------------
@@ -164,12 +226,16 @@ String? tidyMeasurement(String raw) {
 /// returns it as it came so the form can keep it rather than rewrite it.
 String normalizeOption(String stored, List<FormOption> options) {
   final lowered = stored.trim().toLowerCase();
-  final slug = lowered.replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+  final slug = lowered
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
   for (final option in options) {
     if (option.value == stored) return option.value;
   }
   for (final option in options) {
-    if (option.label.toLowerCase() == lowered || option.value == slug) return option.value;
+    if (option.label.toLowerCase() == lowered || option.value == slug) {
+      return option.value;
+    }
   }
   return stored;
 }
@@ -179,7 +245,9 @@ String normalizeOption(String stored, List<FormOption> options) {
 ({String type, String other}) artworkTypeFields(String? stored) {
   if ((stored ?? '').isEmpty) return (type: '', other: '');
   for (final option in artworkTypes) {
-    if (option.value != 'other' && option.label == stored) return (type: option.value, other: '');
+    if (option.value != 'other' && option.label == stored) {
+      return (type: option.value, other: '');
+    }
   }
   return (type: 'other', other: stored!);
 }
@@ -198,7 +266,9 @@ String? artworkTypeToStore(String type, String other) {
 /// free text, from what is stored.
 ({String style, String other}) paintingStyleFields(String? stored) {
   if ((stored ?? '').isEmpty) return (style: '', other: '');
-  if (paintingStyles.any((style) => style.name == stored)) return (style: stored!, other: '');
+  if (paintingStyles.any((style) => style.name == stored)) {
+    return (style: stored!, other: '');
+  }
   return (style: 'Other', other: stored!);
 }
 
@@ -216,7 +286,11 @@ typedef PriceLadder = ({double base, double customer, double gstIncluded});
 /// Where every rupee between the artist's rate and the listed price goes: the
 /// markup first, then GST on top. Quoted from the rules GalleryZone published,
 /// so a rate change reaches the form with no release.
-PriceLadder priceLadderFor(double artistPrice, {required double markup, required double gstRate}) {
+PriceLadder priceLadderFor(
+  double artistPrice, {
+  required double markup,
+  required double gstRate,
+}) {
   final base = (artistPrice * (1 + markup)).roundToDouble();
   final customer = (base * (1 + gstRate)).roundToDouble();
   return (base: base, customer: customer, gstIncluded: customer - base);
@@ -225,7 +299,9 @@ PriceLadder priceLadderFor(double artistPrice, {required double markup, required
 /// `5` for 0.05, `12.5` for 0.125.
 String percentLabel(double rate) {
   final percent = double.parse((rate * 100).toStringAsFixed(2));
-  return percent == percent.roundToDouble() ? percent.round().toString() : percent.toString();
+  return percent == percent.roundToDouble()
+      ? percent.round().toString()
+      : percent.toString();
 }
 
 // --- Aggregator readiness ----------------------------------------------------
@@ -233,47 +309,10 @@ String percentLabel(double rate) {
 /// What is still missing before this can go for review on the aggregator
 /// channel: the physical facts (MOU §12) and the artist's acceptance of the
 /// display terms. Empty means ready.
-List<String> missingForAggregatorListing(ArtworkPhysical physical, {required bool termsAccepted}) => [
-      ...missingForAggregator(physical),
-      if (!termsAccepted) 'aggregator terms accepted',
-    ];
-
-/// The label for an insurance verdict, as the artist is shown it.
-const insuranceStatusLabel = {
-  ReviewStatus.notSubmitted: 'Not submitted',
-  ReviewStatus.submitted: 'Pending review',
-  ReviewStatus.approved: 'Verified',
-  ReviewStatus.rejected: 'Rejected — resubmit',
-};
-
-/// The questions an artist asks about cover, answered once. Port of
-/// `insurance-faq-chat.tsx`; not a chatbot - there is nothing to answer a free
-/// question, so it is a fixed set.
-const insuranceFaqs = [
-  (
-    question: 'What does the insurance actually cover?',
-    answer: 'Theft, fire, transit damage and loss while the piece is out of your hands — in transit or on display '
-        'with an aggregator. It does not cover normal wear and tear.',
-  ),
-  (
-    question: 'What happens if I decline it?',
-    answer: 'You can still list your work, but GalleryZone, its aggregators and logistics partners carry no '
-        'liability for the piece in transit. Declining is only allowed for marketplace-only listings — aggregator '
-        'display requires cover.',
-  ),
-  (
-    question: 'Who pays for the policy?',
-    answer: "You buy it directly through the insurer. The premium isn't collected by GalleryZone — it's a separate "
-        'charge from them, not deducted from your settlement.',
-  ),
-  (
-    question: 'Where do I get my policy/certificate number?',
-    answer: 'After you complete the application on the $insurancePartner site, they issue a policy or certificate '
-        'number by email. Paste that into the field above once you have it.',
-  ),
-  (
-    question: 'How long until GalleryZone verifies it?',
-    answer: "Admin review usually clears within a couple of business days. You'll see the status change here from "
-        '"Pending review" to "Verified".',
-  ),
+List<String> missingForAggregatorListing(
+  ArtworkPhysical physical, {
+  required bool termsAccepted,
+}) => [
+  ...missingForAggregator(physical),
+  if (!termsAccepted) 'aggregator terms accepted',
 ];

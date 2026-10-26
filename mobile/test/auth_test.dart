@@ -22,20 +22,28 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AuthAck> register(RegisterInput input, {bool simulateError = false}) async =>
-      AuthAck(email: input.email);
+  Future<AuthAck> register(
+    RegisterInput input, {
+    bool simulateError = false,
+  }) async => AuthAck(email: input.email);
 
   @override
-  Future<AuthAck> forgotPassword(ForgotPasswordInput input, {bool simulateError = false}) async =>
-      AuthAck(email: input.email);
+  Future<AuthAck> forgotPassword(
+    ForgotPasswordInput input, {
+    bool simulateError = false,
+  }) async => AuthAck(email: input.email);
 
   @override
-  Future<AuthResult> resetPassword(ResetPasswordInput input, {bool simulateError = false}) async =>
-      const AuthResult();
+  Future<AuthResult> resetPassword(
+    ResetPasswordInput input, {
+    bool simulateError = false,
+  }) async => const AuthResult();
 
   @override
-  Future<AuthResult> verifyEmail({String? token, bool simulateError = false}) async =>
-      const AuthResult();
+  Future<AuthResult> verifyEmail({
+    String? token,
+    bool simulateError = false,
+  }) async => const AuthResult();
 
   @override
   Future<void> signOut() async {}
@@ -109,8 +117,9 @@ void main() {
     });
   });
 
-  testWidgets('login rejects a bad email before calling the repository',
-      (tester) async {
+  testWidgets('login rejects a bad email before calling the repository', (
+    tester,
+  ) async {
     final repository = _FakeAuthRepository();
     await tester.pumpWidget(
       ProviderScope(

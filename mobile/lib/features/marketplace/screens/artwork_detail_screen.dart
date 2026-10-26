@@ -142,7 +142,6 @@ class _ArtworkDetailBody extends ConsumerWidget {
                 ],
               ),
               const Spacer(),
-              if (artwork.insured) const _InsuranceChip(),
             ],
           ),
           const SizedBox(height: 20),
@@ -191,6 +190,27 @@ class _ArtworkDetailBody extends ConsumerWidget {
                   child: Text(
                     'Sold by a verified GalleryZone artist.',
                     style: theme.textTheme.labelSmall,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (artwork.exclusive) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  LucideIcons.sparkles,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Exclusive to GalleryZone',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
                   ),
                 ),
               ],
@@ -406,6 +426,8 @@ class _SpecGrid extends StatelessWidget {
     final dimensions = dimensionsLabel(artwork.dimensions);
     final specs = {
       'Category': humanize(artwork.category),
+      if (artwork.artworkType != null && artwork.artworkType!.trim().isNotEmpty)
+        'Art form': artwork.artworkType!.trim(),
       'Medium': humanize(artwork.medium),
       'Dimensions': dimensions.isEmpty ? 'Not specified' : dimensions,
       'Year': artwork.yearCreated?.toString() ?? 'Not specified',
@@ -437,40 +459,6 @@ class _SpecGrid extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _InsuranceChip extends StatelessWidget {
-  const _InsuranceChip();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ActionChip(
-      avatar: Icon(
-        LucideIcons.shieldCheck,
-        size: 14,
-        color: theme.colorScheme.tertiary,
-      ),
-      label: const Text('Insured'),
-      onPressed: () => showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Insured in transit'),
-          content: const Text(
-            'Transit insurance is recommended for artworks valued above ₹20,000, '
-            'in partnership with HDFC ERGO. This piece qualifies and ships fully '
-            'covered.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it'),
-            ),
-          ],
-        ),
       ),
     );
   }

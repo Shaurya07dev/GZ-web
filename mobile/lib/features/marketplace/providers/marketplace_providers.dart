@@ -29,11 +29,11 @@ class MarketplaceFeed {
   });
 
   factory MarketplaceFeed.first(MarketplacePage page) => MarketplaceFeed(
-        artworks: page.artworks,
-        total: page.total,
-        page: page.page,
-        pageSize: page.pageSize,
-      );
+    artworks: page.artworks,
+    total: page.total,
+    page: page.page,
+    pageSize: page.pageSize,
+  );
 
   final List<Artwork> artworks;
 
@@ -51,7 +51,8 @@ class MarketplaceFeed {
 
   bool get hasMore => page * pageSize < total;
 
-  MarketplaceFeed copyWith({bool? loadingMore, bool? loadMoreFailed}) => MarketplaceFeed(
+  MarketplaceFeed copyWith({bool? loadingMore, bool? loadMoreFailed}) =>
+      MarketplaceFeed(
         artworks: artworks,
         total: total,
         page: page,
@@ -66,7 +67,10 @@ class MarketplaceFeed {
   /// asking for the next one forever.
   MarketplaceFeed append(MarketplacePage next) {
     final seen = {for (final artwork in artworks) artwork.id};
-    final added = [for (final artwork in next.artworks) if (seen.add(artwork.id)) artwork];
+    final added = [
+      for (final artwork in next.artworks)
+        if (seen.add(artwork.id)) artwork,
+    ];
     return MarketplaceFeed(
       artworks: [...artworks, ...added],
       total: next.artworks.isEmpty ? artworks.length : next.total,
@@ -89,8 +93,9 @@ class MarketplaceFeedNotifier extends AsyncNotifier<MarketplaceFeed> {
   final ArtworkFilters filters;
 
   @override
-  Future<MarketplaceFeed> build() async =>
-      MarketplaceFeed.first(await ref.watch(artworkRepositoryProvider).list(filters));
+  Future<MarketplaceFeed> build() async => MarketplaceFeed.first(
+    await ref.watch(artworkRepositoryProvider).list(filters),
+  );
 
   /// Appends the next page. Safe to call as often as the scroll position
   /// likes: it does nothing while a page is in flight or when there is no
@@ -101,7 +106,9 @@ class MarketplaceFeedNotifier extends AsyncNotifier<MarketplaceFeed> {
     final loading = current.copyWith(loadingMore: true, loadMoreFailed: false);
     state = AsyncData(loading);
     try {
-      final next = await ref.read(artworkRepositoryProvider).list(filters.copyWith(page: current.page + 1));
+      final next = await ref
+          .read(artworkRepositoryProvider)
+          .list(filters.copyWith(page: current.page + 1));
       // Refreshed or left while the page was in flight: this answer is stale.
       if (!ref.mounted || !identical(state.value, loading)) return;
       state = AsyncData(current.append(next));
@@ -113,22 +120,28 @@ class MarketplaceFeedNotifier extends AsyncNotifier<MarketplaceFeed> {
 }
 
 final marketplaceFeedProvider = AsyncNotifierProvider.autoDispose
-    .family<MarketplaceFeedNotifier, MarketplaceFeed, ArtworkFilters>(MarketplaceFeedNotifier.new);
+    .family<MarketplaceFeedNotifier, MarketplaceFeed, ArtworkFilters>(
+      MarketplaceFeedNotifier.new,
+    );
 
-final artworkProvider =
-    FutureProvider.autoDispose.family<Artwork?, String>((ref, id) {
+final artworkProvider = FutureProvider.autoDispose.family<Artwork?, String>((
+  ref,
+  id,
+) {
   return ref.watch(artworkRepositoryProvider).get(id);
 });
 
 /// A set of artwork ids, compared by content so it can key a provider family:
 /// the same ids in any order are the same question.
 class IdSet {
-  IdSet(Iterable<String> ids) : ids = List.unmodifiable({...ids}.toList()..sort());
+  IdSet(Iterable<String> ids)
+    : ids = List.unmodifiable({...ids}.toList()..sort());
 
   final List<String> ids;
 
   @override
-  bool operator ==(Object other) => other is IdSet && listEquals(other.ids, ids);
+  bool operator ==(Object other) =>
+      other is IdSet && listEquals(other.ids, ids);
 
   @override
   int get hashCode => Object.hashAll(ids);
@@ -137,34 +150,38 @@ class IdSet {
 /// The pieces behind a list of ids - the wishlist - in any status. Asked for by
 /// id rather than by scanning the marketplace, so a piece that has since sold
 /// still shows, with its real status, instead of silently vanishing.
-final artworksByIdsProvider =
-    FutureProvider.autoDispose.family<Map<String, Artwork>, IdSet>((ref, ids) async {
-  if (ids.ids.isEmpty) return const {};
-  final found = await ref.watch(artworkRepositoryProvider).getMany(ids.ids);
-  return {for (final artwork in found) artwork.id: artwork};
-});
+final artworksByIdsProvider = FutureProvider.autoDispose
+    .family<Map<String, Artwork>, IdSet>((ref, ids) async {
+      if (ids.ids.isEmpty) return const {};
+      final found = await ref.watch(artworkRepositoryProvider).getMany(ids.ids);
+      return {for (final artwork in found) artwork.id: artwork};
+    });
 
-final artworksByArtistProvider =
-    FutureProvider.autoDispose.family<List<Artwork>, String>((ref, artistId) {
-  return ref.watch(artworkRepositoryProvider).listByArtist(artistId);
-});
+final artworksByArtistProvider = FutureProvider.autoDispose
+    .family<List<Artwork>, String>((ref, artistId) {
+      return ref.watch(artworkRepositoryProvider).listByArtist(artistId);
+    });
 
-final artistProfileProvider =
-    FutureProvider.autoDispose.family<ArtistProfile?, String>((ref, id) {
-  return ref.watch(artworkRepositoryProvider).getArtistProfile(id);
-});
+final artistProfileProvider = FutureProvider.autoDispose
+    .family<ArtistProfile?, String>((ref, id) {
+      return ref.watch(artworkRepositoryProvider).getArtistProfile(id);
+    });
 
 /// The unfiltered marketplace at the API's largest page. Its facets are the
 /// filter choices that exist right now — across the whole live marketplace,
 /// not the page in hand, so no option is a dead end and nothing is hard-coded —
 /// and its pieces let the sheet count what each option would leave.
-final marketplaceOverviewProvider = FutureProvider.autoDispose<MarketplacePage>((ref) {
-  return ref
-      .watch(artworkRepositoryProvider)
-      .list(const ArtworkFilters(pageSize: marketplaceMaxPageSize));
-});
+final marketplaceOverviewProvider = FutureProvider.autoDispose<MarketplacePage>(
+  (ref) {
+    return ref
+        .watch(artworkRepositoryProvider)
+        .list(const ArtworkFilters(pageSize: marketplaceMaxPageSize));
+  },
+);
 
-final artworkFacetsProvider = FutureProvider.autoDispose<MarketplaceFacets>((ref) async {
+final artworkFacetsProvider = FutureProvider.autoDispose<MarketplaceFacets>((
+  ref,
+) async {
   return (await ref.watch(marketplaceOverviewProvider.future)).facets;
 });
 
@@ -179,9 +196,12 @@ class WishlistNotifier extends Notifier<Set<String>> {
   static const _key = 'wishlist';
 
   @override
-  Set<String> build() =>
-      MockDb.getCollection<String>(_key, () => const [], (json) => json['id'] as String, (id) => {'id': id})
-          .toSet();
+  Set<String> build() => MockDb.getCollection<String>(
+    _key,
+    () => const [],
+    (json) => json['id'] as String,
+    (id) => {'id': id},
+  ).toSet();
 
   bool has(String artworkId) => state.contains(artworkId);
 
@@ -193,8 +213,9 @@ class WishlistNotifier extends Notifier<Set<String>> {
   }
 }
 
-final wishlistProvider =
-    NotifierProvider<WishlistNotifier, Set<String>>(WishlistNotifier.new);
+final wishlistProvider = NotifierProvider<WishlistNotifier, Set<String>>(
+  WishlistNotifier.new,
+);
 
 /// Artists this device follows. Deliberately the same shape as
 /// [WishlistNotifier] — a persisted set of ids with no API behind it yet —
@@ -208,11 +229,11 @@ class FollowsNotifier extends Notifier<Set<String>> {
 
   @override
   Set<String> build() => MockDb.getCollection<String>(
-        _key,
-        () => const [],
-        (json) => json['id'] as String,
-        (id) => {'id': id},
-      ).toSet();
+    _key,
+    () => const [],
+    (json) => json['id'] as String,
+    (id) => {'id': id},
+  ).toSet();
 
   bool has(String artistId) => state.contains(artistId);
 
@@ -224,8 +245,9 @@ class FollowsNotifier extends Notifier<Set<String>> {
   }
 }
 
-final followsProvider =
-    NotifierProvider<FollowsNotifier, Set<String>>(FollowsNotifier.new);
+final followsProvider = NotifierProvider<FollowsNotifier, Set<String>>(
+  FollowsNotifier.new,
+);
 
 /// Every public artist, keyed by id — the join target for the Following list.
 final artistsProvider = FutureProvider.autoDispose<List<ArtistProfile>>((ref) {

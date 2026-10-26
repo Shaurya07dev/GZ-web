@@ -61,14 +61,19 @@ class FlutterNfcKitDevice implements NfcDevice {
       iosAlertMessage: 'Hold the tag to the back of your phone',
       iosMultipleTagMessage: 'More than one tag found. Hold just one.',
     );
-    return NfcChip(uid: normalizeTagUid(tag.id), isMifareUltralight: tag.type == NFCTagType.mifare_ultralight);
+    return NfcChip(
+      uid: normalizeTagUid(tag.id),
+      isMifareUltralight: tag.type == NFCTagType.mifare_ultralight,
+    );
   }
 
   @override
-  Future<Uint8List> transceive(Uint8List command) => FlutterNfcKit.transceive(command);
+  Future<Uint8List> transceive(Uint8List command) =>
+      FlutterNfcKit.transceive(command);
 
   @override
-  Future<void> writeUrl(String url) => FlutterNfcKit.writeNDEFRecords([ndef.UriRecord.fromString(url)]);
+  Future<void> writeUrl(String url) =>
+      FlutterNfcKit.writeNDEFRecords([ndef.UriRecord.fromString(url)]);
 
   @override
   Future<String?> readUrl() async {
@@ -82,7 +87,10 @@ class FlutterNfcKitDevice implements NfcDevice {
   @override
   Future<void> finish({String? message, String? error}) async {
     try {
-      await FlutterNfcKit.finish(iosAlertMessage: message, iosErrorMessage: error);
+      await FlutterNfcKit.finish(
+        iosAlertMessage: message,
+        iosErrorMessage: error,
+      );
     } catch (_) {
       // Closing a session that is already gone is not worth telling anyone about.
     }

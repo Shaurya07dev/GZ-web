@@ -21,8 +21,11 @@ import 'mappers/commerce_mappers.dart';
 ///     simulated mode (the API says so): the buyer's own simulate call;
 ///  4. read the order back.
 class RemoteCheckoutRepository implements CheckoutRepository {
-  RemoteCheckoutRepository({required this.api, required this.gateway, Random? random})
-      : _random = random ?? Random.secure();
+  RemoteCheckoutRepository({
+    required this.api,
+    required this.gateway,
+    Random? random,
+  }) : _random = random ?? Random.secure();
 
   final ApiClient api;
   final PaymentGateway gateway;
@@ -30,12 +33,18 @@ class RemoteCheckoutRepository implements CheckoutRepository {
 
   /// 32 hex characters; the API requires at least 16. One per checkout
   /// attempt, so a double tap or a retried request cannot create two orders.
-  String _idempotencyKey() =>
-      List.generate(16, (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+  String _idempotencyKey() => List.generate(
+    16,
+    (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
 
   @override
-  Future<CheckoutQuote> getQuote(String artworkId) async =>
-      quoteFromApi(await api.getMap('/v1/artworks/${Uri.encodeComponent(artworkId)}/quote', auth: false));
+  Future<CheckoutQuote> getQuote(String artworkId) async => quoteFromApi(
+    await api.getMap(
+      '/v1/artworks/${Uri.encodeComponent(artworkId)}/quote',
+      auth: false,
+    ),
+  );
 
   @override
   Future<Order> createOrder({
@@ -46,10 +55,20 @@ class RemoteCheckoutRepository implements CheckoutRepository {
   }) async {
     final created = await api.post(
       '/v1/orders',
-      body: {'artworkId': artworkId, 'addressId': addressId, 'idempotencyKey': _idempotencyKey()},
+      body: {
+        'artworkId': artworkId,
+        'addressId': addressId,
+        'idempotencyKey': _idempotencyKey(),
+      },
     );
     final orderId = asMap(created)['orderId'] as String? ?? '';
-    if (orderId.isEmpty) throw const ApiError(status: 0, code: 'bad_response', message: 'The order could not be created.');
+    if (orderId.isEmpty) {
+      throw const ApiError(
+        status: 0,
+        code: 'bad_response',
+        message: 'The order could not be created.',
+      );
+    }
     final base = '/v1/orders/${Uri.encodeComponent(orderId)}';
 
     final session = asMap(await api.post('$base/payment/session'));
@@ -70,7 +89,11 @@ class RemoteCheckoutRepository implements CheckoutRepository {
 
     final order = await getOrder(orderId);
     if (order == null) {
-      throw const ApiError(status: 0, code: 'bad_response', message: 'Your order was placed but could not be read back.');
+      throw const ApiError(
+        status: 0,
+        code: 'bad_response',
+        message: 'Your order was placed but could not be read back.',
+      );
     }
     return order;
   }
@@ -78,8 +101,11 @@ class RemoteCheckoutRepository implements CheckoutRepository {
   /// Nothing advances an order from the phone: fulfilment belongs to
   /// GalleryZone's operations team, who move it forward in the admin console.
   @override
-  Future<Order> advanceOrder(String id) =>
-      Future.error(UnsupportedError('Orders are moved along by GalleryZone, not from the app.'));
+  Future<Order> advanceOrder(String id) => Future.error(
+    UnsupportedError(
+      'Orders are moved along by GalleryZone, not from the app.',
+    ),
+  );
 
   @override
   Future<List<Order>> listOrders() async {
@@ -90,7 +116,9 @@ class RemoteCheckoutRepository implements CheckoutRepository {
   @override
   Future<Order?> getOrder(String id) async {
     try {
-      return orderFromApi(await api.getMap('/v1/orders/${Uri.encodeComponent(id)}'));
+      return orderFromApi(
+        await api.getMap('/v1/orders/${Uri.encodeComponent(id)}'),
+      );
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
       rethrow;

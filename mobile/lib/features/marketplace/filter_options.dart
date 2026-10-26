@@ -23,9 +23,11 @@ class PriceBand {
     return '${formatInr(low ?? 0)} – ${formatInr(high ?? 0)}';
   }
 
-  bool contains(double price) => (min == null || price >= min!) && (max == null || price < max!);
+  bool contains(double price) =>
+      (min == null || price >= min!) && (max == null || price < max!);
 
-  bool matches(double? minPrice, double? maxPrice) => minPrice == min && maxPrice == max;
+  bool matches(double? minPrice, double? maxPrice) =>
+      minPrice == min && maxPrice == max;
 }
 
 const priceBands = [
@@ -74,7 +76,8 @@ class FilterCounts {
       return counts;
     }
 
-    String? text(String? value) => (value == null || value.isEmpty) ? null : value;
+    String? text(String? value) =>
+        (value == null || value.isEmpty) ? null : value;
 
     return FilterCounts(
       category: tally((a) => text(a.category)),
@@ -82,7 +85,10 @@ class FilterCounts {
       size: tally((a) => a.sizeBand),
       artist: tally((a) => text(a.artistId)),
       location: tally((a) => text(a.artistLocation)),
-      price: [for (final band in priceBands) pieces.where((a) => band.contains(a.customerPrice)).length],
+      price: [
+        for (final band in priceBands)
+          pieces.where((a) => band.contains(a.customerPrice)).length,
+      ],
     );
   }
 }

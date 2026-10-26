@@ -23,12 +23,16 @@ class ArtistStatStrip extends StatelessWidget {
     final range = low == null || high == null
         ? '—'
         : low == high
-            ? formatInr(low)
-            : '${formatInr(low)} – ${formatInr(high)}';
+        ? formatInr(low)
+        : '${formatInr(low)} – ${formatInr(high)}';
     final cells = [
       _Cell('Works listed', '${stats.artworksListed}'),
       _Cell('Works sold', '${stats.worksSold}'),
-      _Cell('Price range', range, hint: low == null ? null : 'Listed price, GST included'),
+      _Cell(
+        'Price range',
+        range,
+        hint: low == null ? null : 'Listed price, GST included',
+      ),
       _Cell('On GalleryZone since', stats.joinedLabel),
     ];
     final reviews = rating;
@@ -39,17 +43,23 @@ class ArtistStatStrip extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: DecoratedBox(
-            decoration: BoxDecoration(border: Border.all(color: theme.colorScheme.outline)),
+            decoration: BoxDecoration(
+              border: Border.all(color: theme.colorScheme.outline),
+            ),
             child: Column(
               children: [
                 for (var row = 0; row < cells.length; row += 2) ...[
-                  if (row > 0) Divider(height: 1, color: theme.colorScheme.outline),
+                  if (row > 0)
+                    Divider(height: 1, color: theme.colorScheme.outline),
                   IntrinsicHeight(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(child: _StatCell(cell: cells[row])),
-                        VerticalDivider(width: 1, color: theme.colorScheme.outline),
+                        VerticalDivider(
+                          width: 1,
+                          color: theme.colorScheme.outline,
+                        ),
                         Expanded(child: _StatCell(cell: cells[row + 1])),
                       ],
                     ),
@@ -67,7 +77,9 @@ class ArtistStatStrip extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 reviews.average.toStringAsFixed(1),
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -87,12 +99,18 @@ class ArtistStatStrip extends StatelessWidget {
             children: [
               for (final medium in stats.mediums.take(5))
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: theme.colorScheme.outline),
                   ),
-                  child: Text(humanize(medium), style: theme.textTheme.labelMedium),
+                  child: Text(
+                    humanize(medium),
+                    style: theme.textTheme.labelMedium,
+                  ),
                 ),
             ],
           ),
@@ -134,7 +152,8 @@ class _StatCell extends StatelessWidget {
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-            if (cell.hint != null) Text(cell.hint!, style: theme.textTheme.labelSmall),
+            if (cell.hint != null)
+              Text(cell.hint!, style: theme.textTheme.labelSmall),
           ],
         ),
       ),

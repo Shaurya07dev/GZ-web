@@ -29,10 +29,14 @@ Future<void> main() async {
   var role = RoleX.fromId(await SecureSession.getRole());
   final overrides = <Override>[];
   if (!AppConfig.useMockBackend) {
-    final tokens = TokenManager(auth: FirebaseRestAuth(apiKey: AppConfig.firebaseApiKey));
+    final tokens = TokenManager(
+      auth: FirebaseRestAuth(apiKey: AppConfig.firebaseApiKey),
+    );
     await tokens.load();
     if (!tokens.hasSession) role = null;
-    overrides.addAll(remoteBackendOverrides(tokens, gateway: const RazorpayGateway()));
+    overrides.addAll(
+      remoteBackendOverrides(tokens, gateway: const RazorpayGateway()),
+    );
   }
   runApp(
     ProviderScope(

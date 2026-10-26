@@ -16,20 +16,32 @@ class _Auth implements AuthRepository {
   int signOuts = 0;
 
   @override
-  Future<AuthAck> login(LoginInput input, {bool simulateError = false}) async => AuthAck(email: input.email);
-
-  @override
-  Future<AuthAck> register(RegisterInput input, {bool simulateError = false}) async => AuthAck(email: input.email);
-
-  @override
-  Future<AuthAck> forgotPassword(ForgotPasswordInput input, {bool simulateError = false}) async =>
+  Future<AuthAck> login(LoginInput input, {bool simulateError = false}) async =>
       AuthAck(email: input.email);
 
   @override
-  Future<AuthResult> resetPassword(ResetPasswordInput input, {bool simulateError = false}) async => const AuthResult();
+  Future<AuthAck> register(
+    RegisterInput input, {
+    bool simulateError = false,
+  }) async => AuthAck(email: input.email);
 
   @override
-  Future<AuthResult> verifyEmail({String? token, bool simulateError = false}) async => const AuthResult();
+  Future<AuthAck> forgotPassword(
+    ForgotPasswordInput input, {
+    bool simulateError = false,
+  }) async => AuthAck(email: input.email);
+
+  @override
+  Future<AuthResult> resetPassword(
+    ResetPasswordInput input, {
+    bool simulateError = false,
+  }) async => const AuthResult();
+
+  @override
+  Future<AuthResult> verifyEmail({
+    String? token,
+    bool simulateError = false,
+  }) async => const AuthResult();
 
   @override
   Future<void> signOut() async => signOuts++;
@@ -42,12 +54,12 @@ class _Auth implements AuthRepository {
 }
 
 CurrentUser _user(String role) => CurrentUser(
-      uid: 'u1',
-      roleId: role,
-      status: 'active',
-      name: 'Aarav Shah',
-      email: 'a@b.co',
-    );
+  uid: 'u1',
+  roleId: role,
+  status: 'active',
+  name: 'Aarav Shah',
+  email: 'a@b.co',
+);
 
 ProviderContainer _container(_Auth auth, {Role? role}) {
   final container = ProviderContainer(
@@ -77,8 +89,14 @@ void main() {
     });
 
     test('a safe next path wins over the role\'s landing', () {
-      expect(landingAfterLogin(Role.artist, next: '/checkout?artworkId=aw1'), '/checkout?artworkId=aw1');
-      expect(landingAfterLogin(Role.customer, next: '/transfer/aw1.ev1'), '/transfer/aw1.ev1');
+      expect(
+        landingAfterLogin(Role.artist, next: '/checkout?artworkId=aw1'),
+        '/checkout?artworkId=aw1',
+      );
+      expect(
+        landingAfterLogin(Role.customer, next: '/transfer/aw1.ev1'),
+        '/transfer/aw1.ev1',
+      );
     });
 
     test('a new account lands where the work to do is', () {
@@ -91,7 +109,10 @@ void main() {
   group('next can never leave the app', () {
     test('plain app paths pass', () {
       expect(safeNextPath('/marketplace/aw1'), '/marketplace/aw1');
-      expect(safeNextPath('/checkout?artworkId=aw1'), '/checkout?artworkId=aw1');
+      expect(
+        safeNextPath('/checkout?artworkId=aw1'),
+        '/checkout?artworkId=aw1',
+      );
     });
 
     test('anything that could leave the app is dropped', () {
@@ -111,52 +132,90 @@ void main() {
     });
 
     test('the sign-in screens themselves are not a place to return to', () {
-      for (final auth in ['/login', '/register', '/forgot-password', '/reset-password?token=x', '/verify-email']) {
+      for (final auth in [
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password?token=x',
+        '/verify-email',
+      ]) {
         expect(safeNextPath(auth), isNull, reason: auth);
       }
       expect(safeNextPath('/login/extra'), isNull);
-      expect(safeNextPath('/loginish'), '/loginish', reason: 'a prefix match must not over-block');
+      expect(
+        safeNextPath('/loginish'),
+        '/loginish',
+        reason: 'a prefix match must not over-block',
+      );
     });
   });
 
   group('the router guard', () {
-    test('checkout and a hand-over need an account, and bring the visitor back', () {
-      expect(redirectFor(null, '/checkout?artworkId=aw1'), '/login?next=%2Fcheckout%3FartworkId%3Daw1');
-      expect(redirectFor(null, '/transfer/aw1.ev1'), '/login?next=%2Ftransfer%2Faw1.ev1');
-      expect(redirectFor(Role.customer, '/checkout?artworkId=aw1'), isNull);
-      expect(redirectFor(Role.customer, '/transfer/aw1.ev1'), isNull);
-    });
+    test(
+      'checkout and a hand-over need an account, and bring the visitor back',
+      () {
+        expect(
+          redirectFor(null, '/checkout?artworkId=aw1'),
+          '/login?next=%2Fcheckout%3FartworkId%3Daw1',
+        );
+        expect(
+          redirectFor(null, '/transfer/aw1.ev1'),
+          '/login?next=%2Ftransfer%2Faw1.ev1',
+        );
+        expect(redirectFor(Role.customer, '/checkout?artworkId=aw1'), isNull);
+        expect(redirectFor(Role.customer, '/transfer/aw1.ev1'), isNull);
+      },
+    );
 
     test('browsing stays open to everyone', () {
-      for (final path in ['/marketplace', '/marketplace/aw1', '/artists/a1', '/verify/aw1', '/about', '/faq']) {
+      for (final path in [
+        '/marketplace',
+        '/marketplace/aw1',
+        '/artists/a1',
+        '/verify/aw1',
+        '/about',
+        '/faq',
+      ]) {
         expect(redirectFor(null, path), isNull, reason: path);
       }
     });
 
     test('portals still bounce the wrong role home', () {
       expect(redirectFor(Role.customer, '/dashboard/artworks'), '/account');
-      expect(redirectFor(null, '/aggregator/inventory'), '/login?next=%2Faggregator%2Finventory');
+      expect(
+        redirectFor(null, '/aggregator/inventory'),
+        '/login?next=%2Faggregator%2Finventory',
+      );
     });
   });
 
   group('the session', () {
-    test('signing in remembers the role; signing out forgets everything', () async {
-      final auth = _Auth();
-      final container = _container(auth);
-      expect(container.read(sessionProvider), isNull);
+    test(
+      'signing in remembers the role; signing out forgets everything',
+      () async {
+        final auth = _Auth();
+        final container = _container(auth);
+        expect(container.read(sessionProvider), isNull);
 
-      await container.read(sessionProvider.notifier).signIn(Role.artist);
-      expect(container.read(sessionProvider), Role.artist);
+        await container.read(sessionProvider.notifier).signIn(Role.artist);
+        expect(container.read(sessionProvider), Role.artist);
 
-      await container.read(sessionProvider.notifier).signOut();
-      expect(container.read(sessionProvider), isNull);
-      expect(auth.signOuts, 1, reason: 'the server-side tokens are dropped too');
-    });
+        await container.read(sessionProvider.notifier).signOut();
+        expect(container.read(sessionProvider), isNull);
+        expect(
+          auth.signOuts,
+          1,
+          reason: 'the server-side tokens are dropped too',
+        );
+      },
+    );
 
     test('the server\'s account decides the role', () async {
       final auth = _Auth(user: _user('aggregator'));
       final container = _container(auth, role: Role.artist);
-      container.read(sessionProvider.notifier).reconcile(await container.read(accountProvider.future));
+      container
+          .read(sessionProvider.notifier)
+          .reconcile(await container.read(accountProvider.future));
       await Future<void>.delayed(Duration.zero);
       expect(container.read(sessionProvider), Role.aggregator);
     });
@@ -169,15 +228,22 @@ void main() {
       expect(container.read(sessionEndedProvider), isTrue);
 
       await container.read(sessionProvider.notifier).signIn(Role.customer);
-      expect(container.read(sessionEndedProvider), isFalse, reason: 'cleared by the next sign-in');
+      expect(
+        container.read(sessionEndedProvider),
+        isFalse,
+        reason: 'cleared by the next sign-in',
+      );
     });
 
-    test('an admin account has no portal here, so a cached session for it ends', () async {
-      final container = _container(_Auth(), role: Role.customer);
-      container.read(sessionProvider.notifier).reconcile(_user('admin'));
-      await Future<void>.delayed(Duration.zero);
-      expect(container.read(sessionProvider), isNull);
-    });
+    test(
+      'an admin account has no portal here, so a cached session for it ends',
+      () async {
+        final container = _container(_Auth(), role: Role.customer);
+        container.read(sessionProvider.notifier).reconcile(_user('admin'));
+        await Future<void>.delayed(Duration.zero);
+        expect(container.read(sessionProvider), isNull);
+      },
+    );
 
     test('nothing happens when nobody is signed in', () {
       final container = _container(_Auth());

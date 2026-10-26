@@ -9,7 +9,12 @@ import '../../../data/models/artwork.dart';
 /// `SvgPicture.string`, which needs no asset registration for shapes this
 /// small.
 class SocialGlyph extends StatelessWidget {
-  const SocialGlyph({super.key, required this.platform, this.size = 16, this.color});
+  const SocialGlyph({
+    super.key,
+    required this.platform,
+    this.size = 16,
+    this.color,
+  });
 
   final SocialProofPlatform platform;
   final double size;
@@ -18,27 +23,34 @@ class SocialGlyph extends StatelessWidget {
   static const _paths = <SocialProofPlatform, String>{
     SocialProofPlatform.instagram:
         '<rect x="3" y="3" width="18" height="18" rx="5"/>'
-            '<circle cx="12" cy="12" r="4.2"/>'
-            '<circle cx="17.2" cy="6.8" r="0.6" fill="COLOR" stroke="none"/>',
+        '<circle cx="12" cy="12" r="4.2"/>'
+        '<circle cx="17.2" cy="6.8" r="0.6" fill="COLOR" stroke="none"/>',
     SocialProofPlatform.x: '<path d="M5 5 L19 19"/><path d="M19 5 L5 19"/>',
-    SocialProofPlatform.youtube: '<rect x="3" y="6" width="18" height="12" rx="4"/>'
+    SocialProofPlatform.youtube:
+        '<rect x="3" y="6" width="18" height="12" rx="4"/>'
         '<path d="M10.3 9.4 L15 12 L10.3 14.6 Z" fill="COLOR" stroke="none"/>',
     SocialProofPlatform.tiktok:
         '<path d="M13.5 3.5 v11.3 a3.3 3.3 0 1 1 -3.3 -3.3 c0.3 0 0.6 0.03 0.9 0.08"/>'
-            '<path d="M13.5 3.5 a4.6 4.6 0 0 0 4.6 4.6"/>',
+        '<path d="M13.5 3.5 a4.6 4.6 0 0 0 4.6 4.6"/>',
+    SocialProofPlatform.website:
+        '<circle cx="12" cy="12" r="9"/>'
+        '<path d="M3 12 h18"/><path d="M12 3 a14 14 0 0 1 0 18"/>'
+        '<path d="M12 3 a14 14 0 0 0 0 18"/>',
   };
 
   static String label(SocialProofPlatform platform) => switch (platform) {
-        SocialProofPlatform.instagram => 'Instagram',
-        SocialProofPlatform.youtube => 'YouTube',
-        SocialProofPlatform.x => 'X',
-        SocialProofPlatform.tiktok => 'TikTok',
-      };
+    SocialProofPlatform.instagram => 'Instagram',
+    SocialProofPlatform.youtube => 'YouTube',
+    SocialProofPlatform.x => 'X',
+    SocialProofPlatform.tiktok => 'TikTok',
+    SocialProofPlatform.website => 'Website',
+  };
 
   @override
   Widget build(BuildContext context) {
     final tint = color ?? Theme.of(context).colorScheme.onSurface;
-    final hex = '#${(tint.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    final hex =
+        '#${(tint.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
     final body = _paths[platform]!.replaceAll('COLOR', hex);
     return SvgPicture.string(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '

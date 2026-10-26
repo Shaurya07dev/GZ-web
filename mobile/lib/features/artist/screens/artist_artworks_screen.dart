@@ -16,36 +16,48 @@ import '../widgets/artist_widgets.dart';
 /// "reserved" by an aggregator belongs under "With aggregator", and one that is
 /// "delivered" or "completed" is still a sale. Every status the API can return
 /// lands in exactly one bucket, so nothing is reachable only through "All".
-enum ArtworkBucket { all, draft, pending, live, aggregator, sold, soldElsewhere, returned }
+enum ArtworkBucket {
+  all,
+  draft,
+  pending,
+  live,
+  aggregator,
+  sold,
+  soldElsewhere,
+  returned,
+}
 
 extension ArtworkBucketX on ArtworkBucket {
   String get label => switch (this) {
-        ArtworkBucket.all => 'All',
-        ArtworkBucket.draft => 'Draft',
-        ArtworkBucket.pending => 'Pending',
-        ArtworkBucket.live => 'Live',
-        ArtworkBucket.aggregator => 'With aggregator',
-        ArtworkBucket.sold => 'Sold',
-        ArtworkBucket.soldElsewhere => 'Sold elsewhere',
-        ArtworkBucket.returned => 'Returned',
-      };
+    ArtworkBucket.all => 'All',
+    ArtworkBucket.draft => 'Draft',
+    ArtworkBucket.pending => 'Pending',
+    ArtworkBucket.live => 'Live',
+    ArtworkBucket.aggregator => 'With aggregator',
+    ArtworkBucket.sold => 'Sold',
+    ArtworkBucket.soldElsewhere => 'Sold elsewhere',
+    ArtworkBucket.returned => 'Returned',
+  };
 
   /// Null for "All".
   Set<ArtworkStatus>? get statuses => switch (this) {
-        ArtworkBucket.all => null,
-        ArtworkBucket.draft => const {ArtworkStatus.draft},
-        ArtworkBucket.pending => const {ArtworkStatus.pendingApproval},
-        ArtworkBucket.live => const {ArtworkStatus.marketplace},
-        ArtworkBucket.aggregator => const {ArtworkStatus.reserved, ArtworkStatus.withAggregator},
-        ArtworkBucket.sold => const {
-            ArtworkStatus.sold,
-            ArtworkStatus.settlementComplete,
-            ArtworkStatus.delivered,
-            ArtworkStatus.completed,
-          },
-        ArtworkBucket.soldElsewhere => const {ArtworkStatus.soldExternally},
-        ArtworkBucket.returned => const {ArtworkStatus.returned},
-      };
+    ArtworkBucket.all => null,
+    ArtworkBucket.draft => const {ArtworkStatus.draft},
+    ArtworkBucket.pending => const {ArtworkStatus.pendingApproval},
+    ArtworkBucket.live => const {ArtworkStatus.marketplace},
+    ArtworkBucket.aggregator => const {
+      ArtworkStatus.reserved,
+      ArtworkStatus.withAggregator,
+    },
+    ArtworkBucket.sold => const {
+      ArtworkStatus.sold,
+      ArtworkStatus.settlementComplete,
+      ArtworkStatus.delivered,
+      ArtworkStatus.completed,
+    },
+    ArtworkBucket.soldElsewhere => const {ArtworkStatus.soldExternally},
+    ArtworkBucket.returned => const {ArtworkStatus.returned},
+  };
 
   bool matches(ArtworkStatus status) => statuses?.contains(status) ?? true;
 }
@@ -61,7 +73,8 @@ class ArtistArtworksScreen extends ConsumerStatefulWidget {
   static const path = '/dashboard/artworks';
 
   @override
-  ConsumerState<ArtistArtworksScreen> createState() => _ArtistArtworksScreenState();
+  ConsumerState<ArtistArtworksScreen> createState() =>
+      _ArtistArtworksScreenState();
 }
 
 class _ArtistArtworksScreenState extends ConsumerState<ArtistArtworksScreen> {
@@ -145,10 +158,12 @@ class _Board extends ConsumerWidget {
     final filtered = [
       for (final entry in list)
         if (bucket.matches(entry.artwork.status) &&
-            (needle.isEmpty || entry.artwork.title.toLowerCase().contains(needle)))
+            (needle.isEmpty ||
+                entry.artwork.title.toLowerCase().contains(needle)))
           entry,
     ];
-    int countOf(ArtworkBucket b) => list.where((e) => b.matches(e.artwork.status)).length;
+    int countOf(ArtworkBucket b) =>
+        list.where((e) => b.matches(e.artwork.status)).length;
 
     return Column(
       children: [
@@ -158,7 +173,10 @@ class _Board extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('${list.length} ${list.length == 1 ? 'artwork' : 'artworks'}', style: theme.textTheme.titleLarge),
+                Text(
+                  '${list.length} ${list.length == 1 ? 'artwork' : 'artworks'}',
+                  style: theme.textTheme.titleLarge,
+                ),
                 const SizedBox(height: 2),
                 Text(
                   "Manage submissions, track status, and see what's live.",
@@ -195,7 +213,9 @@ class _Board extends ConsumerWidget {
                             Text(
                               '${countOf(option)}',
                               style: theme.textTheme.labelSmall?.copyWith(
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ],
@@ -230,8 +250,11 @@ class _Board extends ConsumerWidget {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                     itemCount: filtered.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) => ContentWidth(child: ArtistArtworkRow(entry: filtered[index])),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 10),
+                    itemBuilder: (context, index) => ContentWidth(
+                      child: ArtistArtworkRow(entry: filtered[index]),
+                    ),
                   ),
                 ),
         ),
@@ -261,14 +284,22 @@ class _Empty extends StatelessWidget {
       return const EmptyState(
         icon: LucideIcons.frame,
         title: "You haven't listed anything yet.",
-        description: 'Add your paintings here to get them listed on the marketplace.',
+        description:
+            'Add your paintings here to get them listed on the marketplace.',
       );
     }
     return EmptyState(
       icon: LucideIcons.searchX,
-      title: searching ? 'No matching artworks' : 'Nothing under “${bucket.label}” right now.',
-      description: searching ? 'Try a different filter or search term.' : 'Pieces move here as their status changes.',
-      action: OutlinedButton(onPressed: onShowAll, child: Text('Show all $total')),
+      title: searching
+          ? 'No matching artworks'
+          : 'Nothing under “${bucket.label}” right now.',
+      description: searching
+          ? 'Try a different filter or search term.'
+          : 'Pieces move here as their status changes.',
+      action: OutlinedButton(
+        onPressed: onShowAll,
+        child: Text('Show all $total'),
+      ),
     );
   }
 }
@@ -310,12 +341,15 @@ class ArtistArtworkRow extends ConsumerWidget {
                       artwork.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     Text(
                       [
                         humanize(artwork.medium),
-                        if (artwork.yearCreated != null) '${artwork.yearCreated}',
+                        if (artwork.yearCreated != null)
+                          '${artwork.yearCreated}',
                       ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -327,7 +361,8 @@ class ArtistArtworkRow extends ConsumerWidget {
                       runSpacing: 6,
                       children: [
                         ArtworkStatusPill(status: artwork.status),
-                        if (artwork.rarityType != null) RarityBadge(rarity: artwork.rarityType!),
+                        if (artwork.rarityType != null)
+                          RarityBadge(rarity: artwork.rarityType!),
                       ],
                     ),
                   ],
@@ -347,13 +382,19 @@ class ArtistArtworkRow extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text('Listed price', style: theme.textTheme.labelSmall),
-                  Text(formatInr(artwork.customerPrice), style: theme.textTheme.bodySmall),
+                  Text(
+                    formatInr(artwork.customerPrice),
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ),
             ],
           ),
           const Divider(height: 20),
-          Text(listingTypeLabel[artwork.listingType]!, style: theme.textTheme.labelSmall),
+          Text(
+            listingTypeLabel[artwork.listingType]!,
+            style: theme.textTheme.labelSmall,
+          ),
           const SizedBox(height: 4),
           Wrap(
             spacing: 16,
@@ -367,7 +408,8 @@ class ArtistArtworkRow extends ConsumerWidget {
                       ? 'Continue editing'
                       : 'Edit · ${editState.daysLeft} '
                             '${editState.daysLeft == 1 ? "day" : "days"} left',
-                  onTap: () => context.push('/dashboard/artworks/${artwork.id}/edit'),
+                  onTap: () =>
+                      context.push('/dashboard/artworks/${artwork.id}/edit'),
                 )
               else
                 _RowAction(
@@ -397,7 +439,11 @@ class ArtistArtworkRow extends ConsumerWidget {
   }
 }
 
-Future<void> _sendForReview(BuildContext context, WidgetRef ref, Artwork artwork) async {
+Future<void> _sendForReview(
+  BuildContext context,
+  WidgetRef ref,
+  Artwork artwork,
+) async {
   final messenger = ScaffoldMessenger.of(context);
   try {
     await ref.read(artistRepositoryProvider).submitForReview(artwork.id);
@@ -405,7 +451,9 @@ Future<void> _sendForReview(BuildContext context, WidgetRef ref, Artwork artwork
     ref.invalidate(artistKpisProvider);
     ref.invalidate(artistActivityProvider);
     messenger.showSnackBar(
-      const SnackBar(content: Text('Sent for review — it goes live once approved')),
+      const SnackBar(
+        content: Text('Sent for review — it goes live once approved'),
+      ),
     );
   } catch (error) {
     messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
@@ -415,9 +463,14 @@ Future<void> _sendForReview(BuildContext context, WidgetRef ref, Artwork artwork
 /// The withdrawal is irreversible and may cost the artist money, so the exact
 /// amount is named in the dialog rather than described as "a fee". The fee is
 /// raised for an admin to decide - it is not charged by this tap.
-Future<void> _confirmSoldElsewhere(BuildContext context, WidgetRef ref, ArtistArtwork entry) async {
+Future<void> _confirmSoldElsewhere(
+  BuildContext context,
+  WidgetRef ref,
+  ArtistArtwork entry,
+) async {
   final messenger = ScaffoldMessenger.of(context);
-  final fee = (entry.artwork.customerPrice * externalSalePenaltyRate).roundToDouble();
+  final fee = (entry.artwork.customerPrice * externalSalePenaltyRate)
+      .roundToDouble();
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -428,7 +481,10 @@ Future<void> _confirmSoldElsewhere(BuildContext context, WidgetRef ref, ArtistAr
         "admin's discretion.",
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
@@ -442,10 +498,14 @@ Future<void> _confirmSoldElsewhere(BuildContext context, WidgetRef ref, ArtistAr
   );
   if (!(confirmed ?? false)) return;
   try {
-    await ref.read(artistRepositoryProvider).markSoldElsewhere(entry.artwork.id);
+    await ref
+        .read(artistRepositoryProvider)
+        .markSoldElsewhere(entry.artwork.id);
     ref.invalidate(artistArtworksProvider);
     messenger.showSnackBar(
-      SnackBar(content: Text('"${entry.artwork.title}" is marked as sold elsewhere')),
+      SnackBar(
+        content: Text('"${entry.artwork.title}" is marked as sold elsewhere'),
+      ),
     );
   } catch (error) {
     messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
@@ -453,7 +513,12 @@ Future<void> _confirmSoldElsewhere(BuildContext context, WidgetRef ref, ArtistAr
 }
 
 class _RowAction extends StatelessWidget {
-  const _RowAction({required this.icon, required this.label, this.onTap, this.destructive = false});
+  const _RowAction({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.destructive = false,
+  });
 
   final IconData icon;
   final String label;
@@ -477,7 +542,10 @@ class _RowAction extends StatelessWidget {
           children: [
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 6),
-            Text(label, style: theme.textTheme.bodySmall?.copyWith(color: color)),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(color: color),
+            ),
           ],
         ),
       ),

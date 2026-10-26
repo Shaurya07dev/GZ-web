@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/auth.dart';
@@ -20,7 +21,7 @@ const aggregatorDestinations = <ShellDestination>[
   ShellDestination(icon: LucideIcons.layoutGrid, label: 'Dashboard'),
   ShellDestination(icon: LucideIcons.packageSearch, label: 'Browse'),
   ShellDestination(icon: LucideIcons.galleryVerticalEnd, label: 'Inventory'),
-  ShellDestination(icon: LucideIcons.wallet, label: 'Wallet'),
+  ShellDestination(icon: LucideIcons.landmark, label: 'Earnings'),
 ];
 
 /// Same adaptive structure as `CustomerShell` and `ArtistShell` — bottom bar
@@ -60,11 +61,15 @@ class AggregatorShell extends ConsumerWidget {
         bottomNavigationBar: Builder(
           builder: (context) => NavigationBar(
             selectedIndex: navigationShell.currentIndex,
-            onDestinationSelected: (index) => index == aggregatorDestinations.length
+            onDestinationSelected: (index) =>
+                index == aggregatorDestinations.length
                 ? Scaffold.of(context).openEndDrawer()
                 : _goBranch(index),
             destinations: [
-              for (final destination in [...aggregatorDestinations, profileDestination])
+              for (final destination in [
+                ...aggregatorDestinations,
+                profileDestination,
+              ])
                 NavigationDestination(
                   icon: Icon(destination.icon),
                   label: destination.label,
@@ -79,35 +84,39 @@ class AggregatorShell extends ConsumerWidget {
       endDrawer: drawer,
       body: Builder(
         builder: (context) => Row(
-        children: [
-          NavigationRail(
-            selectedIndex: navigationShell.currentIndex,
-            onDestinationSelected: (index) => index == aggregatorDestinations.length
-                ? Scaffold.of(context).openEndDrawer()
-                : _goBranch(index),
-            extended: size.isExpanded,
-            labelType: size.isExpanded ? null : NavigationRailLabelType.all,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                size.isExpanded ? 'GALLERYZONE' : 'GZ',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.tertiary,
-                      letterSpacing: 2,
-                    ),
-              ),
-            ),
-            destinations: [
-              for (final destination in [...aggregatorDestinations, profileDestination])
-                NavigationRailDestination(
-                  icon: Icon(destination.icon),
-                  label: Text(destination.label),
+          children: [
+            NavigationRail(
+              selectedIndex: navigationShell.currentIndex,
+              onDestinationSelected: (index) =>
+                  index == aggregatorDestinations.length
+                  ? Scaffold.of(context).openEndDrawer()
+                  : _goBranch(index),
+              extended: size.isExpanded,
+              labelType: size.isExpanded ? null : NavigationRailLabelType.all,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  size.isExpanded ? 'GALLERYZONE' : 'GZ',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.tertiary,
+                    letterSpacing: 2,
+                  ),
                 ),
-            ],
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(child: navigationShell),
-        ],
+              ),
+              destinations: [
+                for (final destination in [
+                  ...aggregatorDestinations,
+                  profileDestination,
+                ])
+                  NavigationRailDestination(
+                    icon: Icon(destination.icon),
+                    label: Text(destination.label),
+                  ),
+              ],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: navigationShell),
+          ],
         ),
       ),
     );

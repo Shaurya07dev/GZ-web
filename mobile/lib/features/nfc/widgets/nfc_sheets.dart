@@ -28,14 +28,20 @@ Future<void> showNfcSheet(
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => NfcSheet(artwork: artwork, mode: mode, onChanged: onChanged),
+    builder: (_) =>
+        NfcSheet(artwork: artwork, mode: mode, onChanged: onChanged),
   );
 }
 
 enum _Phase { idle, working, linked, locked, failed }
 
 class NfcSheet extends ConsumerStatefulWidget {
-  const NfcSheet({super.key, required this.artwork, required this.mode, required this.onChanged});
+  const NfcSheet({
+    super.key,
+    required this.artwork,
+    required this.mode,
+    required this.onChanged,
+  });
 
   final Artwork artwork;
   final NfcMode mode;
@@ -69,7 +75,11 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
         await flow.lock(widget.artwork.id, onProgress: onProgress);
       }
       widget.onChanged();
-      if (mounted) setState(() => _phase = _mode == NfcMode.link ? _Phase.linked : _Phase.locked);
+      if (mounted) {
+        setState(
+          () => _phase = _mode == NfcMode.link ? _Phase.linked : _Phase.locked,
+        );
+      }
     } on NfcFlowException catch (failure) {
       if (mounted) {
         setState(() {
@@ -85,18 +95,29 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
     final theme = Theme.of(context);
     final linking = _mode == NfcMode.link;
     final replacing = linking && widget.artwork.nfcNeedsLock;
-    final title = linking ? (replacing ? 'Replace NFC tag' : 'Link NFC tag') : 'Lock NFC tag';
+    final title = linking
+        ? (replacing ? 'Replace NFC tag' : 'Link NFC tag')
+        : 'Lock NFC tag';
 
     return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          0,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 28,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
-                Icon(LucideIcons.nfc, size: 18, color: theme.colorScheme.tertiary),
+                Icon(
+                  LucideIcons.nfc,
+                  size: 18,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(title, style: theme.textTheme.titleLarge)),
               ],
@@ -111,11 +132,20 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
     );
   }
 
-  List<Widget> _body(BuildContext context, {required bool linking, required bool replacing}) {
+  List<Widget> _body(
+    BuildContext context, {
+    required bool linking,
+    required bool replacing,
+  }) {
     final theme = Theme.of(context);
     switch (_phase) {
       case _Phase.working:
-        return [_Working(progress: _progress ?? NfcProgress.waitingForTag, linking: linking)];
+        return [
+          _Working(
+            progress: _progress ?? NfcProgress.waitingForTag,
+            linking: linking,
+          ),
+        ];
 
       case _Phase.linked:
         return [
@@ -143,13 +173,17 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
             }),
             icon: const Icon(LucideIcons.lock, size: 16),
             label: const Text('Lock now (recommended)'),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
             key: const Key('nfc-lock-later'),
             onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
             child: const Text('Lock later'),
           ),
           const SizedBox(height: 6),
@@ -171,7 +205,9 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
             child: const Text('Done'),
           ),
         ];
@@ -188,13 +224,17 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
           FilledButton(
             key: const Key('nfc-try-again'),
             onPressed: _start,
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
             child: const Text('Try again'),
           ),
         ];
 
       case _Phase.idle:
-        return linking ? _linkIdle(context, replacing: replacing) : _lockIdle(context);
+        return linking
+            ? _linkIdle(context, replacing: replacing)
+            : _lockIdle(context);
     }
   }
 
@@ -220,7 +260,13 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
         ),
       ],
       const SizedBox(height: 12),
-      Text('NFC ADDRESS (NDEF PAYLOAD)', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, letterSpacing: 0.8)),
+      Text(
+        'NFC ADDRESS (NDEF PAYLOAD)',
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontSize: 10,
+          letterSpacing: 0.8,
+        ),
+      ),
       const SizedBox(height: 4),
       Container(
         padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
@@ -235,7 +281,10 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
                 url,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace', color: theme.colorScheme.tertiary),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  color: theme.colorScheme.tertiary,
+                ),
               ),
             ),
             IconButton(
@@ -244,7 +293,9 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 await Clipboard.setData(ClipboardData(text: url));
-                messenger.showSnackBar(const SnackBar(content: Text('Address copied')));
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Address copied')),
+                );
               },
             ),
           ],
@@ -294,7 +345,12 @@ class _NfcSheetState extends ConsumerState<NfcSheet> {
 enum _Tone { good, warn, bad }
 
 class _Notice extends StatelessWidget {
-  const _Notice({required this.icon, required this.title, required this.body, required this.tone});
+  const _Notice({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.tone,
+  });
 
   final IconData icon;
   final String title;
@@ -325,9 +381,18 @@ class _Notice extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: color)),
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(body, style: theme.textTheme.bodySmall?.copyWith(height: 1.45)),
+                Text(
+                  body,
+                  style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                ),
               ],
             ),
           ),
@@ -356,7 +421,12 @@ class _Steps extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 6),
           for (var i = 0; i < steps.length; i++)
             Padding(
@@ -364,8 +434,16 @@ class _Steps extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(width: 20, child: Text('${i + 1}.', style: theme.textTheme.bodySmall)),
-                  Expanded(child: Text(steps[i], style: theme.textTheme.bodySmall?.copyWith(height: 1.45))),
+                  SizedBox(
+                    width: 20,
+                    child: Text('${i + 1}.', style: theme.textTheme.bodySmall),
+                  ),
+                  Expanded(
+                    child: Text(
+                      steps[i],
+                      style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -388,7 +466,8 @@ class _Working extends StatelessWidget {
     NfcProgress.verifyingWrite => 'Checking what was written…',
     NfcProgress.locking => 'Locking the tag — keep holding it…',
     NfcProgress.verifyingLock => 'Checking the lock took…',
-    NfcProgress.recording => linking ? 'Recording the link…' : 'Recording the lock…',
+    NfcProgress.recording =>
+      linking ? 'Recording the link…' : 'Recording the lock…',
   };
 
   @override
@@ -404,14 +483,29 @@ class _Working extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+              ),
             ),
-            child: Icon(LucideIcons.nfc, size: 30, color: theme.colorScheme.tertiary),
+            child: Icon(
+              LucideIcons.nfc,
+              size: 30,
+              color: theme.colorScheme.tertiary,
+            ),
           ),
           const SizedBox(height: 16),
-          const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
           const SizedBox(height: 14),
-          Text(_line, key: const Key('nfc-progress'), textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+          Text(
+            _line,
+            key: const Key('nfc-progress'),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
         ],
       ),
     );

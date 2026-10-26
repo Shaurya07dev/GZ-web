@@ -67,7 +67,7 @@ class _ArtistProfileBody extends ConsumerWidget {
   static String _verificationSummary(ArtistProfile artist) {
     final tiers = verifiedTierCount(artist.verification);
     if (tiers == 3) {
-      return 'Gold ✦ Verified: completed social media, active plan, and '
+      return 'Gold ✦ Verified: completed social media, artist agreement, and '
           'first-sale verification.';
     }
     if (tiers > 0) return 'Verified: $tiers of 3 verification tiers complete.';
@@ -86,28 +86,47 @@ class _ArtistProfileBody extends ConsumerWidget {
         children: [
           Column(
             children: [
-              ArtistAvatar(name: artist.name, imageUrl: artist.profileImageUrl, size: 96),
+              ArtistAvatar(
+                name: artist.name,
+                imageUrl: artist.profileImageUrl,
+                size: 96,
+              ),
               const SizedBox(height: 14),
               Text(
                 artist.name,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               VerifiedBadge(verification: artist.verification),
               // What they make, before anything about GalleryZone.
               if (artist.headline.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Text(artist.headline, textAlign: TextAlign.center, style: theme.textTheme.bodyLarge),
+                Text(
+                  artist.headline,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge,
+                ),
               ],
               if (artist.location.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(LucideIcons.mapPin, size: 14, color: theme.textTheme.bodySmall?.color),
+                    Icon(
+                      LucideIcons.mapPin,
+                      size: 14,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
                     const SizedBox(width: 6),
-                    Flexible(child: Text(artist.location, style: theme.textTheme.bodySmall)),
+                    Flexible(
+                      child: Text(
+                        artist.location,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -124,7 +143,9 @@ class _ArtistProfileBody extends ConsumerWidget {
               _ConnectButton(artistId: artist.id),
               // Instagram is collected for GalleryZone's own verification and
               // never shown publicly, unlike the other platforms.
-              if (artist.socialLinks.any((link) => link.platform != SocialProofPlatform.instagram)) ...[
+              if (artist.socialLinks.any(
+                (link) => link.platform != SocialProofPlatform.instagram,
+              )) ...[
                 const SizedBox(height: 14),
                 Wrap(
                   spacing: 8,
@@ -133,7 +154,10 @@ class _ArtistProfileBody extends ConsumerWidget {
                     for (final link in artist.socialLinks)
                       if (link.platform != SocialProofPlatform.instagram)
                         ActionChip(
-                          avatar: SocialGlyph(platform: link.platform, size: 14),
+                          avatar: SocialGlyph(
+                            platform: link.platform,
+                            size: 14,
+                          ),
                           label: Text(SocialGlyph.label(link.platform)),
                           onPressed: () => openExternal(context, link.url),
                         ),
@@ -157,7 +181,10 @@ class _ArtistProfileBody extends ConsumerWidget {
           // The web sanitizes this with DOMPurify because it renders the bio
           // as HTML. Nothing here interprets markup, so the tags are simply
           // stripped — no injection surface to sanitize in the first place.
-          Text(_stripTags(artist.bio), style: theme.textTheme.bodyMedium?.copyWith(height: 1.6)),
+          Text(
+            _stripTags(artist.bio),
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.6),
+          ),
           const SizedBox(height: 28),
           Text('Listed artworks', style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
@@ -173,7 +200,8 @@ class _ArtistProfileBody extends ConsumerWidget {
               title: "Couldn't load these listings",
               description: authErrorMessage(error),
               action: OutlinedButton(
-                onPressed: () => ref.invalidate(artworksByArtistProvider(artist.id)),
+                onPressed: () =>
+                    ref.invalidate(artworksByArtistProvider(artist.id)),
                 child: const Text('Try again'),
               ),
             ),
@@ -190,7 +218,8 @@ class _ArtistProfileBody extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: ArtworkGridDelegate.of(context),
                     itemCount: results.length,
-                    itemBuilder: (context, index) => ArtworkCard(artwork: results[index]),
+                    itemBuilder: (context, index) =>
+                        ArtworkCard(artwork: results[index]),
                   ),
           ),
         ],
@@ -198,8 +227,10 @@ class _ArtistProfileBody extends ConsumerWidget {
     );
   }
 
-  static String _stripTags(String html) =>
-      html.replaceAll(RegExp(r'</p>\s*<p>'), '\n\n').replaceAll(RegExp(r'<[^>]+>'), '').trim();
+  static String _stripTags(String html) => html
+      .replaceAll(RegExp(r'</p>\s*<p>'), '\n\n')
+      .replaceAll(RegExp(r'<[^>]+>'), '')
+      .trim();
 }
 
 /// Follow / Following toggle. Filled while not following (it is the action
@@ -228,7 +259,10 @@ class _FollowButton extends ConsumerWidget {
       );
     }
 
-    final icon = Icon(following ? LucideIcons.check : LucideIcons.plus, size: 16);
+    final icon = Icon(
+      following ? LucideIcons.check : LucideIcons.plus,
+      size: 16,
+    );
     final label = Text(following ? 'Following' : 'Follow');
 
     return SizedBox(
@@ -275,7 +309,8 @@ class _ConnectButtonState extends ConsumerState<_ConnectButton> {
       await ref
           .read(artistNetworkRepositoryProvider)
           .sendConnectionRequest(
-            requesterId: ref.read(accountProvider).value?.uid ?? currentArtistId,
+            requesterId:
+                ref.read(accountProvider).value?.uid ?? currentArtistId,
             recipientId: widget.artistId,
             message: _messageController.text,
           );
@@ -304,16 +339,17 @@ class _ConnectButtonState extends ConsumerState<_ConnectButton> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Send a connection request',
-                style: Theme.of(sheetContext).textTheme.titleMedium),
+            Text(
+              'Send a connection request',
+              style: Theme.of(sheetContext).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _messageController,
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Add a note (optional)',
-                hintText:
-                    'We both work coastal light — would be good to compare notes.',
+                hintText: 'We both work coastal light — would be good to compare notes.',
               ),
             ),
             const SizedBox(height: 12),
@@ -345,7 +381,11 @@ class _ConnectButtonState extends ConsumerState<_ConnectButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.check, size: 15, color: theme.colorScheme.tertiary),
+            Icon(
+              LucideIcons.check,
+              size: 15,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(width: 6),
             Text('Connected', style: theme.textTheme.bodySmall),
           ],

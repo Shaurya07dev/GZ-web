@@ -15,25 +15,28 @@ import 'package:gallery_zone/features/artist/widgets/artist_shell.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-SubmitArtworkInput _input({bool asDraft = false, double price = 20000, String title = 'New piece'}) =>
-    SubmitArtworkInput(
-      title: title,
-      description: 'Test piece.',
-      category: 'painting',
-      medium: 'Oil on Canvas',
-      artistPrice: price,
-      listingType: ListingType.marketplaceOnly,
-      insuranceOpted: false,
-      images: const [
-        ArtworkImage(
-          url: '/artworks/bird.png',
-          thumbnailUrl: '/artworks/bird.png',
-          sortOrder: 0,
-          altText: 'New piece',
-        ),
-      ],
-      asDraft: asDraft,
-    );
+SubmitArtworkInput _input({
+  bool asDraft = false,
+  double price = 20000,
+  String title = 'New piece',
+}) => SubmitArtworkInput(
+  title: title,
+  description: 'Test piece.',
+  category: 'painting',
+  medium: 'Oil on Canvas',
+  artistPrice: price,
+  listingType: ListingType.marketplaceOnly,
+  insuranceOpted: false,
+  images: const [
+    ArtworkImage(
+      url: '/artworks/bird.png',
+      thumbnailUrl: '/artworks/bird.png',
+      sortOrder: 0,
+      altText: 'New piece',
+    ),
+  ],
+  asDraft: asDraft,
+);
 
 void main() {
   late MockArtistRepository repository;
@@ -45,19 +48,21 @@ void main() {
     repository = MockArtistRepository();
   });
 
-  test('the portal shows drafts and in-review pieces; the marketplace does not',
-      () async {
-    final portal = await repository.listArtworks();
-    expect(portal, hasLength(7));
+  test(
+    'the portal shows drafts and in-review pieces; the marketplace does not',
+    () async {
+      final portal = await repository.listArtworks();
+      expect(portal, hasLength(7));
 
-    final browsable = await MockArtworkRepository().listAllLive();
-    final ids = browsable.map((a) => a.id).toSet();
-    // aw-3 and aw-7 are drafts, aw-2 is in review.
-    expect(ids.contains('aw-1'), isTrue);
-    expect(ids.contains('aw-2'), isFalse);
-    expect(ids.contains('aw-3'), isFalse);
-    expect(ids.contains('aw-7'), isFalse);
-  });
+      final browsable = await MockArtworkRepository().listAllLive();
+      final ids = browsable.map((a) => a.id).toSet();
+      // aw-3 and aw-7 are drafts, aw-2 is in review.
+      expect(ids.contains('aw-1'), isTrue);
+      expect(ids.contains('aw-2'), isFalse);
+      expect(ids.contains('aw-3'), isFalse);
+      expect(ids.contains('aw-7'), isFalse);
+    },
+  );
 
   test('the artist price rides alongside, never inside, the artwork', () async {
     final portal = await repository.listArtworks();
@@ -81,7 +86,9 @@ void main() {
       expect(browsable.map((a) => a.id), isNot(contains(artwork.id)));
 
       final portal = await repository.listArtworks();
-      final submitted = portal.firstWhere((entry) => entry.artwork.id == artwork.id);
+      final submitted = portal.firstWhere(
+        (entry) => entry.artwork.id == artwork.id,
+      );
       expect(submitted.artistPrice, 20000);
     });
 
@@ -91,8 +98,14 @@ void main() {
     });
 
     test('an empty title or a zero price is rejected', () {
-      expect(() => repository.submitArtwork(_input(title: '  ')), throwsA(isA<Exception>()));
-      expect(() => repository.submitArtwork(_input(price: 0)), throwsA(isA<Exception>()));
+      expect(
+        () => repository.submitArtwork(_input(title: '  ')),
+        throwsA(isA<Exception>()),
+      );
+      expect(
+        () => repository.submitArtwork(_input(price: 0)),
+        throwsA(isA<Exception>()),
+      );
     });
 
     test('appends to the activity feed', () async {
@@ -111,12 +124,18 @@ void main() {
 
       expect(transaction.amount, -10000);
       expect((await repository.getWallet()).balance, before.balance - 10000);
-      expect((await repository.listWalletTransactions()).first.id, transaction.id);
+      expect(
+        (await repository.listWalletTransactions()).first.id,
+        transaction.id,
+      );
     });
 
     test('below the floor or above the balance is refused', () async {
       final wallet = await repository.getWallet();
-      expect(() => repository.requestWithdrawal(999), throwsA(isA<Exception>()));
+      expect(
+        () => repository.requestWithdrawal(999),
+        throwsA(isA<Exception>()),
+      );
       expect(
         () => repository.requestWithdrawal(wallet.balance + 1),
         throwsA(isA<Exception>()),
@@ -148,7 +167,10 @@ void main() {
     expect(messages.where((m) => m.unread), hasLength(2));
 
     await repository.markMessageRead(messages.first.id);
-    expect((await repository.listMessages()).where((m) => m.unread), hasLength(1));
+    expect(
+      (await repository.listMessages()).where((m) => m.unread),
+      hasLength(1),
+    );
   });
 
   test('gallery spaces join a holding to the artist\'s own artwork', () async {
@@ -158,12 +180,16 @@ void main() {
     expect(placements.single.holding.advancePercent, 5);
   });
 
-  testWidgets('the artworks board shows both prices — the type wall in use',
-      (tester) async {
+  testWidgets('the artworks board shows both prices — the type wall in use', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [artistRepositoryProvider.overrideWithValue(repository)],
-        child: MaterialApp(theme: AppTheme.dark, home: const ArtistArtworksScreen()),
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const ArtistArtworksScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -197,8 +223,9 @@ void main() {
     expect(find.text('Draft'), findsWidgets);
   });
 
-  testWidgets('the artist shell swaps its navigation surface by width',
-      (tester) async {
+  testWidgets('the artist shell swaps its navigation surface by width', (
+    tester,
+  ) async {
     Future<void> pumpAt(Size size) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1.0;
@@ -216,7 +243,8 @@ void main() {
                   routes: [
                     GoRoute(
                       path: '/${destination.label.toLowerCase()}',
-                      builder: (context, state) => Center(child: Text(destination.label)),
+                      builder: (context, state) =>
+                          Center(child: Text(destination.label)),
                     ),
                   ],
                 ),
@@ -228,7 +256,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
         ),
       );
       await tester.pumpAndSettle();

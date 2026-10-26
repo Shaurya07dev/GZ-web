@@ -48,25 +48,25 @@ typedef PortalMenuGroups = List<PortalMenuSection>;
 /// are the same three destinations for a collector, an artist and an
 /// aggregator, so they are written once — only Support's route differs.
 List<PortalMenuItem> _helpSection(String supportRoute) => [
-      PortalMenuItem(
-        icon: LucideIcons.lifeBuoy,
-        label: 'Support',
-        subtitle: 'Raise a ticket, or read your open ones',
-        route: supportRoute,
-      ),
-      const PortalMenuItem(
-        icon: LucideIcons.circleHelp,
-        label: 'FAQs',
-        subtitle: 'Buying, selling, authenticity and delivery',
-        route: FaqScreen.path,
-      ),
-      const PortalMenuItem(
-        icon: LucideIcons.info,
-        label: 'About & legal',
-        subtitle: 'The company, terms, privacy and cookies',
-        route: AboutScreen.path,
-      ),
-    ];
+  PortalMenuItem(
+    icon: LucideIcons.lifeBuoy,
+    label: 'Support',
+    subtitle: 'Raise a ticket, or read your open ones',
+    route: supportRoute,
+  ),
+  const PortalMenuItem(
+    icon: LucideIcons.circleHelp,
+    label: 'FAQs',
+    subtitle: 'Buying, selling, authenticity and delivery',
+    route: FaqScreen.path,
+  ),
+  const PortalMenuItem(
+    icon: LucideIcons.info,
+    label: 'About & legal',
+    subtitle: 'The company, terms, privacy and cookies',
+    route: AboutScreen.path,
+  ),
+];
 
 final customerMenu = <PortalMenuSection>[
   const PortalMenuSection(
@@ -84,17 +84,17 @@ final customerMenu = <PortalMenuSection>[
         subtitle: 'Delivery address book',
         route: '/account/addresses',
       ),
-      PortalMenuItem(
-        icon: LucideIcons.wallet,
-        label: 'Wallet',
-        subtitle: 'Store credit and refunds',
-        route: '/account/wallet',
-      ),
     ],
   ),
   const PortalMenuSection(
     title: 'Selling',
     items: [
+      PortalMenuItem(
+        icon: LucideIcons.fingerprint,
+        label: 'COA & NFC',
+        subtitle: 'Certificates, tags and ownership transfer',
+        route: '/account/coa-nfc',
+      ),
       PortalMenuItem(
         icon: LucideIcons.repeat2,
         label: 'Resell artwork',
@@ -103,7 +103,10 @@ final customerMenu = <PortalMenuSection>[
       ),
     ],
   ),
-  PortalMenuSection(title: 'Help & legal', items: _helpSection('/account/support')),
+  PortalMenuSection(
+    title: 'Help & legal',
+    items: _helpSection('/account/support'),
+  ),
 ];
 
 final artistMenu = <PortalMenuSection>[
@@ -163,6 +166,12 @@ final artistMenu = <PortalMenuSection>[
         subtitle: 'Other artists, and joint work',
         route: '/dashboard/network',
       ),
+      PortalMenuItem(
+        icon: LucideIcons.penTool,
+        label: 'Blogs',
+        subtitle: 'Write and track editorial submissions',
+        route: '/dashboard/blogs',
+      ),
     ],
   ),
   const PortalMenuSection(
@@ -199,7 +208,10 @@ final artistMenu = <PortalMenuSection>[
       ),
     ],
   ),
-  PortalMenuSection(title: 'Help & legal', items: _helpSection('/dashboard/support')),
+  PortalMenuSection(
+    title: 'Help & legal',
+    items: _helpSection('/dashboard/support'),
+  ),
 ];
 
 final aggregatorMenu = <PortalMenuSection>[
@@ -297,24 +309,25 @@ final aggregatorMenu = <PortalMenuSection>[
 
 /// Which menu a role gets, and what the drawer header calls it. Held here so
 /// the shells and the dashboards cannot disagree about it.
-({String roleLabel, PortalMenuGroups groups, String homeRoute}) portalMenuFor(Role role) =>
-    switch (role) {
-      Role.customer => (
-          roleLabel: 'Collector',
-          groups: customerMenu,
-          homeRoute: Role.customer.home,
-        ),
-      Role.artist => (
-          roleLabel: 'Artist',
-          groups: artistMenu,
-          homeRoute: Role.artist.home,
-        ),
-      Role.aggregator => (
-          roleLabel: 'Aggregator',
-          groups: aggregatorMenu,
-          homeRoute: Role.aggregator.home,
-        ),
-    };
+({String roleLabel, PortalMenuGroups groups, String homeRoute}) portalMenuFor(
+  Role role,
+) => switch (role) {
+  Role.customer => (
+    roleLabel: 'Collector',
+    groups: customerMenu,
+    homeRoute: Role.customer.home,
+  ),
+  Role.artist => (
+    roleLabel: 'Artist',
+    groups: artistMenu,
+    homeRoute: Role.artist.home,
+  ),
+  Role.aggregator => (
+    roleLabel: 'Aggregator',
+    groups: aggregatorMenu,
+    homeRoute: Role.aggregator.home,
+  ),
+};
 
 /// The signed-in person's name as the server knows it, or empty while that is
 /// still being read (and in mock mode, which has no account record).
@@ -340,7 +353,8 @@ final portalDisplayNameProvider = Provider<String>((ref) {
   return switch (ref.watch(sessionProvider)) {
     Role.artist => currentArtistName,
     Role.aggregator => currentAggregatorName,
-    Role.customer => ref.watch(customerProfileProvider).value?.name ?? 'Collector',
+    Role.customer =>
+      ref.watch(customerProfileProvider).value?.name ?? 'Collector',
     null => 'GalleryZone',
   };
 });
@@ -356,7 +370,11 @@ const profileDestination = ShellDestination(
 /// Initials for the avatar. Two words give two letters, one gives one — no
 /// third letter, which is what turns a monogram back into a word.
 String portalInitials(String name) {
-  final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  final words = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .toList();
   if (words.isEmpty) return '?';
   final letters = words.length == 1 ? [words.first] : [words.first, words.last];
   return letters.map((word) => word[0].toUpperCase()).join();
@@ -365,7 +383,11 @@ String portalInitials(String name) {
 /// The top-right avatar. Opens the portal menu as an end drawer, so the host
 /// screen's `Scaffold` is the one that has to carry [PortalMenuDrawer].
 class PortalAvatarButton extends StatelessWidget {
-  const PortalAvatarButton({super.key, required this.name, this.badgeCount = 0});
+  const PortalAvatarButton({
+    super.key,
+    required this.name,
+    this.badgeCount = 0,
+  });
 
   final String name;
 
@@ -466,10 +488,16 @@ class PortalMenuDrawer extends ConsumerWidget {
             ),
             const Divider(height: 1),
             ListTile(
-              leading: Icon(LucideIcons.logOut, size: 20, color: theme.colorScheme.error),
+              leading: Icon(
+                LucideIcons.logOut,
+                size: 20,
+                color: theme.colorScheme.error,
+              ),
               title: Text(
                 'Sign out',
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
               onTap: () async {
                 final router = GoRouter.of(context);

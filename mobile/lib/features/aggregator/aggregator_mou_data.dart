@@ -20,7 +20,10 @@ const aggregatorMou = MouDocument(
     MouTitle('MEMORANDUM OF UNDERSTANDING'),
     MouHeading('BETWEEN', center: true),
     MouHeading('GALLERYZONE PRIVATE LIMITED', center: true),
-    MouParagraph('(Hereinafter referred to as “Galleryzone”, “Company”, or “Platform”)', center: true),
+    MouParagraph(
+      '(Hereinafter referred to as “Galleryzone”, “Company”, or “Platform”)',
+      center: true,
+    ),
     MouHeading('AND', center: true),
     MouHeading('AUTHORIZED ART PARTNER / AGGREGATOR', center: true),
     MouField('Name', MouFieldKey.partyName),
@@ -31,246 +34,644 @@ const aggregatorMou = MouDocument(
     MouField('Effective Date', MouFieldKey.partyEffectiveDate),
     MouParagraph('(Hereinafter referred to as the “Aggregator”)', center: true),
     MouHeading('1. PURPOSE'),
-    MouParagraph('1.1 This Memorandum of Understanding (“MOU”) establishes the business relationship between Galleryzone and the Aggregator for the professional display, promotion, facilitation, and sale of artworks and related products through Galleryzone’s aggregator platform.'),
-    MouParagraph('1.2 The purpose of this MOU is to define the respective rights, responsibilities, commercial arrangements, inventory custody obligations, pricing mechanism, sales process, incentive structure, and other terms applicable to the relationship between Galleryzone and the Aggregator.'),
+    MouParagraph(
+      '1.1 This Memorandum of Understanding (“MOU”) establishes the business relationship between Galleryzone and the Aggregator for the professional display, promotion, facilitation, and sale of artworks and related products through Galleryzone’s aggregator platform.',
+    ),
+    MouParagraph(
+      '1.2 The purpose of this MOU is to define the respective rights, responsibilities, commercial arrangements, inventory custody obligations, pricing mechanism, sales process, incentive structure, and other terms applicable to the relationship between Galleryzone and the Aggregator.',
+    ),
     MouHeading('2. BUSINESS MODEL'),
-    MouParagraph('2.1 Galleryzone operates as an art e-commerce platform connecting artists, suppliers, distributors, galleries, Aggregators, and customers through a centralized online platform.'),
-    MouParagraph('2.2 The Aggregator shall act solely as an authorized display, promotion, and sales-support partner of Galleryzone and shall conduct its activities in accordance with this MOU and applicable Galleryzone policies.'),
-    MouParagraph('2.3 The Aggregator shall not be considered the owner of any artwork merely by virtue of receiving, displaying, promoting, or facilitating the sale of such artwork.'),
-    MouParagraph('2.4 All customer transactions relating to artworks supplied through this arrangement shall be subject to the customer order and transaction process specified in Clause 5 and applicable Galleryzone policies.'),
+    MouParagraph(
+      '2.1 Galleryzone operates as an art e-commerce platform connecting artists, suppliers, distributors, galleries, Aggregators, and customers through a centralized online platform.',
+    ),
+    MouParagraph(
+      '2.2 The Aggregator shall act solely as an authorized display, promotion, and sales-support partner of Galleryzone and shall conduct its activities in accordance with this MOU and applicable Galleryzone policies.',
+    ),
+    MouParagraph(
+      '2.3 The Aggregator shall not be considered the owner of any artwork merely by virtue of receiving, displaying, promoting, or facilitating the sale of such artwork.',
+    ),
+    MouParagraph(
+      '2.4 All customer transactions relating to artworks supplied through this arrangement shall be subject to the customer order and transaction process specified in Clause 5 and applicable Galleryzone policies.',
+    ),
     MouHeading('3. OWNERSHIP OF PRODUCTS AND TRANSFER OF TITLE'),
-    MouParagraph('3.1 All artworks and products supplied through Galleryzone shall remain the sole property of the respective Artist until the applicable conditions for transfer of ownership under this Clause are fulfilled.'),
-    MouParagraph('3.2 The Aggregator shall have only custody and authorized possession of artworks entrusted to it for display, promotion, or sale facilitation.'),
-    MouParagraph('3.3 The Aggregator shall not: (a) claim ownership; (b) sell independently or outside the Galleryzone platform; (c) transfer, assign, pledge, mortgage, or otherwise encumber any artwork; (d) transfer possession to any unauthorized person or entity; or (e) represent itself as the owner.'),
-    MouParagraph('3.4 Ownership and title to the physical artwork shall transfer to the customer only upon receipt of the full applicable purchase consideration and successful delivery of the artwork to the customer having been confirmed.'),
-    MouParagraph('3.5 Until those conditions are fulfilled, the artwork shall continue to remain the property of the respective Artist.'),
-    MouParagraph('3.6 The Aggregator shall immediately notify Galleryzone of any circumstance that may affect ownership, custody, condition, or availability of any artwork.'),
+    MouParagraph(
+      '3.1 All artworks and products supplied through Galleryzone shall remain the sole property of the respective Artist until the applicable conditions for transfer of ownership under this Clause are fulfilled.',
+    ),
+    MouParagraph(
+      '3.2 The Aggregator shall have only custody and authorized possession of artworks entrusted to it for display, promotion, or sale facilitation.',
+    ),
+    MouParagraph(
+      '3.3 The Aggregator shall not: (a) claim ownership; (b) sell independently or outside the Galleryzone platform; (c) transfer, assign, pledge, mortgage, or otherwise encumber any artwork; (d) transfer possession to any unauthorized person or entity; or (e) represent itself as the owner.',
+    ),
+    MouParagraph(
+      '3.4 Ownership and title to the physical artwork shall transfer to the customer only upon receipt of the full applicable purchase consideration and successful delivery of the artwork to the customer having been confirmed.',
+    ),
+    MouParagraph(
+      '3.5 Until those conditions are fulfilled, the artwork shall continue to remain the property of the respective Artist.',
+    ),
+    MouParagraph(
+      '3.6 The Aggregator shall immediately notify Galleryzone of any circumstance that may affect ownership, custody, condition, or availability of any artwork.',
+    ),
     MouHeading('4. INVENTORY CUSTODY'),
-    MouParagraph('4.1 Minimum 30-day display except specified protective/emergency reasons; early non-fault recall gives pro-rata adjustment and Galleryzone-paid return logistics.'),
-    MouParagraph('4.2 Galleryzone may place artworks or other inventory at the Aggregator’s premises for display and promotional purposes.'),
-    MouParagraph('4.3 The Aggregator may also place orders for artworks through the applicable Galleryzone portal or system.'),
-    MouParagraph('4.4 Any artwork provided for display shall ordinarily remain with the Aggregator for a maximum period of thirty (30) days unless Galleryzone agrees to an extension in writing or through email.'),
-    MouParagraph('4.5 Upon expiry of the applicable display period, or whenever requested by Galleryzone, the Aggregator shall promptly return the artwork to Galleryzone, the Artist, or another location designated by Galleryzone.'),
-    MouParagraph('4.6 The Aggregator shall maintain entrusted inventory in a safe, secure, clean and suitable environment; take reasonable precautions against theft, loss, damage, deterioration, misuse and unauthorized access; immediately report incidents; permit reasonable inspections/audits; maintain accurate inventory records; and return inventory immediately upon authorized request.'),
-    MouParagraph('4.7 The Aggregator’s liability for loss, theft, damage or other physical loss relating to artwork in its custody shall be determined in accordance with Clause 7 and the custody, condition-audit and logistics provisions of this MOU.'),
-    MouParagraph('4.8 Inventory records remain subject to Galleryzone’s control and verification.'),
-    MouParagraph('4.9 Display Artworks per quarter; fill in the agreed min number before signing.'),
-    MouParagraph('4.10 Exclusive display in premium indoor areas with active 24/7 CCTV surveillance.'),
+    MouParagraph(
+      '4.1 Minimum 30-day display except specified protective/emergency reasons; early non-fault recall gives pro-rata adjustment and Galleryzone-paid return logistics.',
+    ),
+    MouParagraph(
+      '4.2 Galleryzone may place artworks or other inventory at the Aggregator’s premises for display and promotional purposes.',
+    ),
+    MouParagraph(
+      '4.3 The Aggregator may also place orders for artworks through the applicable Galleryzone portal or system.',
+    ),
+    MouParagraph(
+      '4.4 Any artwork provided for display shall ordinarily remain with the Aggregator for a maximum period of thirty (30) days unless Galleryzone agrees to an extension in writing or through email.',
+    ),
+    MouParagraph(
+      '4.5 Upon expiry of the applicable display period, or whenever requested by Galleryzone, the Aggregator shall promptly return the artwork to Galleryzone, the Artist, or another location designated by Galleryzone.',
+    ),
+    MouParagraph(
+      '4.6 The Aggregator shall maintain entrusted inventory in a safe, secure, clean and suitable environment; take reasonable precautions against theft, loss, damage, deterioration, misuse and unauthorized access; immediately report incidents; permit reasonable inspections/audits; maintain accurate inventory records; and return inventory immediately upon authorized request.',
+    ),
+    MouParagraph(
+      '4.7 The Aggregator’s liability for loss, theft, damage or other physical loss relating to artwork in its custody shall be determined in accordance with Clause 7 and the custody, condition-audit and logistics provisions of this MOU.',
+    ),
+    MouParagraph(
+      '4.8 Inventory records remain subject to Galleryzone’s control and verification.',
+    ),
+    MouParagraph(
+      '4.9 Display Artworks per quarter; fill in the agreed min number before signing.',
+    ),
+    MouParagraph(
+      '4.10 Exclusive display in premium indoor areas with active 24/7 CCTV surveillance.',
+    ),
     MouParagraph('4.11 Retention of video logs for at least 60 days.'),
-    MouParagraph('4.12 Aggregator liability for physical loss, theft, vandalism or damage caused by its guests, patrons or staff during the 30-day display period.'),
+    MouParagraph(
+      '4.12 Aggregator liability for physical loss, theft, vandalism or damage caused by its guests, patrons or staff during the 30-day display period.',
+    ),
     MouHeading('5. CUSTOMER ORDERS'),
-    MouParagraph('5.1 All customer orders relating to artworks covered by this MOU shall be processed exclusively through Galleryzone unless otherwise authorized in writing.'),
-    MouParagraph('5.2 Galleryzone shall administer customer orders and related transaction processes in accordance with its responsibilities under Clause 11 and applicable Galleryzone policies.'),
-    MouParagraph('5.3 The Aggregator may assist customers by providing accurate product information and facilitating communication with Galleryzone.'),
-    MouParagraph('5.4 The Aggregator shall not collect customer payments directly unless expressly authorized in writing.'),
-    MouParagraph('5.5 The Aggregator shall not make any unauthorized representation, promise, discount, warranty, refund commitment, or other commercial commitment on behalf of Galleryzone.'),
+    MouParagraph(
+      '5.1 All customer orders relating to artworks covered by this MOU shall be processed exclusively through Galleryzone unless otherwise authorized in writing.',
+    ),
+    MouParagraph(
+      '5.2 Galleryzone shall administer customer orders and related transaction processes in accordance with its responsibilities under Clause 11 and applicable Galleryzone policies.',
+    ),
+    MouParagraph(
+      '5.3 The Aggregator may assist customers by providing accurate product information and facilitating communication with Galleryzone.',
+    ),
+    MouParagraph(
+      '5.4 The Aggregator shall not collect customer payments directly unless expressly authorized in writing.',
+    ),
+    MouParagraph(
+      '5.5 The Aggregator shall not make any unauthorized representation, promise, discount, warranty, refund commitment, or other commercial commitment on behalf of Galleryzone.',
+    ),
     MouHeading('6. PRICING POLICY'),
-    MouParagraph('6.1 “Artist Price” means the price applicable to the artwork as determined by the respective Artist and recorded or communicated to Galleryzone.'),
-    MouParagraph('6.2 “Listed Selling Price” means the selling price displayed to the customer through the Gallery zone platform.'),
-    MouParagraph('6.3 The Listed Selling Price shall be determined in accordance with Galleryzone’s pricing framework. Any applicable appreciation or commercial margin shall be subject to Galleryzone’s pricing controls, and the Aggregator’s incentive shall be calculated and settled in accordance with Clause 9.'),
-    MouParagraph('6.4 The Aggregator may, through the applicable Galleryzone system, propose or determine the Listed Selling Price at the permitted stage, subject to Galleryzone’s pricing rules and controls.'),
-    MouParagraph('6.5 Galleryzone retains overall control of the pricing framework and may review, approve, modify, restrict or reject any proposed Listed Selling Price.'),
-    MouParagraph('6.6 The Aggregator shall not offer unauthorized discounts, modify the Listed Selling Price after an order is placed, represent an unauthorized price, or independently negotiate/conclude a sale outside Galleryzone.'),
-    MouParagraph('6.7 Exceptional pricing arrangements require Galleryzone’s prior written approval.'),
+    MouParagraph(
+      '6.1 “Artist Price” means the price applicable to the artwork as determined by the respective Artist and recorded or communicated to Galleryzone.',
+    ),
+    MouParagraph(
+      '6.2 “Listed Selling Price” means the selling price displayed to the customer through the Gallery zone platform.',
+    ),
+    MouParagraph(
+      '6.3 The Listed Selling Price shall be determined in accordance with Galleryzone’s pricing framework. Any applicable appreciation or commercial margin shall be subject to Galleryzone’s pricing controls, and the Aggregator’s incentive shall be calculated and settled in accordance with Clause 9.',
+    ),
+    MouParagraph(
+      '6.4 The Aggregator may, through the applicable Galleryzone system, propose or determine the Listed Selling Price at the permitted stage, subject to Galleryzone’s pricing rules and controls.',
+    ),
+    MouParagraph(
+      '6.5 Galleryzone retains overall control of the pricing framework and may review, approve, modify, restrict or reject any proposed Listed Selling Price.',
+    ),
+    MouParagraph(
+      '6.6 The Aggregator shall not offer unauthorized discounts, modify the Listed Selling Price after an order is placed, represent an unauthorized price, or independently negotiate/conclude a sale outside Galleryzone.',
+    ),
+    MouParagraph(
+      '6.7 Exceptional pricing arrangements require Galleryzone’s prior written approval.',
+    ),
     MouHeading('7. SECURITY DEPOSIT, FORFEITURE AND AGGREGATOR LIABILITY'),
-    MouParagraph('7.1 Before taking possession of an artwork for display, the Aggregator shall pay an amount equivalent to five percent (5%) of the applicable artwork value as a security deposit/advance, together with applicable delivery, transportation or logistics charges.'),
-    MouParagraph('7.2 The security deposit/advance secures the Aggregator’s obligations to properly receive, handle, display, safeguard and return the artwork. It is not a purchase and does not transfer ownership.'),
-    MouParagraph('7.3 Upon successful sale, the applicable security deposit may be adjusted or otherwise settled through Galleryzone’s settlement process. Refund within 15 days after sale or completion of 30-day display followed by return; early Galleryzone recall triggers pro-rata adjustment and Galleryzone bears return logistics.'),
-    MouParagraph('7.4 If an artwork remains unsold and is returned in the required condition, the security deposit shall be refundable or adjustable, subject to lawful deductions expressly permitted under this MOU.'),
-    MouParagraph('7.5 Galleryzone may forfeit the security deposit, in whole or in part, where the Aggregator fails to return an artwork; loses, misplaces or permits unauthorized removal; causes damage through negligence or wilful misconduct; deals with artwork outside the platform without authorization; materially breaches custody/security/handling obligations; refuses inspection/return/reconciliation; abandons artwork; or fails to comply with reasonable instructions.'),
-    MouParagraph('7.6 In the event of damage or loss, the deposit may be applied toward reasonable repair, restoration, replacement, recovery, transportation and directly related expenses.'),
-    MouParagraph('7.7 The security deposit is security only and shall not constitute a maximum liability or liability cap. Where loss or damage is established as attributable to a Party, that Party shall be responsible for the reasonable and documented repair or restoration cost. Where the artwork is totally lost, destroyed or damaged beyond economical repair, the responsible Party shall be liable for the applicable Artist Price or documented quoted value, subject to the audit and responsibility determination procedure in Clause 7.12. There shall be no double recovery for the same loss or damage.'),
-    MouParagraph('7.8 Any loss, theft, destruction or material damage occurring while artwork is in an Aggregator’s custody or control shall be investigated under Clause 7.12. The amount payable shall be determined from the documented Artist Price or other documented quoted value, together with reasonable and documented repair, restoration or recovery costs, according to the responsibility established by the audit.'),
-    MouParagraph('7.9 No Party shall be held responsible solely because an incident occurred while artwork was in its possession. Responsibility and payment shall be determined after reviewing the available evidence, including condition reports, photographs, videos, packaging records, handover records, witness statements and any other relevant documentation, in accordance with Clause'),
-    MouParagraph('7.10 In a loss or material damage event attributable to the Aggregator, the security deposit shall not be refundable until the applicable loss and liabilities are fully reconciled. Galleryzone may first apply/forfeit the deposit and then recover any remaining amount.'),
-    MouParagraph('7.11 The Party found responsible under Clause 7.12 shall be responsible, to the extent legally recoverable, for reasonable and documented inspection, restoration, replacement, transportation, recovery and legal recovery costs directly attributable to the incident.'),
-    MouParagraph('7.12 Any forfeiture or deduction shall be communicated with reasonable details of the relevant loss, damage, expense or breach.'),
-    MouParagraph('7.13 Delivery, transportation, logistics and handling charges paid by the Aggregator for an unsold artwork shall be non-refundable unless Galleryzone expressly agrees otherwise in writing.'),
+    MouParagraph(
+      '7.1 Before taking possession of an artwork for display, the Aggregator shall pay an amount equivalent to five percent (5%) of the applicable artwork value as a security deposit/advance, together with applicable delivery, transportation or logistics charges.',
+    ),
+    MouParagraph(
+      '7.2 The security deposit/advance secures the Aggregator’s obligations to properly receive, handle, display, safeguard and return the artwork. It is not a purchase and does not transfer ownership.',
+    ),
+    MouParagraph(
+      '7.3 Upon successful sale, the applicable security deposit may be adjusted or otherwise settled through Galleryzone’s settlement process. Refund within 15 days after sale or completion of 30-day display followed by return; early Galleryzone recall triggers pro-rata adjustment and Galleryzone bears return logistics.',
+    ),
+    MouParagraph(
+      '7.4 If an artwork remains unsold and is returned in the required condition, the security deposit shall be refundable or adjustable, subject to lawful deductions expressly permitted under this MOU.',
+    ),
+    MouParagraph(
+      '7.5 Galleryzone may forfeit the security deposit, in whole or in part, where the Aggregator fails to return an artwork; loses, misplaces or permits unauthorized removal; causes damage through negligence or wilful misconduct; deals with artwork outside the platform without authorization; materially breaches custody/security/handling obligations; refuses inspection/return/reconciliation; abandons artwork; or fails to comply with reasonable instructions.',
+    ),
+    MouParagraph(
+      '7.6 In the event of damage or loss, the deposit may be applied toward reasonable repair, restoration, replacement, recovery, transportation and directly related expenses.',
+    ),
+    MouParagraph(
+      '7.7 The security deposit is security only and shall not constitute a maximum liability or liability cap. Where loss or damage is established as attributable to a Party, that Party shall be responsible for the reasonable and documented repair or restoration cost. Where the artwork is totally lost, destroyed or damaged beyond economical repair, the responsible Party shall be liable for the applicable Artist Price or documented quoted value, subject to the audit and responsibility determination procedure in Clause 7.12. There shall be no double recovery for the same loss or damage.',
+    ),
+    MouParagraph(
+      '7.8 Any loss, theft, destruction or material damage occurring while artwork is in an Aggregator’s custody or control shall be investigated under Clause 7.12. The amount payable shall be determined from the documented Artist Price or other documented quoted value, together with reasonable and documented repair, restoration or recovery costs, according to the responsibility established by the audit.',
+    ),
+    MouParagraph(
+      '7.9 No Party shall be held responsible solely because an incident occurred while artwork was in its possession. Responsibility and payment shall be determined after reviewing the available evidence, including condition reports, photographs, videos, packaging records, handover records, witness statements and any other relevant documentation, in accordance with Clause',
+    ),
+    MouParagraph(
+      '7.10 In a loss or material damage event attributable to the Aggregator, the security deposit shall not be refundable until the applicable loss and liabilities are fully reconciled. Galleryzone may first apply/forfeit the deposit and then recover any remaining amount.',
+    ),
+    MouParagraph(
+      '7.11 The Party found responsible under Clause 7.12 shall be responsible, to the extent legally recoverable, for reasonable and documented inspection, restoration, replacement, transportation, recovery and legal recovery costs directly attributable to the incident.',
+    ),
+    MouParagraph(
+      '7.12 Any forfeiture or deduction shall be communicated with reasonable details of the relevant loss, damage, expense or breach.',
+    ),
+    MouParagraph(
+      '7.13 Delivery, transportation, logistics and handling charges paid by the Aggregator for an unsold artwork shall be non-refundable unless Galleryzone expressly agrees otherwise in writing.',
+    ),
     MouHeading('8. TAXES AND REGULATORY COMPLIANCE'),
-    MouParagraph('8.1 Each Party shall comply with the laws, registrations, licences, approvals and regulatory requirements applicable to its respective activities and obligations under this MOU.'),
-    MouParagraph('8.2 The Aggregator shall maintain all registrations, licences, approvals and authorizations required for its activities.'),
-    MouParagraph('8.3 Nothing in this MOU shall transfer one Party\'s independent statutory or regulatory obligations to the other Party.'),
-    MouParagraph('8.4 Tax, GST, TDS, TCS and other statutory deductions and responsibilities shall be governed by Clause 26.'),
+    MouParagraph(
+      '8.1 Each Party shall comply with the laws, registrations, licences, approvals and regulatory requirements applicable to its respective activities and obligations under this MOU.',
+    ),
+    MouParagraph(
+      '8.2 The Aggregator shall maintain all registrations, licences, approvals and authorizations required for its activities.',
+    ),
+    MouParagraph(
+      '8.3 Nothing in this MOU shall transfer one Party\'s independent statutory or regulatory obligations to the other Party.',
+    ),
+    MouParagraph(
+      '8.4 Tax, GST, TDS, TCS and other statutory deductions and responsibilities shall be governed by Clause 26.',
+    ),
     MouHeading('9. INCENTIVE STRUCTURE AND SETTLEMENT'),
-    MouParagraph('9.1 Subject to this MOU, the Aggregator shall be eligible to receive a tiered incentive calculated as a specified percentage of the Markup Pool for eligible sales facilitated through the Aggregator. The applicable percentage for a calendar month shall be determined by the Aggregator’s total Eligible Monthly Sales in the immediately preceding calendar month, as set out below.'),
-    MouParagraph('9.2 “Markup Pool” means the positive difference between the Listed Selling Price and the Artist Price for an eligible sale, excluding separately identified GST and other taxes, shipping, logistics, insurance, payment gateway charges and other fees or charges. No Markup Pool arises where the difference is zero or negative.'),
-    MouParagraph('9.3 “Eligible Monthly Sales” means the aggregate Listed Selling Price of successful sales facilitated through the Aggregator during a calendar month, excluding cancelled, refunded, reversed, fraudulent or otherwise unsuccessful transactions. Separately identified taxes, shipping, logistics, insurance and other charges are excluded from Eligible Monthly Sales.'),
-    MouParagraph('9.4 The incentive rate applicable to the current calendar month shall be determined by the Eligible Monthly Sales achieved in the immediately preceding calendar month, as follows: (a) Tier 1 — Base: twenty percent (20%) of the Markup Pool where the preceding month’s Eligible Monthly Sales were up to and including ₹10,00,000; (b) Tier 2 — Growth: thirty-five percent (35%) of the Markup Pool where the preceding month’s Eligible Monthly Sales exceeded ₹10,00,000 and were up to and including ₹50,00,000; and (c) Tier 3 — Elite: fifty percent (50%) of the Markup Pool where the preceding month’s Eligible Monthly Sales exceeded ₹50,00,000. The applicable tier rate shall apply to eligible sales in the current calendar month, not retrospectively to the preceding month.'),
-    MouParagraph('9.5 If no Eligible Monthly Sales were recorded in the immediately preceding calendar month, Tier 1 shall apply by default to the current calendar month. The tier shall be reviewed for each calendar month based on the immediately preceding calendar month’s Eligible Monthly Sales. Any change to the tier structure or rates must be agreed in writing by both Parties.'),
-    MouParagraph('9.6 The Aggregator’s incentive for an eligible transaction shall become payable only after Galleryzone has received full customer payment, successful delivery has been confirmed, and any applicable return, cancellation or cooling-off period has expired. Subject to lawful deductions and reconciliation, the amount due shall be settled within fifteen (15) business days thereafter.'),
-    MouParagraph('9.7 Cancelled, refunded, reversed, charged-back or otherwise unsuccessful transactions do not generate an incentive. If an incentive has already been credited or paid for a transaction subsequently cancelled, refunded, reversed or charged back, Galleryzone may reverse or adjust the corresponding amount against future incentives, settlement amounts or the Aggregator’s ledger, subject to applicable law and reasonable transaction details.'),
-    MouParagraph('9.8 Final settlement remains subject to lawful deductions, adjustments, taxes, refunds, charge backs, payment gateway charges, logistics charges and other amounts recoverable under this MOU. Galleryzone shall maintain or provide a reasonable settlement statement showing the eligible sales, Markup Pool, applicable tier/rate, incentive calculation and deductions.'),
-    MouParagraph('9.9 Payment Gateway Charges. All payment gateway charges, transaction processing fees and other payment-processing charges applicable to sales facilitated through the Aggregator shall be borne by the Aggregator and may be deducted from the Aggregator’s incentive, settlement amount or wallet balance, as applicable. Galleryzone shall provide reasonable details of such charges in the relevant settlement statement. Any deduction shall be subject to applicable law and the terms of the relevant payment service provider.'),
+    MouParagraph(
+      '9.1 Subject to this MOU, the Aggregator shall be eligible to receive a tiered incentive calculated as a specified percentage of the Markup Pool for eligible sales facilitated through the Aggregator. The applicable percentage for a calendar month shall be determined by the Aggregator’s total Eligible Monthly Sales in the immediately preceding calendar month, as set out below.',
+    ),
+    MouParagraph(
+      '9.2 “Markup Pool” means the positive difference between the Listed Selling Price and the Artist Price for an eligible sale, excluding separately identified GST and other taxes, shipping, logistics, insurance, payment gateway charges and other fees or charges. No Markup Pool arises where the difference is zero or negative.',
+    ),
+    MouParagraph(
+      '9.3 “Eligible Monthly Sales” means the aggregate Listed Selling Price of successful sales facilitated through the Aggregator during a calendar month, excluding cancelled, refunded, reversed, fraudulent or otherwise unsuccessful transactions. Separately identified taxes, shipping, logistics, insurance and other charges are excluded from Eligible Monthly Sales.',
+    ),
+    MouParagraph(
+      '9.4 The incentive rate applicable to the current calendar month shall be determined by the Eligible Monthly Sales achieved in the immediately preceding calendar month, as follows: (a) Tier 1 — Base: twenty percent (20%) of the Markup Pool where the preceding month’s Eligible Monthly Sales were up to and including ₹10,00,000; (b) Tier 2 — Growth: thirty-five percent (35%) of the Markup Pool where the preceding month’s Eligible Monthly Sales exceeded ₹10,00,000 and were up to and including ₹50,00,000; and (c) Tier 3 — Elite: fifty percent (50%) of the Markup Pool where the preceding month’s Eligible Monthly Sales exceeded ₹50,00,000. The applicable tier rate shall apply to eligible sales in the current calendar month, not retrospectively to the preceding month.',
+    ),
+    MouParagraph(
+      '9.5 If no Eligible Monthly Sales were recorded in the immediately preceding calendar month, Tier 1 shall apply by default to the current calendar month. The tier shall be reviewed for each calendar month based on the immediately preceding calendar month’s Eligible Monthly Sales. Any change to the tier structure or rates must be agreed in writing by both Parties.',
+    ),
+    MouParagraph(
+      '9.6 The Aggregator’s incentive for an eligible transaction shall become payable only after Galleryzone has received full customer payment, successful delivery has been confirmed, and any applicable return, cancellation or cooling-off period has expired. Subject to lawful deductions and reconciliation, the amount due shall be settled within fifteen (15) business days thereafter.',
+    ),
+    MouParagraph(
+      '9.7 Cancelled, refunded, reversed, charged-back or otherwise unsuccessful transactions do not generate an incentive. If an incentive has already been credited or paid for a transaction subsequently cancelled, refunded, reversed or charged back, Galleryzone may reverse or adjust the corresponding amount against future incentives, settlement amounts or the Aggregator’s ledger, subject to applicable law and reasonable transaction details.',
+    ),
+    MouParagraph(
+      '9.8 Final settlement remains subject to lawful deductions, adjustments, taxes, refunds, charge backs, payment gateway charges, logistics charges and other amounts recoverable under this MOU. Galleryzone shall maintain or provide a reasonable settlement statement showing the eligible sales, Markup Pool, applicable tier/rate, incentive calculation and deductions.',
+    ),
+    MouParagraph(
+      '9.9 Payment Gateway Charges. All payment gateway charges, transaction processing fees and other payment-processing charges applicable to sales facilitated through the Aggregator shall be borne by the Aggregator and may be deducted from the Aggregator’s incentive, settlement amount or wallet balance, as applicable. Galleryzone shall provide reasonable details of such charges in the relevant settlement statement. Any deduction shall be subject to applicable law and the terms of the relevant payment service provider.',
+    ),
     MouHeading('10. DELIVERY, PACKAGING AND LOGISTICS'),
-    MouParagraph('10.1 Delivery shall ordinarily be arranged through Galleryzone’s authorized logistics partners.'),
-    MouParagraph('10.2 Galleryzone shall coordinate shipment, applicable logistics, tracking where available, and customer delivery updates.'),
-    MouParagraph('10.3 Unless otherwise specified, applicable shipping charges shall be borne by the customer on the event of sale.'),
-    MouParagraph('10.4 The Aggregator shall use the same or equivalent packaging, protective materials, framing protection, wrapping and cushioning in which the artwork was received, unless Galleryzone gives different written instructions.'),
-    MouParagraph('10.5 Original packaging / protective materials shall not be removed, replaced, altered or discarded without approval except where reasonably necessary for inspection, display or safe transport.'),
-    MouParagraph('10.6 Opened packaging shall be properly restored and resealed using equivalent protection.'),
-    MouParagraph('10.7 Artwork shall be protected against impact, vibration, moisture, dust, contamination, scratches, frame damage, bending, deformation, breakage and other foreseeable transit risks.'),
-    MouParagraph('10.8 Artwork shall be handed to the logistics partner in a condition suitable for safe transportation.'),
-    MouParagraph('10.9 If packaging is visibly in adequate or damaged, the Aggregator shall notify Galleryzone and obtain instructions before dispatch.'),
-    MouParagraph('10.10 Original documentation, certificates, labels, QR codes, NFC-related materials, display cards and identification materials supplied with artwork shall be securely sent with the artwork where applicable.'),
-    MouParagraph('10.11 The Aggregator shall cooperate in timely collection and handover.'),
-    MouParagraph('10.12 Unauthorized logistics providers shall not be appointed for Galleryzone orders without written approval.'),
-    MouParagraph('10.13 The Aggregator shall comply with the packaging, handling and dispatch requirements under this Clause. Liability for loss or damage attributable to the Aggregator shall be determined in accordance with Clause 7.'),
-    MouParagraph('10.14 Damage identified before logistics hand over must be immediately reported with photographs/ evidence and dispatch must await instructions.'),
-    MouParagraph('10.15 Reasonable pre-handover photographs /records shall be retained where requested.'),
+    MouParagraph(
+      '10.1 Delivery shall ordinarily be arranged through Galleryzone’s authorized logistics partners.',
+    ),
+    MouParagraph(
+      '10.2 Galleryzone shall coordinate shipment, applicable logistics, tracking where available, and customer delivery updates.',
+    ),
+    MouParagraph(
+      '10.3 Unless otherwise specified, applicable shipping charges shall be borne by the customer on the event of sale.',
+    ),
+    MouParagraph(
+      '10.4 The Aggregator shall use the same or equivalent packaging, protective materials, framing protection, wrapping and cushioning in which the artwork was received, unless Galleryzone gives different written instructions.',
+    ),
+    MouParagraph(
+      '10.5 Original packaging / protective materials shall not be removed, replaced, altered or discarded without approval except where reasonably necessary for inspection, display or safe transport.',
+    ),
+    MouParagraph(
+      '10.6 Opened packaging shall be properly restored and resealed using equivalent protection.',
+    ),
+    MouParagraph(
+      '10.7 Artwork shall be protected against impact, vibration, moisture, dust, contamination, scratches, frame damage, bending, deformation, breakage and other foreseeable transit risks.',
+    ),
+    MouParagraph(
+      '10.8 Artwork shall be handed to the logistics partner in a condition suitable for safe transportation.',
+    ),
+    MouParagraph(
+      '10.9 If packaging is visibly in adequate or damaged, the Aggregator shall notify Galleryzone and obtain instructions before dispatch.',
+    ),
+    MouParagraph(
+      '10.10 Original documentation, certificates, labels, QR codes, NFC-related materials, display cards and identification materials supplied with artwork shall be securely sent with the artwork where applicable.',
+    ),
+    MouParagraph(
+      '10.11 The Aggregator shall cooperate in timely collection and handover.',
+    ),
+    MouParagraph(
+      '10.12 Unauthorized logistics providers shall not be appointed for Galleryzone orders without written approval.',
+    ),
+    MouParagraph(
+      '10.13 The Aggregator shall comply with the packaging, handling and dispatch requirements under this Clause. Liability for loss or damage attributable to the Aggregator shall be determined in accordance with Clause 7.',
+    ),
+    MouParagraph(
+      '10.14 Damage identified before logistics hand over must be immediately reported with photographs/ evidence and dispatch must await instructions.',
+    ),
+    MouParagraph(
+      '10.15 Reasonable pre-handover photographs /records shall be retained where requested.',
+    ),
     MouHeading('11. RESPONSIBILITIES OF THE PARTIES'),
-    MouParagraph('11.1 Galleryzone shall be responsible for product sourcing and Artist/supplier coordination, platform-level inventory management, pricing framework, customer billing/invoicing, platform marketing, customer payment collection, settlement, technology maintenance, or processing, logistics coordination and customer transaction communications.'),
-    MouParagraph('11.2 The Aggregator shall nominate a Galleryzone Coordinator; display artworks professionally; provide accurate approved information; safeguard inventory; provide reasonable local promotional support; coordinate enquiries/orders; comply with operational/display standards; refrain from unauthorized sales/commitments; and promptly communicate issues.'),
+    MouParagraph(
+      '11.1 Galleryzone shall be responsible for product sourcing and Artist/supplier coordination, platform-level inventory management, pricing framework, customer billing/invoicing, platform marketing, customer payment collection, settlement, technology maintenance, or processing, logistics coordination and customer transaction communications.',
+    ),
+    MouParagraph(
+      '11.2 The Aggregator shall nominate a Galleryzone Coordinator; display artworks professionally; provide accurate approved information; safeguard inventory; provide reasonable local promotional support; coordinate enquiries/orders; comply with operational/display standards; refrain from unauthorized sales/commitments; and promptly communicate issues.',
+    ),
     MouHeading('12. WARRANTY AND AUTHENTICITY'),
-    MouParagraph('12.1 Galleryzone shall use reasonable processes to ensure artworks are sourced from genuine Artists or authorized suppliers.'),
-    MouParagraph('12.2 The Aggregator shall not provide an independent warranty, authenticity certification, ownership representation or other commitment unless approved by Galleryzone.'),
-    MouParagraph('12.3 The Aggregator shall not alter certificates, authenticity information, documentation, labels, QR codes or other identification materials without approval.'),
-    MouParagraph('12.4 Complaints regarding authenticity, quality, ownership, warranty, returns, refunds or condition shall be promptly referred to Galleryzone.'),
+    MouParagraph(
+      '12.1 Galleryzone shall use reasonable processes to ensure artworks are sourced from genuine Artists or authorized suppliers.',
+    ),
+    MouParagraph(
+      '12.2 The Aggregator shall not provide an independent warranty, authenticity certification, ownership representation or other commitment unless approved by Galleryzone.',
+    ),
+    MouParagraph(
+      '12.3 The Aggregator shall not alter certificates, authenticity information, documentation, labels, QR codes or other identification materials without approval.',
+    ),
+    MouParagraph(
+      '12.4 Complaints regarding authenticity, quality, ownership, warranty, returns, refunds or condition shall be promptly referred to Galleryzone.',
+    ),
     MouHeading('13. CONFIDENTIALITY'),
-    MouParagraph('13.1 Each Party shall keep confidential non-public commercial, financial, technical, operational, customer, pricing, business, security and proprietary information received from the other Party.'),
-    MouParagraph('13.2 Confidential information includes Artist pricing, customer information, supplier information, commercial terms, incentive structures, business plans, operational processes, platform information and non-public financial information.'),
-    MouParagraph('13.3 Disclosure is permitted to authorized employees, professional advisers, auditors, insurers, payment processors, logistics providers, contractors and representatives with a legitimate need to know and appropriate confidentiality obligations, or where required by law.'),
-    MouParagraph('13.4 Confidentiality does not apply to information already public without breach, lawfully known before disclosure, independently developed, or lawfully received from a third party without confidentiality restriction.'),
-    MouParagraph('13.5 These obligations survive termination for so long as information remains confidential or as required by law.'),
+    MouParagraph(
+      '13.1 Each Party shall keep confidential non-public commercial, financial, technical, operational, customer, pricing, business, security and proprietary information received from the other Party.',
+    ),
+    MouParagraph(
+      '13.2 Confidential information includes Artist pricing, customer information, supplier information, commercial terms, incentive structures, business plans, operational processes, platform information and non-public financial information.',
+    ),
+    MouParagraph(
+      '13.3 Disclosure is permitted to authorized employees, professional advisers, auditors, insurers, payment processors, logistics providers, contractors and representatives with a legitimate need to know and appropriate confidentiality obligations, or where required by law.',
+    ),
+    MouParagraph(
+      '13.4 Confidentiality does not apply to information already public without breach, lawfully known before disclosure, independently developed, or lawfully received from a third party without confidentiality restriction.',
+    ),
+    MouParagraph(
+      '13.5 These obligations survive termination for so long as information remains confidential or as required by law.',
+    ),
     MouHeading('14. INTELLECTUAL PROPERTY'),
-    MouParagraph('14.1 Galleryzone’s name, logo, website, software, platform, catalogues, marketing materials, trademarks, designs, content, processes and related intellectual property remain the property of Galleryzone or its licensors.'),
-    MouParagraph('14.2 The Aggregator shall not reproduce, modify, distribute, misuse or copy Galleryzone intellectual property, systems or content, or represent ownership, without prior written permission.'),
-    MouParagraph('14.3 Authorized promotional/operational use is limited to the purpose and duration authorized.'),
-    MouParagraph('14.4 Upon termination, unauthorized use shall cease and materials shall be returned/deleted as reasonably requested.'),
+    MouParagraph(
+      '14.1 Galleryzone’s name, logo, website, software, platform, catalogues, marketing materials, trademarks, designs, content, processes and related intellectual property remain the property of Galleryzone or its licensors.',
+    ),
+    MouParagraph(
+      '14.2 The Aggregator shall not reproduce, modify, distribute, misuse or copy Galleryzone intellectual property, systems or content, or represent ownership, without prior written permission.',
+    ),
+    MouParagraph(
+      '14.3 Authorized promotional/operational use is limited to the purpose and duration authorized.',
+    ),
+    MouParagraph(
+      '14.4 Upon termination, unauthorized use shall cease and materials shall be returned/deleted as reasonably requested.',
+    ),
     MouHeading('15. TERM AND RENEWAL'),
-    MouParagraph('15.1 This MOU remains valid for an initial period of one (1) year from the Effective Date.'),
-    MouParagraph('15.2 It automatically renews for successive periods unless either party gives written notice of non-renewal/termination at least thirty (30) days before expiry.'),
-    MouParagraph('15.3 Parties may mutually agree in writing to renew, modify or replace the MOU.'),
-    MouParagraph('15.4 Continued relationship after expiry remains subject to this MOU unless superseded by written agreement.'),
+    MouParagraph(
+      '15.1 This MOU remains valid for an initial period of one (1) year from the Effective Date.',
+    ),
+    MouParagraph(
+      '15.2 It automatically renews for successive periods unless either party gives written notice of non-renewal/termination at least thirty (30) days before expiry.',
+    ),
+    MouParagraph(
+      '15.3 Parties may mutually agree in writing to renew, modify or replace the MOU.',
+    ),
+    MouParagraph(
+      '15.4 Continued relationship after expiry remains subject to this MOU unless superseded by written agreement.',
+    ),
     MouHeading('16. TERMINATION, SUSPENSION AND DELISTING'),
-    MouParagraph('16.1 Either party may terminate the MOU with thirty (30) days’ prior written notice if termination is not covered under clause 16.2'),
-    MouParagraph('16.2 Galleryzone may terminate Galleryzone profile and MOU immediately for fraud or suspected fraud, material misrepresentation, unauthorized sale/transfer/disposal, damage arising from negligence or wilful misconduct, confidentiality breach, misuse of Galleryzone IP, repeated policy violations, unauthorized pricing/discounting/commitments, failure to return inventory, or any material breach incapable of cure or not cured within the specified period.'),
-    MouParagraph('16.3 Upon termination/expiry, the Aggregator shall cease representing itself as authorized, return inventory, cease unauthorized IP use, settle outstanding amounts, provide reconciliation information and cooperate with pending orders.'),
-    MouParagraph('16.4 The Aggregator may, within 15 (fifteen) days from the date of receipt of the termination notice, submit a written representation to Galleryzone challenging the termination decision, together with all relevant facts, documents, records, and other supporting evidence relied upon by the Aggregator. Galleryzone shall consider such representation and the supporting materials submitted in good faith and may, at its sole discretion, confirm, modify, withdraw, or otherwise reconsider the termination decision. Submission of such representation shall not, by itself, suspend or otherwise affect the effectiveness of the termination notice unless Galleryzone expressly agrees otherwise in writing.'),
-    MouParagraph('16.5 Outstanding incentives following suspension, delisting, termination or expiry shall be payable only for transactions satisfying Clause 9, including the applicable payment, delivery and return/cancellation conditions, and shall remain subject to lawful deductions, reversals and reconciliation.'),
-    MouParagraph('16.6 Amounts recoverable for loss, damage, unauthorized use or breach may be adjusted against amounts otherwise payable, subject to law.'),
-    MouParagraph('16.7 Galleryzone may temporarily suspend, restrict or permanently delist the Aggregator where it fails to comply with a material obligation, requirement, policy, standard or condition under this MOU.'),
-    MouParagraph('16.8 Grounds may include custody/handling/return failures; loss, damage, theft or unauthorized removal/transfer; unauthorized sale; unauthorized pricing/discounting; failure to follow procedures; misleading customer information; failure to make required payments/deposits; repeated substantiated customer complaints; materially misleading conduct; serious professional misconduct; or conduct reasonably demonstrated to create a material risk of harm to Galleryzone, Artists, customers, inventory, business operations or brand reputation.'),
-    MouParagraph('16.9 A suspension/delisting decision shall be based on a reasonable and bona fide assessment of relevant conduct, evidence, complaint or risk and shall not be exercised arbitrarily or solely on an unsubstantiated allegation.'),
-    MouParagraph('16.10 Depending on severity, Galleryzone may issue a warning/compliance notice, suspend platform access, suspend listings/sales, restrict additional inventory, require immediate return, permanently delist, and/or terminate.'),
-    MouParagraph('16.11 Where a breach is curable, Galleryzone may provide a reasonable cure period. No cure opportunity is required for fraud, unauthorized sale/transfer, material inventory risk, serious misconduct, IP misuse, or circumstances requiring immediate protective action.'),
-    MouParagraph('16.12 Suspension/delisting/freeze does not release accrued obligations, including inventory, payment, confidentiality, damage, return and reconciliation obligations.'),
-    MouParagraph('16.13 Galleryzone may disable or restrict platform/portal/listing/order/promotional access to the extent reasonably necessary.'),
-    MouParagraph('16.14 Delisting does not waive Galleryzone’s right to recover outstanding amounts, loss, damage, costs, liabilities or other remedies.'),
+    MouParagraph(
+      '16.1 Either party may terminate the MOU with thirty (30) days’ prior written notice if termination is not covered under clause 16.2',
+    ),
+    MouParagraph(
+      '16.2 Galleryzone may terminate Galleryzone profile and MOU immediately for fraud or suspected fraud, material misrepresentation, unauthorized sale/transfer/disposal, damage arising from negligence or wilful misconduct, confidentiality breach, misuse of Galleryzone IP, repeated policy violations, unauthorized pricing/discounting/commitments, failure to return inventory, or any material breach incapable of cure or not cured within the specified period.',
+    ),
+    MouParagraph(
+      '16.3 Upon termination/expiry, the Aggregator shall cease representing itself as authorized, return inventory, cease unauthorized IP use, settle outstanding amounts, provide reconciliation information and cooperate with pending orders.',
+    ),
+    MouParagraph(
+      '16.4 The Aggregator may, within 15 (fifteen) days from the date of receipt of the termination notice, submit a written representation to Galleryzone challenging the termination decision, together with all relevant facts, documents, records, and other supporting evidence relied upon by the Aggregator. Galleryzone shall consider such representation and the supporting materials submitted in good faith and may, at its sole discretion, confirm, modify, withdraw, or otherwise reconsider the termination decision. Submission of such representation shall not, by itself, suspend or otherwise affect the effectiveness of the termination notice unless Galleryzone expressly agrees otherwise in writing.',
+    ),
+    MouParagraph(
+      '16.5 Outstanding incentives following suspension, delisting, termination or expiry shall be payable only for transactions satisfying Clause 9, including the applicable payment, delivery and return/cancellation conditions, and shall remain subject to lawful deductions, reversals and reconciliation.',
+    ),
+    MouParagraph(
+      '16.6 Amounts recoverable for loss, damage, unauthorized use or breach may be adjusted against amounts otherwise payable, subject to law.',
+    ),
+    MouParagraph(
+      '16.7 Galleryzone may temporarily suspend, restrict or permanently delist the Aggregator where it fails to comply with a material obligation, requirement, policy, standard or condition under this MOU.',
+    ),
+    MouParagraph(
+      '16.8 Grounds may include custody/handling/return failures; loss, damage, theft or unauthorized removal/transfer; unauthorized sale; unauthorized pricing/discounting; failure to follow procedures; misleading customer information; failure to make required payments/deposits; repeated substantiated customer complaints; materially misleading conduct; serious professional misconduct; or conduct reasonably demonstrated to create a material risk of harm to Galleryzone, Artists, customers, inventory, business operations or brand reputation.',
+    ),
+    MouParagraph(
+      '16.9 A suspension/delisting decision shall be based on a reasonable and bona fide assessment of relevant conduct, evidence, complaint or risk and shall not be exercised arbitrarily or solely on an unsubstantiated allegation.',
+    ),
+    MouParagraph(
+      '16.10 Depending on severity, Galleryzone may issue a warning/compliance notice, suspend platform access, suspend listings/sales, restrict additional inventory, require immediate return, permanently delist, and/or terminate.',
+    ),
+    MouParagraph(
+      '16.11 Where a breach is curable, Galleryzone may provide a reasonable cure period. No cure opportunity is required for fraud, unauthorized sale/transfer, material inventory risk, serious misconduct, IP misuse, or circumstances requiring immediate protective action.',
+    ),
+    MouParagraph(
+      '16.12 Suspension/delisting/freeze does not release accrued obligations, including inventory, payment, confidentiality, damage, return and reconciliation obligations.',
+    ),
+    MouParagraph(
+      '16.13 Galleryzone may disable or restrict platform/portal/listing/order/promotional access to the extent reasonably necessary.',
+    ),
+    MouParagraph(
+      '16.14 Delisting does not waive Galleryzone’s right to recover outstanding amounts, loss, damage, costs, liabilities or other remedies.',
+    ),
     MouHeading('17. DISPUTE RESOLUTION AND ARBITRATION'),
-    MouParagraph('17.1 Parties shall first attempt in good faith to resolve disputes through written notice and discussions for thirty (30) days.'),
-    MouParagraph('17.2 If unresolved, the dispute shall be finally resolved by arbitration under the Arbitration and Conciliation Act, 1996, as amended.'),
-    MouParagraph('17.3 Arbitration shall be conducted by a sole arbitrator mutually appointed. If no agreement is reached within thirty (30) days, appointment shall be made in accordance with applicable law.'),
-    MouParagraph('17.4 The seat and legal place of arbitration shall be Hyderabad, Telangana, India. The language shall be English.'),
-    MouParagraph('17.5 The award shall be final and binding subject to applicable law.'),
-    MouParagraph('17.6 Either party may seek urgent interim/protective/injunctive relief from a competent court. Courts at Hyderabad shall have jurisdiction over such applications and enforcement.'),
-    MouParagraph('17.7 Arbitration proceedings and related documents shall be treated as confidential except as required for enforcement, legal compliance or professional advice.'),
+    MouParagraph(
+      '17.1 Parties shall first attempt in good faith to resolve disputes through written notice and discussions for thirty (30) days.',
+    ),
+    MouParagraph(
+      '17.2 If unresolved, the dispute shall be finally resolved by arbitration under the Arbitration and Conciliation Act, 1996, as amended.',
+    ),
+    MouParagraph(
+      '17.3 Arbitration shall be conducted by a sole arbitrator mutually appointed. If no agreement is reached within thirty (30) days, appointment shall be made in accordance with applicable law.',
+    ),
+    MouParagraph(
+      '17.4 The seat and legal place of arbitration shall be Hyderabad, Telangana, India. The language shall be English.',
+    ),
+    MouParagraph(
+      '17.5 The award shall be final and binding subject to applicable law.',
+    ),
+    MouParagraph(
+      '17.6 Either party may seek urgent interim/protective/injunctive relief from a competent court. Courts at Hyderabad shall have jurisdiction over such applications and enforcement.',
+    ),
+    MouParagraph(
+      '17.7 Arbitration proceedings and related documents shall be treated as confidential except as required for enforcement, legal compliance or professional advice.',
+    ),
     MouHeading('18. FORCE MAJEURE'),
-    MouParagraph('18.1 Neither party shall be liable for delay/failure to perform to the extent caused by circumstances beyond reasonable control, including natural disasters, fire, flood, epidemic/pandemic, war, terrorism, civil disturbance, governmental action, strikes, major logistics disruption, widespread telecommunications/internet failure, cyber incidents, utility failure or material third-party infrastructure failure.'),
-    MouParagraph('18.2 The affected party shall use reasonable efforts to mitigate the effect and resume performance as soon as practicable.'),
-    MouParagraph('18.3 Force majeure shall not excuse payment obligations already due, ownership obligations for artwork already sold, or obligations intended to survive.'),
-    MouParagraph('18.4 If the event materially prevents performance for more than sixty (60) consecutive days, either party may request termination of the affected arrangement subject to settlement of accrued rights and obligations.'),
+    MouParagraph(
+      '18.1 Neither party shall be liable for delay/failure to perform to the extent caused by circumstances beyond reasonable control, including natural disasters, fire, flood, epidemic/pandemic, war, terrorism, civil disturbance, governmental action, strikes, major logistics disruption, widespread telecommunications/internet failure, cyber incidents, utility failure or material third-party infrastructure failure.',
+    ),
+    MouParagraph(
+      '18.2 The affected party shall use reasonable efforts to mitigate the effect and resume performance as soon as practicable.',
+    ),
+    MouParagraph(
+      '18.3 Force majeure shall not excuse payment obligations already due, ownership obligations for artwork already sold, or obligations intended to survive.',
+    ),
+    MouParagraph(
+      '18.4 If the event materially prevents performance for more than sixty (60) consecutive days, either party may request termination of the affected arrangement subject to settlement of accrued rights and obligations.',
+    ),
     MouHeading('19. PERSONAL DATA PROTECTION AND PRIVACY'),
-    MouParagraph('19.1 Galleryzone may collect and process the Aggregator’s personal/business data, including identity, contact, address, tax, payment, verification, transaction, inventory, provenance and other information reasonably necessary for onboarding, KYC/verification, listing, sale, settlement, logistics, customer support, fraud prevention, legal compliance, record keeping and legitimate business purposes.'),
-    MouParagraph('19.2 Galleryzone shall process such data in accordance with applicable data-protection and privacy laws, including the Digital Personal Data Protection Act, 2023 and applicable rules, as and when applicable.'),
-    MouParagraph('19.3 Relevant information may be shared with authorized service providers, payment processors, logistics providers, insurers, Artists, professional advisers, auditors, regulators, tax authorities and other parties where reasonably necessary or legally required.'),
-    MouParagraph('19.4 Galleryzone shall take reasonable technical and organizational measures appropriate to the nature of the data.'),
-    MouParagraph('19.5 Data may be retained as reasonably necessary for contractual, tax, accounting, fraud-prevention, dispute-resolution, provenance, legal or regulatory requirements.'),
-    MouParagraph('19.6 The Aggregator may exercise applicable data rights in accordance with Galleryzone’s privacy policy and applicable law.'),
-    MouParagraph('19.7 Galleryzone’s then-current privacy policy and legally required notices form part of the privacy framework, subject to mandatory law.'),
+    MouParagraph(
+      '19.1 Galleryzone may collect and process the Aggregator’s personal/business data, including identity, contact, address, tax, payment, verification, transaction, inventory, provenance and other information reasonably necessary for onboarding, KYC/verification, listing, sale, settlement, logistics, customer support, fraud prevention, legal compliance, record keeping and legitimate business purposes.',
+    ),
+    MouParagraph(
+      '19.2 Galleryzone shall process such data in accordance with applicable data-protection and privacy laws, including the Digital Personal Data Protection Act, 2023 and applicable rules, as and when applicable.',
+    ),
+    MouParagraph(
+      '19.3 Relevant information may be shared with authorized service providers, payment processors, logistics providers, insurers, Artists, professional advisers, auditors, regulators, tax authorities and other parties where reasonably necessary or legally required.',
+    ),
+    MouParagraph(
+      '19.4 Galleryzone shall take reasonable technical and organizational measures appropriate to the nature of the data.',
+    ),
+    MouParagraph(
+      '19.5 Data may be retained as reasonably necessary for contractual, tax, accounting, fraud-prevention, dispute-resolution, provenance, legal or regulatory requirements.',
+    ),
+    MouParagraph(
+      '19.6 The Aggregator may exercise applicable data rights in accordance with Galleryzone’s privacy policy and applicable law.',
+    ),
+    MouParagraph(
+      '19.7 Galleryzone’s then-current privacy policy and legally required notices form part of the privacy framework, subject to mandatory law.',
+    ),
     MouHeading('20. INDEMNIFICATION'),
-    MouParagraph('20.1 The Aggregator shall indemnify and hold harmless Galleryzone, its directors, officers, employees and authorized service providers from third-party claims, losses, liabilities, penalties, reasonable costs and expenses arising from or relating to: breach of this MOU; unauthorized sale/transfer or misuse of artwork; loss or damage attributable to the Aggregator; infringement of third-party rights caused by the Aggregator’s acts; false or misleading information/documents supplied by the Aggregator; unlawful conduct attributable to the Aggregator; or taxes/statutory liabilities attributable to the Aggregator’s acts or omissions.'),
-    MouParagraph('20.2 Galleryzone remains responsible for liabilities that cannot lawfully be transferred and for loss directly caused by Galleryzone’s proven fraud, wilful misconduct or negligence, subject to this MOU and applicable law.'),
-    MouParagraph('20.3 The indemnified party shall, where reasonably practicable, provide notice and reasonable cooperation in defence. No settlement imposing an admission or continuing obligation on the indemnified party shall be entered without its consent, not to be unreasonably withheld.'),
+    MouParagraph(
+      '20.1 The Aggregator shall indemnify and hold harmless Galleryzone, its directors, officers, employees and authorized service providers from third-party claims, losses, liabilities, penalties, reasonable costs and expenses arising from or relating to: breach of this MOU; unauthorized sale/transfer or misuse of artwork; loss or damage attributable to the Aggregator; infringement of third-party rights caused by the Aggregator’s acts; false or misleading information/documents supplied by the Aggregator; unlawful conduct attributable to the Aggregator; or taxes/statutory liabilities attributable to the Aggregator’s acts or omissions.',
+    ),
+    MouParagraph(
+      '20.2 Galleryzone remains responsible for liabilities that cannot lawfully be transferred and for loss directly caused by Galleryzone’s proven fraud, wilful misconduct or negligence, subject to this MOU and applicable law.',
+    ),
+    MouParagraph(
+      '20.3 The indemnified party shall, where reasonably practicable, provide notice and reasonable cooperation in defence. No settlement imposing an admission or continuing obligation on the indemnified party shall be entered without its consent, not to be unreasonably withheld.',
+    ),
     MouHeading('21. NOTICES'),
-    MouParagraph('21.1 Formal notices shall be sent to the email address and/or physical address recorded for the relevant party or subsequently notified in writing.'),
-    MouParagraph('21.2 Operational communications may also be made through the Galleryzone platform or official communication channels.'),
-    MouParagraph('21.3 Email notice shall be treated as received when transmitted without delivery failure, subject to law. Physical notice shall be treated as received upon delivery or attempted delivery in accordance with law.'),
-    MouParagraph('21.4 Each party shall promptly notify changes to contact details.'),
+    MouParagraph(
+      '21.1 Formal notices shall be sent to the email address and/or physical address recorded for the relevant party or subsequently notified in writing.',
+    ),
+    MouParagraph(
+      '21.2 Operational communications may also be made through the Galleryzone platform or official communication channels.',
+    ),
+    MouParagraph(
+      '21.3 Email notice shall be treated as received when transmitted without delivery failure, subject to law. Physical notice shall be treated as received upon delivery or attempted delivery in accordance with law.',
+    ),
+    MouParagraph(
+      '21.4 Each party shall promptly notify changes to contact details.',
+    ),
     MouHeading('22. ELECTRONIC EXECUTION AND RECORDS'),
-    MouParagraph('22.1 This MOU may be executed and accepted electronically, including electronic signatures, digital signatures, electronic acceptance or other legally valid means.'),
-    MouParagraph('22.2 Galleryzone may maintain electronic records of the accepted version, date/time, authentication/verification records and related audit information, subject to law.'),
-    MouParagraph('22.3 Electronic copies and records maintained in the ordinary course may be used as evidence of acceptance and execution, subject to law.'),
+    MouParagraph(
+      '22.1 This MOU may be executed and accepted electronically, including electronic signatures, digital signatures, electronic acceptance or other legally valid means.',
+    ),
+    MouParagraph(
+      '22.2 Galleryzone may maintain electronic records of the accepted version, date/time, authentication/verification records and related audit information, subject to law.',
+    ),
+    MouParagraph(
+      '22.3 Electronic copies and records maintained in the ordinary course may be used as evidence of acceptance and execution, subject to law.',
+    ),
     MouHeading('23. COMPLIANCE WITH APPLICABLE LAWS'),
-    MouParagraph('23.1 Each party shall comply with laws and regulations relevant to its obligations.'),
-    MouParagraph('23.2 The Aggregator shall provide accurate KYC, tax, ownership, authorization and other information reasonably required for lawful onboarding and transactions.'),
-    MouParagraph('23.3 The Aggregator shall not submit, handle, display or sell artwork or materials that are unlawful, counterfeit, infringing, misleading, fraudulent or otherwise prohibited by applicable law.'),
-    MouParagraph('23.4 Galleryzone may suspend, restrict, hold, freeze, delist or terminate an artwork/ account where reasonably necessary for law, regulatory direction, fraud prevention or material compliance obligations, subject to law.'),
+    MouParagraph(
+      '23.1 Each party shall comply with laws and regulations relevant to its obligations.',
+    ),
+    MouParagraph(
+      '23.2 The Aggregator shall provide accurate KYC, tax, ownership, authorization and other information reasonably required for lawful onboarding and transactions.',
+    ),
+    MouParagraph(
+      '23.3 The Aggregator shall not submit, handle, display or sell artwork or materials that are unlawful, counterfeit, infringing, misleading, fraudulent or otherwise prohibited by applicable law.',
+    ),
+    MouParagraph(
+      '23.4 Galleryzone may suspend, restrict, hold, freeze, delist or terminate an artwork/ account where reasonably necessary for law, regulatory direction, fraud prevention or material compliance obligations, subject to law.',
+    ),
     MouHeading('24. RETURNS, REFUNDS, CANCELLATIONS AND PAYMENT REVERSALS'),
-    MouParagraph('24.1 Buyer returns, refunds, cancellations and failed deliveries shall be handled under applicable Galleryzone buyer/return/refund policies and law.'),
-    MouParagraph('24.2 For cancelled, refunded, reversed or charge back transactions, Galleryzone may hold, reverse or adjust the corresponding settlement, including reasonable applicable third-party charges, subject to law.'),
-    MouParagraph('24.3 Galleryzone may recover incorrectly paid amounts by adjustment against future amounts, wallet balances or other lawful mechanisms after providing reasonable details.'),
-    MouParagraph('24.4 Responsibility for return shipping, return damage, customer-caused damage and other return-related costs shall be determined under applicable transaction terms, the condition-audit procedure in Clause 7.12, logistics arrangements and law.'),
+    MouParagraph(
+      '24.1 Buyer returns, refunds, cancellations and failed deliveries shall be handled under applicable Galleryzone buyer/return/refund policies and law.',
+    ),
+    MouParagraph(
+      '24.2 For cancelled, refunded, reversed or charge back transactions, Galleryzone may hold, reverse or adjust the corresponding settlement, including reasonable applicable third-party charges, subject to law.',
+    ),
+    MouParagraph(
+      '24.3 Galleryzone may recover incorrectly paid amounts by adjustment against future amounts, wallet balances or other lawful mechanisms after providing reasonable details.',
+    ),
+    MouParagraph(
+      '24.4 Responsibility for return shipping, return damage, customer-caused damage and other return-related costs shall be determined under applicable transaction terms, the condition-audit procedure in Clause 7.12, logistics arrangements and law.',
+    ),
     MouHeading('25. WALLET AND SETTLEMENT LEDGER'),
-    MouParagraph('25.1 Any Galleryzone wallet/account balance is an internal transaction and settlement ledger recording amounts payable, receivable, deductions and adjustments.'),
-    MouParagraph('25.2 The wallet is not a deposit, bank account, payment instrument to regulated financial product unless expressly established in accordance with law.'),
-    MouParagraph('25.3 Galleryzone may record eligible sales, Markup Pool calculations, the tier/rate applied; incentives accrued or paid, deductions, refunds, charge backs, logistics costs, taxes and other permitted amounts in the wallet or settlement ledger.'),
-    MouParagraph('25.4 The Aggregator may raise a written reconciliation query within a 15 days period after receiving a settlement statement.'),
+    MouParagraph(
+      '25.1 Any Galleryzone wallet/account balance is an internal transaction and settlement ledger recording amounts payable, receivable, deductions and adjustments.',
+    ),
+    MouParagraph(
+      '25.2 The wallet is not a deposit, bank account, payment instrument to regulated financial product unless expressly established in accordance with law.',
+    ),
+    MouParagraph(
+      '25.3 Galleryzone may record eligible sales, Markup Pool calculations, the tier/rate applied; incentives accrued or paid, deductions, refunds, charge backs, logistics costs, taxes and other permitted amounts in the wallet or settlement ledger.',
+    ),
+    MouParagraph(
+      '25.4 The Aggregator may raise a written reconciliation query within a 15 days period after receiving a settlement statement.',
+    ),
     MouHeading('26. TAX, GST AND STATUTORY DEDUCTIONS'),
-    MouParagraph('26.1 Each party is responsible for taxes imposed on it by law in relation to its income, activities and obligations.'),
-    MouParagraph('26.2 The Aggregator shall provide accurate GST, PAN, tax residency and other tax information where required.'),
-    MouParagraph('26.3 Galleryzone may deduct or withhold amounts required by law, including GST, TDS, TCS or other statutory deductions, and provide relevant records where legally required.'),
-    MouParagraph('26.4 Tax treatment may vary by transaction structure, channel, location of supply and applicable law; the parties shall cooperate with reasonable documentation.'),
-    MouParagraph('26.5 If incorrect tax information supplied by the Aggregator results in additional liability, interest, penalty or loss attributable to that information, the Aggregator shall be responsible to the extent permitted by law.'),
+    MouParagraph(
+      '26.1 Each party is responsible for taxes imposed on it by law in relation to its income, activities and obligations.',
+    ),
+    MouParagraph(
+      '26.2 The Aggregator shall provide accurate GST, PAN, tax residency and other tax information where required.',
+    ),
+    MouParagraph(
+      '26.3 Galleryzone may deduct or withhold amounts required by law, including GST, TDS, TCS or other statutory deductions, and provide relevant records where legally required.',
+    ),
+    MouParagraph(
+      '26.4 Tax treatment may vary by transaction structure, channel, location of supply and applicable law; the parties shall cooperate with reasonable documentation.',
+    ),
+    MouParagraph(
+      '26.5 If incorrect tax information supplied by the Aggregator results in additional liability, interest, penalty or loss attributable to that information, the Aggregator shall be responsible to the extent permitted by law.',
+    ),
     MouHeading('27. INDEPENDENT RELATIONSHIP; NO PARTNERSHIP OR AGENCY'),
-    MouParagraph('27.1 The parties are independent contracting parties. Nothing creates partnership, joint venture, employment or general agency.'),
-    MouParagraph('27.2 Neither party may bind the other except where expressly authorized in writing.'),
-    MouParagraph('27.3 Galleryzone may act as marketplace, facilitator or authorized intermediary only to the extent described in this MOU, transaction terms or applicable law.'),
+    MouParagraph(
+      '27.1 The parties are independent contracting parties. Nothing creates partnership, joint venture, employment or general agency.',
+    ),
+    MouParagraph(
+      '27.2 Neither party may bind the other except where expressly authorized in writing.',
+    ),
+    MouParagraph(
+      '27.3 Galleryzone may act as marketplace, facilitator or authorized intermediary only to the extent described in this MOU, transaction terms or applicable law.',
+    ),
     MouHeading('28. THIRD-PARTY SERVICE PROVIDERS AND SUBCONTRACTING'),
-    MouParagraph('28.1 Galleryzone may use authorized third-party providers for technology, hosting, verification, KYC, payment processing, logistics, insurance, marketing, customer support, exhibitions, storage and related functions.'),
-    MouParagraph('28.2 The Aggregator authorizes Galleryzone to share information reasonably necessary for such services, subject to applicable law.'),
-    MouParagraph('28.3 Galleryzone may appoint or change service providers where reasonably necessary for business or compliance purposes.'),
+    MouParagraph(
+      '28.1 Galleryzone may use authorized third-party providers for technology, hosting, verification, KYC, payment processing, logistics, insurance, marketing, customer support, exhibitions, storage and related functions.',
+    ),
+    MouParagraph(
+      '28.2 The Aggregator authorizes Galleryzone to share information reasonably necessary for such services, subject to applicable law.',
+    ),
+    MouParagraph(
+      '28.3 Galleryzone may appoint or change service providers where reasonably necessary for business or compliance purposes.',
+    ),
     MouHeading('29. ASSIGNMENT'),
-    MouParagraph('29.1 The Aggregator shall not assign or transfer this MOU or material rights without Galleryzone’s prior written consent, except where prohibited by law.'),
-    MouParagraph('29.2 Galleryzone may assign or transfer this MOU to an affiliate, successor, purchaser of substantially all relevant business/assets, or other lawful successor, provided the assignment does not unlawfully prejudice accrued rights of the Aggregator.'),
+    MouParagraph(
+      '29.1 The Aggregator shall not assign or transfer this MOU or material rights without Galleryzone’s prior written consent, except where prohibited by law.',
+    ),
+    MouParagraph(
+      '29.2 Galleryzone may assign or transfer this MOU to an affiliate, successor, purchaser of substantially all relevant business/assets, or other lawful successor, provided the assignment does not unlawfully prejudice accrued rights of the Aggregator.',
+    ),
     MouHeading('30. WAIVER; CUMULATIVE REMEDIES'),
-    MouParagraph('30.1 Failure or delay in exercising a right or remedy shall not constitute waiver.'),
-    MouParagraph('30.2 Rights and remedies under this MOU are cumulative and, subject to law, are in addition to other available rights and remedies.'),
+    MouParagraph(
+      '30.1 Failure or delay in exercising a right or remedy shall not constitute waiver.',
+    ),
+    MouParagraph(
+      '30.2 Rights and remedies under this MOU are cumulative and, subject to law, are in addition to other available rights and remedies.',
+    ),
     MouHeading('31. AGGREGATOR CAPACITY AND AUTHORITY'),
-    MouParagraph('31.1 The Aggregator represents that it has legal capacity and authority to enter into and perform this MOU.'),
-    MouParagraph('31.2 The Aggregator shall not knowingly submit or handle artwork subject to a conflicting ownership, licensing, consignment, security, contractual or other restriction that prevents the activities contemplated by this MOU.'),
-    MouParagraph('31.3 Where acting through a representative, entity or authorized person, appropriate authority documentation shall be provided where reasonably required.'),
+    MouParagraph(
+      '31.1 The Aggregator represents that it has legal capacity and authority to enter into and perform this MOU.',
+    ),
+    MouParagraph(
+      '31.2 The Aggregator shall not knowingly submit or handle artwork subject to a conflicting ownership, licensing, consignment, security, contractual or other restriction that prevents the activities contemplated by this MOU.',
+    ),
+    MouParagraph(
+      '31.3 Where acting through a representative, entity or authorized person, appropriate authority documentation shall be provided where reasonably required.',
+    ),
     MouHeading('32. RISK OF LOSS AND CONDITION'),
-    MouParagraph('32.1 Ownership and risk of physical loss or damage are separate concepts. Risk and financial responsibility shall be allocated according to the actual custody timeline, condition records, handover records and the audit procedure in Clause 7.12. For the avoidance of doubt, liability for loss or damage shall be determined under Clause 7 after the cause and responsibility have been assessed.'),
-    MouParagraph('32.2 The Aggregator shall disclose known pre-existing damage, defects, restoration, alteration or material condition issues.'),
-    MouParagraph('32.3 Galleryzone or an authorized Aggregator may inspect and document condition by photographs, videos or condition reports before dispatch, during custody or before delivery.'),
-    MouParagraph('32.4 Parties shall cooperate with logistics providers and the persons conducting the condition audit in relation to damage or loss.'),
+    MouParagraph(
+      '32.1 Ownership and risk of physical loss or damage are separate concepts. Risk and financial responsibility shall be allocated according to the actual custody timeline, condition records, handover records and the audit procedure in Clause 7.12. For the avoidance of doubt, liability for loss or damage shall be determined under Clause 7 after the cause and responsibility have been assessed.',
+    ),
+    MouParagraph(
+      '32.2 The Aggregator shall disclose known pre-existing damage, defects, restoration, alteration or material condition issues.',
+    ),
+    MouParagraph(
+      '32.3 Galleryzone or an authorized Aggregator may inspect and document condition by photographs, videos or condition reports before dispatch, during custody or before delivery.',
+    ),
+    MouParagraph(
+      '32.4 Parties shall cooperate with logistics providers and the persons conducting the condition audit in relation to damage or loss.',
+    ),
     MouHeading('33. AGGREGATOR CUSTODY, ACCOUNTABILITY AND RECONCILIATION'),
-    MouParagraph('33.1 From physical delivery, collection or placement under the Aggregator’s control until confirmed return to Galleryzone, the Artist or an authorized location, the Aggregator shall maintain the artwork in accordance with this MOU.'),
-    MouParagraph('33.2 The security deposit shall not be treated as a substitute for the Aggregator’s custody, safeguarding, return, insurance or financial obligations.'),
-    MouParagraph('33.3 The Aggregator shall maintain accurate records of each artwork, including artwork ID, Artist Price, receipt date, condition, location, display status, movement, sale status and return status.'),
-    MouParagraph('33.4 Loss, theft, disappearance, damage, unauthorized movement, customer-caused incident, insurance incident or other material event affecting artwork shall be reported to Galleryzone immediately.'),
-    MouParagraph('33.5 Any artwork that cannot be accounted for within the applicable return period shall be dealt with in accordance with Clause 7.'),
-    MouParagraph('33.6 Any liability of the Aggregator for loss or damage to artwork shall be determined exclusively in accordance with Clause 7 and the applicable custody and logistics provisions of this MOU.'),
-    MouParagraph('33.7 Payment or recovery for loss or damage shall not transfer copyright or any other intellectual-property rights in the artwork to the Aggregator.'),
+    MouParagraph(
+      '33.1 From physical delivery, collection or placement under the Aggregator’s control until confirmed return to Galleryzone, the Artist or an authorized location, the Aggregator shall maintain the artwork in accordance with this MOU.',
+    ),
+    MouParagraph(
+      '33.2 The security deposit shall not be treated as a substitute for the Aggregator’s custody, safeguarding, return, insurance or financial obligations.',
+    ),
+    MouParagraph(
+      '33.3 The Aggregator shall maintain accurate records of each artwork, including artwork ID, Artist Price, receipt date, condition, location, display status, movement, sale status and return status.',
+    ),
+    MouParagraph(
+      '33.4 Loss, theft, disappearance, damage, unauthorized movement, customer-caused incident, insurance incident or other material event affecting artwork shall be reported to Galleryzone immediately.',
+    ),
+    MouParagraph(
+      '33.5 Any artwork that cannot be accounted for within the applicable return period shall be dealt with in accordance with Clause 7.',
+    ),
+    MouParagraph(
+      '33.6 Any liability of the Aggregator for loss or damage to artwork shall be determined exclusively in accordance with Clause 7 and the applicable custody and logistics provisions of this MOU.',
+    ),
+    MouParagraph(
+      '33.7 Payment or recovery for loss or damage shall not transfer copyright or any other intellectual-property rights in the artwork to the Aggregator.',
+    ),
     MouHeading('34. POST-TERMINATION EFFECTS AND RECORD RETENTION'),
-    MouParagraph('34.1 Termination does not affect accrued rights or obligations.'),
-    MouParagraph('34.2 Galleryzone may retain transaction, tax, accounting, authenticity, provenance, ownership, dispute, fraud-prevention and other records for periods reasonably required by law or legitimate business purposes.'),
-    MouParagraph('34.3 Following termination, Galleryzone shall cease new marketing/listing activities where required by applicable withdrawal/termination terms, except for historical records, sold-artwork provenance, transaction records and legally required records.'),
-    MouParagraph('34.4 Provisions concerning confidentiality, data protection, intellectual property, payment obligations, indemnity, liability, dispute resolution, record retention and other provisions intended by nature to survive shall survive termination.'),
+    MouParagraph(
+      '34.1 Termination does not affect accrued rights or obligations.',
+    ),
+    MouParagraph(
+      '34.2 Galleryzone may retain transaction, tax, accounting, authenticity, provenance, ownership, dispute, fraud-prevention and other records for periods reasonably required by law or legitimate business purposes.',
+    ),
+    MouParagraph(
+      '34.3 Following termination, Galleryzone shall cease new marketing/listing activities where required by applicable withdrawal/termination terms, except for historical records, sold-artwork provenance, transaction records and legally required records.',
+    ),
+    MouParagraph(
+      '34.4 Provisions concerning confidentiality, data protection, intellectual property, payment obligations, indemnity, liability, dispute resolution, record retention and other provisions intended by nature to survive shall survive termination.',
+    ),
     MouHeading('35. ORDER OF PRECEDENCE AND POLICIES'),
-    MouParagraph('35.1 In case of conflict, the following order applies unless expressly stated otherwise: (a) mandatory applicable law; (b) this signed MOU and signed amendments; (c) transaction-specific written terms accepted by the parties; and (d) applicable operational policies published by Galleryzone.'),
-    MouParagraph('35.2 Operational policies may supplement procedures and requirements but shall not materially amend core commercial rights and obligations, including the tier thresholds, incentive percentages or calculation method in Clause 9, unless amended in accordance with this MOU or otherwise expressly permitted by law.'),
+    MouParagraph(
+      '35.1 In case of conflict, the following order applies unless expressly stated otherwise: (a) mandatory applicable law; (b) this signed MOU and signed amendments; (c) transaction-specific written terms accepted by the parties; and (d) applicable operational policies published by Galleryzone.',
+    ),
+    MouParagraph(
+      '35.2 Operational policies may supplement procedures and requirements but shall not materially amend core commercial rights and obligations, including the tier thresholds, incentive percentages or calculation method in Clause 9, unless amended in accordance with this MOU or otherwise expressly permitted by law.',
+    ),
     MouHeading('36. SEVERABILITY'),
-    MouParagraph('36.1 If any provision is held invalid, illegal or unenforceable by a competent authority, that provision shall been forced to the maximum extent permitted by law and the remaining provisions shall continue in force.'),
-    MouParagraph('36.2 The parties shall, where reasonably practicable, cooperate to replace an unenforceable provision with a lawful provision that most closely reflects the original commercial intent.'),
+    MouParagraph(
+      '36.1 If any provision is held invalid, illegal or unenforceable by a competent authority, that provision shall been forced to the maximum extent permitted by law and the remaining provisions shall continue in force.',
+    ),
+    MouParagraph(
+      '36.2 The parties shall, where reasonably practicable, cooperate to replace an unenforceable provision with a lawful provision that most closely reflects the original commercial intent.',
+    ),
     MouHeading('37. LIMITATION OF LIABILITY'),
-    MouParagraph('37.1 Except to the extent prohibited by applicable law, neither party shall be liable for indirect, incidental, special or consequential loss arising solely from a remote or unforeseeable event.'),
-    MouParagraph('37.2 Nothing in this Clause limits or excludes liability that cannot lawfully be limited or excluded.'),
-    MouParagraph('37.3 Nothing in this Clause shall limit the Aggregator\'s liability expressly arising under Clause 7 for loss, theft, destruction or damage to artwork attributable to the Aggregator, unauthorized sale or transfer, conversion or misappropriation, fraud, wilful misconduct, gross negligence, breach of confidentiality, infringement caused by the Aggregator, or any other liability that cannot lawfully be limited or excluded.'),
-    MouParagraph('37.4 The security deposit referred to in Clause 7 is not a liability cap. The liability provisions of Clause 7 shall prevail to the extent of any inconsistency with this Clause.'),
+    MouParagraph(
+      '37.1 Except to the extent prohibited by applicable law, neither party shall be liable for indirect, incidental, special or consequential loss arising solely from a remote or unforeseeable event.',
+    ),
+    MouParagraph(
+      '37.2 Nothing in this Clause limits or excludes liability that cannot lawfully be limited or excluded.',
+    ),
+    MouParagraph(
+      '37.3 Nothing in this Clause shall limit the Aggregator\'s liability expressly arising under Clause 7 for loss, theft, destruction or damage to artwork attributable to the Aggregator, unauthorized sale or transfer, conversion or misappropriation, fraud, wilful misconduct, gross negligence, breach of confidentiality, infringement caused by the Aggregator, or any other liability that cannot lawfully be limited or excluded.',
+    ),
+    MouParagraph(
+      '37.4 The security deposit referred to in Clause 7 is not a liability cap. The liability provisions of Clause 7 shall prevail to the extent of any inconsistency with this Clause.',
+    ),
     MouHeading('38. LANGUAGE AND INTERPRETATION'),
-    MouParagraph('38.1 This MOU is executed in English. If a translation is provided for convenience, the English version shall prevail to the extent permitted by law.'),
-    MouParagraph('38.2 Headings are for convenience only and shall not affect interpretation.'),
+    MouParagraph(
+      '38.1 This MOU is executed in English. If a translation is provided for convenience, the English version shall prevail to the extent permitted by law.',
+    ),
+    MouParagraph(
+      '38.2 Headings are for convenience only and shall not affect interpretation.',
+    ),
     MouHeading('39. GOVERNING LAW AND JURISDICTION'),
-    MouParagraph('39.1 This MOU shall be governed by and construed in accordance with the laws of India.'),
-    MouParagraph('39.2 Subject to Clause 17 and applicable law, the competent courts at Hyderabad, Telangana, India shall have jurisdiction in respect of matters arising out of or relating to this MOU that are not required to be finally determined by arbitration, including interim or protective relief, appointment or replacement of an arbitrator where applicable, and enforcement of an arbitral award.'),
+    MouParagraph(
+      '39.1 This MOU shall be governed by and construed in accordance with the laws of India.',
+    ),
+    MouParagraph(
+      '39.2 Subject to Clause 17 and applicable law, the competent courts at Hyderabad, Telangana, India shall have jurisdiction in respect of matters arising out of or relating to this MOU that are not required to be finally determined by arbitration, including interim or protective relief, appointment or replacement of an arbitrator where applicable, and enforcement of an arbitral award.',
+    ),
     MouHeading('40. ENTIRE AGREEMENT'),
-    MouParagraph('40.1 This MOU constitutes the entire understanding and agreement between Galleryzone and the Aggregator with respect to its subject matter and supersedes all prior discussions, communications, understandings or representations relating to the same subject matter, unless expressly incorporated herein.'),
-    MouParagraph('40.2 Amendments, modifications or variations to this MOU shall be valid only when made in writing and accepted by both Parties.'),
-    MouParagraph('40.3 Amendments may be executed physically or through legally recognized electronic or digital means.'),
-    MouParagraph('40.4 This MOU may be executed in counterparts, including electronically, each of which shall be deemed an original and all of which together shall constitute one instrument.'),
+    MouParagraph(
+      '40.1 This MOU constitutes the entire understanding and agreement between Galleryzone and the Aggregator with respect to its subject matter and supersedes all prior discussions, communications, understandings or representations relating to the same subject matter, unless expressly incorporated herein.',
+    ),
+    MouParagraph(
+      '40.2 Amendments, modifications or variations to this MOU shall be valid only when made in writing and accepted by both Parties.',
+    ),
+    MouParagraph(
+      '40.3 Amendments may be executed physically or through legally recognized electronic or digital means.',
+    ),
+    MouParagraph(
+      '40.4 This MOU may be executed in counterparts, including electronically, each of which shall be deemed an original and all of which together shall constitute one instrument.',
+    ),
     MouHeading('SIGNATURES'),
-    MouParagraph('The parties confirm that they have read understood and agreed to the terms of this MOU and intend to be legally bound by it, subject to applicable law.'),
+    MouParagraph(
+      'The parties confirm that they have read understood and agreed to the terms of this MOU and intend to be legally bound by it, subject to applicable law.',
+    ),
     MouSigner('FOR GALLERYZONE PRIVATE LIMITED'),
     MouField('Name', MouFieldKey.companyName),
     MouField('Designation', MouFieldKey.companyDesignation),

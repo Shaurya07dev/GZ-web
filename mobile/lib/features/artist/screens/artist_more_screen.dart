@@ -39,7 +39,9 @@ class ArtistMoreScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    backgroundColor: theme.colorScheme.primary.withValues(
+                      alpha: 0.15,
+                    ),
                     child: Text(
                       portalInitials(name),
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -53,7 +55,11 @@ class ArtistMoreScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: theme.textTheme.titleMedium, overflow: TextOverflow.ellipsis),
+                        Text(
+                          name,
+                          style: theme.textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         Text(
                           menu.roleLabel,
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -91,10 +97,16 @@ class ArtistMoreScreen extends ConsumerWidget {
           ],
           const Divider(height: 25),
           ListTile(
-            leading: Icon(LucideIcons.logOut, size: 20, color: theme.colorScheme.error),
+            leading: Icon(
+              LucideIcons.logOut,
+              size: 20,
+              color: theme.colorScheme.error,
+            ),
             title: Text(
               'Sign out',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
             onTap: () async {
               final router = GoRouter.of(context);

@@ -10,10 +10,15 @@ import '../data/models/artist_portal.dart';
 /// client meeting Aug 2026): customer-dominant, no on-time-delivery factor yet,
 /// a linear artwork-count curve. When the client answers, this is the one place
 /// that changes on each side.
-const ratingScoreWeights = (customerRating: 0.65, profileCompletion: 0.25, artworkCount: 0.1);
+const ratingScoreWeights = (
+  customerRating: 0.65,
+  profileCompletion: 0.25,
+  artworkCount: 0.1,
+);
 
 /// 0-10. Linear to 10 - 0 artworks = 0, 10 or more = full marks.
-double artworkCountScore(int artworkCount) => artworkCount.clamp(0, 10).toDouble();
+double artworkCountScore(int artworkCount) =>
+    artworkCount.clamp(0, 10).toDouble();
 
 /// 0-10: the share of a fixed set of profile fields the artist has filled in,
 /// equal weight each (the client hasn't said which should count more).
@@ -46,7 +51,8 @@ double scoreArtist({
   required double profileCompletion,
   required double artworkCount,
 }) {
-  final raw = customerRating * ratingScoreWeights.customerRating +
+  final raw =
+      customerRating * ratingScoreWeights.customerRating +
       profileCompletion * ratingScoreWeights.profileCompletion +
       artworkCount * ratingScoreWeights.artworkCount;
   return (raw * 10).round() / 10;

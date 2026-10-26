@@ -42,8 +42,11 @@ class AggregatorAnalyticsScreen extends ConsumerWidget {
     }
 
     // A dash while the figure is still on its way, as the website shows.
-    String figure(String Function(double) format, double? value) => value == null ? '—' : format(value);
-    Widget stat(String label, String value) => Expanded(child: StatCard(label: label, value: value));
+    String figure(String Function(double) format, double? value) =>
+        value == null ? '—' : format(value);
+    Widget stat(String label, String value) => Expanded(
+      child: StatCard(label: label, value: value),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Analytics')),
@@ -63,18 +66,30 @@ class AggregatorAnalyticsScreen extends ConsumerWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      stat('Sales recorded', summary == null ? '—' : '${summary.salesCount}'),
+                      stat(
+                        'Sales recorded',
+                        summary == null ? '—' : '${summary.salesCount}',
+                      ),
                       const SizedBox(width: 12),
-                      stat('Total revenue', figure(formatInr, summary?.totalRevenue)),
+                      stat(
+                        'Total revenue',
+                        figure(formatInr, summary?.totalRevenue),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      stat('Avg. sold price', figure(formatInr, summary?.averageSoldPrice)),
+                      stat(
+                        'Avg. sold price',
+                        figure(formatInr, summary?.averageSoldPrice),
+                      ),
                       const SizedBox(width: 12),
-                      stat('Avg. display markup', figure(formatInr, summary?.averageDisplayMarkup)),
+                      stat(
+                        'Avg. display markup',
+                        figure(formatInr, summary?.averageDisplayMarkup),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -82,16 +97,22 @@ class AggregatorAnalyticsScreen extends ConsumerWidget {
                     title: 'Top categories moved',
                     description: 'Revenue from your recorded sales, by artwork category.',
                     child: categoriesAsync.when(
-                      loading: () => const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+                      loading: () => const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
                       error: (error, stack) => ChartEmpty(
                         title: "Couldn't load your categories",
                         description: authErrorMessage(error),
                       ),
                       data: (categories) => BarList(
                         emptyTitle: 'No category revenue yet',
-                        emptyDescription: 'Revenue appears here once you record a sale.',
+                        emptyDescription:
+                            'Revenue appears here once you record a sale.',
                         rows: [
-                          for (final category in [...categories]..sort((a, b) => b.revenue.compareTo(a.revenue)))
+                          for (final category in [
+                            ...categories,
+                          ]..sort((a, b) => b.revenue.compareTo(a.revenue)))
                             (
                               label: humanize(category.category),
                               value: category.revenue,

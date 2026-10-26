@@ -13,7 +13,7 @@ import '../providers/account_providers.dart';
 /// The customer portal's "More" tab — a full screen now, not a slide-out
 /// drawer, so the fifth bottom-nav destination is a real page you land on
 /// rather than an overlay. Same [customerMenu] data the drawer used to
-/// render (Wallet, Addresses, Resell artwork, Support, FAQs, About & legal).
+/// render (Addresses, Resell artwork, Support, FAQs, About & legal).
 class CustomerMoreScreen extends ConsumerWidget {
   const CustomerMoreScreen({super.key});
 
@@ -38,7 +38,9 @@ class CustomerMoreScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+                    backgroundColor: theme.colorScheme.primary.withValues(
+                      alpha: 0.15,
+                    ),
                     child: Text(
                       portalInitials(name),
                       style: theme.textTheme.titleLarge?.copyWith(
@@ -52,7 +54,11 @@ class CustomerMoreScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(name, style: theme.textTheme.titleMedium, overflow: TextOverflow.ellipsis),
+                        Text(
+                          name,
+                          style: theme.textTheme.titleMedium,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         Text(
                           menu.roleLabel,
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -90,10 +96,16 @@ class CustomerMoreScreen extends ConsumerWidget {
           ],
           const Divider(height: 25),
           ListTile(
-            leading: Icon(LucideIcons.logOut, size: 20, color: theme.colorScheme.error),
+            leading: Icon(
+              LucideIcons.logOut,
+              size: 20,
+              color: theme.colorScheme.error,
+            ),
             title: Text(
               'Sign out',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
             onTap: () async {
               final router = GoRouter.of(context);

@@ -26,13 +26,19 @@ bool bankAccountNumberInvalid(String number) {
   if (number.isEmpty) return false;
   if (!RegExp(r'^\d{9,18}$').hasMatch(number)) return true;
   if (RegExp(r'^(\d)\1+$').hasMatch(number)) return true;
-  return '01234567890123456789'.contains(number) || '98765432109876543210'.contains(number);
+  return '01234567890123456789'.contains(number) ||
+      '98765432109876543210'.contains(number);
 }
 
 /// The artist's own figures, shown only to them. Derived on read from what
 /// already holds the truth, never stored, so a figure cannot drift from the
 /// thing it counts. Port of `profileStatsService.artistPrivate`.
-typedef ArtistPrivateStats = ({double earned, double pending, double averageSale, int drafts});
+typedef ArtistPrivateStats = ({
+  double earned,
+  double pending,
+  double averageSale,
+  int drafts,
+});
 
 ArtistPrivateStats artistPrivateStatsFor({
   required List<WalletTransaction> transactions,
@@ -49,11 +55,14 @@ ArtistPrivateStats artistPrivateStatsFor({
   return (
     earned: earned,
     pending: wallet.lockedBalance,
-    averageSale: settled.isEmpty ? 0 : (earned / settled.length).roundToDouble(),
+    averageSale: settled.isEmpty
+        ? 0
+        : (earned / settled.length).roundToDouble(),
     drafts: artworks
         .where(
           (entry) =>
-              entry.artwork.status == ArtworkStatus.draft || entry.artwork.status == ArtworkStatus.pendingApproval,
+              entry.artwork.status == ArtworkStatus.draft ||
+              entry.artwork.status == ArtworkStatus.pendingApproval,
         )
         .length,
   );
@@ -69,7 +78,8 @@ ArtistPublicStats artistPublicStatsFor(List<ArtistArtwork> artworks) {
     ArtworkStatus.delivered,
     ArtworkStatus.completed,
   };
-  int count(bool Function(ArtworkStatus) test) => artworks.where((entry) => test(entry.artwork.status)).length;
+  int count(bool Function(ArtworkStatus) test) =>
+      artworks.where((entry) => test(entry.artwork.status)).length;
   return (
     listed: count((status) => status == ArtworkStatus.marketplace),
     sold: count(sold.contains),

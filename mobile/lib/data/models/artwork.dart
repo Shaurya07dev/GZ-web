@@ -55,9 +55,11 @@ const listingTypeLabel = {
 /// Always ask these two rather than comparing against a literal: adding a
 /// channel later shouldn't mean hunting down every
 /// `== ListingType.marketplaceAndAggregator` in the codebase again.
-bool isMarketplaceListed(ListingType type) => type != ListingType.aggregatorOnly;
+bool isMarketplaceListed(ListingType type) =>
+    type != ListingType.aggregatorOnly;
 
-bool isAggregatorListed(ListingType type) => type != ListingType.marketplaceOnly;
+bool isAggregatorListed(ListingType type) =>
+    type != ListingType.marketplaceOnly;
 
 /// GalleryZone's rank for a piece — Rare / Unique / Original / Standard —
 /// shown as a badge over the artwork. It is GalleryZone's call, never the
@@ -115,7 +117,8 @@ class ArtworkRarityConverter implements JsonConverter<ArtworkRarity?, String?> {
   ArtworkRarity? fromJson(String? json) => artworkRarityFromCode(json);
 
   @override
-  String? toJson(ArtworkRarity? object) => object == null ? null : artworkRarityCode[object];
+  String? toJson(ArtworkRarity? object) =>
+      object == null ? null : artworkRarityCode[object];
 }
 
 /// Rough size band the API derives from a piece's stored dimensions.
@@ -152,7 +155,7 @@ ReviewStatus reviewStatusFromCode(String? code) => switch (code) {
   _ => ReviewStatus.notSubmitted,
 };
 
-enum SocialProofPlatform { instagram, youtube, x, tiktok }
+enum SocialProofPlatform { instagram, youtube, x, tiktok, website }
 
 @freezed
 abstract class ArtworkImage with _$ArtworkImage {
@@ -167,15 +170,19 @@ abstract class ArtworkImage with _$ArtworkImage {
     String? id,
   }) = _ArtworkImage;
 
-  factory ArtworkImage.fromJson(Map<String, dynamic> json) => _$ArtworkImageFromJson(json);
+  factory ArtworkImage.fromJson(Map<String, dynamic> json) =>
+      _$ArtworkImageFromJson(json);
 }
 
 @freezed
 abstract class SocialProofLink with _$SocialProofLink {
-  const factory SocialProofLink({required SocialProofPlatform platform, required String url}) =
-      _SocialProofLink;
+  const factory SocialProofLink({
+    required SocialProofPlatform platform,
+    required String url,
+  }) = _SocialProofLink;
 
-  factory SocialProofLink.fromJson(Map<String, dynamic> json) => _$SocialProofLinkFromJson(json);
+  factory SocialProofLink.fromJson(Map<String, dynamic> json) =>
+      _$SocialProofLinkFromJson(json);
 }
 
 @freezed
@@ -207,6 +214,7 @@ abstract class Artwork with _$Artwork {
     required double customerPrice,
     required String thumbnailUrl,
     required bool insured,
+    @Default(false) bool exclusive,
     required ArtworkStatus status,
     required ListingType listingType,
     required String description,
@@ -237,7 +245,7 @@ abstract class Artwork with _$Artwork {
     /// GZ000004-style product code printed on the tag and the passport.
     String? productCode,
 
-    /// Original / limited edition / open edition / study / commission / other.
+    /// One of the 28 regional Indian art traditions, or artist-supplied text.
     String? artworkType,
 
     /// Which of the world painting traditions this is — only for paintings.
@@ -265,7 +273,8 @@ abstract class Artwork with _$Artwork {
     ArtworkCustody? custody,
   }) = _Artwork;
 
-  factory Artwork.fromJson(Map<String, dynamic> json) => _$ArtworkFromJson(json);
+  factory Artwork.fromJson(Map<String, dynamic> json) =>
+      _$ArtworkFromJson(json);
 }
 
 // --- Physical details -------------------------------------------------------
@@ -293,7 +302,10 @@ const framingLabel = {
 };
 
 /// MOU §12: only these two are acceptable for a piece going to an aggregator.
-const aggregatorReadyFraming = {FramingState.framed, FramingState.stretchedCanvas};
+const aggregatorReadyFraming = {
+  FramingState.framed,
+  FramingState.stretchedCanvas,
+};
 
 @freezed
 abstract class ArtworkPhysical with _$ArtworkPhysical {
@@ -353,7 +365,8 @@ abstract class ArtworkCustody with _$ArtworkCustody {
     required String locationLabel,
   }) = _ArtworkCustody;
 
-  factory ArtworkCustody.fromJson(Map<String, dynamic> json) => _$ArtworkCustodyFromJson(json);
+  factory ArtworkCustody.fromJson(Map<String, dynamic> json) =>
+      _$ArtworkCustodyFromJson(json);
 }
 
 /// Fallback custody for a record that doesn't carry an explicit one yet.
@@ -451,7 +464,11 @@ const _purchaseLockedStatuses = {
 enum ArtworkEditReason { draft, withinWindow, purchased, windowClosed }
 
 class ArtworkEditState {
-  const ArtworkEditState({required this.editable, required this.reason, required this.daysLeft});
+  const ArtworkEditState({
+    required this.editable,
+    required this.reason,
+    required this.daysLeft,
+  });
 
   final bool editable;
   final ArtworkEditReason reason;
@@ -487,10 +504,15 @@ ArtworkEditState artworkEditState(Artwork artwork, {DateTime? now}) {
 
   final listedAt = DateTime.parse(artwork.statusHistory.first.changedAt);
   final elapsedDays =
-      (now ?? DateTime.now()).difference(listedAt).inMilliseconds / Duration.millisecondsPerDay;
+      (now ?? DateTime.now()).difference(listedAt).inMilliseconds /
+      Duration.millisecondsPerDay;
   final daysLeft = (artworkEditWindowDays - elapsedDays).ceil();
   return daysLeft > 0
-      ? ArtworkEditState(editable: true, reason: ArtworkEditReason.withinWindow, daysLeft: daysLeft)
+      ? ArtworkEditState(
+          editable: true,
+          reason: ArtworkEditReason.withinWindow,
+          daysLeft: daysLeft,
+        )
       : const ArtworkEditState(
           editable: false,
           reason: ArtworkEditReason.windowClosed,
@@ -576,6 +598,9 @@ abstract class OwnershipTransfer with _$OwnershipTransfer {
     /// ownership hand-overs. Read it through [transferKindOf].
     TransferKind? kind,
 
+    /// Display transfers only: the first calendar day the piece may be shown.
+    String? displayStartsAt,
+
     /// Display transfers only: the date the display period runs to.
     String? displayEndsAt,
 
@@ -598,9 +623,14 @@ bool isDisplayActive(OwnershipTransfer transfer, {DateTime? now}) {
   if (transferKindOf(transfer) != TransferKind.display) return false;
   if (transfer.status != TransferStatus.accepted) return false;
   if (transfer.displayEndedAt != null) return false;
+  final instant = now ?? DateTime.now();
+  final startsAt = transfer.displayStartsAt;
+  if (startsAt != null && DateTime.parse(startsAt).isAfter(instant)) {
+    return false;
+  }
   final endsAt = transfer.displayEndsAt;
   if (endsAt == null) return false;
-  return DateTime.parse(endsAt).isAfter(now ?? DateTime.now());
+  return DateTime.parse(endsAt).isAfter(instant);
 }
 
 /// The one display transfer currently in force for a piece, if any.

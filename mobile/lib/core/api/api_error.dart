@@ -31,7 +31,8 @@ class ApiError implements Exception {
   bool get isRateLimited => status == 429;
 
   /// The account itself is closed to this person (suspended or blocked).
-  bool get isAccountClosed => code == 'account_suspended' || code == 'account_blocked';
+  bool get isAccountClosed =>
+      code == 'account_suspended' || code == 'account_blocked';
 
   /// Reads as `Exception: <message>` on purpose. The mock repositories throw
   /// `Exception('…')` and every screen strips that prefix to show the text;

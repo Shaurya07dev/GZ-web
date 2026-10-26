@@ -21,14 +21,22 @@ class RemoteArtworkRepository implements ArtworkRepository {
 
   static Map<String, dynamic> queryOf(ArtworkFilters filters) {
     final query = <String, dynamic>{'pageSize': '${filters.pageSize}'};
-    if (filters.categories.isNotEmpty) query['category'] = filters.categories.join(',');
+    if (filters.categories.isNotEmpty) {
+      query['category'] = filters.categories.join(',');
+    }
     if (filters.mediums.isNotEmpty) query['medium'] = filters.mediums.join(',');
-    if (filters.rarity != null) query['rarity'] = artworkRarityCode[filters.rarity]!;
+    if (filters.rarity != null) {
+      query['rarity'] = artworkRarityCode[filters.rarity]!;
+    }
     if (filters.artistId != null) query['artistId'] = filters.artistId;
     if (filters.location != null) query['location'] = filters.location;
     if (filters.size != null) query['size'] = sizeBandToApi(filters.size!);
-    if (filters.minPrice != null) query['minPricePaise'] = '${rupeesToPaise(filters.minPrice!)}';
-    if (filters.maxPrice != null) query['maxPricePaise'] = '${rupeesToPaise(filters.maxPrice!)}';
+    if (filters.minPrice != null) {
+      query['minPricePaise'] = '${rupeesToPaise(filters.minPrice!)}';
+    }
+    if (filters.maxPrice != null) {
+      query['maxPricePaise'] = '${rupeesToPaise(filters.maxPrice!)}';
+    }
     final text = filters.query?.trim() ?? '';
     if (text.isNotEmpty) query['q'] = text;
     final sort = switch (filters.sortBy) {
@@ -44,12 +52,19 @@ class RemoteArtworkRepository implements ArtworkRepository {
 
   @override
   Future<MarketplacePage> list(ArtworkFilters filters) async =>
-      marketplacePageFromApi(await api.getMap('/v1/artworks', query: queryOf(filters), auth: false));
+      marketplacePageFromApi(
+        await api.getMap('/v1/artworks', query: queryOf(filters), auth: false),
+      );
 
   @override
   Future<Artwork?> get(String id) async {
     try {
-      return artworkFromApi(await api.getMap('/v1/artworks/${Uri.encodeComponent(id)}', auth: false));
+      return artworkFromApi(
+        await api.getMap(
+          '/v1/artworks/${Uri.encodeComponent(id)}',
+          auth: false,
+        ),
+      );
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
       rethrow;
@@ -68,13 +83,19 @@ class RemoteArtworkRepository implements ArtworkRepository {
         if (artwork != null) found[artwork.id] = artwork;
       }
     }
-    return [for (final id in unique) if (found[id] != null) found[id]!];
+    return [
+      for (final id in unique)
+        if (found[id] != null) found[id]!,
+    ];
   }
 
   @override
   Future<List<Artwork>> listByArtist(String artistId) async {
     try {
-      final json = await api.getMap('/v1/artists/${Uri.encodeComponent(artistId)}/artworks', auth: false);
+      final json = await api.getMap(
+        '/v1/artists/${Uri.encodeComponent(artistId)}/artworks',
+        auth: false,
+      );
       return asMapList(json['artworks']).map(artworkFromApi).toList();
     } on ApiError catch (error) {
       if (error.isNotFound) return const [];
@@ -85,7 +106,9 @@ class RemoteArtworkRepository implements ArtworkRepository {
   @override
   Future<ArtistProfile?> getArtistProfile(String id) async {
     try {
-      return artistProfileFromApi(await api.getMap('/v1/artists/${Uri.encodeComponent(id)}', auth: false));
+      return artistProfileFromApi(
+        await api.getMap('/v1/artists/${Uri.encodeComponent(id)}', auth: false),
+      );
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
       rethrow;
@@ -93,8 +116,9 @@ class RemoteArtworkRepository implements ArtworkRepository {
   }
 
   @override
-  Future<List<ArtistProfile>> listArtists() async =>
-      [for (final card in await listArtistCards()) card.profile];
+  Future<List<ArtistProfile>> listArtists() async => [
+    for (final card in await listArtistCards()) card.profile,
+  ];
 
   @override
   Future<List<ArtistCard>> listArtistCards() async {

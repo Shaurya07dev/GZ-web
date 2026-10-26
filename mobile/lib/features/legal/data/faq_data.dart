@@ -14,7 +14,11 @@ const faqAudienceLabel = <FaqAudience, String>{
 };
 
 class FaqItem {
-  const FaqItem({required this.audience, required this.question, required this.answer});
+  const FaqItem({
+    required this.audience,
+    required this.question,
+    required this.answer,
+  });
 
   final FaqAudience audience;
   final String question;
@@ -35,7 +39,7 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.general,
     question: 'What does the Verified badge mean?',
-    answer: 'Verified artists have linked an official social media handle, kept an active GalleryZone plan for three months, and completed at least one confirmed sale. Clearing all three unlocks the Gold ✦ Verified badge, shown on their profile and every listing.',
+    answer: 'Artist verification has three tiers: an official social or portfolio link, the signed GalleryZone artist agreement, and a first confirmed sale. Clearing all three unlocks the Gold ✦ Verified badge, shown on the artist\'s public profile and listings.',
   ),
   FaqItem(
     audience: FaqAudience.general,
@@ -60,17 +64,17 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.artists,
     question: 'Who can see my artist price?',
-    answer: 'Your listed artist price is confidential. It is not displayed to customers or publicly on the marketplace. Aggregators may see it for business decision-making.',
+    answer: 'Your listed artist price is confidential. It is not displayed to customers, aggregators, or publicly on the marketplace. Aggregators see GalleryZone\'s offer and their permitted selling-price and incentive breakdown instead.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
     question: 'How is the customer selling price calculated?',
-    answer: 'The customer selling price is calculated at 130% of the artist\'s listed price, representing a 30% markup. For example, an artist price of ₹10,000 results in a customer price of ₹13,000 + GST.',
+    answer: 'GalleryZone first adds the 30% platform markup, then includes the applicable 5% artwork GST in the displayed price. For example, an artist price of ₹10,000 becomes ₹13,000 before GST and ₹13,650 including GST. Any payment-gateway fee and delivery charge appear separately at checkout.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
     question: 'How much will I receive when my artwork sells?',
-    answer: 'The artist receives the full listed price. Customer-paid delivery charges are not deducted from the artist settlement if the sale is made through the marketplace. However, if the sale is made through an aggregator channel, delivery charges, convenience charges, and any other applicable charges will be deducted from the artist price.',
+    answer: 'For a marketplace sale, GalleryZone does not deduct its own platform margin from the artist price; only applicable statutory or agreed pass-through deductions may apply. Aggregator-channel settlements can also include the disclosed delivery, convenience, technology, tax, and actual third-party charges allowed by the Artist MOU.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
@@ -79,13 +83,8 @@ const faqItems = <FaqItem>[
   ),
   FaqItem(
     audience: FaqAudience.artists,
-    question: 'Is transit insurance mandatory?',
-    answer: 'No. Transit insurance is optional for marketplace listings. For uninsured artwork, the risk remains with the artist. For sales through the aggregator channel, insurance is mandatory and is purchased at the artist\'s cost. The insurance cost is approximately 1% of the artwork value.',
-  ),
-  FaqItem(
-    audience: FaqAudience.artists,
     question: 'What happens if my artwork is not sold within 30 days?',
-    answer: 'The artwork may be moved to the next available aggregator. The customer selling price is reduced by 10%; the artist\'s original listed price is not reduced.',
+    answer: 'GalleryZone may extend the placement, move the artwork to another approved aggregator, change the sales strategy, or arrange its return. When the configured monthly price ladder applies, the next GalleryZone offer decreases by 2% of the artist price per step; the artist\'s confidential listed price is not reduced.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
@@ -95,7 +94,7 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.artists,
     question: 'How does artist verification work?',
-    answer: 'Full verification requires three criteria: at least one linked social media account, an active paid subscription, and at least one confirmed sale through the platform.',
+    answer: 'The three current tiers are: an official social or portfolio link, acceptance of the current Artist MOU, and one confirmed GalleryZone sale. A subscription is optional and is not a verification requirement.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
@@ -105,12 +104,12 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.artists,
     question: 'When is my settlement paid?',
-    answer: 'Settlement is processed within 7 days after the aggregator records a confirmed sale through the platform.',
+    answer: 'An eligible artist settlement is released after successful delivery and the configured seven-day payout window, subject to returns, reversals, lawful deductions, and the transaction\'s settlement status.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
     question: 'What rights do I retain after selling my artwork?',
-    answer: 'Under the current model, the buyer receives the commercial and ownership rights upon confirmed sale and delivery, while the artist retains moral rights as the creator.',
+    answer: 'The buyer receives ownership of the physical original and may possess, display, use, and resell it. The artist retains copyright, moral rights, and permitted commercial rights for distinguishable prints, merchandise, publications, licensing, and derivative formats, but may not recreate an identical physical original.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
@@ -140,12 +139,12 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.artists,
     question: 'Can I withdraw an artwork after it has been accepted?',
-    answer: 'The current document establishes exclusivity once an artwork is accepted and becomes active. Any withdrawal procedure should therefore follow the applicable platform terms and administrative process. You may mark the artwork as sold; however, a fee equivalent to 1% of the artwork value must be paid at the time of your next listing as a repercussion.',
+    answer: 'You may request withdrawal, but it can be deferred while an aggregator placement, exhibition, buyer transaction, or logistics commitment is active. GalleryZone must communicate any reasonable, actually incurred withdrawal cost before processing wherever practicable; there is no automatic fixed 1% penalty in the current MOU.',
   ),
   FaqItem(
     audience: FaqAudience.artists,
     question: 'What happens if my artwork is damaged during transit?',
-    answer: 'If transit insurance has been selected, the applicable insurance process will apply. Without insurance, the procedures state that GalleryZone, its staff, and aggregators bear no liability for transit damage, loss, or theft.',
+    answer: 'Loss or damage is reviewed against the condition records, packaging, custody history and delivery records. The reasonable repair cost or substantiated loss is allocated to the party whose negligence, breach or failure to follow the agreed handling requirements caused it, as set out in the Artist MOU (Clause 10).',
   ),
   FaqItem(
     audience: FaqAudience.artists,
@@ -160,7 +159,7 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.artists,
     question: 'What is the Certificate of Authenticity?',
-    answer: 'Where provided by the artist, the Certificate of Authenticity (COA) forms part of the artwork\'s authenticity documentation and is made available to the customer through the platform.',
+    answer: 'The artist completes the digital Certificate of Authenticity through GalleryZone before shipment. GalleryZone keeps it with the artwork\'s provenance record, and the artist can print, sign, and dispatch a physical COA when a collector requests one.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
@@ -175,12 +174,12 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.aggregators,
     question: 'What is the aggregator advance?',
-    answer: 'The aggregator pays 5% of the customer selling price as an advance when taking possession of the artwork. The amount will be settled when the artwork is sold.',
+    answer: 'Before taking possession, the aggregator pays the configured security deposit plus delivery. The first two placement months use 5%; later configured placements use 3%. The reservation screen shows the exact basis and amount before Razorpay opens.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
     question: 'Is the 5% advance refundable?',
-    answer: 'It is refundable only if the platform cancels the arrangement before dispatch. Once the artwork has been dispatched to the aggregator, the advance is non-refundable and will only be settled in the wallet after completion of the 30-day period.',
+    answer: 'The security deposit is refundable or adjustable after a successful sale or after an unsold artwork is returned in the required condition, subject to permitted deductions. Delivery and handling charges for an unsold artwork are normally non-refundable.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
@@ -190,12 +189,12 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.aggregators,
     question: 'What happens after 30 days?',
-    answer: 'The customer selling price is reduced by 10%, and the artwork may be moved to the next available aggregator. The reduction is applied to the markup price, not the artist price.',
+    answer: 'GalleryZone may approve an extension, move the artwork to another aggregator, change the sales strategy, or arrange return. Under the current configured ladder, later GalleryZone offers step down by 2% of the artist price, not 10%, while the artist price remains unchanged.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
     question: 'How does the aggregator incentive work?',
-    answer: 'The aggregator receives an incentive equal to 20% of the 30% markup/appreciation. For an artist price of ₹10,000 and a customer price of ₹13,000, the ₹3,000 appreciation produces a ₹600 aggregator incentive.',
+    answer: 'The incentive is a percentage of the pre-GST markup pool. The current month\'s rate is based on the immediately previous calendar month\'s eligible pre-GST sales: 20% up to ₹10 lakh, 35% above ₹10 lakh through ₹50 lakh, and 50% above ₹50 lakh. With no eligible previous-month sales, the 20% tier applies.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
@@ -210,7 +209,7 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.aggregators,
     question: 'Who owns an artwork while it is in my gallery?',
-    answer: 'The platform retains legal ownership while the artwork is in the aggregator\'s possession. The aggregator acts only as a display and sales partner.',
+    answer: 'The artist retains legal ownership while the artwork is in the aggregator\'s custody. Title transfers to the buyer only after full payment and successful delivery are confirmed. Neither GalleryZone nor the aggregator becomes the owner merely by holding or displaying it.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
@@ -239,8 +238,8 @@ const faqItems = <FaqItem>[
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
-    question: 'What happens if an uninsured artwork is damaged while in my possession?',
-    answer: 'The aggregator bears responsibility for damage to uninsured artwork while it is in their possession. If the loss or damage occurs and insurance is applicable, the relevant insurance process will apply.',
+    question: 'What happens if an artwork is damaged while in my possession?',
+    answer: 'Loss, theft or damage while an artwork is in an aggregator\'s custody is investigated under the condition-audit process in the Aggregator MOU (Clause 7). No party is held responsible just because an incident happened in its possession: responsibility is decided from the condition reports, photographs, packaging and handover records, and the party found responsible pays the documented repair or loss amount.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
@@ -265,7 +264,7 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.aggregators,
     question: 'What information can I see before selecting an artwork?',
-    answer: 'The Aggregator Portal provides the artist price, customer selling price, advance requirement, and incentive information so that you can evaluate the artwork commercially.',
+    answer: 'The Aggregator Portal provides GalleryZone\'s current offer, the permitted listed selling price, the security-deposit and delivery amount, and the applicable incentive working. The artist\'s confidential private price is not disclosed.',
   ),
   FaqItem(
     audience: FaqAudience.aggregators,
@@ -275,7 +274,7 @@ const faqItems = <FaqItem>[
   FaqItem(
     audience: FaqAudience.buyers,
     question: 'What rights do I get when I buy a piece?',
-    answer: 'Once your delivery is confirmed, you receive the right to display, reproduce, license, and commercially use or resell the physical artwork.',
+    answer: 'Once full payment and delivery are confirmed, you own the physical original and may possess, display, use, and resell that physical artwork. Copyright, reproduction, licensing, and other intellectual-property rights remain with the artist unless a separate written sale term expressly transfers them.',
   ),
   FaqItem(
     audience: FaqAudience.buyers,
@@ -291,10 +290,5 @@ const faqItems = <FaqItem>[
     audience: FaqAudience.buyers,
     question: 'How do I know a piece is authentic before I buy it?',
     answer: 'Every listing links to a Certificate of Authenticity, a signed origin declaration, and the artwork\'s QR passport page, so you can verify its history independently of the listing itself.',
-  ),
-  FaqItem(
-    audience: FaqAudience.buyers,
-    question: 'Is my order insured in transit?',
-    answer: 'Artwork valued above ₹20,000 is strongly recommended for transit insurance through GalleryZone\'s partner HDFC ERGO. Look for the insured badge on a listing; delivery charges are billed separately from the artwork price.',
   ),
 ];

@@ -124,24 +124,37 @@ void main() {
       return 'monsoon-over-madurai';
     }
 
-    test('listing puts the piece back on the marketplace at the asking price', () async {
-      final artworkId = await ownAPiece();
-      await customer.createResaleListing(artworkId: artworkId, listedPrice: 99000);
+    test(
+      'listing puts the piece back on the marketplace at the asking price',
+      () async {
+        final artworkId = await ownAPiece();
+        await customer.createResaleListing(
+          artworkId: artworkId,
+          listedPrice: 99000,
+        );
 
-      final listed = (await artworks.listAllLive())
-          .firstWhere((a) => a.id == artworkId);
-      expect(listed.status, ArtworkStatus.marketplace);
-      expect(listed.customerPrice, 99000);
+        final listed = (await artworks.listAllLive()).firstWhere(
+          (a) => a.id == artworkId,
+        );
+        expect(listed.status, ArtworkStatus.marketplace);
+        expect(listed.customerPrice, 99000);
 
-      // Withdrawing takes it off again.
-      final listing = (await customer.listResaleListings()).first;
-      await customer.withdrawResaleListing(listing.id);
-      expect((await artworks.get(artworkId))!.status, ArtworkStatus.delivered);
-    });
+        // Withdrawing takes it off again.
+        final listing = (await customer.listResaleListings()).first;
+        await customer.withdrawResaleListing(listing.id);
+        expect(
+          (await artworks.get(artworkId))!.status,
+          ArtworkStatus.delivered,
+        );
+      },
+    );
 
     test('the reseller is paid for a resale, not the artist', () async {
       final artworkId = await ownAPiece();
-      await customer.createResaleListing(artworkId: artworkId, listedPrice: 99000);
+      await customer.createResaleListing(
+        artworkId: artworkId,
+        listedPrice: 99000,
+      );
 
       final artistWalletBefore = await artist.getWallet();
       final sellerWalletBefore = await customer.getWallet();
@@ -177,7 +190,10 @@ void main() {
 
     test('a piece cannot be listed for resale twice at once', () async {
       final artworkId = await ownAPiece();
-      await customer.createResaleListing(artworkId: artworkId, listedPrice: 99000);
+      await customer.createResaleListing(
+        artworkId: artworkId,
+        listedPrice: 99000,
+      );
       expect(
         customer.createResaleListing(artworkId: artworkId, listedPrice: 120000),
         throwsA(isA<Exception>()),
@@ -202,35 +218,44 @@ void main() {
       final queue = await artist.listPhysicalCoaRequests();
       expect(queue.single.id, request.id);
 
-      final dispatched = await artist.dispatchPhysicalCoa(request.id, 'BD-4471');
+      final dispatched = await artist.dispatchPhysicalCoa(
+        request.id,
+        'BD-4471',
+      );
       expect(dispatched.status, PhysicalCoaStatus.dispatched);
       expect(dispatched.courierRef, 'BD-4471');
-      expect(artist.dispatchPhysicalCoa(request.id, 'BD-4471'), throwsA(isA<Exception>()));
-    });
-
-    test('the same piece cannot be requested twice while one is open', () async {
-      await customer.requestPhysicalCoa(
-        artworkId: 'aw-1',
-        delivery: const DeliveryAddress(
-          line1: '12 Laburnum Road',
-          city: 'Pune',
-          state: 'Maharashtra',
-          pincode: '411001',
-        ),
-      );
       expect(
-        customer.requestPhysicalCoa(
-          artworkId: 'aw-1',
-          delivery: const DeliveryAddress(
-          line1: '12 Laburnum Road',
-          city: 'Pune',
-          state: 'Maharashtra',
-          pincode: '411001',
-        ),
-        ),
+        artist.dispatchPhysicalCoa(request.id, 'BD-4471'),
         throwsA(isA<Exception>()),
       );
     });
+
+    test(
+      'the same piece cannot be requested twice while one is open',
+      () async {
+        await customer.requestPhysicalCoa(
+          artworkId: 'aw-1',
+          delivery: const DeliveryAddress(
+            line1: '12 Laburnum Road',
+            city: 'Pune',
+            state: 'Maharashtra',
+            pincode: '411001',
+          ),
+        );
+        expect(
+          customer.requestPhysicalCoa(
+            artworkId: 'aw-1',
+            delivery: const DeliveryAddress(
+              line1: '12 Laburnum Road',
+              city: 'Pune',
+              state: 'Maharashtra',
+              pincode: '411001',
+            ),
+          ),
+          throwsA(isA<Exception>()),
+        );
+      },
+    );
   });
 
   group('framing', () {
@@ -244,10 +269,9 @@ void main() {
         hangingHardwareIncluded: true,
         packagingConfirmed: true,
       );
-      expect(
-        missingForAggregator(rolled),
-        ['framed or stretched-canvas presentation'],
-      );
+      expect(missingForAggregator(rolled), [
+        'framed or stretched-canvas presentation',
+      ]);
 
       const ready = ArtworkPhysical(
         weightKg: 4,

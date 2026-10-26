@@ -10,11 +10,21 @@ class RemoteNfcRepository implements NfcRepository {
 
   final ApiClient api;
 
-  String _path(String artworkId, String leaf) => '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}/nfc/$leaf';
+  String _path(String artworkId, String leaf) =>
+      '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}/nfc/$leaf';
 
   @override
-  Future<NfcCheckAction> check(String artworkId, String tagUid, NfcIntent intent) async {
-    final json = asMap(await api.post(_path(artworkId, 'check'), body: {'tagUid': tagUid, 'intent': intent.name}));
+  Future<NfcCheckAction> check(
+    String artworkId,
+    String tagUid,
+    NfcIntent intent,
+  ) async {
+    final json = asMap(
+      await api.post(
+        _path(artworkId, 'check'),
+        body: {'tagUid': tagUid, 'intent': intent.name},
+      ),
+    );
     return switch (json['action']) {
       'link' => NfcCheckAction.link,
       'replace' => NfcCheckAction.replace,
@@ -25,14 +35,23 @@ class RemoteNfcRepository implements NfcRepository {
 
   @override
   Future<NfcState> confirmLinked(String artworkId, String tagUid) async =>
-      _state(await api.post(_path(artworkId, 'link'), body: {'tagUid': tagUid}));
+      _state(
+        await api.post(_path(artworkId, 'link'), body: {'tagUid': tagUid}),
+      );
 
   @override
   Future<NfcState> confirmLocked(String artworkId, String tagUid) async =>
-      _state(await api.post(_path(artworkId, 'lock'), body: {'tagUid': tagUid}));
+      _state(
+        await api.post(_path(artworkId, 'lock'), body: {'tagUid': tagUid}),
+      );
 
   @override
-  Future<void> reportFailure(String artworkId, NfcFailureStep step, String message, {String? tagUid}) async {
+  Future<void> reportFailure(
+    String artworkId,
+    NfcFailureStep step,
+    String message, {
+    String? tagUid,
+  }) async {
     try {
       await api.post(
         _path(artworkId, 'failure'),

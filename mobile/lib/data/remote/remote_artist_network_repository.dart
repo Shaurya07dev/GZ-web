@@ -21,32 +21,35 @@ class RemoteArtistNetworkRepository implements ArtistNetworkRepository {
   static const _connectionsSoon = 'Artist connections are coming soon.';
 
   @override
-  Future<ArtistRating> getRating(String artistId) async => summarizeRating(artistId, const []);
+  Future<ArtistRating> getRating(String artistId) async =>
+      summarizeRating(artistId, const []);
 
   @override
   Future<List<ArtistReview>> listReviews(String artistId) async => const [];
 
   @override
-  Future<List<ArtistConnection>> listConnections(String artistId) async => const [];
+  Future<List<ArtistConnection>> listConnections(String artistId) async =>
+      const [];
 
   @override
-  Future<ArtistConnection?> getConnectionWith(String viewerId, String peerId) async => null;
+  Future<ArtistConnection?> getConnectionWith(
+    String viewerId,
+    String peerId,
+  ) async => null;
 
   @override
   Future<ArtistConnection> sendConnectionRequest({
     required String requesterId,
     required String recipientId,
     String message = '',
-  }) =>
-      Future.error(Exception(_connectionsSoon));
+  }) => Future.error(Exception(_connectionsSoon));
 
   @override
   Future<ArtistConnection> respondToConnection({
     required String connectionId,
     required String viewerId,
     required bool accept,
-  }) =>
-      Future.error(Exception(_connectionsSoon));
+  }) => Future.error(Exception(_connectionsSoon));
 
   // --- Closing an account --------------------------------------------------------------
 
@@ -61,7 +64,9 @@ class RemoteArtistNetworkRepository implements ArtistNetworkRepository {
   }
 
   @override
-  Future<DeactivationRequest> requestDeactivation({required String reason}) async {
+  Future<DeactivationRequest> requestDeactivation({
+    required String reason,
+  }) async {
     if (reason.trim().isEmpty) {
       throw Exception("Tell us why you're leaving so an admin can review it");
     }
@@ -74,6 +79,7 @@ class RemoteArtistNetworkRepository implements ArtistNetworkRepository {
   /// Withdrawing a pending request isn't a server operation. Surfaced as a
   /// plain message, not a silent no-op.
   @override
-  Future<void> withdrawDeactivation(String requestId) =>
-      Future.error(Exception('Contact support to withdraw a pending deactivation request'));
+  Future<void> withdrawDeactivation(String requestId) => Future.error(
+    Exception('Contact support to withdraw a pending deactivation request'),
+  );
 }

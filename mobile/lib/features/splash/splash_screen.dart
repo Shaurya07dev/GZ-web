@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock/seed/aggregator_seed.dart' show currentAggregatorContact;
+import '../../data/mock/seed/aggregator_seed.dart'
+    show currentAggregatorContact;
 import '../../data/mock/seed/artist_seed.dart' show currentArtistName;
 import '../../data/mock/seed/customer_seed.dart' show seedCustomerProfile;
 import '../../data/models/auth.dart';
@@ -25,12 +26,12 @@ const splashGreetingHold = Duration(milliseconds: 1600);
 /// the stored value is the role, nothing more), so the name comes from the
 /// same "signed in as" fixture each portal's own screens already greet with.
 String splashGreetingName(Role role) => switch (role) {
-      Role.artist => currentArtistName,
-      Role.customer => seedCustomerProfile().name,
-      // The aggregator fixture is a business; greet the contact person, not
-      // the gallery, so the first name split below reads as a person.
-      Role.aggregator => currentAggregatorContact,
-    };
+  Role.artist => currentArtistName,
+  Role.customer => seedCustomerProfile().name,
+  // The aggregator fixture is a business; greet the contact person, not
+  // the gallery, so the first name split below reads as a person.
+  Role.aggregator => currentAggregatorContact,
+};
 
 /// Where a launch ends up once the splash is done.
 String splashDestination(Role? role) => role?.home ?? LoginScreen.path;
@@ -70,7 +71,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // Against the real API the greeting names the signed-in account. If that
     // hasn't been read yet (slow network), skip the greeting rather than hold
     // the launch up or greet a stranger.
-    if (ref.read(remoteBackendProvider) && ref.read(accountNameProvider).isEmpty) return _leave();
+    if (ref.read(remoteBackendProvider) &&
+        ref.read(accountNameProvider).isEmpty) {
+      return _leave();
+    }
     setState(() => _greeting = true);
     _timer = Timer(splashGreetingHold, _leave);
   }

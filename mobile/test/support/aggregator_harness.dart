@@ -17,7 +17,8 @@ import 'package:gallery_zone/features/auth/providers/auth_providers.dart';
 import 'catalog_fixtures.dart';
 
 /// An instant [days] days before now, as the API writes it.
-String daysAgo(int days) => DateTime.now().toUtc().subtract(Duration(days: days)).toIso8601String();
+String daysAgo(int days) =>
+    DateTime.now().toUtc().subtract(Duration(days: days)).toIso8601String();
 
 AggregatorSale testSale({
   String id = 's1',
@@ -27,44 +28,50 @@ AggregatorSale testSale({
   String buyerEmail = 'anita@example.com',
   PaymentRoute route = PaymentRoute.directToGalleryZone,
   String? remittedAt,
-}) =>
-    AggregatorSale(
-      id: id,
-      holdingId: holdingId,
-      artworkId: artworkId,
-      soldPrice: price,
-      buyerName: 'Anita Sen',
-      buyerEmail: buyerEmail,
-      buyerPhone: '9845012345',
-      deliveryAddress: const DeliveryAddress(line1: '14 Church Street', city: 'Bengaluru', state: 'Karnataka', pincode: '560001'),
-      deliveryMode: DeliveryMode.courier,
-      soldAt: daysAgo(1),
-      shipmentStatus: ShipmentStatus.preparing,
-      paymentRoute: route,
-      remittedAt: remittedAt,
-    );
+}) => AggregatorSale(
+  id: id,
+  holdingId: holdingId,
+  artworkId: artworkId,
+  soldPrice: price,
+  buyerName: 'Anita Sen',
+  buyerEmail: buyerEmail,
+  buyerPhone: '9845012345',
+  deliveryAddress: const DeliveryAddress(
+    line1: '14 Church Street',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    pincode: '560001',
+  ),
+  deliveryMode: DeliveryMode.courier,
+  soldAt: daysAgo(1),
+  shipmentStatus: ShipmentStatus.preparing,
+  paymentRoute: route,
+  remittedAt: remittedAt,
+);
 
 AggregatorHoldingView testHolding(
   String id,
   String title, {
   HoldingStatus status = HoldingStatus.reserved,
   String? assignedAt,
-}) =>
-    AggregatorHoldingView(
-      holding: AggregatorHolding(
-        id: id,
-        artworkId: 'aw-$id',
-        advancePercent: 5,
-        advanceAmount: 6500,
-        displayPrice: 136500,
-        assignedAt: assignedAt ?? daysAgo(0),
-        expiresAt: DateTime.now().toUtc().add(const Duration(days: 20)).toIso8601String(),
-        status: status,
-        assignmentSource: AssignmentSource.selfReserved,
-        deliveryDeposit: 2500,
-      ),
-      artwork: fixtureArtwork(id: 'aw-$id', title: title),
-    );
+}) => AggregatorHoldingView(
+  holding: AggregatorHolding(
+    id: id,
+    artworkId: 'aw-$id',
+    advancePercent: 5,
+    advanceAmount: 6500,
+    displayPrice: 136500,
+    assignedAt: assignedAt ?? daysAgo(0),
+    expiresAt: DateTime.now()
+        .toUtc()
+        .add(const Duration(days: 20))
+        .toIso8601String(),
+    status: status,
+    assignmentSource: AssignmentSource.selfReserved,
+    deliveryDeposit: 2500,
+  ),
+  artwork: fixtureArtwork(id: 'aw-$id', title: title),
+);
 
 Widget _stub(String text) => Scaffold(body: Center(child: Text(text)));
 
@@ -83,15 +90,42 @@ Future<void> pumpAggregator(
   final router = GoRouter(
     initialLocation: at,
     routes: [
-      GoRoute(path: AggregatorDashboardScreen.path, builder: (context, state) => const AggregatorDashboardScreen()),
-      GoRoute(path: AggregatorAnalyticsScreen.path, builder: (context, state) => const AggregatorAnalyticsScreen()),
-      GoRoute(path: AggregatorProfileScreen.path, builder: (context, state) => const AggregatorProfileScreen()),
-      GoRoute(path: AggregatorGallerySpacesScreen.path, builder: (context, state) => const AggregatorGallerySpacesScreen()),
-      GoRoute(path: AggregatorMessagesScreen.path, builder: (context, state) => const AggregatorMessagesScreen()),
-      GoRoute(path: AggregatorSettingsScreen.path, builder: (context, state) => const AggregatorSettingsScreen()),
-      GoRoute(path: AggregatorSupportScreen.path, builder: (context, state) => const AggregatorSupportScreen()),
-      GoRoute(path: AggregatorBrowseScreen.path, builder: (context, state) => _stub('BROWSE PAGE')),
-      GoRoute(path: '/aggregator/dashboard/mou', builder: (context, state) => _stub('MOU PAGE')),
+      GoRoute(
+        path: AggregatorDashboardScreen.path,
+        builder: (context, state) => const AggregatorDashboardScreen(),
+      ),
+      GoRoute(
+        path: AggregatorAnalyticsScreen.path,
+        builder: (context, state) => const AggregatorAnalyticsScreen(),
+      ),
+      GoRoute(
+        path: AggregatorProfileScreen.path,
+        builder: (context, state) => const AggregatorProfileScreen(),
+      ),
+      GoRoute(
+        path: AggregatorGallerySpacesScreen.path,
+        builder: (context, state) => const AggregatorGallerySpacesScreen(),
+      ),
+      GoRoute(
+        path: AggregatorMessagesScreen.path,
+        builder: (context, state) => const AggregatorMessagesScreen(),
+      ),
+      GoRoute(
+        path: AggregatorSettingsScreen.path,
+        builder: (context, state) => const AggregatorSettingsScreen(),
+      ),
+      GoRoute(
+        path: AggregatorSupportScreen.path,
+        builder: (context, state) => const AggregatorSupportScreen(),
+      ),
+      GoRoute(
+        path: AggregatorBrowseScreen.path,
+        builder: (context, state) => _stub('BROWSE PAGE'),
+      ),
+      GoRoute(
+        path: '/aggregator/dashboard/mou',
+        builder: (context, state) => _stub('MOU PAGE'),
+      ),
     ],
   );
   addTearDown(router.dispose);

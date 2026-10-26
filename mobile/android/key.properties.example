@@ -1,0 +1,7 @@
+# Copy this file to key.properties. Never commit key.properties or the keystore.
+# Relative storeFile paths are resolved from the android/ directory. An absolute
+# path is safer on the release machine (escape Windows backslashes as \\).
+storeFile=C:\\secure\\galleryzone-upload.jks
+storePassword=replace-with-a-secret
+keyAlias=galleryzone-upload
+keyPassword=replace-with-a-secret

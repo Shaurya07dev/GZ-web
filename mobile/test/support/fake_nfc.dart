@@ -18,9 +18,19 @@ class FakeNtagDevice implements NfcDevice {
     this.mifareUltralight = true,
     List<int>? capabilityContainer,
   }) : pages = List.generate(45, (_) => Uint8List(4)) {
-    pages[2].setAll(0, [0xA1, 0x48, 0x00, 0x00]); // BCC1, internal, LOCK0, LOCK1
+    pages[2].setAll(0, [
+      0xA1,
+      0x48,
+      0x00,
+      0x00,
+    ]); // BCC1, internal, LOCK0, LOCK1
     pages[3].setAll(0, capabilityContainer ?? [0xE1, 0x10, 0x12, 0x00]);
-    pages[40].setAll(0, [0x00, 0x00, 0x00, 0xBD]); // dynamic lock bytes + reserved
+    pages[40].setAll(0, [
+      0x00,
+      0x00,
+      0x00,
+      0xBD,
+    ]); // dynamic lock bytes + reserved
   }
 
   String uid;
@@ -46,7 +56,8 @@ class FakeNtagDevice implements NfcDevice {
 
   bool get capabilityLocked => (pages[3][3] & 0x0F) == 0x0F;
   bool get staticLocked => pages[2][2] == 0xFF && pages[2][3] == 0xFF;
-  bool get dynamicLocked => pages[40][0] == 0xFF && pages[40][1] == 0xFF && pages[40][2] == 0xFF;
+  bool get dynamicLocked =>
+      pages[40][0] == 0xFF && pages[40][1] == 0xFF && pages[40][2] == 0xFF;
   bool get fullyLocked => capabilityLocked && staticLocked && dynamicLocked;
 
   @override
@@ -70,9 +81,14 @@ class FakeNtagDevice implements NfcDevice {
     final page = command[1];
     if (command[0] == 0x30) {
       events.add('read:$page');
-      return Uint8List.fromList([for (var i = 0; i < 4; i++) ...pages[(page + i) % pages.length]]);
+      return Uint8List.fromList([
+        for (var i = 0; i < 4; i++) ...pages[(page + i) % pages.length],
+      ]);
     }
-    assert(command[0] == 0xA2 && command.length == 6, 'a WRITE is A2, page, four bytes');
+    assert(
+      command[0] == 0xA2 && command.length == 6,
+      'a WRITE is A2, page, four bytes',
+    );
     events.add('write:$page');
     writtenPages.add(page);
     final data = command.sublist(2);
@@ -92,7 +108,9 @@ class FakeNtagDevice implements NfcDevice {
           old[i] |= data[i];
         }
       default:
-        if (page < 4 || page > 39) throw Exception('NAK: page $page is not writable');
+        if (page < 4 || page > 39) {
+          throw Exception('NAK: page $page is not writable');
+        }
         if (_userPageLocked(page)) throw Exception('NAK: page $page is locked');
         old.setAll(0, data);
     }
@@ -102,7 +120,9 @@ class FakeNtagDevice implements NfcDevice {
   @override
   Future<void> writeUrl(String address) async {
     events.add('writeUrl');
-    if (capabilityLocked || _userPageLocked(4)) throw Exception('The tag is read-only');
+    if (capabilityLocked || _userPageLocked(4)) {
+      throw Exception('The tag is read-only');
+    }
     url = corruptWrites ? '${address}x' : address;
   }
 
@@ -123,7 +143,10 @@ class FakeNtagDevice implements NfcDevice {
 /// The server's side, scripted. Records every call so a test can assert the
 /// ORDER things happened in.
 class FakeNfcRepository implements NfcRepository {
-  FakeNfcRepository({this.linkAction = NfcCheckAction.link, this.lockAction = NfcCheckAction.lock});
+  FakeNfcRepository({
+    this.linkAction = NfcCheckAction.link,
+    this.lockAction = NfcCheckAction.lock,
+  });
 
   NfcCheckAction linkAction;
   NfcCheckAction lockAction;
@@ -142,7 +165,11 @@ class FakeNfcRepository implements NfcRepository {
   NfcState state = const NfcState(artworkId: 'aw-1');
 
   @override
-  Future<NfcCheckAction> check(String artworkId, String tagUid, NfcIntent intent) async {
+  Future<NfcCheckAction> check(
+    String artworkId,
+    String tagUid,
+    NfcIntent intent,
+  ) async {
     calls.add('check:${intent.name}:$tagUid');
     if (checkRefusal != null) throw Exception(checkRefusal);
     return intent == NfcIntent.link ? linkAction : lockAction;
@@ -152,7 +179,11 @@ class FakeNfcRepository implements NfcRepository {
   Future<NfcState> confirmLinked(String artworkId, String tagUid) async {
     calls.add('confirmLinked:$tagUid');
     if (confirmFailure != null) throw Exception(confirmFailure);
-    return state = NfcState(artworkId: artworkId, tagUid: tagUid, linkedAt: '2026-10-02T12:00:00.000Z');
+    return state = NfcState(
+      artworkId: artworkId,
+      tagUid: tagUid,
+      linkedAt: '2026-10-02T12:00:00.000Z',
+    );
   }
 
   @override
@@ -168,9 +199,13 @@ class FakeNfcRepository implements NfcRepository {
   }
 
   @override
-  Future<void> reportFailure(String artworkId, NfcFailureStep step, String message, {String? tagUid}) async {
+  Future<void> reportFailure(
+    String artworkId,
+    NfcFailureStep step,
+    String message, {
+    String? tagUid,
+  }) async {
     failures.add((step, message));
     calls.add('failure:${step.api}');
   }
-
 }

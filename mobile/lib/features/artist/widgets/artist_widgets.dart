@@ -21,22 +21,47 @@ class ArtworkStatusPill extends StatelessWidget {
   static const _amber = Color(0xFFFBBF24);
   static const _emerald = Color(0xFF34D399);
 
-  static (String, IconData, Color) _style(ArtworkStatus status) => switch (status) {
-        ArtworkStatus.draft => ('Draft', LucideIcons.pencil, Color(0xFF9C9686)),
-        ArtworkStatus.pendingApproval => ('Pending Approval', LucideIcons.clock3, _amber),
-        ArtworkStatus.marketplace => ('Live', LucideIcons.circleCheckBig, _emerald),
-        ArtworkStatus.reserved => ('Reserved', LucideIcons.bookmarkCheck, _sky),
-        ArtworkStatus.preparingDispatch => ('Preparing Dispatch', LucideIcons.packageCheck, _amber),
-        ArtworkStatus.inTransit => ('In Transit', LucideIcons.truck, _amber),
-        ArtworkStatus.withAggregator => ('With Aggregator', LucideIcons.frame, _sky),
-        ArtworkStatus.sold => ('Sold', LucideIcons.circleCheckBig, _emerald),
-        ArtworkStatus.settlementComplete => ('Settled', LucideIcons.wallet, _emerald),
-        ArtworkStatus.delivered => ('Delivered', LucideIcons.checkCheck, _emerald),
-        ArtworkStatus.completed => ('Completed', LucideIcons.checkCheck, _emerald),
-        ArtworkStatus.returned => ('Returned', LucideIcons.circleX, AppColors.destructive),
-        ArtworkStatus.soldExternally =>
-          ('Sold Elsewhere', LucideIcons.externalLink, Color(0xFF9C9686)),
-      };
+  static (String, IconData, Color) _style(
+    ArtworkStatus status,
+  ) => switch (status) {
+    ArtworkStatus.draft => ('Draft', LucideIcons.pencil, Color(0xFF9C9686)),
+    ArtworkStatus.pendingApproval => (
+      'Pending Approval',
+      LucideIcons.clock3,
+      _amber,
+    ),
+    ArtworkStatus.marketplace => ('Live', LucideIcons.circleCheckBig, _emerald),
+    ArtworkStatus.reserved => ('Reserved', LucideIcons.bookmarkCheck, _sky),
+    ArtworkStatus.preparingDispatch => (
+      'Preparing Dispatch',
+      LucideIcons.packageCheck,
+      _amber,
+    ),
+    ArtworkStatus.inTransit => ('In Transit', LucideIcons.truck, _amber),
+    ArtworkStatus.withAggregator => (
+      'With Aggregator',
+      LucideIcons.frame,
+      _sky,
+    ),
+    ArtworkStatus.sold => ('Sold', LucideIcons.circleCheckBig, _emerald),
+    ArtworkStatus.settlementComplete => (
+      'Settled',
+      LucideIcons.wallet,
+      _emerald,
+    ),
+    ArtworkStatus.delivered => ('Delivered', LucideIcons.checkCheck, _emerald),
+    ArtworkStatus.completed => ('Completed', LucideIcons.checkCheck, _emerald),
+    ArtworkStatus.returned => (
+      'Returned',
+      LucideIcons.circleX,
+      AppColors.destructive,
+    ),
+    ArtworkStatus.soldExternally => (
+      'Sold Elsewhere',
+      LucideIcons.externalLink,
+      Color(0xFF9C9686),
+    ),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +81,10 @@ class ArtworkStatusPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w500),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

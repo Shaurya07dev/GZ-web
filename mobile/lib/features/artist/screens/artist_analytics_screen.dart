@@ -34,16 +34,16 @@ class ArtistAnalyticsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Analytics')),
       body: artworks == null
           ? artworksAsync.hasError
-              ? EmptyState(
-                  icon: LucideIcons.triangleAlert,
-                  title: "Couldn't load your analytics",
-                  description: authErrorMessage(artworksAsync.error!),
-                  action: OutlinedButton(
-                    onPressed: () => ref.invalidate(artistArtworksProvider),
-                    child: const Text('Try again'),
-                  ),
-                )
-              : const Center(child: CircularProgressIndicator())
+                ? EmptyState(
+                    icon: LucideIcons.triangleAlert,
+                    title: "Couldn't load your analytics",
+                    description: authErrorMessage(artworksAsync.error!),
+                    action: OutlinedButton(
+                      onPressed: () => ref.invalidate(artistArtworksProvider),
+                      child: const Text('Try again'),
+                    ),
+                  )
+                : const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(artistArtworksProvider);
@@ -59,7 +59,10 @@ class ArtistAnalyticsScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _Summary(
-                          summary: analyticsSummary(artworks: artworks, orders: ordersAsync.value ?? const []),
+                          summary: analyticsSummary(
+                            artworks: artworks,
+                            orders: ordersAsync.value ?? const [],
+                          ),
                         ),
                         const SizedBox(height: 12),
                         const _InstagramCard(),
@@ -67,7 +70,11 @@ class ArtistAnalyticsScreen extends ConsumerWidget {
                         ChartCard(
                           title: 'Revenue trend',
                           description: 'Your settled earnings, last 6 months.',
-                          child: _RevenueChart(series: revenueSeries(transactionsAsync.value ?? const [])),
+                          child: _RevenueChart(
+                            series: revenueSeries(
+                              transactionsAsync.value ?? const [],
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         ChartCard(
@@ -75,24 +82,37 @@ class ArtistAnalyticsScreen extends ConsumerWidget {
                           description: 'Your own settled sales, by category.',
                           child: BarList(
                             emptyTitle: 'No category revenue yet',
-                            emptyDescription: 'No category has recorded a settled sale.',
+                            emptyDescription:
+                                'No category has recorded a settled sale.',
                             rows: [
                               for (final c in categoryPerformance(artworks))
-                                (label: humanize(c.category), value: c.revenue, text: formatCompactInr(c.revenue)),
+                                (
+                                  label: humanize(c.category),
+                                  value: c.revenue,
+                                  text: formatCompactInr(c.revenue),
+                                ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 12),
                         ChartCard(
                           title: 'Artwork status',
-                          description: 'Where your artworks currently sit, by count.',
+                          description:
+                              'Where your artworks currently sit, by count.',
                           child: BarList(
                             emptyTitle: 'No artworks submitted yet',
-                            emptyDescription: 'Nothing has entered the lifecycle so far.',
+                            emptyDescription:
+                                'Nothing has entered the lifecycle so far.',
                             fade: true,
                             rows: [
                               for (final stage in artworkFunnel(artworks))
-                                (label: stage.stage, value: stage.count.toDouble(), text: formatCompactCount(stage.count.toDouble())),
+                                (
+                                  label: stage.stage,
+                                  value: stage.count.toDouble(),
+                                  text: formatCompactCount(
+                                    stage.count.toDouble(),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -113,7 +133,9 @@ class _Summary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget stat(String label, String value) => Expanded(child: StatCard(label: label, value: value));
+    Widget stat(String label, String value) => Expanded(
+      child: StatCard(label: label, value: value),
+    );
     return Column(
       children: [
         Row(
@@ -169,7 +191,9 @@ class _InstagramCardState extends ConsumerState<_InstagramCard> {
       _error = null;
     });
     try {
-      await ref.read(artistRepositoryProvider).updateProfile(profile.copyWith(instagram: _handle.text.trim()));
+      await ref
+          .read(artistRepositoryProvider)
+          .updateProfile(profile.copyWith(instagram: _handle.text.trim()));
       ref.invalidate(artistProfileDetailsProvider);
       if (!mounted) return;
       setState(() => _editing = false);
@@ -198,18 +222,31 @@ class _InstagramCardState extends ConsumerState<_InstagramCard> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                ),
               ),
-              child: SocialGlyph(platform: SocialProofPlatform.instagram, size: 16, color: theme.colorScheme.tertiary),
+              child: SocialGlyph(
+                platform: SocialProofPlatform.instagram,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Instagram', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
                   Text(
-                    connected ? '@${profile.instagram.replaceFirst(RegExp(r'^@'), '')}' : 'Not connected',
+                    'Instagram',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    connected
+                        ? '@${profile.instagram.replaceFirst(RegExp(r'^@'), '')}'
+                        : 'Not connected',
                     style: theme.textTheme.labelSmall,
                   ),
                 ],
@@ -218,7 +255,10 @@ class _InstagramCardState extends ConsumerState<_InstagramCard> {
             if (connected) ...[
               const Icon(LucideIcons.check, size: 14, color: Color(0xFF10B981)),
               const SizedBox(width: 4),
-              const Text('Connected', style: TextStyle(fontSize: 12, color: Color(0xFF10B981))),
+              const Text(
+                'Connected',
+                style: TextStyle(fontSize: 12, color: Color(0xFF10B981)),
+              ),
               const SizedBox(width: 8),
             ],
             TextButton(
@@ -249,17 +289,25 @@ class _InstagramCardState extends ConsumerState<_InstagramCard> {
               errorText: _error,
               prefixIcon: const Padding(
                 padding: EdgeInsets.all(12),
-                child: SocialGlyph(platform: SocialProofPlatform.instagram, size: 16),
+                child: SocialGlyph(
+                  platform: SocialProofPlatform.instagram,
+                  size: 16,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              FilledButton(onPressed: _saving ? null : _save, child: Text(_saving ? 'Saving…' : 'Save')),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: Text(_saving ? 'Saving…' : 'Save'),
+              ),
               const SizedBox(width: 10),
               OutlinedButton(
-                onPressed: _saving ? null : () => setState(() => _editing = false),
+                onPressed: _saving
+                    ? null
+                    : () => setState(() => _editing = false),
                 child: const Text('Cancel'),
               ),
             ],
@@ -282,14 +330,18 @@ class _RevenueChart extends StatelessWidget {
     final theme = Theme.of(context);
     final total = series.fold<double>(0, (sum, p) => sum + p.amount);
     if (total == 0) {
-      return const ChartEmpty(title: 'No revenue yet', description: 'Settled sales will show up here.');
+      return const ChartEmpty(
+        title: 'No revenue yet',
+        description: 'Settled sales will show up here.',
+      );
     }
     final top = series.map((p) => p.amount).reduce((a, b) => a > b ? a : b);
     final gold = theme.colorScheme.tertiary;
     final label = theme.textTheme.labelSmall;
 
     return Semantics(
-      label: 'Area chart of monthly revenue, last 6 months, totaling ${formatInr(total)}.',
+      label:
+          'Area chart of monthly revenue, last 6 months, totaling ${formatInr(total)}.',
       child: SizedBox(
         height: 190,
         child: LineChart(
@@ -300,7 +352,8 @@ class _RevenueChart extends StatelessWidget {
             maxX: (series.length - 1).toDouble(),
             gridData: FlGridData(
               drawVerticalLine: false,
-              getDrawingHorizontalLine: (_) => FlLine(color: theme.colorScheme.outline, strokeWidth: 0.6),
+              getDrawingHorizontalLine: (_) =>
+                  FlLine(color: theme.colorScheme.outline, strokeWidth: 0.6),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
@@ -311,7 +364,9 @@ class _RevenueChart extends StatelessWidget {
                   showTitles: true,
                   reservedSize: 48,
                   getTitlesWidget: (value, meta) {
-                    if (value == meta.max || value == meta.min && value != 0) return const SizedBox.shrink();
+                    if (value == meta.max || value == meta.min && value != 0) {
+                      return const SizedBox.shrink();
+                    }
                     return SideTitleWidget(
                       meta: meta,
                       child: Text(formatCompactInr(value), style: label),
@@ -326,8 +381,15 @@ class _RevenueChart extends StatelessWidget {
                   reservedSize: 26,
                   getTitlesWidget: (value, meta) {
                     final i = value.round();
-                    if (i < 0 || i >= series.length || (value - i).abs() > 0.001) return const SizedBox.shrink();
-                    return SideTitleWidget(meta: meta, child: Text(series[i].month, style: label));
+                    if (i < 0 ||
+                        i >= series.length ||
+                        (value - i).abs() > 0.001) {
+                      return const SizedBox.shrink();
+                    }
+                    return SideTitleWidget(
+                      meta: meta,
+                      child: Text(series[i].month, style: label),
+                    );
                   },
                 ),
               ),
@@ -338,21 +400,29 @@ class _RevenueChart extends StatelessWidget {
                   for (final spot in spots)
                     LineTooltipItem(
                       '${series[spot.x.round()].month}\n${formatInr(spot.y)}',
-                      theme.textTheme.labelMedium!.copyWith(color: Colors.white),
+                      theme.textTheme.labelMedium!.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                 ],
               ),
             ),
             lineBarsData: [
               LineChartBarData(
-                spots: [for (var i = 0; i < series.length; i++) FlSpot(i.toDouble(), series[i].amount)],
+                spots: [
+                  for (var i = 0; i < series.length; i++)
+                    FlSpot(i.toDouble(), series[i].amount),
+                ],
                 isCurved: true,
                 curveSmoothness: 0.25,
                 preventCurveOverShooting: true,
                 color: gold,
                 barWidth: 2,
                 dotData: const FlDotData(show: false),
-                belowBarData: BarAreaData(show: true, color: gold.withValues(alpha: 0.25)),
+                belowBarData: BarAreaData(
+                  show: true,
+                  color: gold.withValues(alpha: 0.25),
+                ),
               ),
             ],
           ),

@@ -45,11 +45,15 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
               segments: [
                 ButtonSegment(
                   value: _Segment.artworks,
-                  label: Text(savedCount == 0 ? 'Artworks' : 'Artworks ($savedCount)'),
+                  label: Text(
+                    savedCount == 0 ? 'Artworks' : 'Artworks ($savedCount)',
+                  ),
                 ),
                 ButtonSegment(
                   value: _Segment.artists,
-                  label: Text(followCount == 0 ? 'Artists' : 'Artists ($followCount)'),
+                  label: Text(
+                    followCount == 0 ? 'Artists' : 'Artists ($followCount)',
+                  ),
                 ),
               ],
               selected: {_segment},
@@ -100,8 +104,7 @@ class _SavedArtworks extends ConsumerWidget {
           return EmptyState(
             icon: LucideIcons.heart,
             title: 'Nothing saved yet',
-            description:
-                'Tap the heart on any artwork to keep it here while you decide.',
+            description: 'Tap the heart on any artwork to keep it here while you decide.',
             action: OutlinedButton(
               onPressed: () => context.push('/marketplace'),
               child: const Text('Browse the marketplace'),
@@ -190,7 +193,11 @@ class _ArtistRow extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              ArtistAvatar(name: artist.name, imageUrl: artist.profileImageUrl, size: 48),
+              ArtistAvatar(
+                name: artist.name,
+                imageUrl: artist.profileImageUrl,
+                size: 48,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -200,15 +207,16 @@ class _ArtistRow extends ConsumerWidget {
                       artist.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       listings == null
                           ? 'Loading their work…'
                           : '${listings.length} '
-                              'piece${listings.length == 1 ? '' : 's'} listed',
+                                'piece${listings.length == 1 ? '' : 's'} listed',
                       style: theme.textTheme.labelSmall,
                     ),
                   ],

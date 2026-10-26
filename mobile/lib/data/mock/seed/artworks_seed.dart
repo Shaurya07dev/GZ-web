@@ -9,7 +9,8 @@ import 'artists_seed.dart';
 /// uses, not a live clock — every `changedAt` must stay reproducible.
 final _today = DateTime.utc(2026, 8, 11);
 
-String _daysAgo(int days) => _today.subtract(Duration(days: days)).toIso8601String();
+String _daysAgo(int days) =>
+    _today.subtract(Duration(days: days)).toIso8601String();
 
 List<ArtworkStatusEvent> _history(List<(ArtworkStatus, int)> entries) => entries
     .map((e) => ArtworkStatusEvent(status: e.$1, changedAt: _daysAgo(e.$2)))
@@ -47,16 +48,21 @@ List<ArtworkImage> _images(String title, List<String> files) => [
       url: files[i],
       thumbnailUrl: files[i],
       sortOrder: i,
-      altText: '$title, ${i < _stageLabels.length ? _stageLabels[i] : "detail view ${i + 1}"}',
+      altText:
+          '$title, ${i < _stageLabels.length ? _stageLabels[i] : "detail view ${i + 1}"}',
     ),
 ];
 
 ({String artistName, bool verifiedArtist}) _artistMeta(String artistId) {
   final artist = seedArtists().firstWhere(
     (a) => a.id == artistId,
-    orElse: () => throw StateError('mock-data/artworks: unknown artistId "$artistId"'),
+    orElse: () =>
+        throw StateError('mock-data/artworks: unknown artistId "$artistId"'),
   );
-  return (artistName: artist.name, verifiedArtist: verifiedTierCount(artist.verification) > 0);
+  return (
+    artistName: artist.name,
+    verifiedArtist: verifiedTierCount(artist.verification) > 0,
+  );
 }
 
 List<Artwork> seedArtworks() {
@@ -83,15 +89,22 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          'Painted over three sittings during the 2025 monsoon, this canvas builds the Madurai coastline in layered oil washes, working wet-into-wet to catch the exact grey-gold light that appears just as the rain breaks. The palette-knife work in the foreground surf is left deliberately raw against the smoother sky. Ships with a signed Certificate of Authenticity and a linked studio video of the final varnishing pass.',
+      description: 'Painted over three sittings during the 2025 monsoon, this canvas builds the Madurai coastline in layered oil washes, working wet-into-wet to catch the exact grey-gold light that appears just as the rain breaks. The palette-knife work in the foreground surf is left deliberately raw against the smoother sky. Ships with a signed Certificate of Authenticity and a linked studio video of the final varnishing pass.',
       dimensions: '24x36 in',
       yearCreated: 2025,
-      images: _images('Monsoon Over Madurai', [_Img.landscape, _Img.framed, _Img.journey, _Img.idPaint]),
+      images: _images('Monsoon Over Madurai', [
+        _Img.landscape,
+        _Img.framed,
+        _Img.journey,
+        _Img.idPaint,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0001',
       coaIssueDate: _daysAgo(199),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-monsoon-madurai/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-monsoon-madurai/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 210),
@@ -112,15 +125,21 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          "A quieter companion to Meera's coastal series, painted at first light on the Kerala backwaters before the water traffic begins. Built in thin, transparent oil glazes over a warm underpainting so the canvas grain shows through in the shadow passages. Unframed and ready to hang, signed and dated on the reverse.",
+      description: "A quieter companion to Meera's coastal series, painted at first light on the Kerala backwaters before the water traffic begins. Built in thin, transparent oil glazes over a warm underpainting so the canvas grain shows through in the shadow passages. Unframed and ready to hang, signed and dated on the reverse.",
       dimensions: '20x30 in',
       yearCreated: 2026,
-      images: _images('Backwater Light, Early Hours', [_Img.framed, _Img.landscape, _Img.eco1]),
+      images: _images('Backwater Light, Early Hours', [
+        _Img.framed,
+        _Img.landscape,
+        _Img.eco1,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0002',
       coaIssueDate: _daysAgo(141),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-backwater-light'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-backwater-light',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 150),
@@ -141,15 +160,23 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "One of the earliest paintings in Meera's current coastal body of work, revisiting a stretch of shoreline she has returned to for three years running. The tideline itself is built up in a heavier impasto than the rest of the canvas, marking where land and water meet. Eligible for gallery display through GalleryZone's aggregator network as well as direct marketplace sale.",
+      description: "One of the earliest paintings in Meera's current coastal body of work, revisiting a stretch of shoreline she has returned to for three years running. The tideline itself is built up in a heavier impasto than the rest of the canvas, marking where land and water meet. Eligible for gallery display through GalleryZone's aggregator network as well as direct marketplace sale.",
       dimensions: '18x24 in',
       yearCreated: 2024,
-      images: _images('Tide Line, Dusk', [_Img.idPaint, _Img.landscape, _Img.framed, _Img.eco2, _Img.journey]),
+      images: _images('Tide Line, Dusk', [
+        _Img.idPaint,
+        _Img.landscape,
+        _Img.framed,
+        _Img.eco2,
+        _Img.journey,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0003',
       coaIssueDate: _daysAgo(85),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-tide-line-dusk/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-tide-line-dusk/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 95),
@@ -172,15 +199,24 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.reserved,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "Cast using the lost-wax method in Arjun's family workshop, this study reworks a seated-figure motif that recurs across four generations of his family's carving practice. The bronze is left in its natural patina rather than polished, so the surface will keep shifting tone over years of handling. Currently reserved through a partner aggregator ahead of gallery display.",
+      description: "Cast using the lost-wax method in Arjun's family workshop, this study reworks a seated-figure motif that recurs across four generations of his family's carving practice. The bronze is left in its natural patina rather than polished, so the surface will keep shifting tone over years of handling. Currently reserved through a partner aggregator ahead of gallery display.",
       dimensions: '18 in H x 9 in W x 7 in D',
       yearCreated: 2025,
-      images: _images('Ancestral Bronze Study', [_Img.busts, _Img.drape, _Img.pyramid, _Img.eco3, _Img.bird, _Img.portrait]),
+      images: _images('Ancestral Bronze Study', [
+        _Img.busts,
+        _Img.drape,
+        _Img.pyramid,
+        _Img.eco3,
+        _Img.bird,
+        _Img.portrait,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0004',
       coaIssueDate: _daysAgo(128),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-ancestral-bronze'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-ancestral-bronze',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 140),
@@ -202,15 +238,22 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          'A single block of Makrana marble, carved entirely by hand over four months with no mechanical finishing on the final surface passes. The torso form continues a study Arjun has returned to several times, each version testing a different balance of rough-cut and polished stone. Base included.',
+      description: 'A single block of Makrana marble, carved entirely by hand over four months with no mechanical finishing on the final surface passes. The torso form continues a study Arjun has returned to several times, each version testing a different balance of rough-cut and polished stone. Base included.',
       dimensions: '22 in H x 10 in W x 8 in D',
       yearCreated: 2023,
-      images: _images('Carved Marble Torso', [_Img.drape, _Img.busts, _Img.pyramid, _Img.eco1]),
+      images: _images('Carved Marble Torso', [
+        _Img.drape,
+        _Img.busts,
+        _Img.pyramid,
+        _Img.eco1,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0005',
       coaIssueDate: _daysAgo(284),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-marble-torso/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-marble-torso/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 300),
@@ -231,15 +274,21 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          'Carved from a single salvaged sandstone block sourced from a demolished haveli near Jaipur, this vessel form keeps the weathering and tool marks of the original stone visible along its base. Arjun finishes each vessel with a hand-rubbed wax seal rather than a synthetic coating, so the surface will darken naturally with handling.',
+      description: 'Carved from a single salvaged sandstone block sourced from a demolished haveli near Jaipur, this vessel form keeps the weathering and tool marks of the original stone visible along its base. Arjun finishes each vessel with a hand-rubbed wax seal rather than a synthetic coating, so the surface will darken naturally with handling.',
       dimensions: '14 in H x 12 in diameter',
       yearCreated: 2025,
-      images: _images('Reclaimed Stone Vessel', [_Img.busts, _Img.drape, _Img.eco2]),
+      images: _images('Reclaimed Stone Vessel', [
+        _Img.busts,
+        _Img.drape,
+        _Img.eco2,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0006',
       coaIssueDate: _daysAgo(50),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-stone-vessel'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-stone-vessel',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 60),
@@ -262,15 +311,22 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          'Shot on medium-format film on the final night Metro Talkies screened a film before closing for good, printed as edition 2 of 9 on archival cotton rag paper. Kavya hand-processes every negative herself and scans at high resolution before printing, so grain and tonal range stay true to the original film stock. Signed and numbered on the reverse.',
+      description: 'Shot on medium-format film on the final night Metro Talkies screened a film before closing for good, printed as edition 2 of 9 on archival cotton rag paper. Kavya hand-processes every negative herself and scans at high resolution before printing, so grain and tonal range stay true to the original film stock. Signed and numbered on the reverse.',
       dimensions: '16x20 in',
       yearCreated: 2026,
-      images: _images('Last Show at Metro Talkies', [_Img.portrait, _Img.bird, _Img.eco3, _Img.journey]),
+      images: _images('Last Show at Metro Talkies', [
+        _Img.portrait,
+        _Img.bird,
+        _Img.eco3,
+        _Img.journey,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0007',
       coaIssueDate: _daysAgo(33),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-metro-talkies/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-metro-talkies/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 40),
@@ -291,16 +347,25 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.reserved,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "Part of Kavya's ongoing series on Bengaluru's disappearing single-screen cinemas, this print looks down from an empty balcony section onto a projector booth mid reel-change. Edition of 9, printed on archival cotton rag paper from a hand-processed medium-format negative. Currently on reserve for gallery display.",
+      description: "Part of Kavya's ongoing series on Bengaluru's disappearing single-screen cinemas, this print looks down from an empty balcony section onto a projector booth mid reel-change. Edition of 9, printed on archival cotton rag paper from a hand-processed medium-format negative. Currently on reserve for gallery display.",
       dimensions: '20x24 in',
       yearCreated: 2026,
-      images: _images('Balcony Seats, Empty Reel', [_Img.bird, _Img.portrait, _Img.eco1]),
+      images: _images('Balcony Seats, Empty Reel', [
+        _Img.bird,
+        _Img.portrait,
+        _Img.eco1,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0008',
       coaIssueDate: _daysAgo(23),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-balcony-seats/'),
-        SocialProofLink(platform: SocialProofPlatform.x, url: 'https://x.com/kavyaiyerphoto/status/1234567890123456789'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-balcony-seats/',
+        ),
+        SocialProofLink(
+          platform: SocialProofPlatform.x,
+          url: 'https://x.com/kavyaiyerphoto/status/1234567890123456789',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 30),
@@ -324,15 +389,21 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          'A hand-pulled linocut of the evening commuter rush along the Howrah line, cut and printed in a single run of eighteen. Rohan carves each block himself and prints on a hand-cranked proofing press using water-based ink, which keeps the line work crisp without the sheen of oil-based printing. Numbered 6/18.',
+      description: 'A hand-pulled linocut of the evening commuter rush along the Howrah line, cut and printed in a single run of eighteen. Rohan carves each block himself and prints on a hand-cranked proofing press using water-based ink, which keeps the line work crisp without the sheen of oil-based printing. Numbered 6/18.',
       dimensions: '12x16 in',
       yearCreated: 2026,
-      images: _images('Howrah Line, Evening', [_Img.pyramid, _Img.busts, _Img.eco2]),
+      images: _images('Howrah Line, Evening', [
+        _Img.pyramid,
+        _Img.busts,
+        _Img.eco2,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0009',
       coaIssueDate: _daysAgo(63),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-howrah-line/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-howrah-line/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 70),
@@ -353,15 +424,22 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'The seventh in an ongoing series studying the ferry ghats of the Hooghly at different times of day, etched on a copper plate and hand-inked for each pull. This impression uses a heavier plate tone than earlier editions in the series, pushing the steps further into shadow. Eligible for aggregator display alongside its marketplace listing.',
+      description: 'The seventh in an ongoing series studying the ferry ghats of the Hooghly at different times of day, etched on a copper plate and hand-inked for each pull. This impression uses a heavier plate tone than earlier editions in the series, pushing the steps further into shadow. Eligible for aggregator display alongside its marketplace listing.',
       dimensions: '14x18 in',
       yearCreated: 2025,
-      images: _images('Ghat Steps No. 7', [_Img.pyramid, _Img.eco3, _Img.busts, _Img.journey]),
+      images: _images('Ghat Steps No. 7', [
+        _Img.pyramid,
+        _Img.eco3,
+        _Img.busts,
+        _Img.journey,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0010',
       coaIssueDate: _daysAgo(89),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-ghat-steps'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-ghat-steps',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 100),
@@ -382,15 +460,21 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.reserved,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "A four-colour linocut built from Rohan's sketches of the second-hand book stalls along College Street, printed in four separate registered passes. Each colour block was hand-cut and aligned individually, so slight registration variation between prints in the edition is expected and part of the process. Currently on reserve for gallery display.",
+      description: "A four-colour linocut built from Rohan's sketches of the second-hand book stalls along College Street, printed in four separate registered passes. Each colour block was hand-cut and aligned individually, so slight registration variation between prints in the edition is expected and part of the process. Currently on reserve for gallery display.",
       dimensions: '16x20 in',
       yearCreated: 2026,
-      images: _images('College Street Folio', [_Img.busts, _Img.pyramid, _Img.eco1]),
+      images: _images('College Street Folio', [
+        _Img.busts,
+        _Img.pyramid,
+        _Img.eco1,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0011',
       coaIssueDate: _daysAgo(41),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-college-street/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-college-street/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 50),
@@ -414,15 +498,21 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          'A wall-hung textile piece hand-embroidered on handwoven cotton, dyed using kusum flower and iron-mordant baths mixed in small batches. Ananya draws the design directly onto the cloth freehand before stitching, so no two pieces in this series share an identical layout. Comes with a fabric-care card and a wooden hanging dowel.',
+      description: 'A wall-hung textile piece hand-embroidered on handwoven cotton, dyed using kusum flower and iron-mordant baths mixed in small batches. Ananya draws the design directly onto the cloth freehand before stitching, so no two pieces in this series share an identical layout. Comes with a fabric-care card and a wooden hanging dowel.',
       dimensions: '22x30 in',
       yearCreated: 2026,
-      images: _images('Field of Kusum Dye', [_Img.drape, _Img.eco2, _Img.journey]),
+      images: _images('Field of Kusum Dye', [
+        _Img.drape,
+        _Img.eco2,
+        _Img.journey,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0012',
       coaIssueDate: _daysAgo(13),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-kusum-dye/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-kusum-dye/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 20),
@@ -443,15 +533,22 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          "Ananya's largest piece to date, reworking a border-stitch pattern her grandmother taught her as a continuous field across the full canvas rather than a framing edge. Every dye bath in this piece was mixed from marigold and pomegranate rind sourced from her family's own kitchen garden. Her first major listing on GalleryZone.",
+      description: "Ananya's largest piece to date, reworking a border-stitch pattern her grandmother taught her as a continuous field across the full canvas rather than a framing edge. Every dye bath in this piece was mixed from marigold and pomegranate rind sourced from her family's own kitchen garden. Her first major listing on GalleryZone.",
       dimensions: '24x36 in',
       yearCreated: 2026,
-      images: _images("Grandmother's Stitch, Revisited", [_Img.drape, _Img.journey, _Img.eco3, _Img.idPaint]),
+      images: _images("Grandmother's Stitch, Revisited", [
+        _Img.drape,
+        _Img.journey,
+        _Img.eco3,
+        _Img.idPaint,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0013',
       coaIssueDate: _daysAgo(9),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-grandmothers-stitch'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-grandmothers-stitch',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 15),
@@ -474,15 +571,23 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          "Built up in thin acrylic layers over several weeks, this canvas fractures a stairwell in Ishaan's own apartment block into overlapping planes of colour until the architecture starts to read as botanical. He works without preparatory sketches, building the composition directly on the canvas and painting out sections that don't hold. Full studio session filmed start to finish.",
+      description: "Built up in thin acrylic layers over several weeks, this canvas fractures a stairwell in Ishaan's own apartment block into overlapping planes of colour until the architecture starts to read as botanical. He works without preparatory sketches, building the composition directly on the canvas and painting out sections that don't hold. Full studio session filmed start to finish.",
       dimensions: '30x30 in',
       yearCreated: 2026,
-      images: _images('Concrete Bloom', [_Img.framed, _Img.landscape, _Img.eco1, _Img.journey, _Img.bird]),
+      images: _images('Concrete Bloom', [
+        _Img.framed,
+        _Img.landscape,
+        _Img.eco1,
+        _Img.journey,
+        _Img.bird,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0014',
       coaIssueDate: _daysAgo(69),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-concrete-bloom'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-concrete-bloom',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 80),
@@ -503,16 +608,28 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceOnly,
-      description:
-          "Ishaan's largest canvas to date, breaking the Delhi skyline seen from his studio window into a grid of overlapping vantage points painted in separate sessions and reassembled as one composition. The underlying pencil grid is still faintly visible beneath the paint in several passages, left intentionally. Ships stretched and ready to hang.",
+      description: "Ishaan's largest canvas to date, breaking the Delhi skyline seen from his studio window into a grid of overlapping vantage points painted in separate sessions and reassembled as one composition. The underlying pencil grid is still faintly visible beneath the paint in several passages, left intentionally. Ships stretched and ready to hang.",
       dimensions: '36x48 in',
       yearCreated: 2025,
-      images: _images('Fractured Skyline', [_Img.landscape, _Img.framed, _Img.eco2, _Img.journey, _Img.idPaint, _Img.bird]),
+      images: _images('Fractured Skyline', [
+        _Img.landscape,
+        _Img.framed,
+        _Img.eco2,
+        _Img.journey,
+        _Img.idPaint,
+        _Img.bird,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0015',
       coaIssueDate: _daysAgo(109),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-fractured-skyline'),
-        SocialProofLink(platform: SocialProofPlatform.tiktok, url: 'https://www.tiktok.com/@ishaankapoorstudio/video/7345678901234567890'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-fractured-skyline',
+        ),
+        SocialProofLink(
+          platform: SocialProofPlatform.tiktok,
+          url: 'https://www.tiktok.com/@ishaankapoorstudio/video/7345678901234567890',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 120),
@@ -533,15 +650,21 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.reserved,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'A study of the wholesale market lanes in Karol Bagh at closing time, built from overlapping fractured planes in a tighter, more restrained palette than Ishaan\'s larger canvases. Painted directly from memory the same evening rather than from photographs. Currently on reserve for gallery display.',
+      description: 'A study of the wholesale market lanes in Karol Bagh at closing time, built from overlapping fractured planes in a tighter, more restrained palette than Ishaan\'s larger canvases. Painted directly from memory the same evening rather than from photographs. Currently on reserve for gallery display.',
       dimensions: '24x30 in',
       yearCreated: 2026,
-      images: _images('Density Study, Karol Bagh', [_Img.framed, _Img.eco3, _Img.landscape]),
+      images: _images('Density Study, Karol Bagh', [
+        _Img.framed,
+        _Img.eco3,
+        _Img.landscape,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0016',
       coaIssueDate: _daysAgo(41),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-density-study/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-density-study/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 52),
@@ -565,15 +688,22 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.reserved,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "Built from sheet-metal offcuts sourced from a scrapyard near her studio collective, welded to a plywood panel and finished with layered pigment and controlled oxidation. Priya lets the metal rust naturally over several weeks under wet cloths before sealing the surface, so the final colour is never fully predictable. Currently on reserve for gallery display.",
+      description: "Built from sheet-metal offcuts sourced from a scrapyard near her studio collective, welded to a plywood panel and finished with layered pigment and controlled oxidation. Priya lets the metal rust naturally over several weeks under wet cloths before sealing the surface, so the final colour is never fully predictable. Currently on reserve for gallery display.",
       dimensions: '30 in H x 40 in W x 4 in D',
       yearCreated: 2025,
-      images: _images('Rust and Ochre Wall Piece', [_Img.busts, _Img.pyramid, _Img.eco1, _Img.drape]),
+      images: _images('Rust and Ochre Wall Piece', [
+        _Img.busts,
+        _Img.pyramid,
+        _Img.eco1,
+        _Img.drape,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0017',
       coaIssueDate: _daysAgo(35),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-rust-ochre'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-rust-ochre',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 45),
@@ -595,8 +725,7 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.sold,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "An earlier, smaller panel in Priya's welded-metal series, built around a cut radio dial salvaged from a decommissioned workshop. The pigment layer was applied in three separate sessions to let each coat oxidize the metal differently before the next. Sold through a partner aggregator; settlement in progress.",
+      description: "An earlier, smaller panel in Priya's welded-metal series, built around a cut radio dial salvaged from a decommissioned workshop. The pigment layer was applied in three separate sessions to let each coat oxidize the metal differently before the next. Sold through a partner aggregator; settlement in progress.",
       dimensions: '24 in H x 32 in W x 3 in D',
       yearCreated: 2024,
       images: _images('Salvaged Frequencies', [
@@ -612,8 +741,14 @@ List<Artwork> seedArtworks() {
       coaCertificateNumber: 'GZ-COA-2026-0018',
       coaIssueDate: _daysAgo(150),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-salvaged-frequencies/'),
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-salvaged-frequencies'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-salvaged-frequencies/',
+        ),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-salvaged-frequencies',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 160),
@@ -647,15 +782,21 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'A rooftop in Fort Kochi an hour after the rain stops, when the water still standing in the planters throws the sky back up at the wall. Built in thin oil glazes so the white of the ground keeps coming through the greens, with the puddles scraped back rather than painted in.',
+      description: 'A rooftop in Fort Kochi an hour after the rain stops, when the water still standing in the planters throws the sky back up at the wall. Built in thin oil glazes so the white of the ground keeps coming through the greens, with the puddles scraped back rather than painted in.',
       dimensions: '30x40 in',
       yearCreated: 2026,
-      images: _images('Terrace Garden, After Rain', [_Img.landscape, _Img.framed, _Img.journey]),
+      images: _images('Terrace Garden, After Rain', [
+        _Img.landscape,
+        _Img.framed,
+        _Img.journey,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0019',
       coaIssueDate: _daysAgo(41),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-terrace-garden/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-terrace-garden/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 52),
@@ -683,16 +824,26 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'A seated figure reduced to the three planes that still read as a person from across a room. Sand-cast in a single pour, then worked back by hand at the shoulders so the tool marks stay visible under the patina. Supplied on a machined steel base.',
+      description: 'A seated figure reduced to the three planes that still read as a person from across a room. Sand-cast in a single pour, then worked back by hand at the shoulders so the tool marks stay visible under the patina. Supplied on a machined steel base.',
       dimensions: '18x11x14 in',
       yearCreated: 2025,
-      images: _images('Weight of a Quiet Room', [_Img.busts, _Img.drape, _Img.eco1, _Img.portrait]),
+      images: _images('Weight of a Quiet Room', [
+        _Img.busts,
+        _Img.drape,
+        _Img.eco1,
+        _Img.portrait,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0020',
       coaIssueDate: _daysAgo(63),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-quiet-room/'),
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-quiet-room-pour'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-quiet-room/',
+        ),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-quiet-room-pour',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 78),
@@ -720,15 +871,21 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'Shot at 5.40am from the far end of Platform Nine, waiting for the one minute when the station lights and the daylight are the same temperature and the whole shed goes flat. Printed on cotton rag in an edition of twelve, each one numbered on the reverse.',
+      description: 'Shot at 5.40am from the far end of Platform Nine, waiting for the one minute when the station lights and the daylight are the same temperature and the whole shed goes flat. Printed on cotton rag in an edition of twelve, each one numbered on the reverse.',
       dimensions: '16x24 in',
       yearCreated: 2026,
-      images: _images('Platform Nine, First Light', [_Img.framed, _Img.eco2, _Img.landscape]),
+      images: _images('Platform Nine, First Light', [
+        _Img.framed,
+        _Img.eco2,
+        _Img.landscape,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0021',
       coaIssueDate: _daysAgo(29),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-platform-nine/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-platform-nine/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 38),
@@ -756,11 +913,14 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          "Cut from a single block after the shopfronts on the artist's own street were painted over in one weekend. The signage lettering is set from wood type salvaged from the press that used to print those shutters, so the piece is partly made of the thing it records.",
+      description: "Cut from a single block after the shopfronts on the artist's own street were painted over in one weekend. The signage lettering is set from wood type salvaged from the press that used to print those shutters, so the piece is partly made of the thing it records.",
       dimensions: '14x20 in',
       yearCreated: 2025,
-      images: _images('Letterpress for a Lost Street', [_Img.pyramid, _Img.eco3, _Img.framed]),
+      images: _images('Letterpress for a Lost Street', [
+        _Img.pyramid,
+        _Img.eco3,
+        _Img.framed,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0022',
       coaIssueDate: _daysAgo(55),
       socialProofLinks: const [],
@@ -790,15 +950,21 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.aggregatorOnly,
-      description:
-          'Three bands of running stitch worked at three different densities across a single dyed field, so the cloth reads as one surface from a distance and as three separate weathers up close. Roughly four months of stitching, in madder, indigo and pomegranate rind.',
+      description: 'Three bands of running stitch worked at three different densities across a single dyed field, so the cloth reads as one surface from a distance and as three separate weathers up close. Roughly four months of stitching, in madder, indigo and pomegranate rind.',
       dimensions: '36x48 in',
       yearCreated: 2025,
-      images: _images('Kantha in Three Registers', [_Img.drape, _Img.eco1, _Img.portrait]),
+      images: _images('Kantha in Three Registers', [
+        _Img.drape,
+        _Img.eco1,
+        _Img.portrait,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0023',
       coaIssueDate: _daysAgo(35),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-kantha-registers/'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-kantha-registers/',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 45),
@@ -826,15 +992,22 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'Two panels built from the housings of dead television sets, flattened, primed and worked over in dry pigment until the seams of the original casing come back through. Hung as a pair with a fixed four-inch gap, which is part of the work rather than a display note.',
+      description: 'Two panels built from the housings of dead television sets, flattened, primed and worked over in dry pigment until the seams of the original casing come back through. Hung as a pair with a fixed four-inch gap, which is part of the work rather than a display note.',
       dimensions: '24x36 in (each panel)',
       yearCreated: 2026,
-      images: _images('Signal Loss (Diptych)', [_Img.eco2, _Img.eco3, _Img.pyramid, _Img.busts]),
+      images: _images('Signal Loss (Diptych)', [
+        _Img.eco2,
+        _Img.eco3,
+        _Img.pyramid,
+        _Img.busts,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0024',
       coaIssueDate: _daysAgo(22),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-signal-loss-build'),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-signal-loss-build',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 31),
@@ -862,16 +1035,26 @@ List<Artwork> seedArtworks() {
       insured: true,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.marketplaceAndAggregator,
-      description:
-          'The largest canvas in this series, and the one that gave up its horizon: a courtyard at the hour when the light is so flat that the walls, the floor and the sky all resolve to the same value. Painted in acrylic for the speed, then knocked back with a dry brush over four weeks.',
+      description: 'The largest canvas in this series, and the one that gave up its horizon: a courtyard at the hour when the light is so flat that the walls, the floor and the sky all resolve to the same value. Painted in acrylic for the speed, then knocked back with a dry brush over four weeks.',
       dimensions: '48x60 in',
       yearCreated: 2026,
-      images: _images('Noon Heat, Chettinad', [_Img.idPaint, _Img.landscape, _Img.framed, _Img.journey]),
+      images: _images('Noon Heat, Chettinad', [
+        _Img.idPaint,
+        _Img.landscape,
+        _Img.framed,
+        _Img.journey,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0025',
       coaIssueDate: _daysAgo(17),
       socialProofLinks: const [
-        SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://www.instagram.com/reel/gz-noon-heat-chettinad/'),
-        SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://www.youtube.com/watch?v=gz-noon-heat-process'),
+        SocialProofLink(
+          platform: SocialProofPlatform.instagram,
+          url: 'https://www.instagram.com/reel/gz-noon-heat-chettinad/',
+        ),
+        SocialProofLink(
+          platform: SocialProofPlatform.youtube,
+          url: 'https://www.youtube.com/watch?v=gz-noon-heat-process',
+        ),
       ],
       statusHistory: _history([
         (ArtworkStatus.draft, 27),
@@ -899,11 +1082,14 @@ List<Artwork> seedArtworks() {
       insured: false,
       status: ArtworkStatus.marketplace,
       listingType: ListingType.aggregatorOnly,
-      description:
-          'A wall-mounted bronze the size of an open hand, patinated in stages over six weeks and stopped at the point where the green had taken but the metal underneath still showed at the edges. Fourth in a run of nine, each one halted at a different week.',
+      description: 'A wall-mounted bronze the size of an open hand, patinated in stages over six weeks and stopped at the point where the green had taken but the metal underneath still showed at the edges. Fourth in a run of nine, each one halted at a different week.',
       dimensions: '9x7x2 in',
       yearCreated: 2025,
-      images: _images('Verdigris Study No. 4', [_Img.eco3, _Img.busts, _Img.eco1]),
+      images: _images('Verdigris Study No. 4', [
+        _Img.eco3,
+        _Img.busts,
+        _Img.eco1,
+      ]),
       coaCertificateNumber: 'GZ-COA-2026-0026',
       coaIssueDate: _daysAgo(48),
       socialProofLinks: const [],

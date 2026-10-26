@@ -14,25 +14,25 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Artwork _artwork(String id) => Artwork(
-      id: id,
-      title: 'Monsoon, Madurai',
-      artistId: 'ar-1',
-      artistName: 'Ananya Rao',
-      verifiedArtist: true,
-      category: 'painting',
-      medium: 'Oil on canvas',
-      customerPrice: 23400,
-      thumbnailUrl: '/artworks/bird.png',
-      insured: true,
-      status: ArtworkStatus.sold,
-      listingType: ListingType.marketplaceOnly,
-      description: 'A study in rain light.',
-      images: const [],
-      coaCertificateNumber: 'GZ-COA-0001',
-      coaIssueDate: '2025-03-04',
-      socialProofLinks: const [],
-      statusHistory: const [],
-    );
+  id: id,
+  title: 'Monsoon, Madurai',
+  artistId: 'ar-1',
+  artistName: 'Ananya Rao',
+  verifiedArtist: true,
+  category: 'painting',
+  medium: 'Oil on canvas',
+  customerPrice: 23400,
+  thumbnailUrl: '/artworks/bird.png',
+  insured: true,
+  status: ArtworkStatus.sold,
+  listingType: ListingType.marketplaceOnly,
+  description: 'A study in rain light.',
+  images: const [],
+  coaCertificateNumber: 'GZ-COA-0001',
+  coaIssueDate: '2025-03-04',
+  socialProofLinks: const [],
+  statusHistory: const [],
+);
 
 void main() {
   late MockCustomerRepository repository;
@@ -67,7 +67,9 @@ void main() {
       expect(await repository.listAddresses(), hasLength(4));
 
       await repository.updateAddress(created.copyWith(city: 'Mysuru'));
-      final updated = (await repository.listAddresses()).firstWhere((a) => a.id == created.id);
+      final updated = (await repository.listAddresses()).firstWhere(
+        (a) => a.id == created.id,
+      );
       expect(updated.city, 'Mysuru');
 
       await repository.deleteAddress(created.id);
@@ -82,36 +84,44 @@ void main() {
     });
   });
 
-  test('profile edits persist — a successful save is not silently discarded',
-      () async {
-    final profile = await repository.getProfile();
-    expect(profile.name, 'Aarav Shah');
+  test(
+    'profile edits persist — a successful save is not silently discarded',
+    () async {
+      final profile = await repository.getProfile();
+      expect(profile.name, 'Aarav Shah');
 
-    await repository.updateProfile(profile.copyWith(name: 'Aarav S.'));
-    expect((await repository.getProfile()).name, 'Aarav S.');
+      await repository.updateProfile(profile.copyWith(name: 'Aarav S.'));
+      expect((await repository.getProfile()).name, 'Aarav S.');
 
-    // A second repository instance reads the same stored value.
-    expect((await MockCustomerRepository().getProfile()).name, 'Aarav S.');
-  });
+      // A second repository instance reads the same stored value.
+      expect((await MockCustomerRepository().getProfile()).name, 'Aarav S.');
+    },
+  );
 
-  test('collection is exactly the delivered orders, joined to their artwork',
-      () async {
-    // Only `order-monsoon-madurai` is delivered in the seed set. Pinning the
-    // collection to one record keeps the assertion about the join, not about
-    // how many fixtures happen to ship.
-    MockDb.setCollection('artworks', [_artwork('monsoon-over-madurai')], (a) => a.toJson());
+  test(
+    'collection is exactly the delivered orders, joined to their artwork',
+    () async {
+      // Only `order-monsoon-madurai` is delivered in the seed set. Pinning the
+      // collection to one record keeps the assertion about the join, not about
+      // how many fixtures happen to ship.
+      MockDb.setCollection('artworks', [
+        _artwork('monsoon-over-madurai'),
+      ], (a) => a.toJson());
 
-    final collection = await repository.listCollection();
-    expect(collection, hasLength(1));
-    expect(collection.single.order!.status, OrderStatus.delivered);
-    expect(collection.single.artwork.id, 'monsoon-over-madurai');
-  });
+      final collection = await repository.listCollection();
+      expect(collection, hasLength(1));
+      expect(collection.single.order!.status, OrderStatus.delivered);
+      expect(collection.single.artwork.id, 'monsoon-over-madurai');
+    },
+  );
 
-  test('a delivered order whose artwork is gone is skipped, not rendered blank',
-      () async {
-    MockDb.setCollection('artworks', <Artwork>[], (a) => a.toJson());
-    expect(await repository.listCollection(), isEmpty);
-  });
+  test(
+    'a delivered order whose artwork is gone is skipped, not rendered blank',
+    () async {
+      MockDb.setCollection('artworks', <Artwork>[], (a) => a.toJson());
+      expect(await repository.listCollection(), isEmpty);
+    },
+  );
 
   group('resale', () {
     test('create then withdraw', () async {
@@ -125,8 +135,10 @@ void main() {
 
       final withdrawn = await repository.withdrawResaleListing(listing.id);
       expect(withdrawn.status, ResaleListingStatus.withdrawn);
-      expect((await repository.listResaleListings()).single.status,
-          ResaleListingStatus.withdrawn);
+      expect(
+        (await repository.listResaleListings()).single.status,
+        ResaleListingStatus.withdrawn,
+      );
     });
 
     test('a non-positive price is rejected', () {
@@ -198,7 +210,8 @@ void main() {
                   routes: [
                     GoRoute(
                       path: '/${destination.label.toLowerCase()}',
-                      builder: (context, state) => Center(child: Text(destination.label)),
+                      builder: (context, state) =>
+                          Center(child: Text(destination.label)),
                     ),
                   ],
                 ),
@@ -210,7 +223,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
         ),
       );
       // The drawer's header reads the collector's name, and every mock
@@ -227,7 +243,9 @@ void main() {
       expect(find.byType(NavigationRail), findsNothing);
     });
 
-    testWidgets('expanded uses a rail instead, same destinations', (tester) async {
+    testWidgets('expanded uses a rail instead, same destinations', (
+      tester,
+    ) async {
       await pumpShellAt(tester, const Size(1000, 900));
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);

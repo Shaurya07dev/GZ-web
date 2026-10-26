@@ -46,7 +46,8 @@ class AggregatorHoldingScreen extends ConsumerWidget {
           title: "Couldn't load this holding",
           description: 'Something went wrong. Try again in a moment.',
           action: OutlinedButton(
-            onPressed: () => ref.invalidate(aggregatorHoldingProvider(holdingId)),
+            onPressed: () =>
+                ref.invalidate(aggregatorHoldingProvider(holdingId)),
             child: const Text('Try again'),
           ),
         ),
@@ -87,12 +88,14 @@ class _HoldingBody extends ConsumerWidget {
     // The API takes a piece back itself once its window has passed, so this only
     // shows in the gap before that runs. Recording a sale is the one thing still
     // worth doing from here.
-    final expired = reserved && !DateTime.parse(holding.expiresAt).isAfter(displayNow(ref));
+    final expired =
+        reserved && !DateTime.parse(holding.expiresAt).isAfter(displayNow(ref));
     // One answer per window: GalleryZone's reply stands until the window moves.
     // The API also refuses a second request while one is waiting, and once the
     // piece is already held to the end of its listing.
     final request = holding.extensionRequest;
-    final canAskToKeep = reserved &&
+    final canAskToKeep =
+        reserved &&
         !expired &&
         !holding.windowExtended &&
         request?.status != ExtensionStatus.pending &&
@@ -119,8 +122,9 @@ class _HoldingBody extends ConsumerWidget {
                   icon: LucideIcons.clock,
                   destructive: true,
                   title: "This piece's 30-day window has ended.",
-                  body: 'GalleryZone takes it back and offers it to another aggregator, and your advance returns '
-                      'to your wallet. If it sold before then, record the sale now.',
+                  body:
+                      'GalleryZone takes it back and offers it to another aggregator. Your refundable advance '
+                      'is released after reconciliation. If it sold before then, record the sale now.',
                   action: Align(
                     alignment: Alignment.centerLeft,
                     child: FilledButton(
@@ -135,8 +139,9 @@ class _HoldingBody extends ConsumerWidget {
                 PortalNotice(
                   icon: LucideIcons.undo2,
                   title: 'Your period for this piece has ended.',
-                  body: 'It has gone back to GalleryZone and is now available to another aggregator. Your advance '
-                      'is back in your wallet.',
+                  body:
+                      'It has gone back to GalleryZone and is now available to another aggregator. Your refundable '
+                      'advance has been released for settlement.',
                   action: Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
@@ -146,7 +151,9 @@ class _HoldingBody extends ConsumerWidget {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () => context.go(AggregatorBrowseScreen.path),
-                      child: const Text('Browse inventory to reserve something else'),
+                      child: const Text(
+                        'Browse inventory to reserve something else',
+                      ),
                     ),
                   ),
                 ),
@@ -171,11 +178,22 @@ class _HoldingBody extends ConsumerWidget {
                               onPressed: () => showNfcSheet(
                                 context,
                                 artwork: artwork,
-                                mode: stage == NfcStage.unlinked ? NfcMode.link : NfcMode.lock,
+                                mode: stage == NfcStage.unlinked
+                                    ? NfcMode.link
+                                    : NfcMode.lock,
                                 onChanged: refreshTag,
                               ),
-                              icon: Icon(stage == NfcStage.unlinked ? LucideIcons.link2 : LucideIcons.lock, size: 14),
-                              label: Text(stage == NfcStage.unlinked ? 'Link tag' : 'Lock tag'),
+                              icon: Icon(
+                                stage == NfcStage.unlinked
+                                    ? LucideIcons.link2
+                                    : LucideIcons.lock,
+                                size: 14,
+                              ),
+                              label: Text(
+                                stage == NfcStage.unlinked
+                                    ? 'Link tag'
+                                    : 'Lock tag',
+                              ),
                             ),
                           ),
                         )
@@ -193,7 +211,11 @@ class _HoldingBody extends ConsumerWidget {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          child: SizedBox(width: 80, height: 80, child: ArtworkImageView(url: artwork.thumbnailUrl)),
+                          child: SizedBox(
+                            width: 80,
+                            height: 80,
+                            child: ArtworkImageView(url: artwork.thumbnailUrl),
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -204,16 +226,24 @@ class _HoldingBody extends ConsumerWidget {
                                 artwork.title,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                              Text(artwork.artistName, style: theme.textTheme.bodySmall),
+                              Text(
+                                artwork.artistName,
+                                style: theme.textTheme.bodySmall,
+                              ),
                               const SizedBox(height: 8),
                               HoldingStatusPill(status: holding.status),
                             ],
                           ),
                         ),
                         const SizedBox(width: 8),
-                        PriceTag(amount: holding.displayPrice, style: theme.textTheme.titleMedium),
+                        PriceTag(
+                          amount: holding.displayPrice,
+                          style: theme.textTheme.titleMedium,
+                        ),
                       ],
                     ),
                     if (reserved) ...[
@@ -234,16 +264,23 @@ class _HoldingBody extends ConsumerWidget {
                             // keeps it to the end of the artist's 180 days.
                             "Extended — too little of this piece's listing was left to place it elsewhere, so it "
                             'stays with you until the listing ends.',
-                            style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              height: 1.4,
+                            ),
                           ),
                         ),
                       if (request != null) ...[
                         const SizedBox(height: 8),
-                        _ExtensionStatus(request: request, expiresAt: holding.expiresAt),
+                        _ExtensionStatus(
+                          request: request,
+                          expiresAt: holding.expiresAt,
+                        ),
                       ],
                     ],
                     const Divider(height: 28),
-                    _Caption('Rotation · month ${holding.cycleMonth} of $aggregatorCycleMonths'),
+                    _Caption(
+                      'Rotation · month ${holding.cycleMonth} of $aggregatorCycleMonths',
+                    ),
                     CycleStepper(currentMonth: holding.cycleMonth),
                     const Divider(height: 28),
                     Row(
@@ -256,14 +293,28 @@ class _HoldingBody extends ConsumerWidget {
                             suffix: '(${holding.advancePercent}%)',
                           ),
                         ),
-                        Expanded(child: _Stat(label: 'Delivery deposit', value: formatInr(holding.deliveryDeposit))),
-                        Expanded(child: _Stat(label: 'Display price', value: formatInr(holding.displayPrice))),
+                        Expanded(
+                          child: _Stat(
+                            label: 'Delivery deposit',
+                            value: formatInr(holding.deliveryDeposit),
+                          ),
+                        ),
+                        Expanded(
+                          child: _Stat(
+                            label: 'Display price',
+                            value: formatInr(holding.displayPrice),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     PortalDetailRow(
                       label: 'Assigned',
-                      value: holding.assignmentSource == AssignmentSource.gzAssigned ? 'By GalleryZone' : 'You reserved it',
+                      value:
+                          holding.assignmentSource ==
+                              AssignmentSource.gzAssigned
+                          ? 'By GalleryZone'
+                          : 'You reserved it',
                     ),
                     if (reserved) ...[
                       const Divider(height: 28),
@@ -279,9 +330,19 @@ class _HoldingBody extends ConsumerWidget {
                             onPressed: () => showReturnHolding(context, view),
                             child: const Text('Return'),
                           ),
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                showReportHoldingIssue(context, view),
+                            icon: const Icon(
+                              LucideIcons.triangleAlert,
+                              size: 14,
+                            ),
+                            label: const Text('Report issue'),
+                          ),
                           if (canAskToKeep)
                             OutlinedButton(
-                              onPressed: () => showRequestExtension(context, view),
+                              onPressed: () =>
+                                  showRequestExtension(context, view),
                               child: const Text('Ask to keep it longer'),
                             ),
                         ],
@@ -306,19 +367,28 @@ class _HoldingBody extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(LucideIcons.shieldOff, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                      Icon(
+                        LucideIcons.shieldOff,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           "This piece's COA/NFC passport is only visible while it's in your active inventory.",
-                          style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            height: 1.45,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
               const SizedBox(height: 24),
-              SuggestedArtworks(references: [artwork], title: 'Similar artworks'),
+              SuggestedArtworks(
+                references: [artwork],
+                title: 'Similar artworks',
+              ),
             ],
           ),
         ),
@@ -338,7 +408,8 @@ class _Caption extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.8, fontWeight: FontWeight.w500),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(letterSpacing: 0.8, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -359,7 +430,12 @@ class _Stat extends StatelessWidget {
       children: [
         Text(label, style: theme.textTheme.labelSmall),
         const SizedBox(height: 2),
-        Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         if (suffix != null) Text(suffix!, style: theme.textTheme.labelSmall),
       ],
     );
@@ -379,16 +455,30 @@ class _ExtensionStatus extends StatelessWidget {
     final theme = Theme.of(context);
     final ends = formatShortDate(expiresAt);
     final (icon, title, color) = switch (request.status) {
-      ExtensionStatus.pending => (LucideIcons.hourglass, 'Waiting for GalleryZone', theme.colorScheme.tertiary),
-      ExtensionStatus.approved => (LucideIcons.circleCheckBig, 'GalleryZone agreed', const Color(0xFF34D399)),
-      ExtensionStatus.declined => (LucideIcons.circleX, 'GalleryZone said no', theme.colorScheme.onSurfaceVariant),
+      ExtensionStatus.pending => (
+        LucideIcons.hourglass,
+        'Waiting for GalleryZone',
+        theme.colorScheme.tertiary,
+      ),
+      ExtensionStatus.approved => (
+        LucideIcons.circleCheckBig,
+        'GalleryZone agreed',
+        const Color(0xFF34D399),
+      ),
+      ExtensionStatus.declined => (
+        LucideIcons.circleX,
+        'GalleryZone said no',
+        theme.colorScheme.onSurfaceVariant,
+      ),
     };
     final body = switch (request.status) {
-      ExtensionStatus.pending => "You asked to keep this piece longer. If it isn't approved by $ends, it goes back "
-          'on sale and your advance is released.',
+      ExtensionStatus.pending =>
+        "You asked to keep this piece longer. If it isn't approved by $ends, it goes back "
+            'on sale and your advance is released.',
       ExtensionStatus.approved => 'The window now runs to $ends.',
-      ExtensionStatus.declined => 'The window ends on $ends. Then the piece goes back on sale and your advance is '
-          'released.',
+      ExtensionStatus.declined =>
+        'The window ends on $ends. Then the piece goes back on sale and your advance is '
+            'released.',
     };
 
     return Container(
@@ -403,25 +493,43 @@ class _ExtensionStatus extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+            child: Icon(
+              icon,
+              size: 16,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(body, style: theme.textTheme.bodySmall?.copyWith(height: 1.45)),
+                Text(
+                  body,
+                  style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                ),
                 if (request.status == ExtensionStatus.pending)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text('Your assurance: “${request.assurance}”', style: theme.textTheme.bodySmall?.copyWith(height: 1.45)),
+                    child: Text(
+                      'Your assurance: “${request.assurance}”',
+                      style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                    ),
                   ),
                 if (request.note != null && request.note!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text('GalleryZone wrote: “${request.note}”', style: theme.textTheme.bodySmall?.copyWith(height: 1.45)),
+                    child: Text(
+                      'GalleryZone wrote: “${request.note}”',
+                      style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+                    ),
                   ),
               ],
             ),
@@ -448,39 +556,59 @@ class _PassportCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         children: [
-          StatusPill(label: 'Artwork Passport', color: theme.colorScheme.tertiary, icon: LucideIcons.shieldCheck),
+          StatusPill(
+            label: 'Artwork Passport',
+            color: theme.colorScheme.tertiary,
+            icon: LucideIcons.shieldCheck,
+          ),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            child: SizedBox(width: 120, height: 120, child: ArtworkImageView(url: artwork.thumbnailUrl)),
+            child: SizedBox(
+              width: 120,
+              height: 120,
+              child: ArtworkImageView(url: artwork.thumbnailUrl),
+            ),
           ),
           const SizedBox(height: 14),
           Text(
             artwork.title,
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 2),
           Text('by ${artwork.artistName}', style: theme.textTheme.bodySmall),
           const SizedBox(height: 14),
-          Container(width: 64, height: 1, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+          Container(
+            width: 64,
+            height: 1,
+            color: theme.colorScheme.primary.withValues(alpha: 0.5),
+          ),
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: _Stat(
                   label: 'CERTIFICATE NO.',
-                  value: artwork.coaCertificateNumber.isEmpty ? 'Pending approval' : artwork.coaCertificateNumber,
+                  value: artwork.coaCertificateNumber.isEmpty
+                      ? 'Pending approval'
+                      : artwork.coaCertificateNumber,
                 ),
               ),
               Expanded(
                 child: _Stat(
                   label: 'ISSUED',
-                  value: artwork.coaIssueDate.isEmpty ? '—' : formatLongDate(artwork.coaIssueDate),
+                  value: artwork.coaIssueDate.isEmpty
+                      ? '—'
+                      : formatLongDate(artwork.coaIssueDate),
                 ),
               ),
             ],

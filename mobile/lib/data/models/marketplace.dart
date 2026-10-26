@@ -64,13 +64,22 @@ class MarketplacePage {
 
   bool get hasMore => page * pageSize < total;
 
-  static const empty = MarketplacePage(artworks: [], total: 0, page: 1, pageSize: 20);
+  static const empty = MarketplacePage(
+    artworks: [],
+    total: 0,
+    page: 1,
+    pageSize: 20,
+  );
 }
 
 /// A row in the artists directory: the public profile plus the figures the
 /// listing is built from.
 class ArtistCard {
-  const ArtistCard({required this.profile, required this.artworkCount, this.coverImageUrl});
+  const ArtistCard({
+    required this.profile,
+    required this.artworkCount,
+    this.coverImageUrl,
+  });
 
   final ArtistProfile profile;
   final int artworkCount;

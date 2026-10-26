@@ -14,7 +14,7 @@ import '../providers/account_providers.dart';
 import '../widgets/order_widgets.dart';
 
 /// Port of `features/account/collector-dashboard.tsx`, plus the entry points
-/// the web keeps in its sidebar (wallet, resale, addresses, profile,
+/// the web keeps in its sidebar (resale, addresses, profile,
 /// support) — on mobile those live in the More tab rather than in a nine-item
 /// tab bar.
 class AccountDashboardScreen extends ConsumerWidget {
@@ -31,7 +31,8 @@ class AccountDashboardScreen extends ConsumerWidget {
     final collection = ref.watch(collectionProvider).value;
     final listings = ref.watch(resaleListingsProvider).value;
     final wishlistCount = ref.watch(wishlistProvider).length;
-    final recent = [...?orders]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final recent = [...?orders]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
@@ -69,8 +70,13 @@ class AccountDashboardScreen extends ConsumerWidget {
                             orders: orders,
                             collection: collection,
                             wishlisted: wishlistCount,
-                            listedForResale: listings
-                                    ?.where((l) => l.status == ResaleListingStatus.active)
+                            listedForResale:
+                                listings
+                                    ?.where(
+                                      (l) =>
+                                          l.status ==
+                                          ResaleListingStatus.active,
+                                    )
                                     .length ??
                                 0,
                           ),
@@ -93,7 +99,10 @@ class AccountDashboardScreen extends ConsumerWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Couldn't load your orders.", style: theme.textTheme.bodySmall),
+                        Text(
+                          "Couldn't load your orders.",
+                          style: theme.textTheme.bodySmall,
+                        ),
                         TextButton(
                           onPressed: () => ref.invalidate(ordersProvider),
                           child: const Text('Try again'),
@@ -151,7 +160,8 @@ class CollectorStats {
     final placed = orders.where((o) => o.status != OrderStatus.pending);
     final counts = <String, int>{};
     for (final item in collection) {
-      counts[item.artwork.artistName] = (counts[item.artwork.artistName] ?? 0) + 1;
+      counts[item.artwork.artistName] =
+          (counts[item.artwork.artistName] ?? 0) + 1;
     }
     final repeat = counts.entries.where((e) => e.value > 1).toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -159,9 +169,15 @@ class CollectorStats {
       worksOwned: collection.length,
       ordersPlaced: placed.length,
       inProgress: placed
-          .where((o) => o.status != OrderStatus.delivered && o.status != OrderStatus.cancelled)
+          .where(
+            (o) =>
+                o.status != OrderStatus.delivered &&
+                o.status != OrderStatus.cancelled,
+          )
           .length,
-      totalSpent: placed.where((o) => o.status != OrderStatus.cancelled).fold(0.0, (sum, o) => sum + o.total),
+      totalSpent: placed
+          .where((o) => o.status != OrderStatus.cancelled)
+          .fold(0.0, (sum, o) => sum + o.total),
       wishlisted: wishlisted,
       listedForResale: listedForResale,
       artistsCollected: [for (final e in repeat) e.key],
@@ -182,7 +198,11 @@ class CollectorStats {
 /// Port of `collector-profile-card.tsx`: the first thing a collector sees is
 /// what they own, not a list of settings.
 class CollectorProfileCard extends StatelessWidget {
-  const CollectorProfileCard({super.key, required this.profile, required this.stats});
+  const CollectorProfileCard({
+    super.key,
+    required this.profile,
+    required this.stats,
+  });
 
   final CustomerProfile? profile;
   final CollectorStats? stats;
@@ -197,7 +217,9 @@ class CollectorProfileCard extends StatelessWidget {
       return Container(
         height: 180,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: 0.5,
+          ),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
       );
@@ -224,7 +246,9 @@ class CollectorProfileCard extends StatelessWidget {
         children: [
           Text(
             profile?.name ?? '',
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (since != null)
             Text(
@@ -235,7 +259,8 @@ class CollectorProfileCard extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final columns = constraints.maxWidth >= 520 ? 3 : 2;
-              final width = (constraints.maxWidth - 16 * (columns - 1)) / columns;
+              final width =
+                  (constraints.maxWidth - 16 * (columns - 1)) / columns;
               return Wrap(
                 spacing: 16,
                 runSpacing: 16,
@@ -248,7 +273,11 @@ class CollectorProfileCard extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Icon(icon, size: 14, color: theme.textTheme.bodySmall?.color),
+                              Icon(
+                                icon,
+                                size: 14,
+                                color: theme.textTheme.bodySmall?.color,
+                              ),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
@@ -268,7 +297,9 @@ class CollectorProfileCard extends StatelessWidget {
                               value,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -319,11 +350,17 @@ class _DiscoverBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.primary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
-            Icon(LucideIcons.compass, size: 20, color: theme.colorScheme.tertiary),
+            Icon(
+              LucideIcons.compass,
+              size: 20,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -331,7 +368,9 @@ class _DiscoverBanner extends StatelessWidget {
                 children: [
                   Text(
                     'Discover more artworks',
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     'Browse original work from independent artists across India.',
@@ -340,7 +379,11 @@ class _DiscoverBanner extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(LucideIcons.arrowRight, size: 16, color: theme.colorScheme.tertiary),
+            Icon(
+              LucideIcons.arrowRight,
+              size: 16,
+              color: theme.colorScheme.tertiary,
+            ),
           ],
         ),
       ),

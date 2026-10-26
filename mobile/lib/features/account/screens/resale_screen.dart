@@ -29,98 +29,113 @@ class ResaleScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Resell artwork')),
-      body: (collection.isLoading || listings.isLoading) && !collection.hasValue && !listings.hasValue
+      body:
+          (collection.isLoading || listings.isLoading) &&
+              !collection.hasValue &&
+              !listings.hasValue
           ? const Center(child: CircularProgressIndicator())
-          : (collection.hasError || listings.hasError) && !(collection.hasValue && listings.hasValue)
-              ? EmptyState(
-                  icon: LucideIcons.repeat2,
-                  title: "Couldn't load your resale options",
-                  description: 'Something went wrong. Try again in a moment.',
-                  action: OutlinedButton(
-                    onPressed: () {
-                      ref.invalidate(collectionProvider);
-                      ref.invalidate(resaleListingsProvider);
-                    },
-                    child: const Text('Try again'),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(collectionProvider);
-                    ref.invalidate(resaleListingsProvider);
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    children: [
-                      ContentWidth(
-                        child: Builder(
-                          builder: (context) {
-                            final items = collection.value ?? const <CollectionItem>[];
-                            final all = listings.value ?? const <ResaleListing>[];
-                            final active = {
-                              for (final listing in all)
-                                if (listing.status == ResaleListingStatus.active) listing.artworkId,
-                            };
-                            final eligible = [
-                              for (final item in items)
-                                if (!active.contains(item.artwork.id)) item,
-                            ];
+          : (collection.hasError || listings.hasError) &&
+                !(collection.hasValue && listings.hasValue)
+          ? EmptyState(
+              icon: LucideIcons.repeat2,
+              title: "Couldn't load your resale options",
+              description: 'Something went wrong. Try again in a moment.',
+              action: OutlinedButton(
+                onPressed: () {
+                  ref.invalidate(collectionProvider);
+                  ref.invalidate(resaleListingsProvider);
+                },
+                child: const Text('Try again'),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(collectionProvider);
+                ref.invalidate(resaleListingsProvider);
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  ContentWidth(
+                    child: Builder(
+                      builder: (context) {
+                        final items =
+                            collection.value ?? const <CollectionItem>[];
+                        final all = listings.value ?? const <ResaleListing>[];
+                        final active = {
+                          for (final listing in all)
+                            if (listing.status == ResaleListingStatus.active)
+                              listing.artworkId,
+                        };
+                        final eligible = [
+                          for (final item in items)
+                            if (!active.contains(item.artwork.id)) item,
+                        ];
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text('Eligible artworks', style: theme.textTheme.titleLarge),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Any artwork in your collection can be listed for resale.',
-                                  style: theme.textTheme.bodySmall,
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Eligible artworks',
+                              style: theme.textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Any artwork in your collection can be listed for resale.',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 12),
+                            if (eligible.isEmpty)
+                              const EmptyState(
+                                icon: LucideIcons.repeat2,
+                                title: 'Nothing eligible right now',
+                                description:
+                                    "Artworks become eligible for resale once they're "
+                                    'delivered and part of your collection.',
+                              )
+                            else
+                              for (final item in eligible)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _EligibleRow(item: item),
                                 ),
-                                const SizedBox(height: 12),
-                                if (eligible.isEmpty)
-                                  const EmptyState(
-                                    icon: LucideIcons.repeat2,
-                                    title: 'Nothing eligible right now',
-                                    description:
-                                        "Artworks become eligible for resale once they're "
-                                        'delivered and part of your collection.',
-                                  )
-                                else
-                                  for (final item in eligible)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
-                                      child: _EligibleRow(item: item),
-                                    ),
-                                const SizedBox(height: 28),
-                                Text('Your listings', style: theme.textTheme.titleLarge),
-                                const SizedBox(height: 12),
-                                if (all.isEmpty)
-                                  const EmptyState(
-                                    icon: LucideIcons.tag,
-                                    title: 'No resale listings yet',
-                                    description: 'Artworks you list for resale will appear here.',
-                                  )
-                                else
-                                  for (final listing in all)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
-                                      child: _ListingRow(
-                                        listing: listing,
-                                        // The listing names the piece by id only; the
-                                        // collection is where its title and photo are.
-                                        artwork: items
-                                            .where((c) => c.artwork.id == listing.artworkId)
-                                            .firstOrNull
-                                            ?.artwork,
-                                      ),
-                                    ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                            const SizedBox(height: 28),
+                            Text(
+                              'Your listings',
+                              style: theme.textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 12),
+                            if (all.isEmpty)
+                              const EmptyState(
+                                icon: LucideIcons.tag,
+                                title: 'No resale listings yet',
+                                description: 'Artworks you list for resale will appear here.',
+                              )
+                            else
+                              for (final listing in all)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _ListingRow(
+                                    listing: listing,
+                                    // The listing names the piece by id only; the
+                                    // collection is where its title and photo are.
+                                    artwork: items
+                                        .where(
+                                          (c) =>
+                                              c.artwork.id == listing.artworkId,
+                                        )
+                                        .firstOrNull
+                                        ?.artwork,
+                                  ),
+                                ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
     );
   }
 }
@@ -159,7 +174,9 @@ class _EligibleRow extends ConsumerWidget {
                   item.artwork.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 Text(
                   item.order != null
@@ -181,9 +198,15 @@ class _EligibleRow extends ConsumerWidget {
     );
   }
 
-  Future<void> _openListingSheet(BuildContext context, WidgetRef ref, CollectionItem item) async {
+  Future<void> _openListingSheet(
+    BuildContext context,
+    WidgetRef ref,
+    CollectionItem item,
+  ) async {
     final paid = item.order?.amount;
-    final controller = TextEditingController(text: paid == null ? '' : paid.toStringAsFixed(0));
+    final controller = TextEditingController(
+      text: paid == null ? '' : paid.toStringAsFixed(0),
+    );
     final formKey = GlobalKey<FormState>();
 
     final price = await showModalBottomSheet<double>(
@@ -202,16 +225,23 @@ class _EligibleRow extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('List "${item.artwork.title}"', style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'List "${item.artwork.title}"',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: controller,
                 keyboardType: TextInputType.number,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
-                decoration: const InputDecoration(labelText: 'Asking price (₹)'),
+                decoration: const InputDecoration(
+                  labelText: 'Asking price (₹)',
+                ),
                 validator: (value) {
                   final parsed = double.tryParse((value ?? '').trim());
-                  if (parsed == null || parsed <= 0) return 'Enter a listing price';
+                  if (parsed == null || parsed <= 0) {
+                    return 'Enter a listing price';
+                  }
                   return null;
                 },
               ),
@@ -219,13 +249,15 @@ class _EligibleRow extends ConsumerWidget {
               Text(
                 '${paid == null ? '' : 'Originally acquired for ${formatInr(paid)}. '}'
                 "Buyer inquiries and resale checkout aren't wired to a live marketplace yet.",
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(height: 1.5),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(height: 1.5),
               ),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
                   if (!formKey.currentState!.validate()) return;
-                  Navigator.of(context).pop(double.parse(controller.text.trim()));
+                  Navigator.of(context)
+                      .pop(double.parse(controller.text.trim()));
                 },
                 child: const Text('List for resale'),
               ),
@@ -243,12 +275,12 @@ class _EligibleRow extends ConsumerWidget {
           .createResaleListing(artworkId: item.artwork.id, listedPrice: price);
       ref.invalidate(resaleListingsProvider);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listed for resale')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Listed for resale')));
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     }
   }
 }
@@ -292,10 +324,18 @@ class _ListingRow extends ConsumerWidget {
                   piece?.title ?? 'Artwork',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-                PriceTag(amount: listing.listedPrice, style: theme.textTheme.bodyMedium),
-                Text('Listed ${formatShortDate(listing.listedAt)}', style: theme.textTheme.labelSmall),
+                PriceTag(
+                  amount: listing.listedPrice,
+                  style: theme.textTheme.bodyMedium,
+                ),
+                Text(
+                  'Listed ${formatShortDate(listing.listedAt)}',
+                  style: theme.textTheme.labelSmall,
+                ),
               ],
             ),
           ),
@@ -308,7 +348,9 @@ class _ListingRow extends ConsumerWidget {
                 TextButton.icon(
                   onPressed: () async {
                     try {
-                      await ref.read(customerRepositoryProvider).withdrawResaleListing(listing.id);
+                      await ref
+                          .read(customerRepositoryProvider)
+                          .withdrawResaleListing(listing.id);
                       ref.invalidate(resaleListingsProvider);
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -347,12 +389,21 @@ class _StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: active ? green.withValues(alpha: 0.1) : theme.colorScheme.secondary,
-        border: Border.all(color: active ? green.withValues(alpha: 0.3) : theme.colorScheme.outline),
+        color: active
+            ? green.withValues(alpha: 0.1)
+            : theme.colorScheme.secondary,
+        border: Border.all(
+          color: active
+              ? green.withValues(alpha: 0.3)
+              : theme.colorScheme.outline,
+        ),
       ),
       child: Text(
         titleCase(status.name),
-        style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w500),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

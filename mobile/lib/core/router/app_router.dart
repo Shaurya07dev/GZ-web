@@ -15,10 +15,10 @@ import '../../features/account/screens/account_more_screen.dart';
 import '../../features/account/screens/account_settings_screen.dart';
 import '../../features/account/screens/addresses_screen.dart';
 import '../../features/account/screens/collection_screen.dart';
+import '../../features/account/screens/coa_nfc_screen.dart';
 import '../../features/account/screens/orders_screen.dart';
 import '../../features/account/screens/resale_screen.dart';
 import '../../features/account/screens/support_screen.dart';
-import '../../features/account/screens/wallet_screen.dart';
 import '../../features/account/screens/wishlist_screen.dart';
 import '../../features/account/widgets/customer_shell.dart';
 import '../../features/aggregator/screens/aggregator_account_screens.dart';
@@ -36,6 +36,8 @@ import '../../features/aggregator/screens/aggregator_wallet_screen.dart';
 import '../../features/aggregator/widgets/aggregator_shell.dart';
 import '../../features/artist/screens/artist_account_screens.dart';
 import '../../features/artist/screens/artist_analytics_screen.dart';
+import '../../features/artist/screens/artist_blog_form_screen.dart';
+import '../../features/artist/screens/artist_blogs_screen.dart';
 import '../../features/artist/screens/artist_kyc_screen.dart';
 import '../../features/artist/screens/artist_settlements_screen.dart';
 import '../../features/artist/screens/artist_artworks_screen.dart';
@@ -49,6 +51,9 @@ import '../../features/artist/screens/artist_network_screen.dart';
 import '../../features/artist/screens/mou_screen.dart';
 import '../../features/artist/widgets/artist_shell.dart';
 import '../../features/checkout/screens/checkout_screen.dart';
+import '../../features/content/screens/art_supplies_screen.dart';
+import '../../features/content/screens/blog_detail_screen.dart';
+import '../../features/content/screens/blogs_screen.dart';
 import '../../features/legal/screens/faq_screen.dart';
 import '../../features/legal/screens/legal_document_screen.dart';
 import '../../features/marketing/screens/about_screen.dart';
@@ -111,7 +116,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     // `role.home ?? /login` this used to pick synchronously.
     initialLocation: SplashScreen.path,
     refreshListenable: session,
-    redirect: (context, state) => redirectFor(session.value, state.uri.toString()),
+    redirect: (context, state) =>
+        redirectFor(session.value, state.uri.toString()),
     // A bad deep link (or a stale link to a screen a later phase hasn't
     // built yet) lands here instead of go_router's raw error page.
     errorBuilder: (context, state) => Scaffold(
@@ -127,10 +133,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(state.uri.toString(), style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                state.uri.toString(),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: 20),
               FilledButton(
-                onPressed: () => context.go(session.value?.home ?? LoginScreen.path),
+                onPressed: () =>
+                    context.go(session.value?.home ?? LoginScreen.path),
                 child: const Text('Go back'),
               ),
             ],
@@ -208,6 +218,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: FaqScreen.path,
         builder: (context, state) => const FaqScreen(),
       ),
+      GoRoute(
+        path: BlogsScreen.path,
+        builder: (context, state) => const BlogsScreen(),
+      ),
+      GoRoute(
+        path: '/blogs/:slug',
+        builder: (context, state) =>
+            BlogDetailScreen(slug: state.pathParameters['slug']!),
+      ),
+      GoRoute(
+        path: ArtSuppliesScreen.path,
+        builder: (context, state) => const ArtSuppliesScreen(),
+      ),
       // One route per document rather than `/legal/:docId`, so an unknown
       // legal path hits the real error page instead of an empty document.
       for (final spec in legalDocs.values)
@@ -219,8 +242,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // piece, account or not — same reasoning as the passport above.
       GoRoute(
         path: TransferAcceptScreen.path,
-        builder: (context, state) =>
-            TransferAcceptScreen(transferId: state.pathParameters['transferId']!),
+        builder: (context, state) => TransferAcceptScreen(
+          transferId: state.pathParameters['transferId']!,
+        ),
       ),
       GoRoute(
         path: PassportScreen.path,
@@ -243,12 +267,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                   // Nested under /account so these push onto the Account
                   // branch's own navigator, keeping the shell visible.
                   GoRoute(
-                    path: 'wallet',
-                    builder: (context, state) => const WalletScreen(),
-                  ),
-                  GoRoute(
                     path: 'resale',
                     builder: (context, state) => const ResaleScreen(),
+                  ),
+                  GoRoute(
+                    path: 'coa-nfc',
+                    builder: (context, state) => const CustomerCoaNfcScreen(),
                   ),
                   GoRoute(
                     path: 'addresses',
@@ -274,8 +298,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: ':orderId',
-                    builder: (context, state) =>
-                        OrderDetailScreen(orderId: state.pathParameters['orderId']!),
+                    builder: (context, state) => OrderDetailScreen(
+                      orderId: state.pathParameters['orderId']!,
+                    ),
                   ),
                 ],
               ),
@@ -341,15 +366,25 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'settlements',
-                    builder: (context, state) => const ArtistSettlementsScreen(),
+                    builder: (context, state) =>
+                        const ArtistSettlementsScreen(),
                   ),
                   GoRoute(
                     path: 'analytics',
                     builder: (context, state) => const ArtistAnalyticsScreen(),
                   ),
                   GoRoute(
+                    path: 'blogs',
+                    builder: (context, state) => const ArtistBlogsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'blogs/new',
+                    builder: (context, state) => const ArtistBlogFormScreen(),
+                  ),
+                  GoRoute(
                     path: 'verification',
-                    builder: (context, state) => const ArtistVerificationScreen(),
+                    builder: (context, state) =>
+                        const ArtistVerificationScreen(),
                   ),
                   GoRoute(
                     path: 'messages',
@@ -428,31 +463,38 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'analytics',
-                    builder: (context, state) => const AggregatorAnalyticsScreen(),
+                    builder: (context, state) =>
+                        const AggregatorAnalyticsScreen(),
                   ),
                   GoRoute(
                     path: 'customers',
-                    builder: (context, state) => const AggregatorCustomersScreen(),
+                    builder: (context, state) =>
+                        const AggregatorCustomersScreen(),
                   ),
                   GoRoute(
                     path: 'shipping',
-                    builder: (context, state) => const AggregatorShippingScreen(),
+                    builder: (context, state) =>
+                        const AggregatorShippingScreen(),
                   ),
                   GoRoute(
                     path: 'gallery-spaces',
-                    builder: (context, state) => const AggregatorGallerySpacesScreen(),
+                    builder: (context, state) =>
+                        const AggregatorGallerySpacesScreen(),
                   ),
                   GoRoute(
                     path: 'settlements',
-                    builder: (context, state) => const AggregatorSettlementsScreen(),
+                    builder: (context, state) =>
+                        const AggregatorSettlementsScreen(),
                   ),
                   GoRoute(
                     path: 'messages',
-                    builder: (context, state) => const AggregatorMessagesScreen(),
+                    builder: (context, state) =>
+                        const AggregatorMessagesScreen(),
                   ),
                   GoRoute(
                     path: 'profile',
-                    builder: (context, state) => const AggregatorProfileScreen(),
+                    builder: (context, state) =>
+                        const AggregatorProfileScreen(),
                   ),
                   GoRoute(
                     path: 'mou',
@@ -460,11 +502,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'settings',
-                    builder: (context, state) => const AggregatorSettingsScreen(),
+                    builder: (context, state) =>
+                        const AggregatorSettingsScreen(),
                   ),
                   GoRoute(
                     path: 'support',
-                    builder: (context, state) => const AggregatorSupportScreen(),
+                    builder: (context, state) =>
+                        const AggregatorSupportScreen(),
                   ),
                 ],
               ),
@@ -478,8 +522,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: AggregatorReserveScreen.subPath,
-                    builder: (context, state) =>
-                        AggregatorReserveScreen(artworkId: state.pathParameters['artworkId']!),
+                    builder: (context, state) => AggregatorReserveScreen(
+                      artworkId: state.pathParameters['artworkId']!,
+                    ),
                   ),
                 ],
               ),
@@ -493,8 +538,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: AggregatorHoldingScreen.subPath,
-                    builder: (context, state) =>
-                        AggregatorHoldingScreen(holdingId: state.pathParameters['holdingId']!),
+                    builder: (context, state) => AggregatorHoldingScreen(
+                      holdingId: state.pathParameters['holdingId']!,
+                    ),
                   ),
                 ],
               ),

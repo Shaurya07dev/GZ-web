@@ -16,29 +16,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// paid. Every link here was missing before — an order used to sit at
 /// `pending` forever and nothing ever left the review queue.
 
-SubmitArtworkInput _input({bool asDraft = false, String title = 'Harbour Light'}) =>
-    SubmitArtworkInput(
-      title: title,
-      description: 'A demo piece.',
-      category: 'painting',
-      medium: 'Oil on Canvas',
-      artistPrice: 10000,
-      listingType: ListingType.marketplaceOnly,
-      insuranceOpted: false,
-      images: const [
-        ArtworkImage(
-          url: '/artworks/bird.png',
-          thumbnailUrl: '/artworks/bird.png',
-          sortOrder: 0,
-          altText: 'Harbour Light',
-        ),
-      ],
-      asDraft: asDraft,
-    );
+SubmitArtworkInput _input({
+  bool asDraft = false,
+  String title = 'Harbour Light',
+}) => SubmitArtworkInput(
+  title: title,
+  description: 'A demo piece.',
+  category: 'painting',
+  medium: 'Oil on Canvas',
+  artistPrice: 10000,
+  listingType: ListingType.marketplaceOnly,
+  insuranceOpted: false,
+  images: const [
+    ArtworkImage(
+      url: '/artworks/bird.png',
+      thumbnailUrl: '/artworks/bird.png',
+      sortOrder: 0,
+      altText: 'Harbour Light',
+    ),
+  ],
+  asDraft: asDraft,
+);
 
 /// Past the review delay without waiting it out.
-void _runReview() =>
-    promoteApprovedSubmissions(now: DateTime.now().add(demoReviewDelay).add(const Duration(seconds: 1)));
+void _runReview() => promoteApprovedSubmissions(
+  now: DateTime.now().add(demoReviewDelay).add(const Duration(seconds: 1)),
+);
 
 void main() {
   late MockArtistRepository artist;
@@ -78,7 +81,9 @@ void main() {
     });
 
     test('a draft never enters review on its own', () async {
-      final draft = await artist.submitArtwork(_input(asDraft: true, title: 'A draft'));
+      final draft = await artist.submitArtwork(
+        _input(asDraft: true, title: 'A draft'),
+      );
       _runReview();
 
       final live = await artworks.listAllLive();
@@ -103,20 +108,23 @@ void main() {
   });
 
   group('payment', () {
-    test('a declined payment places no order and leaves the piece for sale', () async {
-      expect(
-        checkout.createOrder(
-          artworkId: 'aw-5',
-          addressId: 'addr-home-pune',
-          paymentMethod: PaymentMethod.card,
-          simulateFailure: true,
-        ),
-        throwsA(isA<Exception>()),
-      );
+    test(
+      'a declined payment places no order and leaves the piece for sale',
+      () async {
+        expect(
+          checkout.createOrder(
+            artworkId: 'aw-5',
+            addressId: 'addr-home-pune',
+            paymentMethod: PaymentMethod.card,
+            simulateFailure: true,
+          ),
+          throwsA(isA<Exception>()),
+        );
 
-      final live = await artworks.listAllLive();
-      expect(live.map((a) => a.id), contains('aw-5'));
-    });
+        final live = await artworks.listAllLive();
+        expect(live.map((a) => a.id), contains('aw-5'));
+      },
+    );
   });
 
   group('the full chain', () {
@@ -136,7 +144,10 @@ void main() {
       // "Sold" badge there, the same as the web. What must not happen is a
       // second sale of a one-of-a-kind original.
       final listed = await artworks.listAllLive();
-      expect(listed.firstWhere((a) => a.id == submitted.id).status, ArtworkStatus.sold);
+      expect(
+        listed.firstWhere((a) => a.id == submitted.id).status,
+        ArtworkStatus.sold,
+      );
       expect(
         checkout.createOrder(
           artworkId: submitted.id,
@@ -151,8 +162,10 @@ void main() {
       var wallet = await artist.getWallet();
       expect(wallet.pendingBalance, walletBefore.pendingBalance + payout);
       expect(wallet.balance, walletBefore.balance);
-      expect((await artist.listWalletTransactions()).first.status,
-          WalletTransactionStatus.pending);
+      expect(
+        (await artist.listWalletTransactions()).first.status,
+        WalletTransactionStatus.pending,
+      );
 
       // Nothing is in the collection until it is actually delivered.
       expect(
@@ -175,16 +188,22 @@ void main() {
       expect(resolveCustody(delivered).custodian, CustodyParty.customer);
 
       wallet = await artist.getWallet();
-      expect(wallet.pendingBalance, walletBefore.pendingBalance + payout,
-          reason: 'still pending — the 7 days have not run');
+      expect(
+        wallet.pendingBalance,
+        walletBefore.pendingBalance + payout,
+        reason: 'still pending — the 7 days have not run',
+      );
       expect(wallet.balance, walletBefore.balance);
 
       var settlements = await artist.listSettlements();
       expect(settlements.first.orderId, order.id);
       expect(settlements.first.artistAmount, payout);
       expect(settlements.first.status, SettlementStatus.pending);
-      expect(settlements.first.releaseAfter, isNotNull,
-          reason: 'delivery stamps the release date');
+      expect(
+        settlements.first.releaseAfter,
+        isNotNull,
+        reason: 'delivery stamps the release date',
+      );
 
       // Seven days on, the money is withdrawable. Nothing runs on a timer, so
       // this backdates the delivery and reads the wallet, which is where the
@@ -230,8 +249,9 @@ void main() {
 
       // And releasing twice never doubles the artist's money — a settlement
       // leaves `pending` on the first release and is never seen again.
-      final settlement = (await artist.listSettlements())
-          .firstWhere((s) => s.orderId == order.id);
+      final settlement = (await artist.listSettlements()).firstWhere(
+        (s) => s.orderId == order.id,
+      );
       simulateDeliveryAndRelease(settlement.id);
       final balance = (await artist.getWallet()).balance;
       simulateDeliveryAndRelease(settlement.id);

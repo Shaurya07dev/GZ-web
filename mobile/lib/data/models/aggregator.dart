@@ -21,6 +21,56 @@ enum DeliveryMode {
 
 enum ShipmentStatus { preparing, dispatched, delivered }
 
+enum HoldingReportIssueType {
+  @JsonValue('damaged_in_transit')
+  damagedInTransit,
+  @JsonValue('wrong_piece')
+  wrongPiece,
+  @JsonValue('quality_issue')
+  qualityIssue,
+  @JsonValue('coa_nfc_problem')
+  coaNfcProblem,
+  @JsonValue('missing_accessories')
+  missingAccessories,
+  other,
+}
+
+enum HoldingReportStatus { open, resolved }
+
+const holdingReportIssueLabel = {
+  HoldingReportIssueType.damagedInTransit: 'Damaged in transit',
+  HoldingReportIssueType.wrongPiece: 'Wrong piece received',
+  HoldingReportIssueType.qualityIssue: 'Quality issue (not as described)',
+  HoldingReportIssueType.coaNfcProblem: 'COA / NFC tag problem',
+  HoldingReportIssueType.missingAccessories: 'Missing accessories',
+  HoldingReportIssueType.other: 'Other',
+};
+
+@freezed
+abstract class HoldingReport with _$HoldingReport {
+  const factory HoldingReport({
+    required String id,
+    required String holdingId,
+    required String artworkId,
+    required String artworkTitle,
+    required String aggregatorId,
+    required String aggregatorName,
+    required String aggregatorEmail,
+    required String artistId,
+    required String artistName,
+    required HoldingReportIssueType issueType,
+    required String description,
+    required HoldingReportStatus status,
+    required String reportedAt,
+    String? resolvedAt,
+    String? resolvedBy,
+    String? resolutionNote,
+  }) = _HoldingReport;
+
+  factory HoldingReport.fromJson(Map<String, dynamic> json) =>
+      _$HoldingReportFromJson(json);
+}
+
 /// How an aggregator paid in the cash they collected at the counter.
 enum RemitVia { wallet, bank }
 
@@ -99,6 +149,11 @@ abstract class AggregatorSale with _$AggregatorSale {
     /// so dispatching won't be refused (NFC_IMPLEMENTATION.md §5.2b). True when
     /// the API says nothing: don't warn about what can't be known.
     @Default(true) bool nfcReady,
+
+    /// Live ShipRocket tracking for the aggregator-to-buyer leg.
+    ShiprocketStage? shiprocketStage,
+    String? trackingId,
+    String? carrier,
   }) = _AggregatorSale;
 
   factory AggregatorSale.fromJson(Map<String, dynamic> json) =>

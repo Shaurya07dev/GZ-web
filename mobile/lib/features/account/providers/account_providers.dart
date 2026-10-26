@@ -14,7 +14,9 @@ final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
 /// Every read below is `autoDispose`: orders, wallet balance and addresses
 /// are exactly the state SAD §9.2 says is never cached client-side. Nothing
 /// here is pinned in app-wide state.
-final customerProfileProvider = FutureProvider.autoDispose<CustomerProfile>((ref) {
+final customerProfileProvider = FutureProvider.autoDispose<CustomerProfile>((
+  ref,
+) {
   return ref.watch(customerRepositoryProvider).getProfile();
 });
 
@@ -26,11 +28,16 @@ final ordersProvider = FutureProvider.autoDispose<List<Order>>((ref) async {
   final orders = await ref.watch(checkoutRepositoryProvider).listOrders();
   // Newest first — the list, the dashboard's "recent orders" and any future
   // caller all want the same order, so it's sorted once here.
-  return [...orders]
-    ..sort((a, b) => DateTime.parse(b.createdAt).compareTo(DateTime.parse(a.createdAt)));
+  return [...orders]..sort(
+    (a, b) =>
+        DateTime.parse(b.createdAt).compareTo(DateTime.parse(a.createdAt)),
+  );
 });
 
-final orderProvider = FutureProvider.autoDispose.family<Order?, String>((ref, id) {
+final orderProvider = FutureProvider.autoDispose.family<Order?, String>((
+  ref,
+  id,
+) {
   return ref.watch(checkoutRepositoryProvider).getOrder(id);
 });
 
@@ -40,23 +47,29 @@ final walletProvider = FutureProvider.autoDispose<WalletSummary>((ref) {
 
 final walletTransactionsProvider =
     FutureProvider.autoDispose<List<WalletTransaction>>((ref) {
-  return ref.watch(customerRepositoryProvider).listWalletTransactions();
-});
+      return ref.watch(customerRepositoryProvider).listWalletTransactions();
+    });
 
-final collectionProvider = FutureProvider.autoDispose<List<CollectionItem>>((ref) {
+final collectionProvider = FutureProvider.autoDispose<List<CollectionItem>>((
+  ref,
+) {
   return ref.watch(customerRepositoryProvider).listCollection();
 });
 
 final physicalCoaRequestsProvider =
     FutureProvider.autoDispose<List<PhysicalCoaRequest>>((ref) {
-  return ref.watch(customerRepositoryProvider).listPhysicalCoaRequests();
-});
+      return ref.watch(customerRepositoryProvider).listPhysicalCoaRequests();
+    });
 
-final resaleListingsProvider = FutureProvider.autoDispose<List<ResaleListing>>((ref) {
+final resaleListingsProvider = FutureProvider.autoDispose<List<ResaleListing>>((
+  ref,
+) {
   return ref.watch(customerRepositoryProvider).listResaleListings();
 });
 
-final supportTicketsProvider = FutureProvider.autoDispose<List<SupportTicket>>((ref) {
+final supportTicketsProvider = FutureProvider.autoDispose<List<SupportTicket>>((
+  ref,
+) {
   return ref.watch(customerRepositoryProvider).listSupportTickets();
 });
 

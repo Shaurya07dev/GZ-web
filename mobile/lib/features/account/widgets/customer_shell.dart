@@ -3,14 +3,15 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shell/portal_widgets.dart';
 
 /// Five real destinations, each its own branch — no drawer-opening special
 /// case. "More" is a full screen (see `CustomerMoreScreen`), not a
-/// slide-out drawer, so everything the web keeps in its sidebar (Wallet,
-/// Addresses, Resell, Support, FAQs, About) has a direct tab rather than
+/// slide-out drawer, so everything the web keeps in its sidebar (Addresses,
+/// Resell, Support, FAQs, About) has a direct tab rather than
 /// living behind the avatar.
 const shellDestinations = <ShellDestination>[
   ShellDestination(icon: LucideIcons.layoutGrid, label: 'Account'),
@@ -75,9 +76,9 @@ class CustomerShell extends ConsumerWidget {
               child: Text(
                 size.isExpanded ? 'GALLERYZONE' : 'GZ',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.tertiary,
-                      letterSpacing: 2,
-                    ),
+                  color: Theme.of(context).colorScheme.tertiary,
+                  letterSpacing: 2,
+                ),
               ),
             ),
             destinations: [

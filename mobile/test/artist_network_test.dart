@@ -45,11 +45,14 @@ void main() {
       expect(rating.average, (total / reviews.length * 10).round() / 10);
     });
 
-    test('an artist nobody has reviewed reads as zero, not as one star', () async {
-      final rating = await network.getRating('nobody-has-bought-from-me');
-      expect(rating.count, 0);
-      expect(rating.average, 0);
-    });
+    test(
+      'an artist nobody has reviewed reads as zero, not as one star',
+      () async {
+        final rating = await network.getRating('nobody-has-bought-from-me');
+        expect(rating.count, 0);
+        expect(rating.average, 0);
+      },
+    );
 
     test('reviews come back newest first', () async {
       final reviews = await network.listReviews(currentArtistId);
@@ -161,7 +164,9 @@ void main() {
     test('a request waits on a decision and can be withdrawn', () async {
       expect(await network.getDeactivationRequest(), isNull);
 
-      final request = await network.requestDeactivation(reason: 'Moving abroad');
+      final request = await network.requestDeactivation(
+        reason: 'Moving abroad',
+      );
       expect(request.status, DeactivationStatus.pending);
 
       // Asking twice while one is open is refused — a queue of identical
@@ -188,9 +193,7 @@ void main() {
         DateTime.now().add(Duration(days: days)).toIso8601String();
 
     test('accepting a display transfer does not change the owner', () async {
-      final before = resolveCustody(
-        (await artworks.get('aw-1'))!,
-      );
+      final before = resolveCustody((await artworks.get('aw-1'))!);
 
       final transfer = await ownership.initiate(
         artworkId: 'aw-1',
@@ -198,6 +201,7 @@ void main() {
         toName: 'Verandah Art House',
         toEmail: 'hello@verandaharthouse.in',
         kind: TransferKind.display,
+        displayStartsAt: inDays(0),
         displayEndsAt: inDays(30),
       );
       final accepted = await ownership.accept(transfer.id);
@@ -205,14 +209,12 @@ void main() {
       expect(accepted.status, TransferStatus.accepted);
       expect(isDisplayActive(accepted), isTrue);
 
-      final after = resolveCustody(
-        (await artworks.get('aw-1'))!,
-      );
+      final after = resolveCustody((await artworks.get('aw-1'))!);
       expect(after.legalOwner, before.legalOwner);
       expect(after.legalOwnerName, before.legalOwnerName);
     });
 
-    test('a display without an end date, or with a past one, is refused', () async {
+    test('a display without both dates, or with an end before its start, is refused', () async {
       expect(
         () => ownership.initiate(
           artworkId: 'aw-1',
@@ -231,6 +233,7 @@ void main() {
           toName: 'Verandah Art House',
           toEmail: 'hello@verandaharthouse.in',
           kind: TransferKind.display,
+          displayStartsAt: inDays(1),
           displayEndsAt: inDays(-1),
         ),
         throwsA(isA<Exception>()),
@@ -244,6 +247,7 @@ void main() {
         toName: 'Verandah Art House',
         toEmail: 'hello@verandaharthouse.in',
         kind: TransferKind.display,
+        displayStartsAt: inDays(0),
         displayEndsAt: inDays(30),
       );
       await ownership.accept(first.id);
@@ -255,6 +259,7 @@ void main() {
           toName: 'Another Gallery',
           toEmail: 'hello@another.in',
           kind: TransferKind.display,
+          displayStartsAt: inDays(0),
           displayEndsAt: inDays(10),
         ),
         throwsA(isA<Exception>()),
@@ -268,6 +273,7 @@ void main() {
         toName: 'Verandah Art House',
         toEmail: 'hello@verandaharthouse.in',
         kind: TransferKind.display,
+        displayStartsAt: inDays(0),
         displayEndsAt: inDays(30),
       );
       await ownership.accept(transfer.id);
@@ -302,6 +308,24 @@ void main() {
       expect(activeDisplayTransfer([lapsed]), isNull);
     });
 
+    test('a future display period is recorded but not active early', () {
+      final scheduled = OwnershipTransfer(
+        id: 'tr-scheduled',
+        artworkId: 'aw-1',
+        artworkTitle: 'Monsoon Reverie',
+        fromName: 'Devika Rao',
+        toName: 'Verandah Art House',
+        toEmail: 'hello@verandaharthouse.in',
+        initiatedAt: inDays(0),
+        acceptedAt: inDays(0),
+        status: TransferStatus.accepted,
+        kind: TransferKind.display,
+        displayStartsAt: inDays(3),
+        displayEndsAt: inDays(30),
+      );
+      expect(isDisplayActive(scheduled), isFalse);
+    });
+
     test('a record with no kind is an ownership hand-over', () {
       final legacy = OwnershipTransfer(
         id: 'tr-legacy',
@@ -333,7 +357,10 @@ void main() {
         );
 
     test('only an approved, uncollected fee is collectable', () {
-      expect(isPenaltyCollectable(fee(status: PenaltyStatus.pendingReview)), isFalse);
+      expect(
+        isPenaltyCollectable(fee(status: PenaltyStatus.pendingReview)),
+        isFalse,
+      );
       expect(isPenaltyCollectable(fee(status: PenaltyStatus.waived)), isFalse);
       expect(isPenaltyCollectable(fee(status: PenaltyStatus.approved)), isTrue);
       expect(
@@ -353,26 +380,32 @@ void main() {
       expect(penaltyStatusOf(fee()), PenaltyStatus.approved);
     });
 
-    test('marking sold elsewhere raises the fee for review, not for payment', () async {
-      final walletBefore = await artist.getWallet();
+    test(
+      'marking sold elsewhere raises the fee for review, not for payment',
+      () async {
+        final walletBefore = await artist.getWallet();
 
-      await artist.markSoldElsewhere('aw-1');
-      final penalties = await artist.listPenalties();
-      final raised = penalties.firstWhere((p) => p.artworkId == 'aw-1');
+        await artist.markSoldElsewhere('aw-1');
+        final penalties = await artist.listPenalties();
+        final raised = penalties.firstWhere((p) => p.artworkId == 'aw-1');
 
-      expect(penaltyStatusOf(raised), PenaltyStatus.pendingReview);
-      expect(raised.settledAt, isNull);
+        expect(penaltyStatusOf(raised), PenaltyStatus.pendingReview);
+        expect(raised.settledAt, isNull);
 
-      final walletAfter = await artist.getWallet();
-      expect(walletAfter.balance, walletBefore.balance);
-    });
+        final walletAfter = await artist.getWallet();
+        expect(walletAfter.balance, walletBefore.balance);
+      },
+    );
   });
 
   test('the demo artist has an avatar the seeds agree on', () {
     expect(currentArtistAvatar, isNotEmpty);
     final connections = seedArtistConnections();
     expect(
-      connections.where((c) => c.requesterId == currentArtistId).first.requesterAvatar,
+      connections
+          .where((c) => c.requesterId == currentArtistId)
+          .first
+          .requesterAvatar,
       currentArtistAvatar,
     );
   });

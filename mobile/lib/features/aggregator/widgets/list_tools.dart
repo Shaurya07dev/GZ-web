@@ -73,30 +73,48 @@ class PillFilter<T> extends StatelessWidget {
       itemBuilder: (context) => [
         PopupMenuItem(
           value: -1,
-          child: Text(label, style: TextStyle(color: picked == null ? gold : null)),
+          child: Text(
+            label,
+            style: TextStyle(color: picked == null ? gold : null),
+          ),
         ),
         for (var i = 0; i < options.length; i++)
           PopupMenuItem(
             value: i,
-            child: Text(options[i].$2, style: TextStyle(color: options[i].$1 == value ? gold : null)),
+            child: Text(
+              options[i].$2,
+              style: TextStyle(color: options[i].$1 == value ? gold : null),
+            ),
           ),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: picked == null ? theme.colorScheme.onSurface.withValues(alpha: 0.04) : gold.withValues(alpha: 0.1),
+          color: picked == null
+              ? theme.colorScheme.onSurface.withValues(alpha: 0.04)
+              : gold.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: picked == null ? theme.colorScheme.outline : gold.withValues(alpha: 0.5)),
+          border: Border.all(
+            color: picked == null
+                ? theme.colorScheme.outline
+                : gold.withValues(alpha: 0.5),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               picked?.$2 ?? label,
-              style: theme.textTheme.labelLarge?.copyWith(color: picked == null ? null : gold),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: picked == null ? null : gold,
+              ),
             ),
             const SizedBox(width: 6),
-            Icon(LucideIcons.chevronDown, size: 14, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              LucideIcons.chevronDown,
+              size: 14,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),

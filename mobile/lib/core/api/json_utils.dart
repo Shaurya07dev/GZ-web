@@ -24,7 +24,9 @@ DateTime? parseTimestamp(Object? value) {
     final seconds = value['_seconds'] ?? value['seconds'];
     if (seconds is num) {
       final nanos = value['_nanoseconds'] ?? value['nanoseconds'];
-      final millis = seconds.toInt() * 1000 + ((nanos is num ? nanos.toInt() : 0) ~/ 1000000);
+      final millis =
+          seconds.toInt() * 1000 +
+          ((nanos is num ? nanos.toInt() : 0) ~/ 1000000);
       return DateTime.fromMillisecondsSinceEpoch(millis, isUtc: true);
     }
   }
@@ -33,10 +35,12 @@ DateTime? parseTimestamp(Object? value) {
 
 /// [parseTimestamp] as the ISO-8601 string the models keep (they store dates
 /// as strings, like the web's types). Empty when absent.
-String isoOf(Object? value) => parseTimestamp(value)?.toUtc().toIso8601String() ?? '';
+String isoOf(Object? value) =>
+    parseTimestamp(value)?.toUtc().toIso8601String() ?? '';
 
 /// [isoOf], but `null` when absent — for nullable date fields.
-String? isoOrNull(Object? value) => parseTimestamp(value)?.toUtc().toIso8601String();
+String? isoOrNull(Object? value) =>
+    parseTimestamp(value)?.toUtc().toIso8601String();
 
 /// Reads `json[key]` as a map, or an empty one — so a mapper can chain
 /// without a null check at every level.
@@ -45,7 +49,10 @@ Map<String, dynamic> asMap(Object? value) =>
 
 /// Reads a JSON list of objects, ignoring anything that is not one.
 List<Map<String, dynamic>> asMapList(Object? value) => value is List
-    ? [for (final item in value) if (item is Map) Map<String, dynamic>.from(item)]
+    ? [
+        for (final item in value)
+          if (item is Map) Map<String, dynamic>.from(item),
+      ]
     : <Map<String, dynamic>>[];
 
 /// The `paise` field of [json] as rupees, or [orElse] when it is absent.

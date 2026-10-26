@@ -9,7 +9,9 @@ enum NfcStage { unlinked, linkedUnlocked, linkedLocked }
 extension ArtworkNfc on Artwork {
   NfcStage get nfcStage {
     if (nfcLinkedAt == null) return NfcStage.unlinked;
-    return nfcLockedAt == null ? NfcStage.linkedUnlocked : NfcStage.linkedLocked;
+    return nfcLockedAt == null
+        ? NfcStage.linkedUnlocked
+        : NfcStage.linkedLocked;
   }
 
   /// Linked, never locked: the red "must lock before shipping" state.
@@ -17,10 +19,10 @@ extension ArtworkNfc on Artwork {
 }
 
 String nfcStageLabel(NfcStage stage) => switch (stage) {
-      NfcStage.unlinked => 'Not yet tagged',
-      NfcStage.linkedUnlocked => 'Tag linked · unlocked',
-      NfcStage.linkedLocked => 'Tag locked',
-    };
+  NfcStage.unlinked => 'Not yet tagged',
+  NfcStage.linkedUnlocked => 'Tag linked · unlocked',
+  NfcStage.linkedLocked => 'Tag locked',
+};
 
 /// What the app is about to do to a chip, asked of the server first.
 enum NfcIntent { link, lock }
@@ -50,7 +52,12 @@ enum NfcFailureStep {
 
 /// The tag as the server records it after a link or a lock.
 class NfcState {
-  const NfcState({required this.artworkId, this.tagUid, this.linkedAt, this.lockedAt});
+  const NfcState({
+    required this.artworkId,
+    this.tagUid,
+    this.linkedAt,
+    this.lockedAt,
+  });
 
   final String artworkId;
 

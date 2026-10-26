@@ -41,6 +41,7 @@ const _$SocialProofPlatformEnumMap = {
   SocialProofPlatform.youtube: 'youtube',
   SocialProofPlatform.x: 'x',
   SocialProofPlatform.tiktok: 'tiktok',
+  SocialProofPlatform.website: 'website',
 };
 
 _ArtworkStatusEvent _$ArtworkStatusEventFromJson(Map<String, dynamic> json) =>
@@ -82,6 +83,7 @@ _Artwork _$ArtworkFromJson(Map<String, dynamic> json) => _Artwork(
   customerPrice: (json['customerPrice'] as num).toDouble(),
   thumbnailUrl: json['thumbnailUrl'] as String,
   insured: json['insured'] as bool,
+  exclusive: json['exclusive'] as bool? ?? false,
   status: $enumDecode(_$ArtworkStatusEnumMap, json['status']),
   listingType: $enumDecode(_$ListingTypeEnumMap, json['listingType']),
   description: json['description'] as String,
@@ -132,6 +134,7 @@ Map<String, dynamic> _$ArtworkToJson(_Artwork instance) => <String, dynamic>{
   'customerPrice': instance.customerPrice,
   'thumbnailUrl': instance.thumbnailUrl,
   'insured': instance.insured,
+  'exclusive': instance.exclusive,
   'status': _$ArtworkStatusEnumMap[instance.status]!,
   'listingType': _$ListingTypeEnumMap[instance.listingType]!,
   'description': instance.description,
@@ -272,6 +275,7 @@ _OwnershipTransfer _$OwnershipTransferFromJson(Map<String, dynamic> json) =>
       cancelledAt: json['cancelledAt'] as String?,
       status: $enumDecode(_$TransferStatusEnumMap, json['status']),
       kind: $enumDecodeNullable(_$TransferKindEnumMap, json['kind']),
+      displayStartsAt: json['displayStartsAt'] as String?,
       displayEndsAt: json['displayEndsAt'] as String?,
       displayEndedAt: json['displayEndedAt'] as String?,
     );
@@ -289,6 +293,7 @@ Map<String, dynamic> _$OwnershipTransferToJson(_OwnershipTransfer instance) =>
       'cancelledAt': instance.cancelledAt,
       'status': _$TransferStatusEnumMap[instance.status]!,
       'kind': _$TransferKindEnumMap[instance.kind],
+      'displayStartsAt': instance.displayStartsAt,
       'displayEndsAt': instance.displayEndsAt,
       'displayEndedAt': instance.displayEndedAt,
     };

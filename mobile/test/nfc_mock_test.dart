@@ -13,8 +13,10 @@ import 'support/fake_nfc.dart';
 /// chip before the API has the NFC routes. This runs the real flow against the demo's own
 /// artist and artworks, so what a person taps through there is what is tested here.
 
-Future<List<String>> _stages(MockArtistRepository artist) async =>
-    [for (final a in await artist.listArtworks()) '${a.artwork.id}:${a.artwork.nfcStage.name}'];
+Future<List<String>> _stages(MockArtistRepository artist) async => [
+  for (final a in await artist.listArtworks())
+    '${a.artwork.id}:${a.artwork.nfcStage.name}',
+];
 
 void main() {
   setUp(() async {
@@ -32,13 +34,17 @@ void main() {
     final flow = NfcFlow(device: chip, repository: MockNfcRepository());
 
     await flow.link(first.id);
-    var now = (await artist.listArtworks()).firstWhere((a) => a.artwork.id == first.id).artwork;
+    var now = (await artist.listArtworks())
+        .firstWhere((a) => a.artwork.id == first.id)
+        .artwork;
     expect(now.nfcStage, NfcStage.linkedUnlocked);
     expect(now.nfcTagUid, '04a1b2c3d4e580');
     expect(chip.url, verifyUrlFor(first.id));
 
     await flow.lock(first.id);
-    now = (await artist.listArtworks()).firstWhere((a) => a.artwork.id == first.id).artwork;
+    now = (await artist.listArtworks())
+        .firstWhere((a) => a.artwork.id == first.id)
+        .artwork;
     expect(now.nfcStage, NfcStage.linkedLocked);
     expect(chip.fullyLocked, isTrue);
   });
@@ -55,14 +61,33 @@ void main() {
     final second = FakeNtagDevice(); // the very same chip id
     await expectLater(
       NfcFlow(device: second, repository: repository).link(pieces[1].id),
-      throwsA(isA<NfcFlowException>().having((e) => e.message, 'message', 'This chip is already linked to another artwork.')),
+      throwsA(
+        isA<NfcFlowException>().having(
+          (e) => e.message,
+          'message',
+          'This chip is already linked to another artwork.',
+        ),
+      ),
     );
-    expect(second.url, isNull, reason: 'the first piece\'s chip was not overwritten');
+    expect(
+      second.url,
+      isNull,
+      reason: 'the first piece\'s chip was not overwritten',
+    );
 
     await NfcFlow(device: chip, repository: repository).lock(pieces[0].id);
     await expectLater(
-      NfcFlow(device: FakeNtagDevice(uid: '04ffeeddccbbaa'), repository: repository).link(pieces[0].id),
-      throwsA(isA<NfcFlowException>().having((e) => e.message, 'message', contains('locked'))),
+      NfcFlow(
+        device: FakeNtagDevice(uid: '04ffeeddccbbaa'),
+        repository: repository,
+      ).link(pieces[0].id),
+      throwsA(
+        isA<NfcFlowException>().having(
+          (e) => e.message,
+          'message',
+          contains('locked'),
+        ),
+      ),
     );
     expect(await _stages(artist), contains('${pieces[0].id}:linkedLocked'));
   });
@@ -71,8 +96,13 @@ void main() {
     final artist = MockArtistRepository();
     final piece = (await artist.listArtworks()).first.artwork;
     final repository = MockNfcRepository();
-    await NfcFlow(device: FakeNtagDevice(), repository: repository).link(piece.id);
-    final stored = (await artist.listArtworks()).firstWhere((a) => a.artwork.id == piece.id).artwork;
+    await NfcFlow(
+      device: FakeNtagDevice(),
+      repository: repository,
+    ).link(piece.id);
+    final stored = (await artist.listArtworks())
+        .firstWhere((a) => a.artwork.id == piece.id)
+        .artwork;
     expect(stored.nfcLinkedAt, isNotNull);
     expect(stored.nfcLockedAt, isNull);
   });

@@ -14,7 +14,8 @@ class SecureSession {
   static const _storage = FlutterSecureStorage();
   static const _roleKey = 'gz_session_role';
 
-  static Future<void> setRole(String role) => _storage.write(key: _roleKey, value: role);
+  static Future<void> setRole(String role) =>
+      _storage.write(key: _roleKey, value: role);
 
   static Future<String?> getRole() => _storage.read(key: _roleKey);
 

@@ -68,7 +68,11 @@ class AuthCrest extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Container(height: 1, width: 40, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+        Container(
+          height: 1,
+          width: 40,
+          color: theme.colorScheme.primary.withValues(alpha: 0.6),
+        ),
       ],
     );
   }
@@ -95,11 +99,15 @@ class AuthFormHeader extends StatelessWidget {
     final titleText = Text(
       title,
       textAlign: centered ? TextAlign.center : TextAlign.start,
-      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+      style: theme.textTheme.headlineSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
     );
 
     return Column(
-      crossAxisAlignment: centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      crossAxisAlignment: centered
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         if (icon != null && !centered)
           Row(
@@ -141,7 +149,11 @@ class _IconHalo extends StatelessWidget {
         color: tint.withValues(alpha: 0.12),
         border: Border.all(color: tint.withValues(alpha: 0.3)),
       ),
-      child: Icon(icon, size: 20, color: Theme.of(context).colorScheme.tertiary),
+      child: Icon(
+        icon,
+        size: 20,
+        color: Theme.of(context).colorScheme.tertiary,
+      ),
     );
   }
 }
@@ -177,7 +189,9 @@ class AuthResultPanel extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 8),
         DefaultTextStyle.merge(
@@ -233,7 +247,9 @@ class _AuthTextFieldState extends State<AuthTextField> {
       children: [
         Text(
           widget.label,
-          style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 6),
         TextFormField(
@@ -246,10 +262,15 @@ class _AuthTextFieldState extends State<AuthTextField> {
           autovalidateMode: AutovalidateMode.onUserInteraction,
           decoration: InputDecoration(
             hintText: widget.hint,
-            prefixIcon: widget.icon == null ? null : Icon(widget.icon, size: 18),
+            prefixIcon: widget.icon == null
+                ? null
+                : Icon(widget.icon, size: 18),
             suffixIcon: widget.obscure
                 ? IconButton(
-                    icon: Icon(_hidden ? LucideIcons.eye : LucideIcons.eyeOff, size: 18),
+                    icon: Icon(
+                      _hidden ? LucideIcons.eye : LucideIcons.eyeOff,
+                      size: 18,
+                    ),
                     onPressed: () => setState(() => _hidden = !_hidden),
                     tooltip: _hidden ? 'Show password' : 'Hide password',
                   )
@@ -313,8 +334,12 @@ class _RoleToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final background = selected ? theme.colorScheme.tertiary : Colors.transparent;
-    final foreground = selected ? theme.colorScheme.onTertiary : theme.textTheme.bodySmall?.color;
+    final background = selected
+        ? theme.colorScheme.tertiary
+        : Colors.transparent;
+    final foreground = selected
+        ? theme.colorScheme.onTertiary
+        : theme.textTheme.bodySmall?.color;
     return Semantics(
       selected: selected,
       button: true,
@@ -327,7 +352,9 @@ class _RoleToggleButton extends StatelessWidget {
             color: background,
             borderRadius: BorderRadius.circular(AppRadius.xl4),
             border: Border.all(
-              color: selected ? theme.colorScheme.tertiary : theme.colorScheme.outline,
+              color: selected
+                  ? theme.colorScheme.tertiary
+                  : theme.colorScheme.outline,
             ),
           ),
           child: Row(
@@ -374,7 +401,9 @@ class DevPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.35)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         children: [
@@ -382,7 +411,9 @@ class DevPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+              ),
             ),
             child: Text(
               'DEV',
@@ -475,7 +506,9 @@ class SocialAuthRow extends StatelessWidget {
   void _notAvailable(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Google sign-in isn't available in the app yet — use your email and password."),
+        content: Text(
+          "Google sign-in isn't available in the app yet — use your email and password.",
+        ),
       ),
     );
   }
@@ -560,17 +593,25 @@ class AuthErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: theme.colorScheme.error.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(LucideIcons.alertCircle, size: 18, color: theme.colorScheme.error),
+          Icon(
+            LucideIcons.alertCircle,
+            size: 18,
+            color: theme.colorScheme.error,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
           ),
         ],

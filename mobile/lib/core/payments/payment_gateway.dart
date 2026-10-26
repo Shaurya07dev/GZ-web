@@ -34,7 +34,9 @@ class GatewaySession {
   final String prefillContact;
 
   factory GatewaySession.fromApi(Map<String, dynamic> json) {
-    final prefill = json['prefill'] is Map ? Map<String, dynamic>.from(json['prefill'] as Map) : const <String, dynamic>{};
+    final prefill = json['prefill'] is Map
+        ? Map<String, dynamic>.from(json['prefill'] as Map)
+        : const <String, dynamic>{};
     return GatewaySession(
       keyId: json['keyId'] as String? ?? '',
       gatewayOrderId: json['razorpayOrderId'] as String? ?? '',
@@ -96,6 +98,8 @@ class UnavailablePaymentGateway implements PaymentGateway {
 
   @override
   Future<GatewayPayment> pay(GatewaySession session) {
-    throw const PaymentFailedException("Online payment isn't available in this build.");
+    throw const PaymentFailedException(
+      "Online payment isn't available in this build.",
+    );
   }
 }

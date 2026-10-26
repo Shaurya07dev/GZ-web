@@ -17,7 +17,11 @@ import '../repositories/auth_repository.dart';
 ///  * Registration creates the account and profile through the API
 ///    (`POST /v1/auth/register`) and then signs in with the same credentials.
 class RemoteAuthRepository implements AuthRepository {
-  RemoteAuthRepository({required this.api, required this.firebase, required this.tokens});
+  RemoteAuthRepository({
+    required this.api,
+    required this.firebase,
+    required this.tokens,
+  });
 
   final ApiClient api;
   final FirebaseRestAuth firebase;
@@ -43,7 +47,11 @@ class RemoteAuthRepository implements AuthRepository {
   }
 
   /// Signs in to Firebase, then asks the API who that is.
-  Future<AuthAck> _establish(String email, String password, {required bool remember}) async {
+  Future<AuthAck> _establish(
+    String email,
+    String password, {
+    required bool remember,
+  }) async {
     final session = await firebase.signInWithPassword(email.trim(), password);
     await tokens.start(session, remember: remember);
 
@@ -55,7 +63,9 @@ class RemoteAuthRepository implements AuthRepository {
       // nowhere useful to route them.
       await tokens.clear();
       if (error.isUnauthorized) {
-        throw Exception('No GalleryZone account exists for this sign-in yet. Create one first.');
+        throw Exception(
+          'No GalleryZone account exists for this sign-in yet. Create one first.',
+        );
       }
       rethrow;
     }
@@ -66,7 +76,11 @@ class RemoteAuthRepository implements AuthRepository {
       await tokens.clear();
       throw Exception(_adminMessage);
     }
-    return AuthAck(email: user.email.isEmpty ? email : user.email, role: role, name: user.name);
+    return AuthAck(
+      email: user.email.isEmpty ? email : user.email,
+      role: role,
+      name: user.name,
+    );
   }
 
   @override
@@ -74,7 +88,10 @@ class RemoteAuthRepository implements AuthRepository {
       _establish(input.email, input.password, remember: input.rememberMe);
 
   @override
-  Future<AuthAck> register(RegisterInput input, {bool simulateError = false}) async {
+  Future<AuthAck> register(
+    RegisterInput input, {
+    bool simulateError = false,
+  }) async {
     await api.post(
       '/v1/auth/register',
       auth: false,
@@ -106,24 +123,39 @@ class RemoteAuthRepository implements AuthRepository {
   /// The API answers 202 whether or not the address has an account, so this
   /// cannot be used to find out who is registered.
   @override
-  Future<AuthAck> forgotPassword(ForgotPasswordInput input, {bool simulateError = false}) async {
-    await api.post('/v1/auth/password-reset', auth: false, body: {'email': input.email.trim()});
+  Future<AuthAck> forgotPassword(
+    ForgotPasswordInput input, {
+    bool simulateError = false,
+  }) async {
+    await api.post(
+      '/v1/auth/password-reset',
+      auth: false,
+      body: {'email': input.email.trim()},
+    );
     return AuthAck(email: input.email);
   }
 
   /// [ResetPasswordInput.token] is Firebase's `oobCode` from the emailed link.
   @override
-  Future<AuthResult> resetPassword(ResetPasswordInput input, {bool simulateError = false}) async {
+  Future<AuthResult> resetPassword(
+    ResetPasswordInput input, {
+    bool simulateError = false,
+  }) async {
     final code = input.token;
     if (code == null || code.isEmpty) {
-      throw Exception('This reset link is missing its code. Request a new one.');
+      throw Exception(
+        'This reset link is missing its code. Request a new one.',
+      );
     }
     await firebase.confirmPasswordReset(code, input.password);
     return const AuthResult();
   }
 
   @override
-  Future<AuthResult> verifyEmail({String? token, bool simulateError = false}) async {
+  Future<AuthResult> verifyEmail({
+    String? token,
+    bool simulateError = false,
+  }) async {
     if (token == null || token.isEmpty) {
       throw Exception('This verification link is missing its code.');
     }

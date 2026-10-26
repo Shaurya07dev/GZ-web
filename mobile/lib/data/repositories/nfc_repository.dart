@@ -7,7 +7,11 @@ abstract class NfcRepository {
   /// Before the chip is touched: would linking or locking THIS chip be allowed?
   /// Changes nothing. A refusal (the chip belongs to another piece, the wrong
   /// chip for a lock, a locked tag...) throws with the server's own wording.
-  Future<NfcCheckAction> check(String artworkId, String tagUid, NfcIntent intent);
+  Future<NfcCheckAction> check(
+    String artworkId,
+    String tagUid,
+    NfcIntent intent,
+  );
 
   /// The URL has been written and the UID read back. The same chip again is a
   /// no-op; a different one replaces it until the lock.
@@ -18,5 +22,10 @@ abstract class NfcRepository {
 
   /// A link or lock that failed on the phone, relayed to Sentry. Best-effort:
   /// never throws.
-  Future<void> reportFailure(String artworkId, NfcFailureStep step, String message, {String? tagUid});
+  Future<void> reportFailure(
+    String artworkId,
+    NfcFailureStep step,
+    String message, {
+    String? tagUid,
+  });
 }
