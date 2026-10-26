@@ -12,6 +12,7 @@ import {
   serviceChargeOf,
   aggregatorAdvanceForMonth,
   aggregatorCommissionOf,
+  commissionRateForPreviousMonthSales,
   aggregatorOfferPriceOf,
   isPriceWarning,
   artistPriceFrom,
@@ -177,6 +178,18 @@ const R = (rupees: number) => Math.round(rupees * 100);
   const display = R(157_500);
   assert.equal(aggregatorCommissionOf(display, artistPrice, rates), R(10_000), "20% x (150,000 - 100,000)");
   assert.equal(aggregatorCommissionOf(displayPriceOfHelper(R(90_000), rates), artistPrice, rates), 0, "never negative");
+}
+
+// --- Aggregator incentive tier (MOU 2026.3 §9.4) ---------------------------
+// The signed agreement supersedes the earlier lifetime-sales interpretation:
+// this month's rate comes only from last calendar month's successful,
+// pre-tax listed selling prices.
+{
+  assert.equal(commissionRateForPreviousMonthSales(0, rates), 0.2, "no prior-month sales uses Tier 1");
+  assert.equal(commissionRateForPreviousMonthSales(R(1_000_000), rates), 0.2, "exactly ₹10 lakh remains Tier 1");
+  assert.equal(commissionRateForPreviousMonthSales(R(1_000_000) + 1, rates), 0.35, "above ₹10 lakh uses Tier 2");
+  assert.equal(commissionRateForPreviousMonthSales(R(5_000_000), rates), 0.35, "exactly ₹50 lakh remains Tier 2");
+  assert.equal(commissionRateForPreviousMonthSales(R(5_000_000) + 1, rates), 0.5, "above ₹50 lakh uses Tier 3");
 }
 
 function displayPriceOfHelper(preTax: number, r: typeof rates): number {

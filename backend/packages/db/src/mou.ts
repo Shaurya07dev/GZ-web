@@ -16,7 +16,7 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { DbError } from "./errors.ts";
 import { getOwnProfile, type OwnProfile } from "./profiles.ts";
-import { Collections } from "./collections.ts";
+import { Collections, type PublicProfileDoc } from "./collections.ts";
 
 export class MouError extends DbError {}
 
@@ -190,7 +190,16 @@ export async function recordMouAcceptance(
     ip: input.ip ?? null,
     userAgent: input.userAgent?.slice(0, 300) ?? null,
   };
-  await ref.set(doc);
+  const batch = db.batch();
+  batch.set(ref, doc);
+  if (input.party === "artist") {
+    batch.set(
+      db.collection(Collections.publicProfiles).doc(input.uid),
+      { tier2ArtistAgreement: true } satisfies Partial<PublicProfileDoc>,
+      { merge: true },
+    );
+  }
+  await batch.commit();
   return toAcceptance((await ref.get()).data() as MouAcceptanceDoc);
 }
 

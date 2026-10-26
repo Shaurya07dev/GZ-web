@@ -125,7 +125,7 @@ export function aggregatorSalePostings({
   /** The real artist→aggregator delivery leg, when it has been quoted. */
   deliveryChargePaise?: number;
   /** The slab rate picked for this sale's billing month, from
-   *  commissionRateForLifetimeSales(). Omitted callers fall back to the
+   *  commissionRateForPreviousMonthSales(). Omitted callers fall back to the
    *  flat rate on PricingRates. */
   commissionRate?: number;
 }): Posting[] {

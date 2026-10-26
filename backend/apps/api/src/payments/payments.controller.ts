@@ -9,7 +9,11 @@
 //   POST /v1/payments/razorpay/webhook    public — Razorpay's server → ours
 //        payment.captured / order.paid → paid; payment.failed → recorded
 //
-// An aggregator's wallet top-up is the same shape:
+// Aggregator reservation payments use the same hardened gateway path. The
+// legacy wallet routes remain for older web/mobile clients, while current
+// clients call /reservation-payments and never expose a prepaid wallet.
+//
+// An aggregator's legacy wallet top-up is the same shape:
 //   POST /v1/aggregator/wallet/topups             aggregator — { amountPaise } → the same session shape
 //   POST /v1/aggregator/wallet/topups/:id/verify  aggregator — re-read, then credit the wallet
 //   POST /v1/aggregator/wallet/topups/:id/simulate  aggregator — PAYMENTS_MODE=simulated only
@@ -247,46 +251,73 @@ export class PaymentsController {
     return topup;
   }
 
-  @Roles("aggregator")
-  @Post("aggregator/wallet/topups")
-  async startTopup(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(startWalletTopupInputSchema)) body: StartWalletTopupInput) {
-    const { topupId } = await createWalletTopup(this.db, { userId: req.authUser.uid, amountPaise: body.amountPaise });
-    if (this.env.paymentsMode !== "razorpay") return { mode: "simulated" as const, topupId, amountPaise: body.amountPaise };
+  private async startAggregatorPayment(
+    req: AuthenticatedRequest,
+    amountPaise: number,
+    kind: "topup" | "reservation",
+  ) {
+    const { topupId } = await createWalletTopup(this.db, {
+      userId: req.authUser.uid,
+      amountPaise,
+    });
+    const publicId = kind === "reservation" ? { paymentId: topupId } : { topupId };
+    if (this.env.paymentsMode !== "razorpay") {
+      return { mode: "simulated" as const, ...publicId, amountPaise };
+    }
 
     const [user, gateway] = await Promise.all([
       getCurrentUser(this.db, req.authUser.uid, { touchLogin: false }),
-      this.razorpay.createTopupOrder({ topupId, amountPaise: body.amountPaise, userId: req.authUser.uid }),
+      this.razorpay.createTopupOrder({ topupId, amountPaise, userId: req.authUser.uid }),
     ]);
     await attachTopupProviderOrder(this.db, topupId, gateway.id);
     return {
       mode: "razorpay" as const,
-      topupId,
+      ...publicId,
       keyId: this.razorpay.keyId,
       razorpayOrderId: gateway.id,
-      amountPaise: body.amountPaise,
+      amountPaise,
       currency: "INR",
       name: "GalleryZone",
-      description: "Add funds to your GalleryZone wallet",
-      prefill: { name: user?.name ?? "", email: user?.email ?? "", contact: user?.phone ?? "" },
+      description:
+        kind === "reservation"
+          ? "Artwork reservation deposit and delivery"
+          : "Add funds to your GalleryZone wallet",
+      prefill: {
+        name: user?.name ?? "",
+        email: user?.email ?? "",
+        contact: user?.phone ?? "",
+      },
     };
   }
 
-  @Roles("aggregator")
-  @Post("aggregator/wallet/topups/:id/verify")
-  async verifyTopup(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(verifySchema)) body: VerifyBody) {
+  private async verifyAggregatorPayment(
+    req: AuthenticatedRequest,
+    id: string,
+    body: VerifyBody,
+  ) {
     const topup = await this.ownTopup(req, id);
-    if (topup.status === "paid") return { status: "paid" as const, amountPaise: topup.amountPaise };
+    if (topup.status === "paid") {
+      return { status: "paid" as const, amountPaise: topup.amountPaise };
+    }
 
     const gatewayOrderId = topup.providerOrderId ?? body?.razorpayOrderId ?? null;
-    if (!gatewayOrderId) throw notStarted("top-up");
-    if (body && (body.razorpayOrderId !== gatewayOrderId || !this.razorpay.verifyCheckoutSignature(body))) throw badSignature();
+    if (!gatewayOrderId) throw notStarted("reservation payment");
+    if (
+      body &&
+      (body.razorpayOrderId !== gatewayOrderId ||
+        !this.razorpay.verifyCheckoutSignature(body))
+    ) {
+      throw badSignature();
+    }
 
     const gateway = await this.razorpay.fetchOrder(gatewayOrderId);
     const guard = this.amountGuard(gateway, topup.amountPaise, gatewayOrderId);
     if (guard) throw guard;
     if (gateway.status !== "paid") return { status: gateway.status };
 
-    const payment = (await this.razorpay.fetchPayments(gatewayOrderId)).find((p) => p.status === "captured");
+    const payment = (await this.razorpay.fetchPayments(gatewayOrderId)).find(
+      (candidate) => candidate.status === "captured",
+    );
     const result = await markTopupPaid(this.db, id, {
       method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
       providerPaymentId: payment?.id ?? body?.razorpayPaymentId ?? null,
@@ -294,16 +325,68 @@ export class PaymentsController {
     return { status: "paid" as const, amountPaise: result.amountPaise };
   }
 
+  private async simulateAggregatorPayment(req: AuthenticatedRequest, id: string) {
+    if (this.env.paymentsMode !== "simulated") {
+      throw new ForbiddenException({
+        type: "about:blank",
+        title: "Simulated payment is disabled",
+        status: 403,
+        code: "payments_not_simulated",
+      });
+    }
+    await this.ownTopup(req, id);
+    const result = await markTopupPaid(this.db, id, {
+      method: "simulated",
+      providerPaymentId: null,
+    });
+    return { status: "paid" as const, amountPaise: result.amountPaise };
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/reservation-payments")
+  async startReservationPayment(
+    @Req() req: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(startWalletTopupInputSchema)) body: StartWalletTopupInput,
+  ) {
+    return this.startAggregatorPayment(req, body.amountPaise, "reservation");
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/reservation-payments/:id/verify")
+  verifyReservationPayment(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(verifySchema)) body: VerifyBody,
+  ) {
+    return this.verifyAggregatorPayment(req, id, body);
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/reservation-payments/:id/simulate")
+  simulateReservationPayment(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    return this.simulateAggregatorPayment(req, id);
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/wallet/topups")
+  async startTopup(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(startWalletTopupInputSchema)) body: StartWalletTopupInput) {
+    return this.startAggregatorPayment(req, body.amountPaise, "topup");
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/wallet/topups/:id/verify")
+  async verifyTopup(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(verifySchema)) body: VerifyBody) {
+    return this.verifyAggregatorPayment(req, id, body);
+  }
+
   /** The simulated gateway, for environments with no Razorpay keys. Refused the moment PAYMENTS_MODE is razorpay. */
   @Roles("aggregator")
   @Post("aggregator/wallet/topups/:id/simulate")
   async simulateTopup(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
-    if (this.env.paymentsMode !== "simulated") {
-      throw new ForbiddenException({ type: "about:blank", title: "Simulated payment is disabled", status: 403, code: "payments_not_simulated" });
-    }
-    await this.ownTopup(req, id);
-    const result = await markTopupPaid(this.db, id, { method: "simulated", providerPaymentId: null });
-    return { status: "paid", amountPaise: result.amountPaise };
+    return this.simulateAggregatorPayment(req, id);
   }
 
   /**

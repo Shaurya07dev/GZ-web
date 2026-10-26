@@ -50,11 +50,7 @@ import { bookShipment, isShiprocketConfigured } from "./shiprocket.ts";
 // Separate function so the reserve handler stays readable, and so a failed
 // booking logs clearly without masking the reservation's success.
 async function bookInboundShipment(db: Db, holdingId: string, artworkId: string, aggregatorId: string): Promise<void> {
-  if (!isShiprocketConfigured()) {
-    // Dev / preview without credentials — book a stub so the UI tracker lights
-    // up end-to-end. The webhook never fires in this branch; the aggregator
-    // sees "pickup" indefinitely until a real booking happens.
-  }
+  if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured; inbound booking was not created");
   // Resolve the three parties: artwork → artist, artist profile → studio
   // address, aggregator profile → gallery address.
   const [artworkSnap, aggProfileSnap, aggUserSnap] = await Promise.all([
