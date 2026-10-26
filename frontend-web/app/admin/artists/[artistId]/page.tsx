@@ -15,7 +15,7 @@ import type { AdminUser } from "@/types/admin";
 
 const TIER_LABELS = [
   { key: "tier1SocialMedia", label: "Tier 1 · Social media linked" },
-  { key: "tier2ActivePlan", label: "Tier 2 · Active subscription" },
+  { key: "tier2ActivePlan", label: "Tier 2 · Artist agreement" },
   { key: "tier3FirstSale", label: "Tier 3 · First confirmed sale" },
 ] as const;
 

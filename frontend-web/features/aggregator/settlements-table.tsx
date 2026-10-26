@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { Landmark } from "lucide-react";
 import {
@@ -25,7 +24,6 @@ import {
   useProcessSettlementMutation,
   useRemittancesDue,
 } from "@/hooks/useAggregatorSettlements";
-import { useAggregatorWallet } from "@/hooks/useAggregatorWallet";
 import { PayeeDetails } from "@/components/shared/payee-details";
 import { formatINR } from "@/lib/utils";
 import type { Settlement, SettlementStatus } from "@/types/admin";
@@ -155,7 +153,6 @@ export function SettlementsTable() {
 // their entitlement, and mixing the two is how people end up netting off.
 function RemittancesDueCard() {
   const { data: due } = useRemittancesDue();
-  const { data: wallet } = useAggregatorWallet();
   const markRemitted = useMarkRemittedMutation();
   // Snapshotted once: react-hooks/purity forbids Date.now() in render, and a
   // few minutes of drift can't change which day a deadline falls on.
@@ -164,13 +161,11 @@ function RemittancesDueCard() {
   if (!due || due.length === 0) return null;
 
   const total = due.reduce((sum, sale) => sum + sale.soldPrice, 0);
-  const free = wallet ? wallet.balance - wallet.lockedBalance : 0;
-
-  function pay(saleId: string, via: "wallet" | "bank") {
+  function markTransferred(saleId: string) {
     markRemitted.mutate(
-      { saleId, via },
+      { saleId, via: "bank" },
       {
-        onSuccess: () => toast.success(via === "wallet" ? "Paid from your wallet" : "Marked as transferred"),
+        onSuccess: () => toast.success("Marked as transferred"),
         onError: (error) => toast.error(error.message),
       },
     );
@@ -185,7 +180,7 @@ function RemittancesDueCard() {
           </h2>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
             Cash you collected on GalleryZone&rsquo;s behalf. Pay in the full
-            amount within 2 days by Razorpay or by transfer to GalleryZone&rsquo;s
+            amount within 2 days by transfer to GalleryZone&rsquo;s
             bank account. Your commission is settled separately, below.
           </p>
         </div>
@@ -199,7 +194,6 @@ function RemittancesDueCard() {
           const dueAt = sale.remitDueAt ? new Date(sale.remitDueAt).getTime() : null;
           const overdueMs = dueAt !== null ? now - dueAt : 0;
           const overdueDays = Math.floor(overdueMs / 86_400_000);
-          const short = Math.max(0, sale.soldPrice - free);
           return (
             <li
               key={sale.id}
@@ -238,18 +232,10 @@ function RemittancesDueCard() {
                 </span>
                 <Button
                   size="sm"
-                  disabled={markRemitted.isPending || short > 0}
-                  title={short > 0 ? `Add ${formatINR(short)} to your wallet first` : undefined}
-                  onClick={() => pay(sale.id, "wallet")}
-                >
-                  Pay from wallet
-                </Button>
-                <Button
-                  size="sm"
                   variant="outline"
                   disabled={markRemitted.isPending}
                   title="You have transferred it to GalleryZone's bank account"
-                  onClick={() => pay(sale.id, "bank")}
+                  onClick={() => markTransferred(sale.id)}
                 >
                   Mark transferred
                 </Button>

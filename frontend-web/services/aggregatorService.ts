@@ -7,6 +7,11 @@ import type { AggregatorHolding, HoldingExtensionRequest, RecordSalePayload } fr
 import type { Artwork, ArtworkSummary } from "@/types/artwork";
 import { http, isApiError } from "@/lib/api";
 import { paiseToRupees, toArtwork, toArtworkSummary, type ArtworkDto } from "@/lib/api-mappers";
+import {
+  PaymentDismissedError,
+  openRazorpayCheckout,
+  type RazorpaySession,
+} from "@/lib/razorpay-checkout";
 
 export interface AggregatorOffer {
   artworkId: string;
@@ -149,6 +154,38 @@ export const aggregatorService = {
   async getReservableArtwork(artworkId: string): Promise<ReservableArtwork | null> {
     const all = await aggregatorService.listReservableInventory();
     return all.find((a) => a.id === artworkId) ?? null;
+  },
+
+  /**
+   * Pays the exact advance + delivery charge for one reservation. The backend
+   * verifies the captured Razorpay order before crediting the internal
+   * reservation ledger; simulated completion is available only when the API is
+   * explicitly running in simulated-payment mode.
+   */
+  async payReservation(amount: number): Promise<void> {
+    const session = await http.post<
+      | { mode: "simulated"; paymentId: string }
+      | (RazorpaySession & { paymentId: string })
+    >("/v1/aggregator/reservation-payments", {
+      amountPaise: Math.round(amount * 100),
+    });
+    const base = `/v1/aggregator/reservation-payments/${encodeURIComponent(session.paymentId)}`;
+    if (session.mode === "razorpay") {
+      const outcome = await openRazorpayCheckout(session);
+      const confirmed = await http.post<{ status: string }>(
+        `${base}/verify`,
+        outcome.success ?? undefined,
+      );
+      if (confirmed.status !== "paid") {
+        if (outcome.dismissed) throw new PaymentDismissedError();
+        throw new Error(
+          outcome.failureMessage ??
+            "The reservation payment did not go through. Nothing was reserved.",
+        );
+      }
+    } else {
+      await http.post(`${base}/simulate`);
+    }
   },
 
   /**

@@ -4,12 +4,12 @@ import {
   ShieldCheck,
   Globe,
   Share2,
-  Clock3,
+  FileSignature,
   HandCoins,
   Sparkles,
   QrCode,
   Fingerprint,
-  Wallet,
+  Landmark,
 } from "lucide-react";
 
 // All copy on this page is sourced from the Artist Onboarding Guide
@@ -62,10 +62,10 @@ export const VERIFICATION_TIERS: VerificationTier[] = [
   },
   {
     tier: 2,
-    title: "Active Plan",
+    title: "Artist Agreement",
     description:
-      "The artist keeps an active GalleryZone plan for three consecutive months. It's free for artists who opt into the physical aggregator listing model.",
-    icon: Clock3,
+      "The artist reads and signs the current GalleryZone Artist MOU covering listing, sale, settlement, custody, and provenance.",
+    icon: FileSignature,
   },
   {
     tier: 3,
@@ -91,9 +91,9 @@ export interface TechFeature {
 
 export const TECH_FEATURES: TechFeature[] = [
   {
-    title: "QR Tagging",
+    title: "NFC & QR Passport",
     description:
-      "Every artwork carries a physical QR tag linked to its digital identity, Certificate of Authenticity, and ownership history for the artwork's entire life cycle. The tag is scan-ready at galleries, fairs, or private collections, connecting anyone with a phone to the full provenance record. Tags are permanent, they stay with the work, not the platform.",
+      "Accepted artworks can carry a locked NFC tag and QR link to a persistent digital passport, Certificate of Authenticity, and ownership history. The record stays with the work across galleries and collectors.",
     icon: QrCode,
   },
   {
@@ -103,9 +103,9 @@ export const TECH_FEATURES: TechFeature[] = [
     icon: Fingerprint,
   },
   {
-    title: "Wallet & Auto Notifications",
+    title: "Escrow & Bank Payouts",
     description:
-      "An integrated wallet tracks advances and settlements automatically, with notifications sent at every step from sale to payout. Artists always know exactly where their money is and when it arrives.",
-    icon: Wallet,
+      "GalleryZone records payment, delivery, settlement, and payout status in a transparent ledger, then releases eligible earnings to the verified bank account after the settlement window.",
+    icon: Landmark,
   },
 ];

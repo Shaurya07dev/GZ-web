@@ -46,7 +46,7 @@ export const AGGREGATOR_NOTIFICATION_GROUPS: NotificationGroup[] = [
         id: "settlement-paid",
         source: { name: "GalleryZone", initials: "GZ" },
         title: "Advance credited",
-        subtitle: "Your security deposit was refunded to your wallet",
+        subtitle: "Your refundable security deposit was released after reconciliation",
         timestamp: "1d ago",
         unread: false,
       },

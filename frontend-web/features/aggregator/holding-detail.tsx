@@ -135,7 +135,7 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
             </p>
             <p className="text-sm text-muted-foreground">
               GalleryZone takes it back and offers it to another aggregator,
-              and your advance returns to your wallet. If it sold before then,
+              and your refundable advance is released after reconciliation. If it sold before then,
               record the sale now.
             </p>
           </div>
@@ -154,7 +154,7 @@ export function HoldingDetail({ holdingId }: { holdingId: string }) {
           </p>
           <p className="text-sm text-muted-foreground">
             It has gone back to GalleryZone and is now available to another
-            aggregator. Your advance is back in your wallet.{" "}
+            aggregator. Your refundable advance has been released for settlement.{" "}
             <Link
               href="/aggregator/inventory"
               className="font-medium text-gold-bright hover:underline"

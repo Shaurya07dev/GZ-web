@@ -23,7 +23,6 @@ import {
   useReservableArtwork,
   useReserveArtworkMutation,
 } from "@/hooks/useAggregatorInventory";
-import { useAggregatorWallet } from "@/hooks/useAggregatorWallet";
 import { CycleStepper } from "./cycle-stepper";
 import {
   ReserveRequirementsNotice,
@@ -32,7 +31,7 @@ import {
 import { SuggestedArtworks } from "./suggested-artworks";
 
 // Full-page replacement for what used to be a confirm dialog. Reserving is a
-// real commitment — it holds money from the wallet for thirty days — so it
+// real commitment — it charges the advance and delivery through Razorpay — so it
 // gets its own screen and its own back button rather than a modal you could
 // mis-click through. Confirming lands on the new holding's detail page
 // (holding-detail.tsx), which is the "what happens next" this flow used to
@@ -47,7 +46,6 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
   const { data: artwork, isPending, isError } =
     useReservableArtwork(artworkId);
   const reserveMutation = useReserveArtworkMutation();
-  const { data: wallet } = useAggregatorWallet();
   const { blockedReason } = useReserveRequirements();
   // What has been typed into the price field, before GST. null until they touch
   // it, which means "GalleryZone's price".
@@ -115,8 +113,6 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
     : offer.advance;
   const advanceBase = offer.canSetPrice ? price : offer.advanceBase;
   const payable = advance + offer.deliveryCharge;
-  const free = wallet ? wallet.balance - wallet.lockedBalance : 0;
-  const shortfall = Math.max(0, payable - free);
   const priceWarning =
     offer.priceWarnFrom !== null && price >= offer.priceWarnFrom;
 
@@ -125,6 +121,7 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
       {
         artworkId,
         sellingPrice: offer.canSetPrice ? price : undefined,
+        paymentAmount: payable,
       },
       {
         onSuccess: (holding) => {
@@ -175,11 +172,11 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
         <div className="flex flex-col gap-2">
           <CycleStepper currentMonth={offer.month} />
           <p className="text-sm text-muted-foreground">
-            Month {offer.month} of {AGGREGATOR_CYCLE_MONTHS}. Confirming holds
-            the advance from your wallet and moves this piece into My
-            Inventory for 30 days. After that it moves on to the next
-            aggregator and your advance is back in your wallet on day 31,
-            unless you ask GalleryZone to let you keep it and they agree.
+            Month {offer.month} of {AGGREGATOR_CYCLE_MONTHS}. Confirming opens
+            Razorpay for the advance and delivery charge, then moves this piece
+            into My Inventory for 30 days after payment is verified. If it does
+            not sell, its return and refund must be processed under the
+            reservation terms unless GalleryZone approves an extension.
           </p>
         </div>
 
@@ -359,9 +356,9 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
           </div>
           <div className="mt-0.5 flex items-center justify-between border-t border-gold/20 pt-2">
             <div>
-              <p className="font-medium text-foreground">Held from your wallet</p>
+              <p className="font-medium text-foreground">Pay now through Razorpay</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatINR(Math.max(0, free))} free right now
+                Advance plus delivery for this reservation
               </p>
             </div>
             <span className="font-display text-lg font-semibold tabular-nums text-gold-bright">
@@ -369,23 +366,6 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
             </span>
           </div>
         </div>
-
-        {shortfall > 0 && (
-          <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
-            <span className="flex flex-1 flex-col gap-0.5">
-              <span className="text-xs font-medium text-foreground">
-                {formatINR(shortfall)} short
-              </span>
-              <span className="text-[11px] leading-snug text-muted-foreground">
-                Top up your wallet to reserve this piece. Money is held, not
-                spent: it comes back when the piece sells.
-              </span>
-            </span>
-            <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/aggregator/wallet" />}>
-              Go to wallet
-            </Button>
-          </div>
-        )}
 
         <div className="flex items-center justify-end gap-2">
           <Button
@@ -399,18 +379,16 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
             onClick={handleConfirm}
             disabled={
               reserveMutation.isPending ||
-              shortfall > 0 ||
               Boolean(priceError) ||
               blockedReason !== undefined
             }
             title={
-              blockedReason ??
-              (shortfall > 0
-                ? `Add ${formatINR(shortfall)} to your wallet first`
-                : undefined)
+              blockedReason
             }
           >
-            {reserveMutation.isPending ? "Reserving…" : "Confirm reservation"}
+            {reserveMutation.isPending
+              ? "Processing payment…"
+              : `Pay ${formatINR(payable)} & reserve`}
           </Button>
         </div>
       </div>

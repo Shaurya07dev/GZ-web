@@ -102,7 +102,7 @@ export function ReturnHoldingDialog({
                 Advance ({holding.advancePercent}%)
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Released back to your wallet
+                Released after reconciliation
               </p>
             </div>
             <span className="font-mono tabular-nums text-foreground">

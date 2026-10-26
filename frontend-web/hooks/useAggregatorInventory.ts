@@ -22,8 +22,18 @@ export function useReservableArtwork(artworkId: string) {
 export function useReserveArtworkMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ artworkId, sellingPrice }: { artworkId: string; sellingPrice?: number | undefined }) =>
-      aggregatorService.reserve(artworkId, sellingPrice),
+    mutationFn: async ({
+      artworkId,
+      sellingPrice,
+      paymentAmount,
+    }: {
+      artworkId: string;
+      sellingPrice?: number | undefined;
+      paymentAmount: number;
+    }) => {
+      await aggregatorService.payReservation(paymentAmount);
+      return aggregatorService.reserve(artworkId, sellingPrice);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });

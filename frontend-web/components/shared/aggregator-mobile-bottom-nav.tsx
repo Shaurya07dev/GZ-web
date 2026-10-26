@@ -56,7 +56,7 @@ const MORE_SECTIONS = [
   {
     label: "Finance",
     items: [
-      { label: "Earnings & Wallet", href: "/aggregator/wallet", icon: Wallet },
+      { label: "Earnings", href: "/aggregator/wallet", icon: Wallet },
       { label: "Settlements", href: "/aggregator/settlements", icon: Landmark },
     ],
   },

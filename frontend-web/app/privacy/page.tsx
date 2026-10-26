@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" lastUpdated="August 2026">
+    <LegalLayout title="Privacy Policy" lastUpdated="25 October 2026">
       <LegalToc sections={privacySections} />
       <article className="flex max-w-3xl flex-1 flex-col gap-10">
         {privacySections.map((section) => (

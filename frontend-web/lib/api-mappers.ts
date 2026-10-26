@@ -14,6 +14,7 @@ export interface ArtworkDto {
   productCode: string;
   artistId: string;
   artistName: string;
+  verifiedArtist?: boolean;
   title: string;
   description: string;
   category: string;
@@ -106,8 +107,7 @@ export function toArtwork(dto: ArtworkDto): Artwork {
     title: dto.title,
     artistId: dto.artistId,
     artistName: dto.artistName,
-    // Verification tiers aren't on the public DTO yet.
-    verifiedArtist: false,
+    verifiedArtist: dto.verifiedArtist ?? false,
     category: dto.category,
     medium: dto.medium,
     customerPrice: paiseToRupees(dto.displayPricePaise),
@@ -166,6 +166,12 @@ export interface ArtistDto {
   location: string | null;
   profileImageUrl: string | null;
   artworkCount: number;
+  verification?: {
+    tier1SocialMedia: boolean;
+    tier2ActivePlan: boolean;
+    tier3FirstSale: boolean;
+  };
+  socialLinks?: ArtistProfile["socialLinks"];
 }
 
 export const ARTIST_PLACEHOLDER_IMAGE = "/artworks/portrait-woman.png";
@@ -176,8 +182,8 @@ export function toArtistProfile(dto: ArtistDto): ArtistProfile {
     name: dto.name,
     bio: dto.bio ?? "",
     profileImageUrl: dto.profileImageUrl ?? ARTIST_PLACEHOLDER_IMAGE,
-    verification: { tier1SocialMedia: false, tier2ActivePlan: false, tier3FirstSale: false },
-    socialLinks: [],
+    verification: dto.verification ?? { tier1SocialMedia: false, tier2ActivePlan: false, tier3FirstSale: false },
+    socialLinks: dto.socialLinks ?? [],
     headline: dto.headline ?? "",
     location: dto.location ?? "",
     joinedAt: "",

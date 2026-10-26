@@ -220,7 +220,7 @@ export function CollectionTable() {
                   <th className="px-4 py-3 font-medium">
                     Advance
                     <span className="block text-[10px] font-normal normal-case text-muted-foreground/70">
-                      Held from wallet
+                      Reservation payment held
                     </span>
                   </th>
                   <th className="px-4 py-3 font-medium">

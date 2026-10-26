@@ -198,9 +198,8 @@ function ListingStatusPill({ status }: { status: string }) {
   );
 }
 
-// Nobody else exists to buy the piece in this demo, so this stands in for a
-// second collector. The point is the money: the proceeds land in the seller's
-// balance, where their bank details can take them out.
+// Nobody else exists to buy the piece in this demo, so this only exercises the
+// status transition. It is not proof of buyer checkout or seller payout.
 function SimulateSaleButton({ id }: { id: string }) {
   const completeMutation = useCompleteResaleMutation();
 
@@ -210,8 +209,8 @@ function SimulateSaleButton({ id }: { id: string }) {
       onClick={() =>
         completeMutation.mutate(id, {
           onSuccess: (listing) =>
-            toast.success("Resale complete", {
-              description: `${formatINR(listing.listedPrice)} added to your balance — withdraw it from Wallet.`,
+            toast.success("Demo resale recorded", {
+              description: `${formatINR(listing.listedPrice)} was recorded for this simulated sale; no live buyer payment or seller payout occurred.`,
             }),
           onError: (error) => toast.error(error.message),
         })

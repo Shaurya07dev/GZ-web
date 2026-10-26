@@ -10,7 +10,6 @@ import {
   Frame,
   Fingerprint,
   ShoppingBag,
-  Wallet,
   Repeat2,
   CircleUserRound,
   MapPin,
