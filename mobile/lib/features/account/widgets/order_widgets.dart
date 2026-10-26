@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/order.dart';
 import '../../marketplace/widgets/artwork_card.dart';
@@ -121,16 +122,15 @@ class OrderRow extends StatelessWidget {
     // What was bought comes with the order, so a row needs no second lookup and
     // still reads correctly once the piece has left the marketplace.
     final artwork = order.artwork;
-    return InkWell(
+    // The card is the tile's own material, so the press ripple draws over its
+    // fill instead of underneath it.
+    return Pressable(
       onTap: () => context.push('/account/orders/${order.id}'),
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Container(
+      color: theme.cardTheme.color,
+      side: BorderSide(color: theme.colorScheme.outline),
+      child: Padding(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: theme.colorScheme.outline),
-        ),
         child: Row(
           children: [
             ClipRRect(

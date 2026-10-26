@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../data/models/artwork.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
@@ -54,7 +55,7 @@ class _TransferAcceptScreenState extends ConsumerState<TransferAcceptScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Transfer rights')),
       body: transfer.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: 'Something went wrong',

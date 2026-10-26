@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/mock/mock_checkout_repository.dart';
 import '../../../data/models/order.dart';
@@ -13,6 +14,7 @@ import '../../checkout/providers/checkout_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../providers/account_providers.dart';
 import '../widgets/order_widgets.dart';
+import '../widgets/customer_shell.dart';
 
 /// Port of `app/account/orders/page.tsx` + `order-list.tsx`.
 class OrdersScreen extends ConsumerWidget {
@@ -27,7 +29,7 @@ class OrdersScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Orders')),
       body: orders.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.packageSearch,
           title: "Couldn't load your orders",
@@ -45,7 +47,7 @@ class OrdersScreen extends ConsumerWidget {
                     'Everything you buy on GalleryZone will show up here, with '
                     'full status tracking.',
                 action: OutlinedButton(
-                  onPressed: () => context.push('/marketplace'),
+                  onPressed: () => context.go(customerShopPath),
                   child: const Text('Browse the marketplace'),
                 ),
               )
@@ -157,7 +159,7 @@ class OrderDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Order')),
       body: order.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.packageSearch,
           title: "Couldn't load this order",

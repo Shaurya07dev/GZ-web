@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart' show DeliveryAddress;
 import '../../../data/models/artwork.dart';
@@ -16,6 +17,7 @@ import '../../marketplace/widgets/artwork_card.dart';
 import '../../ownership/providers/ownership_providers.dart';
 import '../../ownership/widgets/transfer_widgets.dart';
 import '../providers/account_providers.dart';
+import '../widgets/customer_shell.dart';
 
 /// Port of `features/account/collection-board.tsx`. Owned = a delivered
 /// order, a piece bought in person at a gallery, or one handed over by its
@@ -35,7 +37,7 @@ class CollectionScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('My Collection')),
       body: collection.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your collection",
@@ -53,7 +55,7 @@ class CollectionScreen extends ConsumerWidget {
                     'Once an order is delivered, the artwork moves here with its '
                     'certificate, provenance, and ownership record.',
                 action: OutlinedButton(
-                  onPressed: () => context.push('/marketplace'),
+                  onPressed: () => context.go(customerShopPath),
                   child: const Text('Browse the marketplace'),
                 ),
               )

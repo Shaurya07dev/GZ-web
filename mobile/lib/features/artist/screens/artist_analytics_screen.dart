@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../data/models/artwork.dart' show SocialProofPlatform;
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart' show EmptyState;
@@ -43,7 +44,7 @@ class ArtistAnalyticsScreen extends ConsumerWidget {
                       child: const Text('Try again'),
                     ),
                   )
-                : const Center(child: CircularProgressIndicator())
+                : const PageSkeleton()
           : RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(artistArtworksProvider);

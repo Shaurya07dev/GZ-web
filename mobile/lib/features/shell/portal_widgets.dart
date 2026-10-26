@@ -22,6 +22,43 @@ class ShellDestination {
   final String label;
 }
 
+/// The portals' bottom bar on a phone: the theme's [NavigationBar] under a
+/// hairline, so the page ends on a clean edge instead of fading into the bar.
+class ShellNavigationBar extends StatelessWidget {
+  const ShellNavigationBar({
+    super.key,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<ShellDestination> destinations;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+      ),
+      child: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
+        destinations: [
+          for (final destination in destinations)
+            NavigationDestination(
+              icon: Icon(destination.icon),
+              label: destination.label,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Card frame the customer, artist and aggregator portals' rows and panels
 /// sit in — one place for the surface + hairline ring treatment, rather
 /// than the same `BoxDecoration` copied down forty screens.
@@ -639,7 +676,10 @@ class WalletTransactionRow extends StatelessWidget {
           Text(
             '${isCredit ? '+' : '−'}${formatInr(transaction.amount.abs())}',
             style: theme.textTheme.bodyMedium?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
+              fontFeatures: const [
+                FontFeature.liningFigures(),
+                FontFeature.tabularFigures(),
+              ],
               color: isCredit ? _emerald : null,
             ),
           ),

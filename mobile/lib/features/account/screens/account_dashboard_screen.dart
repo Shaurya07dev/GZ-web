@@ -6,12 +6,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/customer.dart';
 import '../../../data/models/order.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
 import '../providers/account_providers.dart';
 import '../widgets/order_widgets.dart';
+import '../widgets/customer_shell.dart';
 
 /// Port of `features/account/collector-dashboard.tsx`, plus the entry points
 /// the web keeps in its sidebar (resale, addresses, profile,
@@ -52,38 +54,49 @@ class AccountDashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Welcome back, ${(profile?.name ?? 'there').split(' ').first}',
-                    style: theme.textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Here's a snapshot of your GalleryZone activity.",
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 20),
-                  CollectorProfileCard(
-                    profile: profile,
-                    stats: orders == null || collection == null
-                        ? null
-                        : CollectorStats.of(
-                            orders: orders,
-                            collection: collection,
-                            wishlisted: wishlistCount,
-                            listedForResale:
-                                listings
-                                    ?.where(
-                                      (l) =>
-                                          l.status ==
-                                          ResaleListingStatus.active,
-                                    )
-                                    .length ??
-                                0,
-                          ),
+                  Reveal(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${greetingFor(DateTime.now())}, '
+                          '${(profile?.name ?? 'there').split(' ').first}',
+                          style: theme.textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Here's a snapshot of your GalleryZone activity.",
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  const _DiscoverBanner(),
-                  const SizedBox(height: 24),
+                  Reveal(
+                    index: 1,
+                    child: CollectorProfileCard(
+                      profile: profile,
+                      stats: orders == null || collection == null
+                          ? null
+                          : CollectorStats.of(
+                              orders: orders,
+                              collection: collection,
+                              wishlisted: wishlistCount,
+                              listedForResale:
+                                  listings
+                                      ?.where(
+                                        (l) =>
+                                            l.status ==
+                                            ResaleListingStatus.active,
+                                      )
+                                      .length ??
+                                  0,
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Reveal(index: 2, child: _DiscoverBanner()),
+                  const SizedBox(height: 28),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -122,10 +135,14 @@ class AccountDashboardScreen extends ConsumerWidget {
                       style: theme.textTheme.bodySmall,
                     )
                   else
-                    for (final order in recent.take(3))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: OrderRow(order: order),
+                    for (final (i, order) in recent.take(3).indexed)
+                      Reveal(
+                        key: ValueKey('reveal-order-${order.id}'),
+                        index: 3 + i,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: OrderRow(order: order),
+                        ),
                       ),
                 ],
               ),
@@ -225,13 +242,47 @@ class CollectorProfileCard extends StatelessWidget {
       );
     }
 
+    String count(double value) => '${value.round()}';
+    // Each figure opens the page it counts: a number that looks like a link
+    // and isn't one is a dead end.
+    const orders = '/account/orders';
     final cells = [
-      (LucideIcons.frame, 'Works owned', '${data.worksOwned}'),
-      (LucideIcons.shoppingBag, 'Orders placed', '${data.ordersPlaced}'),
-      (LucideIcons.truck, 'On the way', '${data.inProgress}'),
-      (LucideIcons.wallet, 'Total spent', formatInr(data.totalSpent)),
-      (LucideIcons.heart, 'Wishlisted', '${data.wishlisted}'),
-      (LucideIcons.tag, 'Listed for resale', '${data.listedForResale}'),
+      (
+        LucideIcons.frame,
+        'Works owned',
+        data.worksOwned.toDouble(),
+        count,
+        '/account/collection',
+      ),
+      (
+        LucideIcons.shoppingBag,
+        'Orders placed',
+        data.ordersPlaced.toDouble(),
+        count,
+        orders,
+      ),
+      (
+        LucideIcons.truck,
+        'On the way',
+        data.inProgress.toDouble(),
+        count,
+        orders,
+      ),
+      (LucideIcons.wallet, 'Total spent', data.totalSpent, formatInr, orders),
+      (
+        LucideIcons.heart,
+        'Wishlisted',
+        data.wishlisted.toDouble(),
+        count,
+        '/account/wishlist',
+      ),
+      (
+        LucideIcons.tag,
+        'Listed for resale',
+        data.listedForResale.toDouble(),
+        count,
+        '/account/resale',
+      ),
     ];
 
     return Container(
@@ -265,45 +316,56 @@ class CollectorProfileCard extends StatelessWidget {
                 spacing: 16,
                 runSpacing: 16,
                 children: [
-                  for (final (icon, label, value) in cells)
+                  for (final (icon, label, value, format, route) in cells)
                     SizedBox(
                       width: width,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                icon,
-                                size: 14,
-                                color: theme.textTheme.bodySmall?.color,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelSmall,
+                      child: Pressable(
+                        onTap: () => context.go(route),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  icon,
+                                  size: 14,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                ),
+                                Icon(
+                                  LucideIcons.chevronRight,
+                                  size: 12,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: CountUp(
+                                value: value,
+                                format: format,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: const [
+                                    FontFeature.liningFigures(),
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              value,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                 ],
@@ -336,24 +398,30 @@ class CollectorProfileCard extends StatelessWidget {
   }
 }
 
+/// "Good morning" until noon, "Good afternoon" until five, then "Good
+/// evening" — the greeting a collector opening the app actually expects.
+String greetingFor(DateTime now) => switch (now.hour) {
+  < 12 => 'Good morning',
+  < 17 => 'Good afternoon',
+  _ => 'Good evening',
+};
+
 class _DiscoverBanner extends StatelessWidget {
   const _DiscoverBanner();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: () => context.push('/marketplace'),
+    return Pressable(
+      onTap: () => context.go(customerShopPath),
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Container(
+      color: Color.alphaBlend(
+        theme.colorScheme.primary.withValues(alpha: 0.05),
+        theme.colorScheme.surface,
+      ),
+      side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-          ),
-        ),
         child: Row(
           children: [
             Icon(

@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/artwork.dart';
@@ -230,7 +231,7 @@ class PortfolioScreen extends ConsumerWidget {
                       child: const Text('Try again'),
                     ),
                   )
-                : const Center(child: CircularProgressIndicator())
+                : const PageSkeleton()
           : visible.isEmpty
           ? const EmptyState(
               icon: LucideIcons.images,

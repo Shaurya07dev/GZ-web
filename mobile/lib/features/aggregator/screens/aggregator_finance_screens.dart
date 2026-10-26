@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
@@ -55,7 +56,7 @@ class _AggregatorSettlementsScreenState
       return Scaffold(
         appBar: AppBar(title: const Text('Settlements')),
         body: error == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const PageSkeleton()
             : EmptyState(
                 icon: LucideIcons.triangleAlert,
                 title: "Couldn't load your settlements",

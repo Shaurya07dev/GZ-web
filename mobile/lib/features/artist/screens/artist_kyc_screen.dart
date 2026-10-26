@@ -8,6 +8,7 @@ import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/input_formatters.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/postal.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/mock/seed/artist_seed.dart' show currentArtistId;
@@ -61,7 +62,7 @@ class ArtistKycScreen extends ConsumerWidget {
                 child: Text(profile.isLoading ? 'Trying again…' : 'Try again'),
               ),
             )
-          : const Center(child: CircularProgressIndicator()),
+          : const PageSkeleton(),
     );
   }
 }

@@ -73,6 +73,12 @@ final customerMenu = <PortalMenuSection>[
     title: 'Account',
     items: [
       PortalMenuItem(
+        icon: LucideIcons.frame,
+        label: 'Collection',
+        subtitle: 'The works you own, with their passports',
+        route: '/account/collection',
+      ),
+      PortalMenuItem(
         icon: LucideIcons.circleUserRound,
         label: 'Profile',
         subtitle: 'Name, email and phone',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/models/artwork.dart';
 import '../../data/models/auth.dart';
 import '../../features/auth/providers/auth_providers.dart';
 import '../../features/auth/role_options.dart';
@@ -64,6 +65,7 @@ import '../../features/marketplace/screens/marketplace_screen.dart';
 import '../../features/marketplace/screens/passport_screen.dart';
 import '../../features/ownership/screens/transfer_accept_screen.dart';
 import '../../features/splash/splash_screen.dart';
+import '../theme/app_theme.dart';
 
 /// Sections a signed-in role owns. Port of `proxy.ts`'s `GUARDED_PREFIXES`
 /// minus `/admin`, which never mounts on mobile.
@@ -100,6 +102,33 @@ String? redirectFor(Role? role, String location) {
   if (prefix != null && !role.home.startsWith(prefix)) return role.home;
   return null;
 }
+
+/// Arriving somewhere new rather than going deeper — the launch landing on
+/// sign-in, sign-in landing on a portal, signing out. These cross-fade with a
+/// slight settle; pushes within a section keep the platform's sideways slide.
+Page<void> _arrivalPage(GoRouterState state, Widget child) =>
+    CustomTransitionPage<void>(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 500),
+      reverseTransitionDuration: AppMotion.medium,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final settle = CurvedAnimation(
+          parent: animation,
+          curve: AppMotion.enter,
+        );
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: animation,
+            curve: const Interval(0, 0.7, curve: Curves.easeOut),
+          ),
+          child: ScaleTransition(
+            scale: Tween(begin: 0.97, end: 1.0).animate(settle),
+            child: child,
+          ),
+        );
+      },
+    );
 
 final routerProvider = Provider<GoRouter>((ref) {
   // GoRouter is built once and kept — it can't be rebuilt on sign-in/out
@@ -155,13 +184,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: LoginScreen.path,
-        builder: (context, state) =>
-            LoginScreen(next: state.uri.queryParameters['next']),
+        pageBuilder: (context, state) => _arrivalPage(
+          state,
+          LoginScreen(next: state.uri.queryParameters['next']),
+        ),
       ),
       GoRoute(
         path: RegisterScreen.path,
-        builder: (context, state) => RegisterScreen(
-          initialRole: RoleX.fromId(state.uri.queryParameters['role']),
+        pageBuilder: (context, state) => _arrivalPage(
+          state,
+          RegisterScreen(
+            initialRole: RoleX.fromId(state.uri.queryParameters['role']),
+          ),
         ),
       ),
       GoRoute(
@@ -190,8 +224,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: ArtworkDetailScreen.path,
-        builder: (context, state) =>
-            ArtworkDetailScreen(artworkId: state.pathParameters['artworkId']!),
+        builder: (context, state) => ArtworkDetailScreen(
+          artworkId: state.pathParameters['artworkId']!,
+          // A card hands over the piece it already has; a deep link has none.
+          preview: switch (state.extra) {
+            final Artwork artwork => artwork,
+            _ => null,
+          },
+        ),
       ),
       GoRoute(
         path: ArtistsDirectoryScreen.path,
@@ -253,10 +293,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // The customer's real shell: five branches, each with its own
       // navigator, so switching tabs (or resizing between the bottom bar and
-      // the rail) keeps each branch's scroll position and stack.
+      // the rail) keeps each branch's scroll position and stack. Shop is the
+      // marketplace itself — browsing is what a collector opens the app for,
+      // so it is a tab, not a banner on the account page.
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            CustomerShell(navigationShell: navigationShell),
+        pageBuilder: (context, state, navigationShell) => _arrivalPage(
+          state,
+          CustomerShell(navigationShell: navigationShell),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -286,7 +330,25 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'support',
                     builder: (context, state) => const SupportScreen(),
                   ),
+                  // The works a collector owns: reached from the account's
+                  // own figures and from More, not a tab of its own.
+                  GoRoute(
+                    path: 'collection',
+                    builder: (context, state) => const CollectionScreen(),
+                  ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: customerShopPath,
+                builder: (context, state) => MarketplaceScreen(
+                  inShell: true,
+                  initialCategory: state.uri.queryParameters['category'],
+                  initialQuery: state.uri.queryParameters['q'],
+                ),
               ),
             ],
           ),
@@ -303,14 +365,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: CollectionScreen.path,
-                builder: (context, state) => const CollectionScreen(),
               ),
             ],
           ),
@@ -335,8 +389,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       // The artist portal: four branches, everything else pushed onto the
       // Dashboard branch so the shell stays visible.
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            ArtistShell(navigationShell: navigationShell),
+        pageBuilder: (context, state, navigationShell) =>
+            _arrivalPage(state, ArtistShell(navigationShell: navigationShell)),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -448,8 +502,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // The aggregator portal: four branches, everything else pushed onto
       // the Dashboard branch so the shell stays visible.
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            AggregatorShell(navigationShell: navigationShell),
+        pageBuilder: (context, state, navigationShell) => _arrivalPage(
+          state,
+          AggregatorShell(navigationShell: navigationShell),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [

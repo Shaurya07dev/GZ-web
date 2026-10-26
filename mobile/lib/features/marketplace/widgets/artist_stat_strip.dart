@@ -149,7 +149,10 @@ class _StatCell extends StatelessWidget {
               cell.value,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
+                fontFeatures: const [
+                  FontFeature.liningFigures(),
+                  FontFeature.tabularFigures(),
+                ],
               ),
             ),
             if (cell.hint != null)

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#0B0A08</color>
+    <!-- The app's page colour (AppColors.lightBackground). The window shows it behind Flutter,
+         so a keyboard resize or a page transition never flashes white (or black in dark mode). -->
+    <color name="page_background">#F3EFE9</color>
 </resources>

@@ -28,10 +28,14 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
+    <!-- enableOnBackInvokedCallback: Android 13+ predictive back. A back swipe peeks at the
+         page underneath (Flutter's PredictiveBackPageTransitionsBuilder draws it) instead of
+         jumping there when the finger lifts. -->
     <application
         android:label="GalleryZone"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

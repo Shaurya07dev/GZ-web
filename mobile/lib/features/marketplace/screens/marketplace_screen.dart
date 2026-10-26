@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/artwork_filters.dart';
@@ -18,6 +20,7 @@ import '../../marketing/screens/about_screen.dart';
 import '../filter_options.dart';
 import '../providers/marketplace_providers.dart';
 import '../widgets/artwork_card.dart';
+import '../widgets/halo_reel.dart';
 import 'artists_directory_screen.dart';
 import 'marketplace_filter_sheet.dart';
 
@@ -29,13 +32,23 @@ import 'marketplace_filter_sheet.dart';
 /// bottom sheet and a list that keeps loading as it is scrolled; the filter
 /// model, defaults and reset semantics are the website's.
 class MarketplaceScreen extends ConsumerStatefulWidget {
-  const MarketplaceScreen({super.key, this.initialCategory, this.initialQuery});
+  const MarketplaceScreen({
+    super.key,
+    this.initialCategory,
+    this.initialQuery,
+    this.inShell = false,
+  });
 
   static const path = '/marketplace';
   static const defaultFilters = defaultMarketplaceFilters;
 
   final String? initialCategory;
   final String? initialQuery;
+
+  /// Shown as the collector's Shop tab rather than as a page of its own. The
+  /// tab bar is the way back to their account there, so the app bar drops its
+  /// account button.
+  final bool inShell;
 
   @override
   ConsumerState<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -117,13 +130,28 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   /// A rank in the guide filters the catalogue to it and brings it into view.
   void _pickRank(ArtworkRarity rank) {
     _apply(_filters.copyWith(rarity: rank));
+    _showCatalog();
+  }
+
+  /// "Clear all filters" from the empty state, far down the page: the results
+  /// come back above where the reader is, so take them there.
+  void _clearFromEmpty() {
+    _apply(MarketplaceScreen.defaultFilters);
+    _showCatalog(ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+  }
+
+  void _showCatalog([
+    ScrollPositionAlignmentPolicy policy =
+        ScrollPositionAlignmentPolicy.explicit,
+  ]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = _catalogKey.currentContext;
       if (context != null && context.mounted) {
         Scrollable.ensureVisible(
           context,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
+          duration: AppMotion.medium,
+          curve: AppMotion.standard,
+          alignmentPolicy: policy,
         );
       }
     });
@@ -221,7 +249,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           // The way out of the shop. An artist signs in and lands HERE (as on the website),
           // so without this there was no way on to their dashboard, and a visitor had no
           // way to sign in at all.
-          const _AccountAction(),
+          if (!widget.inShell) const _AccountAction(),
           IconButton(
             onPressed: () => context.push(ArtistsDirectoryScreen.path),
             tooltip: 'Artists',
@@ -248,6 +276,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: _Hero(
+                    reel: switch (ref.watch(marketplaceOverviewProvider)) {
+                      AsyncData(:final value) => haloReelItems(value.artworks),
+                      _ => null,
+                    },
                     controller: _search,
                     onChanged: _onSearchChanged,
                     onSubmitted: _searchNow,
@@ -329,7 +361,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             title: 'No artworks match these filters',
             description: 'Remove a filter or search with different words to see more work.',
             action: OutlinedButton(
-              onPressed: () => _apply(MarketplaceScreen.defaultFilters),
+              onPressed: _clearFromEmpty,
               child: const Text('Clear all filters'),
             ),
           ),
@@ -343,9 +375,16 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
         sliver: SliverGrid(
           gridDelegate: ArtworkGridDelegate.of(context),
           delegate: SliverChildBuilderDelegate(
-            (context, index) => ArtworkCard(
-              key: ValueKey(loaded.artworks[index].id),
-              artwork: loaded.artworks[index],
+            (context, index) => Reveal(
+              key: ValueKey('reveal-${loaded.artworks[index].id}'),
+              // Only the first screenful cascades; cards further down are
+              // built just before they scroll in, and fade up as they arrive.
+              index: index < Reveal.maxStagger ? index : 0,
+              child: ArtworkCard(
+                key: ValueKey(loaded.artworks[index].id),
+                artwork: loaded.artworks[index],
+                hero: true,
+              ),
             ),
             childCount: loaded.artworks.length,
           ),
@@ -422,6 +461,7 @@ class _AccountAction extends ConsumerWidget {
 
 class _Hero extends StatelessWidget {
   const _Hero({
+    required this.reel,
     required this.controller,
     required this.onChanged,
     required this.onSubmitted,
@@ -430,6 +470,9 @@ class _Hero extends StatelessWidget {
     required this.onSelectCategory,
   });
 
+  /// The paintings riding the halo reel; null until the catalogue has loaded,
+  /// so the ring never swaps its paintings out from under the eye.
+  final List<HaloReelItem>? reel;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
@@ -439,41 +482,39 @@ class _Hero extends StatelessWidget {
   /// Null is "All".
   final ValueChanged<String?> onSelectCategory;
 
+  static const _reelHeight = 168.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final reel = this.reel;
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.only(top: 4, bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The website's halo reel, leading as it does there: the shop opens
+          // on paintings rather than on a paragraph about them.
+          SizedBox(
+            height: _reelHeight,
+            child: reel == null
+                ? null
+                : Reveal(
+                    key: const ValueKey('halo-reel'),
+                    child: HaloReel(items: reel, height: _reelHeight),
+                  ),
+          ),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ORIGINAL ART. REAL PEOPLE. MEANINGFUL STORIES.',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.tertiary,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
                   'Discover original art from independent artists',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     height: 1.12,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Explore unique paintings, sculptures and more from talented artists across India and beyond.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
-                    color: theme.textTheme.bodySmall?.color,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -600,31 +641,47 @@ class _CategoryPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final duration = motionOf(context) ? AppMotion.medium : Duration.zero;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Semantics(
         button: true,
         selected: active,
-        child: Material(
-          color: active ? theme.colorScheme.primary : Colors.transparent,
-          shape: StadiumBorder(
-            side: BorderSide(
-              color: active ? Colors.transparent : theme.colorScheme.outline,
+        child: AnimatedContainer(
+          duration: duration,
+          curve: AppMotion.standard,
+          decoration: ShapeDecoration(
+            color: active
+                ? theme.colorScheme.primary
+                : theme.colorScheme.primary.withValues(alpha: 0),
+            shape: StadiumBorder(
+              side: BorderSide(
+                color: active
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline,
+              ),
             ),
           ),
-          child: InkWell(
-            customBorder: const StadiumBorder(),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Center(
-                child: Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: active
-                        ? _onGold
-                        : theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w500,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () {
+                if (!active) HapticFeedback.selectionClick();
+                onTap();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: AnimatedDefaultTextStyle(
+                    duration: duration,
+                    style: theme.textTheme.labelLarge!.copyWith(
+                      color: active
+                          ? _onGold
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                    child: Text(label),
                   ),
                 ),
               ),
@@ -1011,6 +1068,7 @@ class _RankCard extends StatelessWidget {
                                         alpha: 0.7,
                                       ),
                                 fontFeatures: const [
+                                  FontFeature.liningFigures(),
                                   FontFeature.tabularFigures(),
                                 ],
                               ),

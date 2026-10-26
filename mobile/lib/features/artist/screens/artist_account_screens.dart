@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/auth.dart' show ForgotPasswordInput;
@@ -125,7 +126,7 @@ class ArtistMessagesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: messages.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your messages",
@@ -294,7 +295,7 @@ class ArtistSettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: settings == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const PageSkeleton()
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [

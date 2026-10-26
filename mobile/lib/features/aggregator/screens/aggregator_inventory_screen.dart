@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/pricing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
@@ -106,7 +107,7 @@ class _AggregatorBrowseScreenState
     return Scaffold(
       appBar: AppBar(title: const Text('Browse GalleryZone')),
       body: inventory.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.packageSearch,
           title: "Couldn't load inventory",

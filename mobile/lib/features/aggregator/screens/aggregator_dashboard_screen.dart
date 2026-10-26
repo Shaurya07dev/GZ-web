@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/auth.dart';
@@ -67,8 +68,8 @@ class AggregatorDashboardScreen extends ConsumerWidget {
             ContentWidth(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(name, style: theme.textTheme.headlineSmall),
+                children: revealInOrder([
+                  Text(name, style: theme.textTheme.headlineMedium),
                   const SizedBox(height: 4),
                   Text(
                     'Reservations, sales and commission at a glance.',
@@ -132,7 +133,7 @@ class AggregatorDashboardScreen extends ConsumerWidget {
                   const SettlementMechanicsNotice(),
                   const SizedBox(height: 24),
                   const _RecentActivity(),
-                ],
+                ]),
               ),
             ),
           ],
@@ -175,23 +176,19 @@ class _Kpi extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           if (value == null && !failed)
-            const SizedBox(
-              height: 22,
-              width: 22,
-              child: Padding(
-                padding: EdgeInsets.all(3),
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
+            const Shimmer(child: SkeletonBlock(width: 84, height: 26))
           else
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: CountUpText(
                 value ?? '—',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontFeatures: const [
+                    FontFeature.liningFigures(),
+                    FontFeature.tabularFigures(),
+                  ],
                   color: value == null
                       ? theme.colorScheme.onSurfaceVariant
                       : (gold ? theme.colorScheme.tertiary : null),
@@ -352,7 +349,10 @@ class _SalesConversion extends StatelessWidget {
               rate == null ? '—' : '$rate%',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
+                fontFeatures: const [
+                  FontFeature.liningFigures(),
+                  FontFeature.tabularFigures(),
+                ],
                 color: rate == null
                     ? theme.colorScheme.onSurfaceVariant
                     : theme.colorScheme.tertiary,

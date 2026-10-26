@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/order.dart';
 import '../../account/widgets/order_widgets.dart';
@@ -35,7 +36,7 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
     final orders = ref.watch(artistOrdersProvider);
 
     return orders.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PageSkeleton(),
       error: (error, stack) => EmptyState(
         icon: LucideIcons.packageSearch,
         title: "Couldn't load your orders",

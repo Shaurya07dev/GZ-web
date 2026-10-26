@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -101,7 +102,7 @@ class _ArtistArtworksScreenState extends ConsumerState<ArtistArtworksScreen> {
         label: const Text('List new artwork'),
       ),
       body: artworks.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -214,6 +215,7 @@ class _Board extends ConsumerWidget {
                               '${countOf(option)}',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontFeatures: const [
+                                  FontFeature.liningFigures(),
                                   FontFeature.tabularFigures(),
                                 ],
                               ),

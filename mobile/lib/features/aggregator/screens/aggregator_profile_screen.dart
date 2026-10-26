@@ -8,6 +8,7 @@ import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/input_formatters.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/postal.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
@@ -62,7 +63,7 @@ class AggregatorProfileScreen extends ConsumerWidget {
                   child: const Text('Try again'),
                 ),
               )
-            : const Center(child: CircularProgressIndicator()),
+            : const PageSkeleton(),
       );
     }
 
@@ -286,6 +287,7 @@ class _ProfileSummary extends ConsumerWidget {
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w600,
                               fontFeatures: const [
+                                FontFeature.liningFigures(),
                                 FontFeature.tabularFigures(),
                               ],
                             ),

@@ -156,6 +156,18 @@ void main() {
     await MockDb.init();
   });
 
+  testWidgets('the default address starts selected, so one tap moves on', (
+    tester,
+  ) async {
+    _phone(tester);
+    await tester.pumpWidget(_app(_Checkout(quote: _quote())));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continue to review'));
+    await tester.pumpAndSettle();
+    expect(find.text('Review your order'), findsOneWidget);
+  });
+
   testWidgets(
     "the review shows the server's quote - fee, the GST on it, delivery and total",
     (tester) async {

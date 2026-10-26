@@ -19,13 +19,21 @@ class _TestSession extends SessionNotifier {
 /// The offline demo's Sign-in screen has one tap per portal: Demo Artist,
 /// Demo Aggregator, Demo Customer. Against the real API they are not drawn.
 void main() {
-  Future<GoRouter> pumpLogin(WidgetTester tester, {bool remote = false}) async {
+  Future<GoRouter> pumpLogin(
+    WidgetTester tester, {
+    bool remote = false,
+    String? next,
+  }) async {
     final router = GoRouter(
       initialLocation: LoginScreen.path,
       routes: [
-        GoRoute(path: LoginScreen.path, builder: (_, _) => const LoginScreen()),
+        GoRoute(
+          path: LoginScreen.path,
+          builder: (_, _) => LoginScreen(next: next),
+        ),
         for (final role in Role.values)
           GoRoute(path: role.home, builder: (_, _) => Text('home ${role.id}')),
+        GoRoute(path: '/checkout', builder: (_, _) => const Text('checkout')),
       ],
     );
     addTearDown(router.dispose);
@@ -70,6 +78,21 @@ void main() {
       expect(find.text('home ${option.role.id}'), findsOneWidget);
     });
   }
+
+  testWidgets('sent here mid-purchase, a demo sign-in goes back to checkout', (
+    tester,
+  ) async {
+    final router = await pumpLogin(tester, next: '/checkout?artworkId=aw-1');
+
+    await tester.tap(find.text('Demo Customer'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.toString(),
+      '/checkout?artworkId=aw-1',
+    );
+    expect(find.text('checkout'), findsOneWidget);
+  });
 
   testWidgets('against the real API there are no demo buttons', (tester) async {
     await pumpLogin(tester, remote: true);

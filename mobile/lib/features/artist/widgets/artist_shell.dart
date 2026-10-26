@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,6 +33,7 @@ class ArtistShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   void _goBranch(int index) {
+    HapticFeedback.selectionClick();
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -40,20 +43,18 @@ class ArtistShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final size = WindowSize.of(context);
+    final body = BranchFade(
+      index: navigationShell.currentIndex,
+      child: navigationShell,
+    );
 
     if (size.isCompact) {
       return Scaffold(
-        body: navigationShell,
-        bottomNavigationBar: NavigationBar(
+        body: body,
+        bottomNavigationBar: ShellNavigationBar(
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: _goBranch,
-          destinations: [
-            for (final destination in artistDestinations)
-              NavigationDestination(
-                icon: Icon(destination.icon),
-                label: destination.label,
-              ),
-          ],
+          destinations: artistDestinations,
         ),
       );
     }
@@ -85,7 +86,7 @@ class ArtistShell extends ConsumerWidget {
             ],
           ),
           const VerticalDivider(width: 1),
-          Expanded(child: navigationShell),
+          Expanded(child: body),
         ],
       ),
     );

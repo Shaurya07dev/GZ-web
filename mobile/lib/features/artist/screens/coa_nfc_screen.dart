@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/verify_url.dart';
 import '../../../data/models/artwork.dart';
@@ -38,7 +39,7 @@ class CoaNfcScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('COA & NFC')),
       body: artworks.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your certificates",
@@ -450,7 +451,7 @@ class CertificatePreviewScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Certificate of Authenticity')),
       body: passport.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "The passport didn't load",

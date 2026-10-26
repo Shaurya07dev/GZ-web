@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/customer.dart';
@@ -33,7 +34,7 @@ class ResaleScreen extends ConsumerWidget {
           (collection.isLoading || listings.isLoading) &&
               !collection.hasValue &&
               !listings.hasValue
-          ? const Center(child: CircularProgressIndicator())
+          ? const PageSkeleton()
           : (collection.hasError || listings.hasError) &&
                 !(collection.hasValue && listings.hasValue)
           ? EmptyState(

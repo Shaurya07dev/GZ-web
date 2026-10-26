@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/pricing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
@@ -40,7 +41,7 @@ class AggregatorHoldingScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Holding')),
       body: holding.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.galleryVerticalEnd,
           title: "Couldn't load this holding",

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../shell/brand_mark.dart';
 import '../validators.dart';
@@ -51,8 +53,11 @@ class AuthCrest extends StatelessWidget {
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
+            // Regular weight: the italic is bundled at 400 only, and a heavier
+            // request would be faked by smearing it.
             style: theme.textTheme.titleMedium?.copyWith(
               fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w400,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
             ),
             children: [
@@ -68,10 +73,17 @@ class AuthCrest extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          height: 1,
-          width: 40,
-          color: theme.colorScheme.primary.withValues(alpha: 0.6),
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 40),
+          duration: motionOf(context)
+              ? const Duration(milliseconds: 900)
+              : Duration.zero,
+          curve: AppMotion.enter,
+          builder: (context, width, _) => Container(
+            height: 1,
+            width: width,
+            color: theme.colorScheme.primary.withValues(alpha: 0.6),
+          ),
         ),
       ],
     );
@@ -344,10 +356,15 @@ class _RoleToggleButton extends StatelessWidget {
       selected: selected,
       button: true,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          if (!selected) HapticFeedback.selectionClick();
+          onTap();
+        },
         borderRadius: BorderRadius.circular(AppRadius.xl4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: AnimatedContainer(
+          duration: motionOf(context) ? AppMotion.medium : Duration.zero,
+          curve: AppMotion.standard,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           decoration: BoxDecoration(
             color: background,
             borderRadius: BorderRadius.circular(AppRadius.xl4),
@@ -563,16 +580,20 @@ class AuthSubmitButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 44,
+      height: 52,
       child: FilledButton(
         onPressed: isLoading ? null : onPressed,
-        child: isLoading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(label),
+        child: AnimatedSwitcher(
+          duration: AppMotion.fast,
+          child: isLoading
+              ? const SizedBox(
+                  key: ValueKey('busy'),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(label, key: const ValueKey('label')),
+        ),
       ),
     );
   }

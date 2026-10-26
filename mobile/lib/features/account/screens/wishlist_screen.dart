@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
 import '../../marketplace/widgets/artist_avatar.dart';
 import '../../marketplace/widgets/artwork_card.dart';
+import '../widgets/customer_shell.dart';
 
 /// Port of `app/account/wishlist/page.tsx`, widened: the collector keeps
 /// both saved artworks and followed artists here, on two segments, rather
@@ -83,7 +85,7 @@ class _SavedArtworks extends ConsumerWidget {
     final artworks = ref.watch(artworksByIdsProvider(key));
 
     return artworks.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PageSkeleton(),
       error: (error, stack) => EmptyState(
         icon: LucideIcons.triangleAlert,
         title: "Couldn't load your saved work",
@@ -106,7 +108,7 @@ class _SavedArtworks extends ConsumerWidget {
             title: 'Nothing saved yet',
             description: 'Tap the heart on any artwork to keep it here while you decide.',
             action: OutlinedButton(
-              onPressed: () => context.push('/marketplace'),
+              onPressed: () => context.go(customerShopPath),
               child: const Text('Browse the marketplace'),
             ),
           );
@@ -131,7 +133,7 @@ class _FollowedArtists extends ConsumerWidget {
     final artists = ref.watch(artistsProvider);
 
     return artists.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PageSkeleton(),
       error: (error, stack) => EmptyState(
         icon: LucideIcons.triangleAlert,
         title: "Couldn't load the artists you follow",
@@ -154,7 +156,7 @@ class _FollowedArtists extends ConsumerWidget {
                 'Follow an artist from their profile to keep their new work '
                 'together in one place.',
             action: OutlinedButton(
-              onPressed: () => context.push('/marketplace'),
+              onPressed: () => context.go(customerShopPath),
               child: const Text('Find an artist'),
             ),
           );

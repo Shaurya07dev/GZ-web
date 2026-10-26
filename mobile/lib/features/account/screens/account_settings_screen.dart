@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 import '../../../data/models/customer.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../auth/screens/login_screen.dart';
@@ -85,7 +86,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: profile.isLoading && !_isSeeded
-          ? const Center(child: CircularProgressIndicator())
+          ? const PageSkeleton()
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [

@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../data/mock/seed/artist_seed.dart' show currentArtistId;
 import '../../../data/models/artist.dart';
 import '../../../data/models/artist_network.dart';
@@ -34,7 +35,7 @@ class ArtistProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Artist')),
       body: artist.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load this profile",

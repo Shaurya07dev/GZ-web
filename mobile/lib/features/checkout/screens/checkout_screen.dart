@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/payments/payment_gateway.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
@@ -17,6 +18,7 @@ import '../../marketplace/widgets/artwork_card.dart';
 import '../../shell/payee_details.dart';
 import '../../shell/price_breakdown.dart';
 import '../providers/checkout_providers.dart';
+import '../../account/widgets/customer_shell.dart';
 
 /// Port of `app/checkout/page.tsx` + `features/checkout/*`: address, review,
 /// confirm - on one route, as on the website.
@@ -69,6 +71,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     setState(() => _step = steps[steps.indexOf(_step) + 1]);
   }
 
+  /// Checkout opened straight after signing in has nothing behind it, so the
+  /// app bar offers a way out instead of leaving the buyer with only the
+  /// system back gesture, which would close the app. It goes back to
+  /// browsing with the piece reopened on top, so nothing is lost.
+  AppBar _appBar(BuildContext context) => AppBar(
+    title: const Text('Checkout'),
+    leading: Navigator.of(context).canPop()
+        ? null
+        : IconButton(
+            tooltip: 'Close checkout',
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              final artworkId = widget.artworkId;
+              context.go(marketplaceFor(ref.read(sessionProvider)));
+              if (artworkId != null && artworkId.isNotEmpty) {
+                context.push('/marketplace/$artworkId');
+              }
+            },
+          ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final artworkId = widget.artworkId;
@@ -83,18 +106,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         role != null &&
         role != Role.customer) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Checkout')),
+        appBar: _appBar(context),
         body: _CollectorOnly(artworkId: artworkId),
       );
     }
 
     final artwork = ref.watch(artworkProvider(artworkId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
+      appBar: _appBar(context),
       body: artwork.when(
-        loading: () => _artwork != null
-            ? _flow(_artwork!)
-            : const Center(child: CircularProgressIndicator()),
+        loading: () =>
+            _artwork != null ? _flow(_artwork!) : const PageSkeleton(),
         error: (error, stack) => _artwork != null
             ? _flow(_artwork!)
             : EmptyState(
@@ -121,10 +143,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _nothingToCheckOut(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Checkout')),
-    body: _nothingToCheckOutBody(context),
-  );
+  Widget _nothingToCheckOut(BuildContext context) =>
+      Scaffold(appBar: _appBar(context), body: _nothingToCheckOutBody(context));
 
   Widget _nothingToCheckOutBody(BuildContext context) => EmptyState(
     icon: LucideIcons.shoppingBag,
@@ -133,7 +153,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         "We couldn't find an artwork to buy. Head back to the marketplace "
         'and pick a piece to get started.',
     action: FilledButton(
-      onPressed: () => context.go('/marketplace'),
+      onPressed: () => context.go(marketplaceFor(ref.read(sessionProvider))),
       child: const Text('Browse the marketplace'),
     ),
   );
@@ -414,6 +434,7 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
   bool _makeDefault = false;
   bool _isAdding = false;
   bool _isSaving = false;
+  bool _preselected = false;
 
   @override
   void dispose() {
@@ -462,6 +483,22 @@ class _AddressStepState extends ConsumerState<_AddressStep> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final addresses = ref.watch(addressesProvider);
+    // The address marked default (or the only one there is) starts selected,
+    // so the usual purchase is one tap on Continue. With several and none
+    // marked, the buyer chooses: a guess could ship a painting to the wrong
+    // city.
+    final saved = addresses.value;
+    if (!_preselected && widget.selectedId == null && saved != null) {
+      _preselected = true;
+      final initial = saved.length == 1
+          ? saved.single
+          : saved.where((address) => address.isDefault).firstOrNull;
+      if (initial != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && widget.selectedId == null) widget.onSelect(initial);
+        });
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -903,21 +940,27 @@ class _ConfirmStep extends ConsumerWidget {
 
     if (order != null) {
       final payment = order.payment;
+      // The purchase is the moment the whole app leads up to, so it is marked
+      // as one: the success mark plays, then the words settle in beneath it.
       return Column(
         children: [
-          Icon(
-            LucideIcons.circleCheckBig,
-            size: 40,
-            color: theme.colorScheme.tertiary,
+          const SuccessMark(),
+          Reveal(
+            index: 4,
+            child: Text('Order placed', style: theme.textTheme.headlineMedium),
           ),
-          const SizedBox(height: 16),
-          Text('Order placed', style: theme.textTheme.headlineSmall),
           const SizedBox(height: 8),
-          Text(
-            '"${artwork.title}" is on its way to ${address.city}. We\'ll keep you '
-            'updated as it moves through packing and dispatch.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+          Reveal(
+            index: 5,
+            child: Text(
+              '"${artwork.title}" is on its way to ${address.city}. We\'ll keep you '
+              'updated as it moves through packing and dispatch.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                height: 1.5,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -943,7 +986,7 @@ class _ConfirmStep extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => context.go('/marketplace'),
+            onPressed: () => context.go(customerShopPath),
             child: const Text('Continue browsing'),
           ),
         ],

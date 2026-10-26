@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart' show EmptyState;
 import '../providers/content_providers.dart';
@@ -20,7 +21,7 @@ class BlogDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Blog')),
       body: blog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "This post didn't load",

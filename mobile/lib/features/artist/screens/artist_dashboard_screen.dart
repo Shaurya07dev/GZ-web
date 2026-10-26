@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/mock/seed/artist_seed.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/artwork.dart';
@@ -77,7 +79,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
             ContentWidth(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+                children: revealInOrder([
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -87,7 +89,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
                           children: [
                             Text(
                               '${greeting(DateTime.now())}, $firstName',
-                              style: theme.textTheme.headlineSmall,
+                              style: theme.textTheme.headlineMedium,
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -132,14 +134,16 @@ class ArtistDashboardScreen extends ConsumerWidget {
                       ),
                     )
                   else if (artworks == null)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(),
-                      ),
+                    const Shimmer(
+                      child: SkeletonBlock(height: 180, radius: AppRadius.lg),
                     )
                   else
-                    _ArtworkOverview(artworks: artworks),
+                    // Keyed apart from its placeholder, so it eases in when
+                    // the artworks land rather than swapping in a frame.
+                    Reveal(
+                      key: const ValueKey('artwork-overview'),
+                      child: _ArtworkOverview(artworks: artworks),
+                    ),
                   const SizedBox(height: 16),
                   PortalCard(
                     gold: true,
@@ -180,36 +184,49 @@ class ArtistDashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   const _NeedsAttentionCard(),
                   const SizedBox(height: 16),
-                  kpis.when(
-                    loading: () => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: CircularProgressIndicator(),
+                  Reveal(
+                    key: ValueKey(kpis.hasValue),
+                    child: kpis.when(
+                      loading: () => Shimmer(
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < 3; i++)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 12),
+                                child: SkeletonBlock(
+                                  height: 92,
+                                  radius: AppRadius.lg,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    error: (error, stack) => PortalCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      error: (error, stack) => PortalCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Couldn't load your figures.",
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  ref.invalidate(artistKpisProvider),
+                              child: const Text('Try again'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      data: (list) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            "Couldn't load your figures.",
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          TextButton(
-                            onPressed: () => ref.invalidate(artistKpisProvider),
-                            child: const Text('Try again'),
-                          ),
+                          for (final kpi in list)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _KpiCard(kpi: kpi),
+                            ),
                         ],
                       ),
-                    ),
-                    data: (list) => Column(
-                      children: [
-                        for (final kpi in list)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _KpiCard(kpi: kpi),
-                          ),
-                      ],
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -241,7 +258,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     const CommunityTeaser(),
                   ],
-                ],
+                ]),
               ),
             ),
           ],
@@ -529,11 +546,15 @@ class _ArtworkOverview extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text('Your artworks', style: theme.textTheme.titleMedium),
-              Text(
-                '${artworks.length}',
+              CountUp(
+                value: artworks.length.toDouble(),
+                format: (shown) => '${shown.round()}',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontFeatures: const [
+                    FontFeature.liningFigures(),
+                    FontFeature.tabularFigures(),
+                  ],
                 ),
               ),
             ],
@@ -555,7 +576,10 @@ class _ArtworkOverview extends StatelessWidget {
                     '${row.$2}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontFeatures: const [
+                        FontFeature.liningFigures(),
+                        FontFeature.tabularFigures(),
+                      ],
                     ),
                   ),
                 ],
@@ -592,11 +616,14 @@ class _KpiCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: CountUpText(
               kpi.value,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
+                fontFeatures: const [
+                  FontFeature.liningFigures(),
+                  FontFeature.tabularFigures(),
+                ],
               ),
             ),
           ),

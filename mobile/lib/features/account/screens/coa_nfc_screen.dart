@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
@@ -11,6 +12,7 @@ import '../../ownership/widgets/transfer_widgets.dart';
 import '../../shell/portal_widgets.dart';
 import '../providers/account_providers.dart';
 import 'collection_screen.dart' show NfcPill, PaperCertificate;
+import '../widgets/customer_shell.dart';
 
 /// A collector-facing index of every certificate, physical-tag state and
 /// ownership action. The collection detail keeps these controls too; this is
@@ -27,7 +29,7 @@ class CustomerCoaNfcScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('COA & NFC')),
       body: collection.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Certificates didn't load",
@@ -70,7 +72,7 @@ class CustomerCoaNfcScreen extends ConsumerWidget {
                         title: 'No certificates yet',
                         description: 'Once an order is delivered, its certificate and tag state appear here.',
                         action: OutlinedButton(
-                          onPressed: () => context.push('/marketplace'),
+                          onPressed: () => context.go(customerShopPath),
                           child: const Text('Browse the marketplace'),
                         ),
                       )

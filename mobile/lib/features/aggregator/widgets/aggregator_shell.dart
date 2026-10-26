@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,6 +38,7 @@ class AggregatorShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   void _goBranch(int index) {
+    HapticFeedback.selectionClick();
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
@@ -51,30 +54,29 @@ class AggregatorShell extends ConsumerWidget {
       roleLabel: menu.roleLabel,
       groups: menu.groups,
     );
+    final body = BranchFade(
+      index: navigationShell.currentIndex,
+      child: navigationShell,
+    );
 
     if (size.isCompact) {
       return Scaffold(
         endDrawer: drawer,
-        body: navigationShell,
+        body: body,
         // The Builder is what puts `Scaffold.of` below this Scaffold, so the
         // Profile destination can open the drawer this one owns.
         bottomNavigationBar: Builder(
-          builder: (context) => NavigationBar(
+          builder: (context) => ShellNavigationBar(
             selectedIndex: navigationShell.currentIndex,
-            onDestinationSelected: (index) =>
-                index == aggregatorDestinations.length
-                ? Scaffold.of(context).openEndDrawer()
-                : _goBranch(index),
-            destinations: [
-              for (final destination in [
-                ...aggregatorDestinations,
-                profileDestination,
-              ])
-                NavigationDestination(
-                  icon: Icon(destination.icon),
-                  label: destination.label,
-                ),
-            ],
+            onDestinationSelected: (index) {
+              if (index == aggregatorDestinations.length) {
+                HapticFeedback.selectionClick();
+                Scaffold.of(context).openEndDrawer();
+              } else {
+                _goBranch(index);
+              }
+            },
+            destinations: const [...aggregatorDestinations, profileDestination],
           ),
         ),
       );
@@ -115,7 +117,7 @@ class AggregatorShell extends ConsumerWidget {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: navigationShell),
+            Expanded(child: body),
           ],
         ),
       ),

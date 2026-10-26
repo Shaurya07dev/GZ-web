@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -6,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist.dart';
 import '../../../data/models/artwork.dart';
@@ -20,39 +24,161 @@ import '../widgets/social_glyphs.dart';
 /// synthesized from `artwork.verifiedArtist`) so the Gold ✦ tier can show
 /// where it applies.
 class ArtworkDetailScreen extends ConsumerWidget {
-  const ArtworkDetailScreen({super.key, required this.artworkId});
+  const ArtworkDetailScreen({super.key, required this.artworkId, this.preview});
 
   static const path = '/marketplace/:artworkId';
 
   final String artworkId;
 
+  /// The card's copy of the piece, when the page is opened from a grid. It is
+  /// drawn straight away — the photo flies into place and the page reads as
+  /// instant — while the fresh copy loads behind it.
+  final Artwork? preview;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final artwork = ref.watch(artworkProvider(artworkId));
+    final shown = artwork.hasValue ? artwork.value : preview;
+    final ready = shown != null && !artwork.hasError;
 
+    return _DetailScaffold(
+      title: ready ? shown.title : null,
+      bottomBar: ready ? _BuyBar(artwork: shown) : null,
+      body: ready
+          ? _ArtworkDetailBody(artwork: shown)
+          : artwork.when(
+              loading: () => const _DetailSkeleton(),
+              error: (error, stack) => EmptyState(
+                icon: LucideIcons.triangleAlert,
+                title: "Couldn't load this artwork",
+                description: authErrorMessage(error),
+                action: OutlinedButton(
+                  onPressed: () => ref.invalidate(artworkProvider(artworkId)),
+                  child: const Text('Try again'),
+                ),
+              ),
+              data: (data) {
+                if (data == null) {
+                  return const EmptyState(
+                    icon: LucideIcons.searchX,
+                    title: 'Artwork not found',
+                    description: 'This listing may have been removed.',
+                  );
+                }
+                return _ArtworkDetailBody(artwork: data);
+              },
+            ),
+    );
+  }
+}
+
+/// The page's frame. Its app bar says "Artwork" until the reader scrolls past
+/// the piece's own heading, then names the piece — the title comes along with
+/// them instead of leaving the screen.
+class _DetailScaffold extends StatefulWidget {
+  const _DetailScaffold({
+    required this.title,
+    required this.body,
+    this.bottomBar,
+  });
+
+  /// Null while there is no piece to name yet.
+  final String? title;
+  final Widget body;
+  final Widget? bottomBar;
+
+  @override
+  State<_DetailScaffold> createState() => _DetailScaffoldState();
+}
+
+class _DetailScaffoldState extends State<_DetailScaffold> {
+  final _pastHeading = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _pastHeading.dispose();
+    super.dispose();
+  }
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.depth == 0 && notification.metrics.axis == Axis.vertical) {
+      // The heading sits under the 4:5 photo; it has gone once the scroll
+      // clears the photo and the heading's few lines.
+      final photo = math.min(MediaQuery.sizeOf(context).width, 760.0) - 32;
+      _pastHeading.value = notification.metrics.pixels > photo * 1.25 + 110;
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.title;
     return Scaffold(
-      appBar: AppBar(title: const Text('Artwork')),
-      body: artwork.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => EmptyState(
-          icon: LucideIcons.triangleAlert,
-          title: "Couldn't load this artwork",
-          description: authErrorMessage(error),
-          action: OutlinedButton(
-            onPressed: () => ref.invalidate(artworkProvider(artworkId)),
-            child: const Text('Try again'),
+      appBar: AppBar(
+        title: title == null
+            ? const Text('Artwork')
+            : ValueListenableBuilder<bool>(
+                valueListenable: _pastHeading,
+                builder: (context, past, _) => AnimatedSwitcher(
+                  duration: AppMotion.medium,
+                  layoutBuilder: (current, previous) => Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [...previous, ?current],
+                  ),
+                  child: Text(
+                    past ? title : 'Artwork',
+                    key: ValueKey(past),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+      ),
+      bottomNavigationBar: widget.bottomBar,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: widget.body,
+      ),
+    );
+  }
+}
+
+/// The page's own shape while a deep link loads: the photo's frame, then the
+/// lines of its label.
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Loading artwork',
+      child: ExcludeSemantics(
+        child: Shimmer(
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: ContentWidth(
+              maxWidth: 728,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  AspectRatio(
+                    aspectRatio: 4 / 5,
+                    child: SkeletonBlock(radius: AppRadius.lg),
+                  ),
+                  SizedBox(height: 24),
+                  SkeletonBlock(width: 90, height: 11),
+                  SizedBox(height: 12),
+                  SkeletonBlock(width: 260, height: 30),
+                  SizedBox(height: 12),
+                  SkeletonBlock(width: 140, height: 14),
+                  SizedBox(height: 24),
+                  SkeletonBlock(width: 120, height: 26),
+                ],
+              ),
+            ),
           ),
         ),
-        data: (data) {
-          if (data == null) {
-            return const EmptyState(
-              icon: LucideIcons.searchX,
-              title: 'Artwork not found',
-              description: 'This listing may have been removed.',
-            );
-          }
-          return _ArtworkDetailBody(artwork: data);
-        },
       ),
     );
   }
@@ -76,8 +202,6 @@ class _ArtworkDetailBody extends ConsumerWidget {
     final siblings =
         ref.watch(artworksByArtistProvider(artwork.artistId)).value ?? [];
     final related = siblings.where((a) => a.id != artwork.id).take(4).toList();
-    final isWishlisted = ref.watch(wishlistProvider).contains(artwork.id);
-    final isAvailable = artwork.status == ArtworkStatus.marketplace;
 
     // One stacked column, capped: gallery + description + spec rows stretched
     // across a desktop window is unreadable, and a second wide-only layout
@@ -87,201 +211,199 @@ class _ArtworkDetailBody extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          _Gallery(images: artwork.images, fallbackUrl: artwork.thumbnailUrl),
+          _Gallery(
+            images: artwork.images,
+            fallbackUrl: artwork.thumbnailUrl,
+            heroTag: artworkHeroTag(artwork.id),
+          ),
           const SizedBox(height: 24),
-          Text(
-            humanize(artwork.category).toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.tertiary,
-              letterSpacing: 1.6,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            artwork.title,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Flexible(
-                child: InkWell(
-                  onTap: () => context.push('/artists/${artwork.artistId}'),
-                  child: Text(
-                    artwork.artistName,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: theme.colorScheme.tertiary,
-                    ),
+          // The photo is what flew in; the words settle in under it a beat
+          // later rather than racing it.
+          Reveal(
+            index: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  humanize(artwork.category).toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                    letterSpacing: 1.6,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              VerifiedBadge(
-                verification: artist?.verification ?? _noVerification,
-                small: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  PriceTag(
-                    amount: artwork.customerPrice,
-                    style: theme.textTheme.headlineSmall,
+                const SizedBox(height: 8),
+                Text(
+                  artwork.title,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 2),
-                  Text('incl. GST', style: theme.textTheme.labelSmall),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Flexible(
+                      child: InkWell(
+                        onTap: () =>
+                            context.push('/artists/${artwork.artistId}'),
+                        child: Text(
+                          artwork.artistName,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.tertiary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    VerifiedBadge(
+                      verification: artist?.verification ?? _noVerification,
+                      small: true,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PriceTag(
+                          amount: artwork.customerPrice,
+                          style: theme.textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 2),
+                        Text('incl. GST', style: theme.textTheme.labelSmall),
+                      ],
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+                if (artwork.verifiedArtist) ...[
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.badgeCheck,
+                        size: 14,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Sold by a verified GalleryZone artist.',
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Buying sits with the price, as on the website: at the end of the
-          // page it was a screen and a half below the fold.
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: isAvailable
-                        ? () =>
-                              context.push('/checkout?artworkId=${artwork.id}')
-                        : null,
-                    child: Text(_buyLabel(artwork.status)),
+                if (artwork.exclusive) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.sparkles,
+                        size: 14,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Exclusive to GalleryZone',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.tertiary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ],
+                const SizedBox(height: 20),
+                const Divider(),
+                _SpecGrid(artwork: artwork),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  artwork.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.6),
                 ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: () =>
-                      ref.read(wishlistProvider.notifier).toggle(artwork.id),
-                  icon: Icon(
-                    isWishlisted ? Icons.favorite : Icons.favorite_border,
-                    size: 18,
-                  ),
-                  label: Text(isWishlisted ? 'Wishlisted' : 'Wishlist'),
-                ),
-              ),
-            ],
-          ),
-          if (artwork.verifiedArtist) ...[
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.badgeCheck,
-                  size: 14,
-                  color: theme.colorScheme.tertiary,
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    'Sold by a verified GalleryZone artist.',
-                    style: theme.textTheme.labelSmall,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          if (artwork.exclusive) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Icon(
-                  LucideIcons.sparkles,
-                  size: 14,
-                  color: theme.colorScheme.tertiary,
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    'Exclusive to GalleryZone',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.tertiary,
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => context.push('/verify/${artwork.id}'),
+                    icon: const Icon(LucideIcons.scrollText, size: 14),
+                    label: const Text("View this artwork's digital passport"),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: theme.colorScheme.tertiary,
+                      textStyle: theme.textTheme.labelLarge,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 20),
-          const Divider(),
-          _SpecGrid(artwork: artwork),
-          const Divider(),
-          const SizedBox(height: 16),
-          Text(
-            artwork.description,
-            style: theme.textTheme.bodyMedium?.copyWith(height: 1.6),
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => context.push('/verify/${artwork.id}'),
-              icon: const Icon(LucideIcons.scrollText, size: 14),
-              label: const Text("View this artwork's digital passport"),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                foregroundColor: theme.colorScheme.tertiary,
-                textStyle: theme.textTheme.labelLarge,
-              ),
-            ),
-          ),
-          if (artwork.socialProofLinks.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Process & provenance', style: theme.textTheme.bodySmall),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final link in artwork.socialProofLinks)
-                  ActionChip(
-                    avatar: SocialGlyph(platform: link.platform, size: 14),
-                    label: Text(SocialGlyph.label(link.platform)),
-                    onPressed: () => openExternal(context, link.url),
+                if (artwork.socialProofLinks.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Process & provenance',
+                    style: theme.textTheme.bodySmall,
                   ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final link in artwork.socialProofLinks)
+                        ActionChip(
+                          avatar: SocialGlyph(
+                            platform: link.platform,
+                            size: 14,
+                          ),
+                          label: Text(SocialGlyph.label(link.platform)),
+                          onPressed: () => openExternal(context, link.url),
+                        ),
+                    ],
+                  ),
+                ],
+                if (related.isNotEmpty) ...[
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'More from ${artwork.artistName}',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    height:
+                        200 * 1.25 +
+                        ArtworkGridDelegate.textHeight *
+                            ArtworkGridDelegate.textScaleOf(context),
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: related.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 16),
+                      itemBuilder: (context, index) =>
+                          ArtworkCard(artwork: related[index], width: 200),
+                    ),
+                  ),
+                ],
               ],
             ),
-          ],
-          if (related.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
-            Text(
-              'More from ${artwork.artistName}',
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height:
-                  200 * 1.25 +
-                  ArtworkGridDelegate.textHeight *
-                      ArtworkGridDelegate.textScaleOf(context),
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: related.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 16),
-                itemBuilder: (context, index) =>
-                    ArtworkCard(artwork: related[index], width: 200),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );
   }
+}
+
+/// Buying, pinned to the foot of the page: in reach from the first photo to
+/// the last line of the description, beside the heart that saves it for later.
+class _BuyBar extends ConsumerWidget {
+  const _BuyBar({required this.artwork});
+
+  final Artwork artwork;
 
   static String _buyLabel(ArtworkStatus status) => switch (status) {
     ArtworkStatus.marketplace => 'Buy Now',
@@ -289,15 +411,82 @@ class _ArtworkDetailBody extends ConsumerWidget {
     ArtworkStatus.sold => 'Sold',
     _ => 'No longer available',
   };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isWishlisted = ref.watch(wishlistProvider).contains(artwork.id);
+    final isAvailable = artwork.status == ArtworkStatus.marketplace;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 728),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: FilledButton(
+                        onPressed: isAvailable
+                            ? () {
+                                HapticFeedback.lightImpact();
+                                context.push(
+                                  '/checkout?artworkId=${artwork.id}',
+                                );
+                              }
+                            : null,
+                        child: Text(_buyLabel(artwork.status)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        ref.read(wishlistProvider.notifier).toggle(artwork.id);
+                      },
+                      icon: WishlistHeart(saved: isWishlisted),
+                      label: Text(isWishlisted ? 'Wishlisted' : 'Wishlist'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Hero image + thumbnail strip, with tap-to-expand into a full-screen
 /// viewer (the web's zoom dialog).
 class _Gallery extends StatefulWidget {
-  const _Gallery({required this.images, required this.fallbackUrl});
+  const _Gallery({
+    required this.images,
+    required this.fallbackUrl,
+    required this.heroTag,
+  });
 
   final List<ArtworkImage> images;
   final String fallbackUrl;
+
+  /// Shared with the marketplace card the page was opened from, and with the
+  /// full-size viewer: the photo travels between all three.
+  final Object heroTag;
 
   @override
   State<_Gallery> createState() => _GalleryState();
@@ -320,66 +509,64 @@ class _GalleryState extends State<_Gallery> {
         GestureDetector(
           onTap: activeUrl.isEmpty
               ? null
-              : () => showDialog<void>(
-                  context: context,
-                  builder: (context) => Dialog.fullscreen(
-                    backgroundColor: Colors.black,
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: ArtworkImageView(
-                            url: activeUrl,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        SafeArea(
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ),
-                      ],
+              : () =>
+                    Navigator.of(context)
+                        .push(_FullSizeViewer.route(activeUrl, widget.heroTag)),
+          child: AspectRatio(
+            aspectRatio: 4 / 5,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Hero(
+                  tag: widget.heroTag,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    // A thumbnail tap cross-fades the photo instead of
+                    // swapping it in a single frame.
+                    child: AnimatedSwitcher(
+                      duration: motionOf(context)
+                          ? AppMotion.medium
+                          : Duration.zero,
+                      layoutBuilder: (current, previous) => Stack(
+                        fit: StackFit.expand,
+                        children: [...previous, ?current],
+                      ),
+                      child: ArtworkImageView(
+                        key: ValueKey(activeUrl),
+                        url: activeUrl,
+                      ),
                     ),
                   ),
                 ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            child: AspectRatio(
-              aspectRatio: 4 / 5,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ArtworkImageView(url: activeUrl),
-                  if (activeUrl.isNotEmpty)
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
+                if (activeUrl.isNotEmpty)
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface.withValues(
+                          alpha: 0.85,
                         ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withValues(
-                            alpha: 0.85,
+                        borderRadius: BorderRadius.circular(AppRadius.xl4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(LucideIcons.expand, size: 12),
+                          const SizedBox(width: 6),
+                          Text(
+                            'View full size',
+                            style: theme.textTheme.labelSmall,
                           ),
-                          borderRadius: BorderRadius.circular(AppRadius.xl4),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(LucideIcons.expand, size: 12),
-                            const SizedBox(width: 6),
-                            Text(
-                              'View full size',
-                              style: theme.textTheme.labelSmall,
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -392,8 +579,13 @@ class _GalleryState extends State<_Gallery> {
               itemCount: sorted.length,
               separatorBuilder: (context, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) => GestureDetector(
-                onTap: () => setState(() => _activeIndex = index),
-                child: Container(
+                onTap: () {
+                  if (index == _activeIndex) return;
+                  HapticFeedback.selectionClick();
+                  setState(() => _activeIndex = index);
+                },
+                child: AnimatedContainer(
+                  duration: AppMotion.fast,
                   width: 68,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
@@ -412,6 +604,63 @@ class _GalleryState extends State<_Gallery> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// The photo at full size on black, pinch to zoom and drag to look closer —
+/// the brushwork is the point of looking at a painting on a phone. The photo
+/// flies here from the gallery and back.
+class _FullSizeViewer extends StatelessWidget {
+  const _FullSizeViewer({required this.url, required this.heroTag});
+
+  final String url;
+  final Object heroTag;
+
+  static Route<void> route(String url, Object heroTag) =>
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierColor: Colors.black,
+        transitionDuration: AppMotion.slow,
+        reverseTransitionDuration: AppMotion.medium,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            _FullSizeViewer(url: url, heroTag: heroTag),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            FadeTransition(opacity: animation, child: child),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              maxScale: 5,
+              child: Center(
+                child: Hero(
+                  tag: heroTag,
+                  child: ArtworkImageView(url: url, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: IconButton(
+                tooltip: 'Close',
+                icon: const Icon(Icons.close, color: Colors.white),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

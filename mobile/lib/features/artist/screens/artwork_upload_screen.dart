@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/pricing.dart' as pricing;
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
@@ -474,7 +475,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Edit artwork')),
         body: _loadError == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const PageSkeleton()
             : EmptyState(
                 icon: LucideIcons.triangleAlert,
                 title: "Couldn't open this artwork",
@@ -992,7 +993,8 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     final length = tidyMeasurement(_length.text) != null;
     final width = tidyMeasurement(_width.text) != null;
     if (!length || !width) return 'Add the length and width';
-    if (_height.text.trim().isNotEmpty && tidyMeasurement(_height.text) == null) {
+    if (_height.text.trim().isNotEmpty &&
+        tidyMeasurement(_height.text) == null) {
       return 'Enter a number above 0';
     }
     return null;
