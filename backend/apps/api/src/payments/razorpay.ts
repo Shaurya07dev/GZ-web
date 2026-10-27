@@ -83,6 +83,35 @@ export class Razorpay {
     return this.post({ receipt: input.topupId, amountPaise: input.amountPaise, notes: { gzTopupId: input.topupId, gzUserId: input.userId } });
   }
 
+  /** The same, for an aggregator-reservation payment intent. The notes carry the intent id for the webhook. */
+  createIntentOrder(input: { intentId: string; amountPaise: number; aggregatorId: string }): Promise<RazorpayOrder> {
+    return this.post({ receipt: input.intentId, amountPaise: input.amountPaise, notes: { gzIntentId: input.intentId, gzAggregatorId: input.aggregatorId } });
+  }
+
+  /**
+   * POST /v1/payments/{id}/refund — refund the captured amount back to the
+   * original payment source. Called when a reservation payment captures but
+   * the holding couldn't be allocated (someone else won the race) or an
+   * exceptional intent reaches `needs_refund`.
+   *
+   * Idempotent at the API level if a `receipt` identifier is passed; we use
+   * the intent id so a retried refund request returns the same refund rather
+   * than issuing a second one.
+   */
+  async createRefund(input: { providerPaymentId: string; amountPaise: number; receipt: string; notes: Record<string, string> }): Promise<{ id: string; status: string }> {
+    const res = await fetch(`${BASE_URL}/payments/${encodeURIComponent(input.providerPaymentId)}/refund`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: input.amountPaise, receipt: input.receipt.slice(0, 40), notes: input.notes, speed: "normal" }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { id?: string; status?: string; error?: { description?: string } };
+    if (!res.ok || typeof body.id !== "string") {
+      this.logger.error(`razorpay refund failed for payment ${input.providerPaymentId}: ${res.status} ${body.error?.description ?? ""}`);
+      throw new ServiceUnavailableException({ type: "about:blank", title: "Could not refund the payment", status: 503, code: "gateway_error" });
+    }
+    return { id: body.id, status: body.status ?? "processed" };
+  }
+
   private async post(input: { receipt: string; amountPaise: number; notes: Record<string, string> }): Promise<RazorpayOrder> {
     const res = await fetch(`${BASE_URL}/orders`, {
       method: "POST",

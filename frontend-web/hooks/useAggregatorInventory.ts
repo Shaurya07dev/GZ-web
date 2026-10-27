@@ -28,8 +28,9 @@ export function useReserveArtworkMutation() {
       queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-dashboard"] });
-      // The advance and delivery are held from the wallet, so the balance and
-      // its ledger moved too.
+      // The advance + delivery went through Razorpay (not an internal wallet),
+      // but the earnings-display view still reads from the aggregator_held
+      // ledger entries, so refresh it to pick up the new reservation.
       queryClient.invalidateQueries({ queryKey: ["aggregator-wallet"] });
       queryClient.invalidateQueries({
         queryKey: ["aggregator-wallet-transactions"],

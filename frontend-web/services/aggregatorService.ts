@@ -7,6 +7,7 @@ import type { AggregatorHolding, HoldingExtensionRequest, RecordSalePayload } fr
 import type { Artwork, ArtworkSummary } from "@/types/artwork";
 import { http, isApiError } from "@/lib/api";
 import { paiseToRupees, toArtwork, toArtworkSummary, type ArtworkDto } from "@/lib/api-mappers";
+import { PaymentDismissedError, openRazorpayCheckout, type RazorpaySession } from "@/lib/razorpay-checkout";
 
 export interface AggregatorOffer {
   artworkId: string;
@@ -154,13 +155,77 @@ export const aggregatorService = {
   /**
    * `sellingPrice` is what the aggregator sells at, before GST, in rupees. Month 1
    * only; leave it out to take GalleryZone's price. It can't be changed once reserved.
+   *
+   * Flow (replaces the old wallet-balance reserve):
+   *   1. POST /reservation-intents           → opens Razorpay order, returns keyId + orderId
+   *   2. openRazorpayCheckout(session)        → buyer pays through Checkout.js
+   *   3. POST /reservation-intents/:id/verify → server verifies signature + Razorpay, then
+   *                                              atomically creates the holding OR queues a refund
+   *                                              (if another aggregator won the race).
+   *
+   * Verify is called even on dismiss / failure, because a UPI app can still
+   * complete the payment out of band after the modal closes — the server-side
+   * fetchOrder is the only authoritative "paid?" answer.
    */
   async reserve(artworkId: string, sellingPrice?: number): Promise<AggregatorHolding> {
-    const h = await http.post<HoldingDto>("/v1/aggregator/holdings", {
+    type InitResponse =
+      | { mode: "razorpay"; intentId: string; keyId: string; razorpayOrderId: string; amountPaise: number; currency: string; name: string; description: string }
+      | { mode: "simulated"; intentId: string; amountPaise: number };
+    const init = await http.post<InitResponse>("/v1/aggregator/reservation-intents", {
       artworkId,
       ...(sellingPrice === undefined ? {} : { sellingPricePaise: Math.round(sellingPrice * 100) }),
+      // One key per attempt — a double-tap or network retry hits the same
+      // intent (returned idempotently) instead of opening a second Razorpay order.
+      idempotencyKey: crypto.randomUUID(),
     });
-    return toHolding(h);
+
+    const verifyPath = `/v1/aggregator/reservation-intents/${encodeURIComponent(init.intentId)}/verify`;
+
+    if (init.mode === "simulated") {
+      // No gateway configured (dev / preview). Verify immediately — the
+      // server finalizes without a real payment.
+      const result = await http.post<{ status: string; holdingId?: string; reason?: string }>(verifyPath, {});
+      if (result.status !== "finalized" || !result.holdingId) {
+        throw new Error(result.reason ?? "Could not reserve this piece. Please try again.");
+      }
+      return (await aggregatorService.getHolding(result.holdingId))!;
+    }
+
+    const session: RazorpaySession = {
+      mode: "razorpay",
+      keyId: init.keyId,
+      razorpayOrderId: init.razorpayOrderId,
+      amountPaise: init.amountPaise,
+      currency: init.currency,
+      name: init.name,
+      description: init.description,
+      prefill: { name: "", email: "", contact: "" },
+    };
+    const outcome = await openRazorpayCheckout(session);
+    const result = await http.post<{ status: string; holdingId?: string; reason?: string }>(
+      verifyPath,
+      outcome.success
+        ? {
+            razorpayOrderId: outcome.success.razorpay_order_id,
+            razorpayPaymentId: outcome.success.razorpay_payment_id,
+            razorpaySignature: outcome.success.razorpay_signature,
+          }
+        : undefined,
+    );
+    if (result.status === "finalized" && result.holdingId) {
+      return (await aggregatorService.getHolding(result.holdingId))!;
+    }
+    if (result.status === "needs_refund" || result.status === "refunded") {
+      // Server captured the payment but couldn't allocate the artwork. The
+      // refund is on its way; tell the user plainly.
+      throw new Error(
+        result.reason ??
+          "Someone else reserved this piece before your payment could be confirmed. Your payment is being refunded.",
+      );
+    }
+    if (result.status === "cancelled") throw new PaymentDismissedError();
+    if (outcome.dismissed) throw new PaymentDismissedError();
+    throw new Error(outcome.failureMessage ?? result.reason ?? "The payment did not go through. Nothing was charged.");
   },
 
   /** Ask GalleryZone to let the aggregator keep a piece past its window, with an assurance that it will sell. */
