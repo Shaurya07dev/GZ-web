@@ -62,7 +62,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistKpisProvider);
           ref.invalidate(artistActivityProvider);

@@ -1228,7 +1228,7 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
           ),
         },
         const SizedBox(height: 8),
-        SwitchListTile(
+        SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
           value: _simulateFailure,
           onChanged: (value) => setState(() => _simulateFailure = value),

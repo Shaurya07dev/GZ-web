@@ -533,6 +533,12 @@ class SocialAuthRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Not on an iPhone: App Review rejects a button that only says it does not
+    // work yet, and an app offering Google sign-in must offer Sign in with
+    // Apple too. Bring both together when Google sign-in is built.
+    if (theme.platform case TargetPlatform.iOS || TargetPlatform.macOS) {
+      return const SizedBox.shrink();
+    }
     return Column(
       children: [
         Row(

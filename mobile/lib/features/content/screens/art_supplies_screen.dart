@@ -46,7 +46,7 @@ class _ArtSuppliesScreenState extends ConsumerState<ArtSuppliesScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Art supplies')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(affiliateProductsProvider);
           await ref.read(affiliateProductsProvider.future);

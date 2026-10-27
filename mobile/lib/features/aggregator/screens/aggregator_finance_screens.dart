@@ -97,7 +97,7 @@ class _AggregatorSettlementsScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settlements')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           invalidateAggregatorSaleFlow(ref);
           await ref.read(aggregatorSettlementsProvider.future);

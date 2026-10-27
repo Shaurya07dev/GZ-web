@@ -1,0 +1,33 @@
+name: iOS build
+
+# Compiles the app for iPhone on a Mac runner, unsigned. Development happens
+# on Windows, where Xcode cannot run, so this is the check that the iOS side
+# (Info.plist, pods, Swift plugins) still builds. Signing and TestFlight need
+# the Apple developer account and are not done here.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/ios-build.yml"
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign

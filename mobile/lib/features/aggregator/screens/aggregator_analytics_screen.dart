@@ -50,7 +50,7 @@ class AggregatorAnalyticsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Analytics')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(aggregatorAnalyticsProvider);
           ref.invalidate(aggregatorCategoryPerformanceProvider);

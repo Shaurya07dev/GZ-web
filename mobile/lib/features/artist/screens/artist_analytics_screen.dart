@@ -45,7 +45,7 @@ class ArtistAnalyticsScreen extends ConsumerWidget {
                     ),
                   )
                 : const PageSkeleton()
-          : RefreshIndicator(
+          : RefreshIndicator.adaptive(
               onRefresh: () async {
                 ref.invalidate(artistArtworksProvider);
                 ref.invalidate(artistOrdersProvider);

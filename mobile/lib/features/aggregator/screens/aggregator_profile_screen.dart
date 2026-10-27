@@ -70,7 +70,7 @@ class AggregatorProfileScreen extends ConsumerWidget {
     final signed = profile.mouAcceptance != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Company profile')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(aggregatorProfileProvider);
           ref.invalidate(aggregatorStatsProvider);

@@ -59,7 +59,7 @@ class CollectionScreen extends ConsumerWidget {
                   child: const Text('Browse the marketplace'),
                 ),
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(collectionProvider);
                   await ref.read(collectionProvider.future);

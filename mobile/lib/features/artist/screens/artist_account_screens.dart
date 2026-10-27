@@ -142,7 +142,7 @@ class ArtistMessagesScreen extends ConsumerWidget {
                 title: 'No messages',
                 description: 'Updates from GalleryZone about your submissions, sales, and account will show up here.',
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(artistMessagesProvider);
                   await ref.read(artistMessagesProvider.future);
@@ -316,7 +316,7 @@ class ArtistSettingsScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 4),
                             for (final toggle in _toggles)
-                              SwitchListTile(
+                              SwitchListTile.adaptive(
                                 contentPadding: EdgeInsets.zero,
                                 value: toggle.get(settings),
                                 onChanged: (value) =>

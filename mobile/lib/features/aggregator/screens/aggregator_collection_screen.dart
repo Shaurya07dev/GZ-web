@@ -90,7 +90,7 @@ class _AggregatorCollectionScreenState
               if (_filter.matches(view.holding.status)) view,
           ];
 
-          return RefreshIndicator(
+          return RefreshIndicator.adaptive(
             onRefresh: () async {
               ref.invalidate(aggregatorCollectionProvider);
               await ref.read(aggregatorCollectionProvider.future);

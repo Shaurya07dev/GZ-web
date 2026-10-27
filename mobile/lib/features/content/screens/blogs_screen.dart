@@ -20,7 +20,7 @@ class BlogsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('GalleryZone blogs')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(publishedBlogsProvider);
           await ref.read(publishedBlogsProvider.future);

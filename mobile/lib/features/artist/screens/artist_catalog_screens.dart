@@ -30,7 +30,7 @@ class GallerySpacesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Aggregator Display')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistGallerySpacesProvider);
           await ref.read(artistGallerySpacesProvider.future);
@@ -239,7 +239,7 @@ class PortfolioScreen extends ConsumerWidget {
               description:
                   'Nothing published yet — approved artworks will appear here.',
             )
-          : RefreshIndicator(
+          : RefreshIndicator.adaptive(
               onRefresh: () async {
                 ref.invalidate(artistArtworksProvider);
                 await ref.read(artistArtworksProvider.future);

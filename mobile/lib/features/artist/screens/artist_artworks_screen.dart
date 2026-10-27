@@ -244,7 +244,7 @@ class _Board extends ConsumerWidget {
                     onBucketChanged(ArtworkBucket.all);
                   },
                 )
-              : RefreshIndicator(
+              : RefreshIndicator.adaptive(
                   onRefresh: () async {
                     ref.invalidate(artistArtworksProvider);
                     await ref.read(artistArtworksProvider.future);

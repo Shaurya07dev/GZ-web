@@ -332,7 +332,7 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
                     : 'Enter a valid 6-digit pincode',
                 keyboardType: TextInputType.number,
               ),
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _isDefault,
                 onChanged: (value) => setState(() => _isDefault = value),

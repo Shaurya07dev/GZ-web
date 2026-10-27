@@ -108,7 +108,7 @@ class _ArtistSettlementsTabState extends ConsumerState<ArtistSettlementsTab> {
               settlement,
         ];
 
-        return RefreshIndicator(
+        return RefreshIndicator.adaptive(
           onRefresh: () async {
             ref.invalidate(artistSettlementsProvider);
             await ref.read(artistSettlementsProvider.future);

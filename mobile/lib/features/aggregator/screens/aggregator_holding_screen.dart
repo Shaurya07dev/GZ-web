@@ -62,7 +62,7 @@ class AggregatorHoldingScreen extends ConsumerWidget {
                   child: const Text('Back to My Inventory'),
                 ),
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(aggregatorHoldingProvider(holdingId));
                   await ref.read(aggregatorHoldingProvider(holdingId).future);

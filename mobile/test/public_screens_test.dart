@@ -431,6 +431,35 @@ void main() {
       },
     );
 
+    testWidgets('the full-size photo fills the screen and drags away', (
+      tester,
+    ) async {
+      _phone(tester);
+      final catalog = _Catalog(
+        artworks: [_artwork(thumbnail: '/artworks/bird.png')],
+        artists: [_artist()],
+      );
+      await tester.pumpWidget(
+        _app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('View full size'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byType(InteractiveViewer)),
+        const Size(390, 844),
+      );
+
+      // A short drag springs back; a long one puts the photo away.
+      await tester.drag(find.byType(InteractiveViewer), const Offset(0, 60));
+      await tester.pumpAndSettle();
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      await tester.drag(find.byType(InteractiveViewer), const Offset(0, 300));
+      await tester.pumpAndSettle();
+      expect(find.byType(InteractiveViewer), findsNothing);
+    });
+
     testWidgets('a reserved piece cannot be bought', (tester) async {
       _phone(tester);
       final catalog = _Catalog(

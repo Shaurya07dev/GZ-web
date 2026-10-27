@@ -611,7 +611,7 @@ class _GalleryState extends State<_Gallery> {
 /// The photo at full size on black, pinch to zoom and drag to look closer —
 /// the brushwork is the point of looking at a painting on a phone. The photo
 /// flies here from the gallery and back.
-class _FullSizeViewer extends StatelessWidget {
+class _FullSizeViewer extends StatefulWidget {
   const _FullSizeViewer({required this.url, required this.heroTag});
 
   final String url;
@@ -619,8 +619,9 @@ class _FullSizeViewer extends StatelessWidget {
 
   static Route<void> route(String url, Object heroTag) =>
       PageRouteBuilder<void>(
+        // The black comes from the page itself rather than a barrier, so it
+        // can thin out while the photo is dragged away.
         opaque: false,
-        barrierColor: Colors.black,
         transitionDuration: AppMotion.slow,
         reverseTransitionDuration: AppMotion.medium,
         pageBuilder: (context, animation, secondaryAnimation) =>
@@ -630,32 +631,113 @@ class _FullSizeViewer extends StatelessWidget {
       );
 
   @override
+  State<_FullSizeViewer> createState() => _FullSizeViewerState();
+}
+
+/// Drag the photo down (or up) to put it away, as in the phone's own photo
+/// viewer: the black thins as it goes, and letting go far enough — or fast
+/// enough — sends it back into the page. One finger only and only while not
+/// zoomed in, so it never fights a pinch or panning around a detail. The drag
+/// is read from the viewer's own gesture, not a second recognizer competing
+/// with it.
+class _FullSizeViewerState extends State<_FullSizeViewer>
+    with SingleTickerProviderStateMixin {
+  final _zoom = TransformationController();
+  late final AnimationController _settle =
+      AnimationController(vsync: this, duration: AppMotion.medium)..addListener(
+        () => setState(() => _drag = _settleFrom * (1 - _settleCurve.value)),
+      );
+  late final Animation<double> _settleCurve = CurvedAnimation(
+    parent: _settle,
+    curve: AppMotion.standard,
+  );
+  bool _zoomed = false;
+  double _drag = 0;
+  double _settleFrom = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _zoom.addListener(() {
+      final zoomed = _zoom.value.getMaxScaleOnAxis() > 1.01;
+      if (zoomed != _zoomed) setState(() => _zoomed = zoomed);
+    });
+  }
+
+  @override
+  void dispose() {
+    _zoom.dispose();
+    _settle.dispose();
+    super.dispose();
+  }
+
+  void _onUpdate(ScaleUpdateDetails details) {
+    if (_zoomed || details.pointerCount != 1) return;
+    _settle.stop();
+    setState(() => _drag += details.focalPointDelta.dy);
+  }
+
+  void _onEnd(ScaleEndDetails details) {
+    if (_drag == 0) return;
+    if (_drag.abs() > 120 || details.velocity.pixelsPerSecond.dy.abs() > 900) {
+      HapticFeedback.lightImpact();
+      Navigator.of(context).pop();
+      return;
+    }
+    _settleFrom = _drag;
+    _settle.forward(from: 0);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final shown = (1 - _drag.abs() / 400).clamp(0.0, 1.0);
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black.withValues(alpha: shown),
       body: Stack(
         children: [
           Positioned.fill(
-            child: InteractiveViewer(
-              maxScale: 5,
-              child: Center(
-                child: Hero(
-                  tag: heroTag,
-                  child: ArtworkImageView(url: url, fit: BoxFit.contain),
+            child: Transform.translate(
+              offset: Offset(0, _drag),
+              child: Transform.scale(
+                scale: 1 - (1 - shown) * 0.2,
+                child: InteractiveViewer(
+                  transformationController: _zoom,
+                  maxScale: 5,
+                  panEnabled: _zoomed,
+                  onInteractionUpdate: _onUpdate,
+                  onInteractionEnd: _onEnd,
+                  child: Center(
+                    child: Hero(
+                      tag: widget.heroTag,
+                      child: ArtworkImageView(
+                        url: widget.url,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: IconButton(
-                tooltip: 'Close',
-                icon: const Icon(Icons.close, color: Colors.white),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+          // Positioned, so the Stack takes the whole screen rather than the
+          // size of this button.
+          Positioned(
+            top: 0,
+            left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Opacity(
+                  opacity: shown,
+                  child: IconButton(
+                    tooltip: 'Close',
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.12),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                 ),
-                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ),

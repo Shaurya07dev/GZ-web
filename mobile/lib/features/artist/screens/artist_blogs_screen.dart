@@ -66,7 +66,7 @@ class ArtistBlogsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistBlogsProvider);
           await ref.read(artistBlogsProvider.future);

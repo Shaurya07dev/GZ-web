@@ -42,7 +42,7 @@ class ArtistWalletTab extends ConsumerWidget {
       );
     }
 
-    return RefreshIndicator(
+    return RefreshIndicator.adaptive(
       onRefresh: () async {
         ref.invalidate(artistWalletProvider);
         ref.invalidate(artistWalletTransactionsProvider);

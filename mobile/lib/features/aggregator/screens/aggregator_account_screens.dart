@@ -55,7 +55,7 @@ class AggregatorGallerySpacesScreen extends ConsumerWidget {
                 title: 'No display spaces on file',
                 description: 'Your display premises will appear here once registered with GalleryZone.',
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(aggregatorGallerySpacesProvider);
                   ref.invalidate(aggregatorCollectionProvider);
@@ -211,7 +211,7 @@ class _AggregatorMessagesScreenState
                 title: 'No messages',
                 description: 'Updates from GalleryZone about assignments, audits, and settlements will show up here.',
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(aggregatorMessagesProvider);
                   await ref.read(aggregatorMessagesProvider.future);
@@ -419,21 +419,21 @@ class AggregatorSettingsScreen extends ConsumerWidget {
               children: [
                 Text('Notifications', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 8),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('New artwork assigned or reserved'),
                   value: settings.notifyNewAssignment,
                   onChanged: (value) =>
                       update(settings.copyWith(notifyNewAssignment: value)),
                 ),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Sale recorded'),
                   value: settings.notifySaleRecorded,
                   onChanged: (value) =>
                       update(settings.copyWith(notifySaleRecorded: value)),
                 ),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Settlement processed'),
                   value: settings.notifySettlementProcessed,
@@ -441,7 +441,7 @@ class AggregatorSettingsScreen extends ConsumerWidget {
                     settings.copyWith(notifySettlementProcessed: value),
                   ),
                 ),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('30-day display window expiring soon'),
                   value: settings.notifyExpiryReminder,

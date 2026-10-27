@@ -38,7 +38,7 @@ class AccountDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(ordersProvider);
           ref.invalidate(collectionProvider);

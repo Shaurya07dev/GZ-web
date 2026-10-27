@@ -39,7 +39,7 @@ class CustomerCoaNfcScreen extends ConsumerWidget {
             child: const Text('Try again'),
           ),
         ),
-        data: (items) => RefreshIndicator(
+        data: (items) => RefreshIndicator.adaptive(
           onRefresh: () async {
             ref
               ..invalidate(collectionProvider)

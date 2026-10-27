@@ -252,7 +252,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               const Expanded(
                                 child: Text('Simulate invalid credentials'),
                               ),
-                              Switch(
+                              Switch.adaptive(
                                 value: _simulateError,
                                 onChanged: (value) =>
                                     setState(() => _simulateError = value),

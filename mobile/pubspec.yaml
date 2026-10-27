@@ -151,9 +151,10 @@ flutter:
 # ---------------------------------------------------------------------------
 flutter_launcher_icons:
   android: true
-  # No Mac on this machine, so iOS assets aren't generated — flip this when
-  # the iOS decision lands (open decision 4).
-  ios: false
+  # The generator only writes PNGs into ios/Runner/Assets.xcassets, so it runs
+  # without a Mac. App Store icons may not carry an alpha channel.
+  ios: true
+  remove_alpha_ios: true
   image_path: assets/icon/app_icon.png
   # Adaptive icon: Android composites foreground over background and masks the
   # pair to whatever shape the launcher uses, so the background is a flat

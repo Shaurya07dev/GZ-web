@@ -66,7 +66,7 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
               entry,
         ];
 
-        return RefreshIndicator(
+        return RefreshIndicator.adaptive(
           onRefresh: () async {
             ref.invalidate(artistOrdersProvider);
             await ref.read(artistOrdersProvider.future);

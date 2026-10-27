@@ -53,7 +53,7 @@ class AggregatorWalletScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Earnings')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(aggregatorWalletProvider);
           ref.invalidate(aggregatorWalletTransactionsProvider);

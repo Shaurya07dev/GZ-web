@@ -206,7 +206,7 @@ class _AggregatorOrdersScreenState
           }
           final shown = _visible(all);
 
-          return RefreshIndicator(
+          return RefreshIndicator.adaptive(
             onRefresh: () async {
               _reloadSales(ref);
               await ref.read(_saleRowsProvider.future);
@@ -570,7 +570,7 @@ class _AggregatorCustomersScreenState
           }
           final shown = _visible(all);
 
-          return RefreshIndicator(
+          return RefreshIndicator.adaptive(
             onRefresh: () async {
               ref.invalidate(aggregatorCustomersProvider);
               await ref.read(aggregatorCustomersProvider.future);
@@ -698,7 +698,7 @@ class AggregatorShippingScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Shipping & logistics')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(aggregatorSalesProvider);
           ref.invalidate(aggregatorCollectionProvider);

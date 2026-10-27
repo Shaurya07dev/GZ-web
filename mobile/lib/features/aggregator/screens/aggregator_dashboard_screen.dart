@@ -52,7 +52,7 @@ class AggregatorDashboardScreen extends ConsumerWidget {
         groups: menu.groups,
         homeRoute: menu.homeRoute,
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(aggregatorDashboardProvider);
           ref.invalidate(aggregatorCollectionProvider);

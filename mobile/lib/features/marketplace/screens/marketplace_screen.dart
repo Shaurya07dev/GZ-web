@@ -262,7 +262,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: _refresh,
         child: NotificationListener<ScrollNotification>(
           onNotification: (n) => n.depth == 0 && _loadMoreIfNearEnd(n.metrics),

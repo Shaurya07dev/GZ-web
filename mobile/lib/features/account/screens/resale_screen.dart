@@ -49,7 +49,7 @@ class ResaleScreen extends ConsumerWidget {
                 child: const Text('Try again'),
               ),
             )
-          : RefreshIndicator(
+          : RefreshIndicator.adaptive(
               onRefresh: () async {
                 ref.invalidate(collectionProvider);
                 ref.invalidate(resaleListingsProvider);

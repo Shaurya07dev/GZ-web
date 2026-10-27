@@ -130,7 +130,7 @@ class _AggregatorBrowseScreenState
           }..remove('')).toList()..sort();
           final visible = _visible(all);
 
-          return RefreshIndicator(
+          return RefreshIndicator.adaptive(
             onRefresh: () async {
               ref.invalidate(aggregatorInventoryProvider);
               await ref.read(aggregatorInventoryProvider.future);

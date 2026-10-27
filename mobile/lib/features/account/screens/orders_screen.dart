@@ -51,7 +51,7 @@ class OrdersScreen extends ConsumerWidget {
                   child: const Text('Browse the marketplace'),
                 ),
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () => ref.refresh(ordersProvider.future),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),

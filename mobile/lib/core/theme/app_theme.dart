@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -90,6 +92,12 @@ class AppTheme {
 
   static const sansFamily = 'Inter';
   static const serifFamily = 'Playfair Display';
+
+  /// iPhone, iPad or Mac: where the app should behave like an Apple app
+  /// (tab bar, tap highlights) rather than an Android one.
+  static bool get isApple =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   /// Playfair carries the editorial voice (titles, headlines, big numbers);
   /// Inter carries everything read at small sizes. Both are bundled (see the
@@ -307,8 +315,24 @@ class AppTheme {
       canvasColor: scheme.surface,
       textTheme: text,
       // A soft, round ripple. The default sparkle reads as noise on a calm,
-      // paper-coloured page.
-      splashFactory: InkRipple.splashFactory,
+      // paper-coloured page. An iPhone answers a tap with a brief highlight,
+      // not a ripple; the press-in scale on cards carries the rest there.
+      splashFactory: isApple ? NoSplash.splashFactory : InkRipple.splashFactory,
+      // The iOS-native pieces — switches, the pull-to-refresh spinner, text
+      // selection handles, the tab bar — in the brand's gold and type.
+      cupertinoOverrideTheme: CupertinoThemeData(
+        primaryColor: scheme.primary,
+        textTheme: CupertinoTextThemeData(
+          primaryColor: scheme.primary,
+          tabLabelTextStyle: TextStyle(
+            fontFamily: sansFamily,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.1,
+            color: mutedForeground,
+          ),
+        ),
+      ),
       splashColor: foreground.withValues(alpha: 0.06),
       highlightColor: foreground.withValues(alpha: 0.04),
       hoverColor: foreground.withValues(alpha: 0.03),

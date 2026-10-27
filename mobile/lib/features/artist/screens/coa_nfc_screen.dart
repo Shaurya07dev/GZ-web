@@ -49,7 +49,7 @@ class CoaNfcScreen extends ConsumerWidget {
             child: const Text('Try again'),
           ),
         ),
-        data: (list) => RefreshIndicator(
+        data: (list) => RefreshIndicator.adaptive(
           onRefresh: () async {
             ref.invalidate(artistArtworksProvider);
             ref.invalidate(artistPhysicalCoaProvider);
