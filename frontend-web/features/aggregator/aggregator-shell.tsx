@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { AggregatorMobileBottomNav } from "@/components/shared/aggregator-mobile-bottom-nav";
@@ -47,6 +48,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Marks this element so the onboarding tour can target it. */
+  tourId?: string;
 }
 
 interface NavGroup {
@@ -65,16 +68,19 @@ const NAV_GROUPS: NavGroup[] = [
         label: "My Profile",
         href: "/aggregator/profile",
         icon: CircleUserRound,
+        tourId: "aggregator-profile",
       },
       {
         label: "Browse GalleryZone",
         href: "/aggregator/inventory",
         icon: PackageSearch,
+        tourId: "aggregator-inventory",
       },
       {
         label: "My Inventory",
         href: "/aggregator/collection",
         icon: GalleryVerticalEnd,
+        tourId: "aggregator-collection",
       },
     ],
   },
@@ -86,17 +92,20 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Orders & Sales",
         href: "/aggregator/orders",
         icon: ShoppingBag,
+        tourId: "aggregator-orders",
       },
       { label: "Customers", href: "/aggregator/customers", icon: Users },
       {
         label: "Display Spaces",
         href: "/aggregator/gallery-spaces",
         icon: Building2,
+        tourId: "aggregator-spaces",
       },
       {
         label: "Shipping & Logistics",
         href: "/aggregator/shipping",
         icon: Truck,
+        tourId: "aggregator-shipping",
       },
     ],
   },
@@ -104,7 +113,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: "finance",
     label: "Finance",
     items: [
-      { label: "Earnings", href: "/aggregator/wallet", icon: Wallet },
+      { label: "Earnings", href: "/aggregator/wallet", icon: Wallet, tourId: "aggregator-earnings" },
       { label: "Settlements", href: "/aggregator/settlements", icon: Landmark },
     ],
   },
@@ -112,7 +121,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: "growth",
     label: "Growth",
     items: [
-      { label: "Analytics", href: "/aggregator/analytics", icon: LineChart },
+      { label: "Analytics", href: "/aggregator/analytics", icon: LineChart, tourId: "aggregator-analytics" },
       { label: "Messages", href: "/aggregator/messages", icon: MessageSquare },
     ],
   },
@@ -120,7 +129,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: "support",
     label: "Support & Account",
     items: [
-      { label: "Support", href: "/aggregator/support", icon: LifeBuoy },
+      { label: "Support", href: "/aggregator/support", icon: LifeBuoy, tourId: "aggregator-support" },
       { label: "Settings", href: "/aggregator/settings", icon: SettingsIcon },
     ],
   },
@@ -128,6 +137,13 @@ const NAV_GROUPS: NavGroup[] = [
 
 const ALL_GROUP_IDS = NAV_GROUPS.map((g) => g.id);
 const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
+
+// react-joyride is client-only and touches `window` at import, so dyn-import
+// with ssr:false stops the server bundle from pulling it in.
+const OnboardingTour = dynamic(
+  () => import("@/features/onboarding/onboarding-tour").then((m) => m.OnboardingTour),
+  { ssr: false },
+);
 
 export function AggregatorShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -145,6 +161,8 @@ export function AggregatorShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom navigation — only shown on small screens */}
       <AggregatorMobileBottomNav />
+
+      <OnboardingTour role="aggregator" />
     </div>
   );
 }
@@ -175,6 +193,7 @@ function NavLink({
       href={item.href}
       onClick={onClick}
       title={collapsed ? item.label : undefined}
+      data-tour={item.tourId}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
         collapsed && "lg:justify-center lg:px-2",
