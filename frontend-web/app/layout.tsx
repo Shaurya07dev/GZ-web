@@ -5,6 +5,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { MobileBottomNav } from "@/components/shared/mobile-bottom-nav";
+import { AssistantWidget } from "@/features/assistant/assistant-widget";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <QueryProvider>
             {children}
             <MobileBottomNav />
+            <AssistantWidget />
           </QueryProvider>
           <Toaster />
           <CookieConsentBanner />
