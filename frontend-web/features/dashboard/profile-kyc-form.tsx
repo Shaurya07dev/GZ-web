@@ -20,7 +20,6 @@ import {
   Truck,
   CreditCard,
   ExternalLink,
-  PlayCircle,
   TriangleAlert,
   Palette,
   Landmark,
@@ -32,7 +31,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FileUploader } from "@/components/ui/file-uploader";
 import { GstStatusBadge } from "@/components/shared/gst-status-badge";
+import { GuideLauncher } from "@/components/shared/guide-launcher";
 import { formatINR } from "@/lib/utils";
+import { GUIDES } from "@/lib/guides";
 import {
   COUNTRIES,
   DEFAULT_COUNTRY_CODE,
@@ -539,23 +540,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               Don&rsquo;t have a GSTIN? Apply on the government GST portal
             </a>
 
-            {/* Placeholder for the GST application walkthrough video — drop
-                the embed or a YouTube link in here when it's ready. */}
-            <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
-              <PlayCircle
-                className="size-5 shrink-0 text-gold-bright"
-                strokeWidth={1.5}
-              />
-              <div>
-                <p className="text-xs font-medium text-foreground">
-                  GST application guide
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  A short walkthrough of registering for GST goes here. Coming
-                  soon.
-                </p>
-              </div>
-            </div>
+            <GuideLauncher guide={GUIDES.gstRegistration} />
           </div>
         </div>
 

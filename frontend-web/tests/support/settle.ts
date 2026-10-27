@@ -60,7 +60,9 @@ export async function settleScrollReveal(page: Page): Promise<void> {
 // keeps landing the same way it happened to before.
 export async function dismissCookieConsent(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    window.localStorage.setItem('gz-cookie-consent', 'accepted');
+    // Top window only: init scripts also run in sandboxed iframes (the guide
+    // dialogs), where touching storage throws.
+    if (window === window.top) window.localStorage.setItem('gz-cookie-consent', 'accepted');
   });
 }
 

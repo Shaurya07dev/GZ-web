@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   Nfc,
   Building2,
-  PlayCircle,
   ScrollText,
   TriangleAlert,
   Clock3,
@@ -22,6 +21,8 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GuideLauncher } from "@/components/shared/guide-launcher";
+import { GUIDES } from "@/lib/guides";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -1186,25 +1187,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 </span>
               </label>
 
-              {/* Placeholder for the single explainer video that sits under the
-                  aggregator terms. Drop the embed in here when the file or
-                  YouTube link is ready — deliberately one video, with any
-                  further walkthroughs linked from Support → FAQs. */}
-              <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
-                <PlayCircle
-                  className="size-5 shrink-0 text-gold-bright"
-                  strokeWidth={1.5}
-                />
-                <div>
-                  <p className="text-xs font-medium text-foreground">
-                    Explainer video
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    A short walkthrough of the aggregator process goes here.
-                    Coming soon.
-                  </p>
-                </div>
-              </div>
+              {/* Deliberately the one explainer under the aggregator terms; the
+                  other guides are listed under Support → FAQs. */}
+              <GuideLauncher guide={GUIDES.aggregatorProcess} />
 
             </div>
           )}

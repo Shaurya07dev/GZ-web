@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GST Registration in 2 Minutes / जीएसटी रजिस्ट्रेशन</title>
+<style>
+:root{--bg:#f6f4ee;--card:#fff;--ink:#1c2430;--mut:#5b6573;--acc:#d9531e;--acc2:#0f6b5c;--line:#e3dfd3;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181f;--card:#1d232d;--ink:#eef1f5;--mut:#9aa5b4;--acc:#ff7a45;--acc2:#4fc3ad;--line:#2c3441}}
+:root[data-theme="dark"]{--bg:#14181f;--card:#1d232d;--ink:#eef1f5;--mut:#9aa5b4;--acc:#ff7a45;--acc2:#4fc3ad;--line:#2c3441}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Noto Sans Devanagari","Mangal",system-ui,-apple-system,Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+.stage{background:var(--card);border:1px solid var(--line);border-radius:16px;aspect-ratio:16/9;min-height:340px;position:relative;overflow:hidden;padding:28px 32px;display:flex;flex-direction:column}
+.tag{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);font-weight:700}
+h1{font-size:clamp(22px,4.4vw,34px);margin:6px 0 14px;line-height:1.2}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+li{font-size:clamp(14px,2.4vw,18px);line-height:1.4;padding-left:26px;position:relative;opacity:0;transform:translateY(8px);transition:.5s}
+li.on{opacity:1;transform:none}
+li::before{content:"";position:absolute;left:0;top:.5em;width:12px;height:12px;border-radius:50%;background:var(--acc2)}
+li.hl{font-weight:600}
+.cap{margin-top:auto;font-size:13px;color:var(--mut);border-top:1px dashed var(--line);padding-top:10px}
+.num{position:absolute;right:22px;top:14px;font-size:clamp(50px,10vw,96px);font-weight:800;color:var(--line);line-height:1}
+.bar{height:6px;background:var(--line);border-radius:4px;margin:14px 0 10px;overflow:hidden;cursor:pointer}
+.bar i{display:block;height:100%;width:0;background:var(--acc)}
+.ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.sel{border-color:var(--acc2);box-shadow:inset 0 0 0 1px var(--acc2);font-weight:600}
+.time{margin-left:auto;color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.note{color:var(--mut);font-size:12px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage">
+    <div class="num" id="num"></div>
+    <div class="tag" id="tag"></div>
+    <h1 id="title"></h1>
+    <ul id="list"></ul>
+    <div class="cap" id="cap"></div>
+  </div>
+  <div class="bar" id="bar"><i id="fill"></i></div>
+  <div class="ctl">
+    <button class="p" id="play"></button>
+    <button id="restart"></button>
+    <button id="voice"></button>
+    <button id="en">English</button>
+    <button id="hi">हिन्दी</button>
+    <span class="time" id="time"></span>
+  </div>
+  <p class="note" id="note"></p>
+</div>
+<script>
+const S=[
+{d:14,
+en:{tag:"Intro",t:"Before you start",items:["Keep PAN of the business or proprietor ready","Valid Indian mobile number and email of the Primary Authorized Signatory","Proof of address of business, photos, and Aadhaar details","Application has 2 parts: Part A (get TRN) and Part B (full form)"],say:"Registering for GST has two parts. Keep your PAN, mobile number, email, address proof and photographs ready."},
+hi:{tag:"परिचय",t:"शुरू करने से पहले",items:["व्यवसाय या प्रोपराइटर का PAN तैयार रखें","प्राइमरी ऑथराइज़्ड सिग्नेटरी का मान्य भारतीय मोबाइल नंबर और ईमेल","व्यवसाय के पते का प्रमाण, फ़ोटो और आधार की जानकारी","आवेदन के दो भाग हैं: भाग A (TRN पाएँ) और भाग B (पूरा फ़ॉर्म)"],say:"जीएसटी रजिस्ट्रेशन के दो भाग होते हैं। अपना पैन, मोबाइल नंबर, ईमेल, पते का प्रमाण और फ़ोटो तैयार रखें।"}},
+{d:14,
+en:{tag:"Step 1",t:"Part A: Start the application",items:["Go to gst.gov.in and click Services, Registration, New Registration","Choose Taxpayer, then your State and District","Enter legal name exactly as on PAN, plus PAN, email and mobile","Type the captcha and click Proceed"],say:"Open gst.gov.in, choose New Registration, select Taxpayer, enter state, legal name, PAN, email and mobile, then solve the captcha."},
+hi:{tag:"चरण 1",t:"भाग A: आवेदन शुरू करें",items:["gst.gov.in पर जाएँ और Services > Registration > New Registration पर क्लिक करें","Taxpayer चुनें, फिर अपना राज्य और ज़िला","PAN के अनुसार व्यवसाय का कानूनी नाम, PAN, ईमेल और मोबाइल दर्ज करें","कैप्चा भरें और Proceed पर क्लिक करें"],say:"gst.gov.in खोलें, न्यू रजिस्ट्रेशन चुनें, टैक्सपेयर चुनें, राज्य, कानूनी नाम, पैन, ईमेल और मोबाइल भरें, फिर कैप्चा हल करें।"}},
+{d:14,
+en:{tag:"Step 2",t:"Verify OTPs and get your TRN",items:["Enter the separate mobile OTP and email OTP, each valid 10 minutes","Click Proceed to see existing registrations on your PAN","A Temporary Reference Number, the TRN, is generated","TRN is also sent to your email and mobile"],say:"Enter the two OTPs, valid for ten minutes. The portal then generates your Temporary Reference Number, or TRN."},
+hi:{tag:"चरण 2",t:"OTP सत्यापित करें और TRN पाएँ",items:["मोबाइल और ईमेल के अलग-अलग OTP डालें, प्रत्येक 10 मिनट तक मान्य","आपके PAN पर मौजूद पंजीकरण देखने के लिए Proceed करें","अस्थायी संदर्भ संख्या यानी TRN बन जाएगी","TRN आपके ईमेल और मोबाइल पर भी भेजा जाता है"],say:"दोनों OTP डालें, जो दस मिनट तक मान्य रहते हैं। इसके बाद पोर्टल आपका अस्थायी संदर्भ नंबर, यानी TRN बना देता है।"}},
+{d:12,
+en:{tag:"Step 3",t:"Part B: Log in with TRN",items:["Choose Temporary Reference Number on the New Registration page","Enter TRN, email and captcha, then verify the new OTPs","On My Saved Applications, click the Edit icon","Draft is deleted after 15 days if not submitted"],say:"Log in again using your TRN, verify the OTPs, and click Edit on My Saved Applications. Submit within fifteen days, or the draft is purged."},
+hi:{tag:"चरण 3",t:"भाग B: TRN से लॉग इन करें",items:["New Registration पेज पर Temporary Reference Number चुनें","TRN, ईमेल और कैप्चा डालें, फिर नए OTP सत्यापित करें","My Saved Applications में Edit आइकन पर क्लिक करें","15 दिनों में जमा न करने पर ड्राफ़्ट हट जाता है"],say:"अब TRN से दोबारा लॉग इन करें, OTP सत्यापित करें और My Saved Applications में Edit पर क्लिक करें। पंद्रह दिनों में जमा करें, वरना ड्राफ़्ट हट जाएगा।"}},
+{d:14,
+en:{tag:"Step 4",t:"Fill the tabs, part 1",items:["Business Details: trade name, constitution, dates, reason for registration","Promoters or Partners: personal details, identity, address, photo","Authorized Signatory: details plus proof of appointment","Principal Place of Business: address, ownership or rent proof"],say:"Fill in Business Details, Promoters, Authorized Signatory and Principal Place of Business. Uploads must be PDF or JPEG, with size limits shown on the form."},
+hi:{tag:"चरण 4",t:"टैब भरें, भाग 1",items:["Business Details: ट्रेड नाम, संविधान, तारीखें, पंजीकरण का कारण","Promoters/Partners: व्यक्तिगत विवरण, पहचान, पता, फ़ोटो","Authorized Signatory: विवरण और नियुक्ति का प्रमाण","Principal Place of Business: पता, स्वामित्व या किराये का प्रमाण"],say:"बिज़नेस डिटेल्स, प्रमोटर, ऑथराइज़्ड सिग्नेटरी और प्रमुख व्यवसाय स्थल भरें। फ़ाइलें PDF या JPEG में हों, और आकार की सीमा फ़ॉर्म में दी गई है।"}},
+{d:15,
+en:{tag:"Step 5",t:"Fill the tabs, part 2",items:["Additional Places of Business, if any","Goods and Services: add HSN or service codes, up to 5 each. For paintings, use HSN 9701","State Specific Information, such as electricity and professional tax details","Aadhaar Authentication: choose Yes, select the required persons"],hl:1,say:"Add any extra business places, and your top five goods or services using HSN codes. For paintings, the HSN code is 9701. Then add state details and choose Aadhaar authentication."},
+hi:{tag:"चरण 5",t:"टैब भरें, भाग 2",items:["Additional Places of Business, यदि कोई हो","Goods and Services: HSN या सर्विस कोड जोड़ें, अधिकतम 5। पेंटिंग के लिए HSN 9701","State Specific Information, जैसे बिजली और प्रोफ़ेशनल टैक्स विवरण","Aadhaar Authentication: Yes चुनें और आवश्यक व्यक्तियों को चुनें"],hl:1,say:"अतिरिक्त व्यवसाय स्थल जोड़ें, अपने शीर्ष पाँच सामान या सेवाओं के एचएसएन कोड डालें। पेंटिंग के लिए एचएसएन 9701 है। फिर राज्य की जानकारी भरें और आधार प्रमाणीकरण चुनें।"}},
+{d:15,
+en:{tag:"Step 6",t:"Verify and submit",items:["Tick the Verification declaration, pick the signatory, enter place","Sign with DSC, e-Signature or EVC","DSC is mandatory for companies and LLPs","ARN receipt arrives by email and SMS within about 15 minutes"],say:"Tick the declaration and sign using DSC, e-Signature or EVC. Companies and LLPs must use DSC. You will receive your Application Reference Number within fifteen minutes."},
+hi:{tag:"चरण 6",t:"सत्यापन और जमा करें",items:["Verification घोषणा पर टिक करें, हस्ताक्षरकर्ता चुनें, स्थान लिखें","DSC, e-Signature या EVC से हस्ताक्षर करें","कंपनी और LLP के लिए DSC अनिवार्य है","लगभग 15 मिनट में ARN रसीद ईमेल और SMS पर आती है"],say:"घोषणा पर टिक करें और डीएससी, ई-सिग्नेचर या ईवीसी से हस्ताक्षर करें। कंपनी और एलएलपी के लिए डीएससी ज़रूरी है। पंद्रह मिनट के भीतर आपको ARN मिल जाएगा।"}},
+{d:14,
+en:{tag:"Step 7",t:"Aadhaar e-KYC and tracking",items:["Open the authentication link sent to the signatory, valid 15 days","Give consent, enter Aadhaar or VID, then the Aadhaar OTP","If the link expires, use Resend Verification Link under My Saved Applications","Track progress at Services, Registration, Track Application Status"],say:"Finally, complete Aadhaar authentication from the emailed link within fifteen days, then track your application under Services, Registration, Track Application Status."},
+hi:{tag:"चरण 7",t:"आधार e-KYC और ट्रैकिंग",items:["हस्ताक्षरकर्ता को भेजा गया ऑथेंटिकेशन लिंक खोलें, 15 दिन मान्य","सहमति दें, आधार या VID डालें, फिर आधार OTP","लिंक समाप्त हो जाए तो My Saved Applications में Resend Verification Link चुनें","Services > Registration > Track Application Status से स्थिति देखें"],say:"अंत में पंद्रह दिनों के भीतर ईमेल के लिंक से आधार प्रमाणीकरण पूरा करें, फिर Track Application Status में अपना आवेदन ट्रैक करें।"}}
+];
+const UI={en:{play:"▶ Play",pause:"⏸ Pause",restart:"↺ Restart",von:"🔊 Voice on",voff:"🔇 Voice off",note:"Based on the official GST Portal guide for Normal Taxpayer registration (tutorial.gst.gov.in). Screen details can change, so check gst.gov.in while applying. Voice uses your browser’s text-to-speech."},
+hi:{play:"▶ चलाएँ",pause:"⏸ रोकें",restart:"↺ फिर से",von:"🔊 आवाज़ चालू",voff:"🔇 आवाज़ बंद",note:"आधार: GST पोर्टल की आधिकारिक गाइड (tutorial.gst.gov.in)। स्क्रीन बदल सकती हैं, इसलिए आवेदन करते समय gst.gov.in देखें। हिन्दी आवाज़ के लिए आपके डिवाइस में हिन्दी टेक्स्ट-टू-स्पीच वॉइस होनी चाहिए।"}};
+const TOTAL=S.reduce((a,s)=>a+s.d,0),starts=[];S.reduce((a,s)=>(starts.push(a),a+s.d),0);
+const $=id=>document.getElementById(id);
+let t=0,playing=false,last=0,cur=-1,voice=false,lang="en";
+const fmt=x=>Math.floor(x/60)+":"+String(Math.floor(x%60)).padStart(2,"0");
+function labels(){const u=UI[lang];$("play").textContent=playing?u.pause:u.play;$("restart").textContent=u.restart;$("voice").textContent=voice?u.von:u.voff;$("note").textContent=u.note;
+$("en").classList.toggle("sel",lang==="en");$("hi").classList.toggle("sel",lang==="hi");document.documentElement.lang=lang}
+function stop(){try{speechSynthesis.cancel()}catch(e){}}
+function speak(txt){stop();if(voice&&playing){try{const u=new SpeechSynthesisUtterance(txt);u.lang=lang==="hi"?"hi-IN":"en-IN";u.rate=1.03;speechSynthesis.speak(u)}catch(e){}}}
+function idx(x){let i=0;while(i<S.length-1&&x>=starts[i+1])i++;return i}
+function render(i){const s=S[i],c=s[lang];cur=i;$("num").textContent=i+1;$("tag").textContent=c.tag;$("title").textContent=c.t;
+$("list").innerHTML=c.items.map((x,k)=>"<li"+(s.hl===k?' class="hl"':"")+">"+x+"</li>").join("");$("cap").textContent="“"+c.say+"”";speak(c.say)}
+function frame(n){
+ if(playing){t+=(n-last)/1000;if(t>=TOTAL){t=TOTAL;playing=false;labels();stop()}}
+ last=n;const i=idx(Math.min(t,TOTAL-.001));if(i!==cur)render(i);
+ const local=t-starts[i],step=(S[i].d-1.5)/S[i].en.items.length;
+ document.querySelectorAll("li").forEach((li,k)=>li.classList.toggle("on",local>=0.6+k*step));
+ $("fill").style.width=(t/TOTAL*100)+"%";$("time").textContent=fmt(t)+" / "+fmt(TOTAL);
+ requestAnimationFrame(frame)}
+$("play").onclick=()=>{if(t>=TOTAL){t=0;cur=-1}playing=!playing;labels();last=performance.now();if(playing)speak(S[idx(t)][lang].say);else stop()};
+$("restart").onclick=()=>{t=0;cur=-1;playing=true;labels();last=performance.now()};
+$("voice").onclick=()=>{voice=!voice;labels();if(voice&&playing)speak(S[idx(t)][lang].say);else stop()};
+function setLang(l){lang=l;cur=-1;labels();stop()}
+$("en").onclick=()=>setLang("en");$("hi").onclick=()=>setLang("hi");
+$("bar").onclick=e=>{const r=$("bar").getBoundingClientRect();t=(e.clientX-r.left)/r.width*TOTAL;cur=-1;last=performance.now()};
+labels();requestAnimationFrame(n=>{last=n;frame(n)});
+</script>
+</body>
+</html>
