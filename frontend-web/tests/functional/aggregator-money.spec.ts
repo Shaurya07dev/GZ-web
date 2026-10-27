@@ -19,6 +19,27 @@ async function json(page: Page, pattern: string, body: unknown, method?: string)
   });
 }
 
+/**
+ * A reservation paid in simulated mode: an intent is created, then verified into a
+ * holding. Returns the bodies the page sent to create the intent.
+ */
+async function stubReservation(page: Page, holding: { id: string }) {
+  const created: unknown[] = [];
+  await page.route('**/v1/aggregator/reservation-intents', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    created.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ mode: 'simulated', intentId: `ri-${holding.id}`, amountPaise: 900_000 }),
+    });
+  });
+  await json(page, `**/v1/aggregator/reservation-intents/ri-${holding.id}/verify`, { status: 'finalized', holdingId: holding.id }, 'POST');
+  await json(page, `**/v1/aggregator/holdings/${holding.id}`, holding);
+  return created;
+}
+
 const profile = (over: Record<string, unknown> = {}) => ({
   uid: 'u1', fullName: 'Anand Rao', email: 'anand@example.in', phone: '9876543210', role: 'aggregator', status: 'active',
   createdAt: '2026-01-10T00:00:00.000Z', bio: null, profileImageUrl: null, headline: 'Director', location: null, instagram: null,
@@ -77,6 +98,8 @@ async function open(page: Page, baseURL: string, stub: Stub = {}) {
   // Anything not stubbed below fails fast instead of reaching a real API.
   await page.route('**/v1/**', (route) => route.abort());
   await dismissCookieConsent(page);
+  // The first-visit walkthrough would sit over every screen below.
+  await page.addInitScript(() => window.localStorage.setItem('gz_tour_completed_aggregator', 'seen'));
   await signInAs(page.context(), 'aggregator', baseURL);
   await json(page, '**/v1/auth/me', { uid: 'u1', role: 'aggregator', status: 'active', name: 'Anand Rao', email: 'anand@example.in', phone: '9876543210', roleGrants: [] });
   await json(page, '**/v1/me/profile', profile({ gstStatus: stub.gstStatus ?? 'approved' }));
@@ -84,18 +107,6 @@ async function open(page: Page, baseURL: string, stub: Stub = {}) {
   await json(page, '**/v1/aggregator/inventory', { artworks: stub.inventory ?? [] });
   await json(page, '**/v1/aggregator/wallet', { accountType: 'aggregator_payable', balancePaise: 5_000_000, heldPaise: 0 });
   await json(page, '**/v1/aggregator/wallet/transactions', { transactions: [] });
-  await json(
-    page,
-    '**/v1/aggregator/reservation-payments',
-    { mode: 'simulated', paymentId: 'default-reservation-payment' },
-    'POST',
-  );
-  await json(
-    page,
-    '**/v1/aggregator/reservation-payments/default-reservation-payment/simulate',
-    { status: 'paid' },
-    'POST',
-  );
   await json(page, '**/v1/aggregator/holdings', { holdings: stub.holdings ?? [] }, 'GET');
 }
 
@@ -105,13 +116,7 @@ const row = (page: Page, label: string | RegExp) =>
 
 test('month 1: the aggregator sets the price and every figure follows it', async ({ page, baseURL }, testInfo) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
-  const bodies: unknown[] = [];
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    bodies.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(holdingDto('h1', 'a1', { displayPricePaise: 15_750_000 })) });
-  });
-  await json(page, '**/v1/aggregator/holdings/h1', holdingDto('h1', 'a1', { displayPricePaise: 15_750_000 }));
+  const created = await stubReservation(page, holdingDto('h1', 'a1', { displayPricePaise: 15_750_000 }));
   await page.goto('/aggregator/inventory/a1/reserve');
 
   // It starts at GalleryZone's price, with GalleryZone's own numbers.
@@ -145,18 +150,12 @@ test('month 1: the aggregator sets the price and every figure follows it', async
   await price.fill('150000');
   await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
   await page.waitForURL('**/aggregator/collection/h1');
-  expect(bodies).toEqual([{ artworkId: 'a1', sellingPricePaise: 15_000_000 }]);
+  expect(created).toEqual([{ artworkId: 'a1', sellingPricePaise: 15_000_000, idempotencyKey: expect.any(String) }]);
 });
 
 test('later months: the price is GalleryZone’s and the advance is 5% of the artist price', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a2', monthTwo)] });
-  const bodies: unknown[] = [];
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    bodies.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(holdingDto('h2', 'a2', { cycleMonth: 2 })) });
-  });
-  await json(page, '**/v1/aggregator/holdings/h2', holdingDto('h2', 'a2', { cycleMonth: 2 }));
+  const created = await stubReservation(page, holdingDto('h2', 'a2', { cycleMonth: 2 }));
   await page.goto('/aggregator/inventory/a2/reserve');
 
   await expect(page.getByText('Price this month, before GST')).toBeVisible();
@@ -168,7 +167,7 @@ test('later months: the price is GalleryZone’s and the advance is 5% of the ar
   await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
   await page.waitForURL('**/aggregator/collection/h2');
   // No price is sent for a month the aggregator doesn't price.
-  expect(bodies).toEqual([{ artworkId: 'a2' }]);
+  expect(created).toEqual([{ artworkId: 'a2', idempotencyKey: expect.any(String) }]);
 });
 
 const GATES = [
@@ -277,22 +276,18 @@ test('a declined request stands for the window, and the piece cannot be asked ab
   await expect(page.getByRole('button', { name: 'Ask to keep it longer' })).toHaveCount(0);
 });
 
-// ---- Direct reservation payment through Razorpay -----------------------------------------------
+// ---- Reservation payment through Razorpay: an intent is opened, paid, then verified -----------
 
-const reservationSession = (
-  paymentId: string,
-  orderId: string,
-  amountPaise: number,
-) => ({
+/** What POST /v1/aggregator/reservation-intents answers when Razorpay is live. */
+const razorpayIntent = (intentId: string, orderId: string, amountPaise: number) => ({
   mode: 'razorpay',
-  paymentId,
+  intentId,
   keyId: 'rzp_test_fake',
   razorpayOrderId: orderId,
   amountPaise,
   currency: 'INR',
   name: 'GalleryZone',
-  description: 'GalleryZone artwork reservation',
-  prefill: { name: '', email: '', contact: '' },
+  description: 'Reserve artwork (advance + delivery)',
 });
 
 /** The signed success payload Checkout.js hands back. The API verifies its HMAC AND re-reads the order. */
@@ -334,40 +329,29 @@ async function fakeRazorpay(page: Page, behaviour: 'pay' | 'close') {
   }, [behaviour, SUCCESS] as const);
 }
 
-test('reservation payment opens Razorpay, verifies, then creates the holding', async ({ page, baseURL }) => {
+test('reservation opens Razorpay, and verifying the payment creates the holding', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
   await fakeRazorpay(page, 'pay');
-  const started: unknown[] = [];
+  const created: unknown[] = [];
   const verified: unknown[] = [];
-  const holdings: unknown[] = [];
 
-  await page.route('**/v1/aggregator/reservation-payments', (route) => {
+  await page.route('**/v1/aggregator/reservation-intents', (route) => {
     if (route.request().method() !== 'POST') return route.fallback();
-    started.push(route.request().postDataJSON());
+    created.push(route.request().postDataJSON());
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       headers: CORS,
-      body: JSON.stringify(reservationSession('rp1', 'order_test_1', 900_000)),
+      body: JSON.stringify(razorpayIntent('ri1', 'order_test_1', 900_000)),
     });
   });
-  await page.route('**/v1/aggregator/reservation-payments/rp1/verify', (route) => {
+  await page.route('**/v1/aggregator/reservation-intents/ri1/verify', (route) => {
     verified.push(route.request().postDataJSON());
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       headers: CORS,
-      body: JSON.stringify({ status: 'paid', amountPaise: 900_000 }),
-    });
-  });
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    holdings.push(route.request().postDataJSON());
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: CORS,
-      body: JSON.stringify(holdingDto('h1', 'a1')),
+      body: JSON.stringify({ status: 'finalized', holdingId: 'h1' }),
     });
   });
   await json(page, '**/v1/aggregator/holdings/h1', holdingDto('h1', 'a1'));
@@ -376,9 +360,15 @@ test('reservation payment opens Razorpay, verifies, then creates the holding', a
   await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
   await page.waitForURL('**/aggregator/collection/h1');
 
-  expect(started).toEqual([{ amountPaise: 900_000 }]);
-  expect(verified).toEqual([SUCCESS]);
-  expect(holdings).toEqual([{ artworkId: 'a1', sellingPricePaise: 13_000_000 }]);
+  expect(created).toEqual([{ artworkId: 'a1', sellingPricePaise: 13_000_000, idempotencyKey: expect.any(String) }]);
+  // The server re-reads the order itself; the page only hands over what Checkout.js returned.
+  expect(verified).toEqual([
+    {
+      razorpayOrderId: SUCCESS.razorpay_order_id,
+      razorpayPaymentId: SUCCESS.razorpay_payment_id,
+      razorpaySignature: SUCCESS.razorpay_signature,
+    },
+  ]);
   expect(
     await page.evaluate(
       () =>
@@ -393,67 +383,43 @@ test('reservation payment opens Razorpay, verifies, then creates the holding', a
   });
 });
 
-test('closing Razorpay is verified and creates no holding when the order is unpaid', async ({ page, baseURL }) => {
+test('closing Razorpay is still verified, and reserves nothing when the order is unpaid', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
   await fakeRazorpay(page, 'close');
   const verified: unknown[] = [];
-  let holdingPosts = 0;
 
-  await json(
-    page,
-    '**/v1/aggregator/reservation-payments',
-    reservationSession('rp2', 'order_test_2', 900_000),
-    'POST',
-  );
-  await page.route('**/v1/aggregator/reservation-payments/rp2/verify', (route) => {
+  await json(page, '**/v1/aggregator/reservation-intents', razorpayIntent('ri2', 'order_test_2', 900_000), 'POST');
+  await page.route('**/v1/aggregator/reservation-intents/ri2/verify', (route) => {
     verified.push(route.request().postDataJSON());
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       headers: CORS,
-      body: JSON.stringify({ status: 'created' }),
+      body: JSON.stringify({ status: 'cancelled' }),
     });
-  });
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    holdingPosts += 1;
-    return route.abort();
   });
 
   await page.goto('/aggregator/inventory/a1/reserve');
   await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
 
   await expect(page.getByText('Payment was cancelled')).toBeVisible();
+  // A UPI app can still complete a payment after the modal closes, so the server is asked anyway.
   expect(verified).toEqual([null]);
-  expect(holdingPosts).toBe(0);
+  await expect(page).toHaveURL(/\/aggregator\/inventory\/a1\/reserve$/);
 });
 
-test('simulated mode uses the explicit reservation-payment simulation endpoint', async ({ page, baseURL }) => {
+test('simulated mode finalizes the intent without opening Razorpay', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
-  const simulated: string[] = [];
+  const verified: unknown[] = [];
 
-  await json(
-    page,
-    '**/v1/aggregator/reservation-payments',
-    { mode: 'simulated', paymentId: 'rp3' },
-    'POST',
-  );
-  await page.route('**/v1/aggregator/reservation-payments/rp3/simulate', (route) => {
-    simulated.push(route.request().url());
+  await json(page, '**/v1/aggregator/reservation-intents', { mode: 'simulated', intentId: 'ri3', amountPaise: 900_000 }, 'POST');
+  await page.route('**/v1/aggregator/reservation-intents/ri3/verify', (route) => {
+    verified.push(route.request().postDataJSON());
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
       headers: CORS,
-      body: JSON.stringify({ status: 'paid', amountPaise: 900_000 }),
-    });
-  });
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      headers: CORS,
-      body: JSON.stringify(holdingDto('h3', 'a1')),
+      body: JSON.stringify({ status: 'finalized', holdingId: 'h3' }),
     });
   });
   await json(page, '**/v1/aggregator/holdings/h3', holdingDto('h3', 'a1'));
@@ -462,7 +428,7 @@ test('simulated mode uses the explicit reservation-payment simulation endpoint',
   await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
   await page.waitForURL('**/aggregator/collection/h3');
 
-  expect(simulated).toHaveLength(1);
+  expect(verified).toEqual([{}]);
 });
 
 test('earnings are read-only and expose no top-up or withdrawal controls', async ({ page, baseURL }) => {
@@ -488,27 +454,17 @@ test('earnings are read-only and expose no top-up or withdrawal controls', async
   await expect(page.getByText(/Commission/).last()).toBeVisible();
 });
 
-test('a paid reservation that loses the allocation race surfaces the failure', async ({ page, baseURL }) => {
+test('a paid reservation that loses the allocation race says the payment is being refunded', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    return route.fulfill({
-      status: 409,
-      contentType: 'application/json',
-      headers: CORS,
-      body: JSON.stringify({
-        type: 'about:blank',
-        title: 'This artwork was reserved by another aggregator after payment. Contact GalleryZone for reconciliation.',
-        status: 409,
-        code: 'conflict',
-      }),
-    });
-  });
+  await fakeRazorpay(page, 'pay');
+  await json(page, '**/v1/aggregator/reservation-intents', razorpayIntent('ri4', 'order_test_4', 900_000), 'POST');
+  // Payment captured, but another aggregator got the piece first: the server queues the refund.
+  await json(page, '**/v1/aggregator/reservation-intents/ri4/verify', { status: 'needs_refund' }, 'POST');
 
   await page.goto('/aggregator/inventory/a1/reserve');
   await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
 
-  await expect(page.getByText(/reserved by another aggregator after payment/)).toBeVisible();
+  await expect(page.getByText(/Your payment is being refunded/)).toBeVisible();
   await expect(page).toHaveURL(/\/reserve$/);
 });
 

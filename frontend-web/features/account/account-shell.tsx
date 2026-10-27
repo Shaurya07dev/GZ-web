@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -41,6 +42,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Marks this element so the onboarding tour can target it. */
+  tourId?: string;
 }
 
 interface NavGroup {
@@ -54,23 +57,23 @@ const NAV_GROUPS: NavGroup[] = [
     id: "main",
     label: "Main",
     items: [
-      { label: "Dashboard", href: "/account", icon: LayoutGrid },
-      { label: "Discover", href: "/marketplace", icon: Compass },
-      { label: "Wishlist", href: "/wishlist", icon: Heart },
+      { label: "Dashboard", href: "/account", icon: LayoutGrid, tourId: "customer-dashboard" },
+      { label: "Discover", href: "/marketplace", icon: Compass, tourId: "customer-discover" },
+      { label: "Wishlist", href: "/wishlist", icon: Heart, tourId: "customer-wishlist" },
     ],
   },
   {
     id: "collection",
     label: "My Collection",
     items: [
-      { label: "My Collection", href: "/account/collection", icon: Frame },
-      { label: "COA & NFC", href: "/account/coa-nfc", icon: Fingerprint },
+      { label: "My Collection", href: "/account/collection", icon: Frame, tourId: "customer-collection" },
+      { label: "COA & NFC", href: "/account/coa-nfc", icon: Fingerprint, tourId: "customer-coa" },
     ],
   },
   {
     id: "purchases",
     label: "Purchases",
-    items: [{ label: "Orders", href: "/account/orders", icon: ShoppingBag }],
+    items: [{ label: "Orders", href: "/account/orders", icon: ShoppingBag, tourId: "customer-orders" }],
   },
   // Finance / Wallet removed (client, 18 Oct 2026): no customer wallet in the
   // escrow model — refunds go back to the original payment method, not to
@@ -79,14 +82,14 @@ const NAV_GROUPS: NavGroup[] = [
     id: "resale",
     label: "Resale",
     items: [
-      { label: "Resell Artwork", href: "/account/resale", icon: Repeat2 },
+      { label: "Resell Artwork", href: "/account/resale", icon: Repeat2, tourId: "customer-resale" },
     ],
   },
   {
     id: "account",
     label: "Account",
     items: [
-      { label: "Profile", href: "/account/settings", icon: CircleUserRound },
+      { label: "Profile", href: "/account/settings", icon: CircleUserRound, tourId: "customer-profile" },
       { label: "Addresses", href: "/account/addresses", icon: MapPin },
       { label: "Support", href: "/account/support", icon: LifeBuoy },
     ],
@@ -101,6 +104,13 @@ const ALL_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 // than a second account-only bottom nav that only matched this section and
 // had to be carefully hidden from/shown to avoid stacking with the global
 // one. Root layout's `pb-16` already reserves room for it.
+// react-joyride is client-only and touches `window` at import time, so dyn-import
+// with ssr:false stops the server bundle from pulling it in.
+const OnboardingTour = dynamic(
+  () => import("@/features/onboarding/onboarding-tour").then((m) => m.OnboardingTour),
+  { ssr: false },
+);
+
 export function AccountShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] bg-background">
@@ -112,6 +122,8 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      <OnboardingTour role="customer" />
     </div>
   );
 }
@@ -137,6 +149,7 @@ function NavLink({
       href={item.href}
       onClick={onClick}
       title={collapsed ? item.label : undefined}
+      data-tour={item.tourId}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
         collapsed && "lg:justify-center lg:px-2",
@@ -182,6 +195,7 @@ function Sidebar() {
         <Link
           href="/marketplace"
           title={collapsed ? "View site" : undefined}
+          data-tour="customer-view-site"
           className={cn(
             "mx-3 mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
             collapsed && "lg:justify-center lg:px-2",

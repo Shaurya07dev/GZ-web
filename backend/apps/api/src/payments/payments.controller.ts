@@ -60,10 +60,16 @@ import {
   orderIdForProviderOrder,
   providerOrderIdForOrder,
   topupIdForProviderOrder,
+  finalizeReservationIntent,
+  getReservationIntent,
+  intentIdForProviderOrder,
+  markIntentRefunded,
+  ReservationIntentError,
   Collections,
   type Db,
   type ArtworkDoc,
 } from "@galleryzone/db";
+import { bookInboundShipment } from "../shiprocket-booking.ts";
 import { startWalletTopupInputSchema, type StartWalletTopupInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
 import { Public, Roles } from "../auth/roles.decorator.ts";
@@ -429,6 +435,13 @@ export class PaymentsController {
       payment?.notes?.gzTopupId ?? orderEntity?.notes?.gzTopupId ?? (providerOrderId ? await topupIdForProviderOrder(this.db, providerOrderId) : null);
     if (topupId) return this.topupWebhook(event.event, topupId, { payment, reportedAmount, providerOrderId });
 
+    // An aggregator-reservation payment intent (notes.gzIntentId). The finalize
+    // transaction is idempotent — a late webhook after the browser already
+    // verified safely becomes a no-op.
+    const intentId =
+      payment?.notes?.gzIntentId ?? orderEntity?.notes?.gzIntentId ?? (providerOrderId ? await intentIdForProviderOrder(this.db, providerOrderId) : null);
+    if (intentId) return this.intentWebhook(event.event, intentId, { payment, reportedAmount });
+
     const noteOrderId = payment?.notes?.gzOrderId ?? orderEntity?.notes?.gzOrderId ?? null;
     const orderId = noteOrderId ?? (providerOrderId ? await orderIdForProviderOrder(this.db, providerOrderId) : null);
     if (!orderId) return { received: true, matched: false };
@@ -470,6 +483,53 @@ export class PaymentsController {
       }
       default:
         break;
+    }
+    return { received: true, matched: true };
+  }
+
+  private async intentWebhook(
+    event: string,
+    intentId: string,
+    ctx: { payment: { id?: string; method?: string } | undefined; reportedAmount: number | null },
+  ) {
+    try {
+      if (event !== "payment.captured" && event !== "order.paid") {
+        // payment.failed etc — nothing to do. The intent either sits in
+        // `created` (buyer never paid; TTL expires it) or is already settled.
+        return { received: true, matched: true };
+      }
+      const intent = await getReservationIntent(this.db, intentId);
+      if (!intent) return { received: true, matched: false };
+      if (intent.status === "finalized" || intent.status === "refunded") {
+        // Browser verify already won the race. Nothing to do.
+        return { received: true, matched: true };
+      }
+      if (ctx.reportedAmount !== null && ctx.reportedAmount !== intent.totalPayablePaise) {
+        console.error(JSON.stringify({ event: "payments.amount_mismatch", source: "webhook_intent", intentId, expectedPaise: intent.totalPayablePaise, reportedAmount: ctx.reportedAmount }));
+        return { received: true, matched: false };
+      }
+      const providerPaymentId = ctx.payment?.id ?? null;
+      if (!providerPaymentId) return { received: true, matched: false };
+      const outcome = await finalizeReservationIntent(this.db, {
+        intentId,
+        aggregatorId: intent.aggregatorId,
+        providerPaymentId,
+      });
+      if (outcome.kind === "needs_refund") {
+        const refund = await this.razorpay.createRefund({
+          providerPaymentId,
+          amountPaise: intent.totalPayablePaise,
+          receipt: `refund-${intentId}`.slice(0, 40),
+          notes: { gzIntentId: intentId, reason: outcome.reason.slice(0, 200), source: "webhook" },
+        });
+        await markIntentRefunded(this.db, intentId, refund.id);
+      } else if (outcome.kind === "finalized") {
+        void bookInboundShipment(this.db, outcome.holdingId, intent.artworkId, intent.aggregatorId).catch((err) =>
+          console.error(JSON.stringify({ event: "shiprocket.inbound.failed", holdingId: outcome.holdingId, error: String(err) })),
+        );
+      }
+    } catch (error) {
+      if (!(error instanceof ReservationIntentError)) throw error;
     }
     return { received: true, matched: true };
   }

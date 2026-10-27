@@ -89,6 +89,43 @@ export const resolveHoldingReportInputSchema = z
 
 export type ResolveHoldingReportInput = z.infer<typeof resolveHoldingReportInputSchema>;
 
+/**
+ * Open a reservation payment intent. The server locks the amount, opens a
+ * Razorpay order, and returns the keyId + razorpayOrderId for the browser
+ * Checkout. The holding is NOT created yet — it only appears after
+ * /verify confirms the payment captured AND the artwork is still available.
+ *
+ * `idempotencyKey` must be unique per attempt — a double-click or network
+ * retry with the same key returns the same intent instead of opening a
+ * second Razorpay order (and charging twice).
+ */
+export const createReservationIntentInputSchema = z
+  .object({
+    artworkId: firestoreId,
+    sellingPricePaise: z.number().int().positive().optional(),
+    idempotencyKey: z.string().min(16).max(128),
+  })
+  .strict();
+
+export type CreateReservationIntentInput = z.infer<typeof createReservationIntentInputSchema>;
+
+/**
+ * The signed payload Razorpay Checkout.js hands back on success. Optional —
+ * verify is also called from the ondismiss path (payment may have captured
+ * out-of-band after the modal closed) and from the webhook, where no signed
+ * payload exists. In those cases the server reads the intent's own
+ * providerOrderId instead.
+ */
+export const verifyReservationIntentInputSchema = z
+  .object({
+    razorpayOrderId: z.string().min(1),
+    razorpayPaymentId: z.string().min(1),
+    razorpaySignature: z.string().min(1),
+  })
+  .strict();
+
+export type VerifyReservationIntentInput = z.infer<typeof verifyReservationIntentInputSchema>;
+
 export interface HoldingDto {
   id: string;
   artworkId: string;

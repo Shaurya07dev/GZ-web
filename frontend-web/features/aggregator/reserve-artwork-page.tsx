@@ -121,7 +121,6 @@ export function ReserveArtworkPage({ artworkId }: { artworkId: string }) {
       {
         artworkId,
         sellingPrice: offer.canSetPrice ? price : undefined,
-        paymentAmount: payable,
       },
       {
         onSuccess: (holding) => {
