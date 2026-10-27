@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -35,19 +36,27 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 
 // "View site" is pinned above this list, so the sidebar reads: View site,
 // My Profile, My Artworks, Add Artwork, Dashboard, then the rest.
-const NAV_ITEMS = [
-  { label: "My Profile", href: "/dashboard/profile", icon: CircleUserRound },
-  { label: "My Artworks", href: "/dashboard/artworks", icon: ImageIcon },
-  { label: "Add Artwork", href: "/dashboard/artworks/upload", icon: ImagePlus },
+interface DashboardNavItem {
+  label: string;
+  href: string;
+  icon: typeof CircleUserRound;
+  /** Marks this element so the onboarding tour can target it. */
+  tourId?: string;
+}
+
+const NAV_ITEMS: readonly DashboardNavItem[] = [
+  { label: "My Profile", href: "/dashboard/profile", icon: CircleUserRound, tourId: "artist-profile" },
+  { label: "My Artworks", href: "/dashboard/artworks", icon: ImageIcon, tourId: "artist-artworks" },
+  { label: "Add Artwork", href: "/dashboard/artworks/upload", icon: ImagePlus, tourId: "artist-upload" },
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-  { label: "Portfolio", href: "/dashboard/portfolio", icon: LayoutTemplate },
+  { label: "Portfolio", href: "/dashboard/portfolio", icon: LayoutTemplate, tourId: "artist-portfolio" },
   { label: "Orders", href: "/dashboard/orders", icon: ShoppingBag },
-  { label: "Earnings", href: "/dashboard/wallet", icon: Wallet },
+  { label: "Earnings", href: "/dashboard/wallet", icon: Wallet, tourId: "artist-earnings" },
   { label: "Settlements", href: "/dashboard/settlements", icon: Landmark },
-  { label: "COA & NFC", href: "/dashboard/coa-nfc", icon: Fingerprint },
+  { label: "COA & NFC", href: "/dashboard/coa-nfc", icon: Fingerprint, tourId: "artist-coa" },
   { label: "Analytics", href: "/dashboard/analytics", icon: LineChart },
-  { label: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-  { label: "Blogs", href: "/dashboard/blogs", icon: PenTool },
+  { label: "Messages", href: "/dashboard/messages", icon: MessageSquare, tourId: "artist-messages" },
+  { label: "Blogs", href: "/dashboard/blogs", icon: PenTool, tourId: "artist-blogs" },
   {
     label: "Aggregator Display",
     href: "/dashboard/gallery-spaces",
@@ -55,7 +64,14 @@ const NAV_ITEMS = [
   },
   { label: "Support", href: "/dashboard/support", icon: LifeBuoy },
   { label: "Settings", href: "/dashboard/settings", icon: SettingsIcon },
-] as const;
+];
+
+// react-joyride is client-only and touches `window` at import, so dyn-import
+// with ssr:false stops the server bundle from pulling it in.
+const OnboardingTour = dynamic(
+  () => import("@/features/onboarding/onboarding-tour").then((m) => m.OnboardingTour),
+  { ssr: false },
+);
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,6 +86,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      <OnboardingTour role="artist" />
     </div>
   );
 }
@@ -156,6 +174,7 @@ function CollapsibleNavLink({
   onClick,
   className,
   children,
+  dataTour,
 }: {
   href: string;
   label: string;
@@ -163,11 +182,13 @@ function CollapsibleNavLink({
   onClick: () => void;
   className: string;
   children: React.ReactNode;
+  dataTour?: string;
 }) {
   const link = (
     <Link
       href={href}
       onClick={onClick}
+      data-tour={dataTour}
       className={cn(className, collapsed && "lg:justify-center lg:px-2")}
     >
       {children}
@@ -206,6 +227,7 @@ function SidebarBody({
         label="View site"
         collapsed={collapsed}
         onClick={onNavigate}
+        dataTour="artist-view-site"
         className="mx-3 mt-3 flex items-center gap-3 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
       >
         <Store className="size-4 shrink-0" strokeWidth={1.75} />
@@ -235,6 +257,7 @@ function SidebarBody({
                 label={item.label}
                 collapsed={collapsed}
                 onClick={onNavigate}
+                dataTour={item.tourId}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors",
                   active
