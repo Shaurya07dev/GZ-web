@@ -102,6 +102,7 @@ export const Collections = {
   affiliateProducts: "affiliateProducts",
   blogs: "blogs",
   holdingReports: "holdingReports",
+  reservationIntents: "reservationIntents",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -776,4 +777,66 @@ export interface HoldingReportDoc {
   resolvedAt: FirebaseFirestore.Timestamp | null;
   resolvedBy: string | null; // admin uid
   resolutionNote: string | null;
+}
+
+/**
+ * An in-flight aggregator reservation payment. Created when an aggregator
+ * clicks "Reserve" — the server locks the amount, opens a Razorpay order, and
+ * only CREATES the holding after the payment is verified AND the allocation
+ * is still free (reservation-intents.ts owns the atomic transaction).
+ *
+ * Why a separate collection and not a field on AggregatorHoldingDoc:
+ *   - Before finalize, there's no holding yet (someone else may still win
+ *     the race). The intent is the only record of "money is being asked for".
+ *   - If a payment captures but the allocation is lost (someone else was
+ *     verified first), the intent records the refund that returns the money.
+ *   - Idempotency keys live here, not on the holding — the client can retry
+ *     the init call safely without creating two Razorpay orders.
+ *
+ * States move only forward (except created→cancelled on expiry):
+ *   created  — amount locked, Razorpay order attached, awaiting the buyer
+ *   paid     — Razorpay confirmed capture; finalize transaction running
+ *   finalized — holding written, intent is permanently settled
+ *   needs_refund — paid but allocation lost (race or stale state); refund queued
+ *   refunded — Razorpay refund succeeded; money is back with the buyer
+ *   expired  — never paid before expiresAt; no money moved
+ *   cancelled — buyer dismissed, verify confirmed no payment; no money moved
+ */
+export type ReservationIntentStatus =
+  | "created"
+  | "paid"
+  | "finalized"
+  | "needs_refund"
+  | "refunded"
+  | "expired"
+  | "cancelled";
+
+export interface ReservationIntentDoc {
+  aggregatorId: string;
+  artworkId: string;
+  /** The aggregator's chosen pre-GST price (month 1 only). Null = GalleryZone's offer. */
+  sellingPricePaise: number | null;
+  /** Snapshotted from the offer at init time so the amount can't drift between init and verify. */
+  advanceAmountPaise: number;
+  deliveryDepositPaise: number;
+  /** advance + deliveryDeposit — what Razorpay charges. */
+  totalPayablePaise: number;
+  /** Client-supplied; same key within TTL returns the same intent. */
+  idempotencyKey: string;
+  /** Razorpay order id, attached after the gateway call. Null while in flight. */
+  providerOrderId: string | null;
+  providerPaymentId: string | null;
+  /** Razorpay refund id when a lost-race refund has been issued. */
+  providerRefundId: string | null;
+  /** Set only once finalize succeeds. */
+  holdingId: string | null;
+  /** Why this intent is in needs_refund / cancelled / expired — for admin triage. */
+  failureReason: string | null;
+  status: ReservationIntentStatus;
+  createdAt: FirebaseFirestore.Timestamp;
+  /** The buyer has this long to complete payment before the intent expires. */
+  expiresAt: FirebaseFirestore.Timestamp;
+  paidAt: FirebaseFirestore.Timestamp | null;
+  finalizedAt: FirebaseFirestore.Timestamp | null;
+  refundedAt: FirebaseFirestore.Timestamp | null;
 }
