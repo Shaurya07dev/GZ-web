@@ -6,6 +6,63 @@ part of 'aggregator.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_HoldingReport _$HoldingReportFromJson(Map<String, dynamic> json) =>
+    _HoldingReport(
+      id: json['id'] as String,
+      holdingId: json['holdingId'] as String,
+      artworkId: json['artworkId'] as String,
+      artworkTitle: json['artworkTitle'] as String,
+      aggregatorId: json['aggregatorId'] as String,
+      aggregatorName: json['aggregatorName'] as String,
+      aggregatorEmail: json['aggregatorEmail'] as String,
+      artistId: json['artistId'] as String,
+      artistName: json['artistName'] as String,
+      issueType: $enumDecode(
+        _$HoldingReportIssueTypeEnumMap,
+        json['issueType'],
+      ),
+      description: json['description'] as String,
+      status: $enumDecode(_$HoldingReportStatusEnumMap, json['status']),
+      reportedAt: json['reportedAt'] as String,
+      resolvedAt: json['resolvedAt'] as String?,
+      resolvedBy: json['resolvedBy'] as String?,
+      resolutionNote: json['resolutionNote'] as String?,
+    );
+
+Map<String, dynamic> _$HoldingReportToJson(_HoldingReport instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'holdingId': instance.holdingId,
+      'artworkId': instance.artworkId,
+      'artworkTitle': instance.artworkTitle,
+      'aggregatorId': instance.aggregatorId,
+      'aggregatorName': instance.aggregatorName,
+      'aggregatorEmail': instance.aggregatorEmail,
+      'artistId': instance.artistId,
+      'artistName': instance.artistName,
+      'issueType': _$HoldingReportIssueTypeEnumMap[instance.issueType]!,
+      'description': instance.description,
+      'status': _$HoldingReportStatusEnumMap[instance.status]!,
+      'reportedAt': instance.reportedAt,
+      'resolvedAt': instance.resolvedAt,
+      'resolvedBy': instance.resolvedBy,
+      'resolutionNote': instance.resolutionNote,
+    };
+
+const _$HoldingReportIssueTypeEnumMap = {
+  HoldingReportIssueType.damagedInTransit: 'damaged_in_transit',
+  HoldingReportIssueType.wrongPiece: 'wrong_piece',
+  HoldingReportIssueType.qualityIssue: 'quality_issue',
+  HoldingReportIssueType.coaNfcProblem: 'coa_nfc_problem',
+  HoldingReportIssueType.missingAccessories: 'missing_accessories',
+  HoldingReportIssueType.other: 'other',
+};
+
+const _$HoldingReportStatusEnumMap = {
+  HoldingReportStatus.open: 'open',
+  HoldingReportStatus.resolved: 'resolved',
+};
+
 _DeliveryAddress _$DeliveryAddressFromJson(Map<String, dynamic> json) =>
     _DeliveryAddress(
       line1: json['line1'] as String,
@@ -50,6 +107,12 @@ _AggregatorSale _$AggregatorSaleFromJson(Map<String, dynamic> json) =>
       remittedVia: $enumDecodeNullable(_$RemitViaEnumMap, json['remittedVia']),
       courierRef: json['courierRef'] as String?,
       nfcReady: json['nfcReady'] as bool? ?? true,
+      shiprocketStage: $enumDecodeNullable(
+        _$ShiprocketStageEnumMap,
+        json['shiprocketStage'],
+      ),
+      trackingId: json['trackingId'] as String?,
+      carrier: json['carrier'] as String?,
     );
 
 Map<String, dynamic> _$AggregatorSaleToJson(_AggregatorSale instance) =>
@@ -73,6 +136,9 @@ Map<String, dynamic> _$AggregatorSaleToJson(_AggregatorSale instance) =>
       'remittedVia': _$RemitViaEnumMap[instance.remittedVia],
       'courierRef': instance.courierRef,
       'nfcReady': instance.nfcReady,
+      'shiprocketStage': _$ShiprocketStageEnumMap[instance.shiprocketStage],
+      'trackingId': instance.trackingId,
+      'carrier': instance.carrier,
     };
 
 const _$DeliveryModeEnumMap = {
@@ -92,6 +158,13 @@ const _$PaymentRouteEnumMap = {
 };
 
 const _$RemitViaEnumMap = {RemitVia.wallet: 'wallet', RemitVia.bank: 'bank'};
+
+const _$ShiprocketStageEnumMap = {
+  ShiprocketStage.pickup: 'pickup',
+  ShiprocketStage.inTransit: 'in_transit',
+  ShiprocketStage.outForDelivery: 'out_for_delivery',
+  ShiprocketStage.delivered: 'delivered',
+};
 
 _GallerySpace _$GallerySpaceFromJson(Map<String, dynamic> json) =>
     _GallerySpace(

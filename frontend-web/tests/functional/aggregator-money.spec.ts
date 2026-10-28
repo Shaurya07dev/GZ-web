@@ -19,6 +19,27 @@ async function json(page: Page, pattern: string, body: unknown, method?: string)
   });
 }
 
+/**
+ * A reservation paid in simulated mode: an intent is created, then verified into a
+ * holding. Returns the bodies the page sent to create the intent.
+ */
+async function stubReservation(page: Page, holding: { id: string }) {
+  const created: unknown[] = [];
+  await page.route('**/v1/aggregator/reservation-intents', (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    created.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ mode: 'simulated', intentId: `ri-${holding.id}`, amountPaise: 900_000 }),
+    });
+  });
+  await json(page, `**/v1/aggregator/reservation-intents/ri-${holding.id}/verify`, { status: 'finalized', holdingId: holding.id }, 'POST');
+  await json(page, `**/v1/aggregator/holdings/${holding.id}`, holding);
+  return created;
+}
+
 const profile = (over: Record<string, unknown> = {}) => ({
   uid: 'u1', fullName: 'Anand Rao', email: 'anand@example.in', phone: '9876543210', role: 'aggregator', status: 'active',
   createdAt: '2026-01-10T00:00:00.000Z', bio: null, profileImageUrl: null, headline: 'Director', location: null, instagram: null,
@@ -77,6 +98,8 @@ async function open(page: Page, baseURL: string, stub: Stub = {}) {
   // Anything not stubbed below fails fast instead of reaching a real API.
   await page.route('**/v1/**', (route) => route.abort());
   await dismissCookieConsent(page);
+  // The first-visit walkthrough would sit over every screen below.
+  await page.addInitScript(() => window.localStorage.setItem('gz_tour_completed_aggregator', 'seen'));
   await signInAs(page.context(), 'aggregator', baseURL);
   await json(page, '**/v1/auth/me', { uid: 'u1', role: 'aggregator', status: 'active', name: 'Anand Rao', email: 'anand@example.in', phone: '9876543210', roleGrants: [] });
   await json(page, '**/v1/me/profile', profile({ gstStatus: stub.gstStatus ?? 'approved' }));
@@ -93,13 +116,7 @@ const row = (page: Page, label: string | RegExp) =>
 
 test('month 1: the aggregator sets the price and every figure follows it', async ({ page, baseURL }, testInfo) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
-  const bodies: unknown[] = [];
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    bodies.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(holdingDto('h1', 'a1', { displayPricePaise: 15_750_000 })) });
-  });
-  await json(page, '**/v1/aggregator/holdings/h1', holdingDto('h1', 'a1', { displayPricePaise: 15_750_000 }));
+  const created = await stubReservation(page, holdingDto('h1', 'a1', { displayPricePaise: 15_750_000 }));
   await page.goto('/aggregator/inventory/a1/reserve');
 
   // It starts at GalleryZone's price, with GalleryZone's own numbers.
@@ -116,47 +133,41 @@ test('month 1: the aggregator sets the price and every figure follows it', async
   await expect(row(page, /GalleryZone \(80% of the markup\)/)).toContainText('₹40,000');
   await expect(row(page, /Your commission if it sells here \(20%\)/)).toContainText('₹10,000');
   await expect(row(page, 'Advance (5%)')).toContainText('₹7,500');
-  await expect(row(page, 'Held from your wallet')).toContainText('₹10,000');
+  await expect(row(page, 'Pay now through Razorpay')).toContainText('₹10,000');
   await expect(page.getByRole('status')).toHaveCount(0);
 
   // Below GalleryZone's price is refused before anything is sent.
   await price.fill('120000');
   await expect(page.getByText(/can.t be lower than GalleryZone.s price, ₹1,30,000/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Confirm reservation' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Pay .* & reserve/ })).toBeDisabled();
 
   // Double GalleryZone's price still goes through: GalleryZone is told, the aggregator is too.
   await price.fill('260000');
   await expect(page.getByRole('status')).toContainText(/at least double/);
-  await expect(page.getByRole('button', { name: 'Confirm reservation' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: /Pay .* & reserve/ })).toBeEnabled();
   await page.screenshot({ path: testInfo.outputPath('reserve-month-1-warning.png'), fullPage: true });
 
   await price.fill('150000');
-  await page.getByRole('button', { name: 'Confirm reservation' }).click();
+  await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
   await page.waitForURL('**/aggregator/collection/h1');
-  expect(bodies).toEqual([{ artworkId: 'a1', sellingPricePaise: 15_000_000 }]);
+  expect(created).toEqual([{ artworkId: 'a1', sellingPricePaise: 15_000_000, idempotencyKey: expect.any(String) }]);
 });
 
 test('later months: the price is GalleryZone’s and the advance is 5% of the artist price', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a2', monthTwo)] });
-  const bodies: unknown[] = [];
-  await page.route('**/v1/aggregator/holdings', (route) => {
-    if (route.request().method() !== 'POST') return route.fallback();
-    bodies.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(holdingDto('h2', 'a2', { cycleMonth: 2 })) });
-  });
-  await json(page, '**/v1/aggregator/holdings/h2', holdingDto('h2', 'a2', { cycleMonth: 2 }));
+  const created = await stubReservation(page, holdingDto('h2', 'a2', { cycleMonth: 2 }));
   await page.goto('/aggregator/inventory/a2/reserve');
 
   await expect(page.getByText('Price this month, before GST')).toBeVisible();
   await expect(page.getByLabel('Your selling price, before GST (₹)')).toHaveCount(0);
   await expect(row(page, 'Advance (5%)')).toContainText('₹5,000');
   await expect(page.getByText('of the artist price, ₹1,00,000')).toBeVisible();
-  await expect(row(page, 'Held from your wallet')).toContainText('₹7,500');
+  await expect(row(page, 'Pay now through Razorpay')).toContainText('₹7,500');
 
-  await page.getByRole('button', { name: 'Confirm reservation' }).click();
+  await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
   await page.waitForURL('**/aggregator/collection/h2');
   // No price is sent for a month the aggregator doesn't price.
-  expect(bodies).toEqual([{ artworkId: 'a2' }]);
+  expect(created).toEqual([{ artworkId: 'a2', idempotencyKey: expect.any(String) }]);
 });
 
 const GATES = [
@@ -182,7 +193,7 @@ for (const gate of GATES) {
     // The same wall stands on the reserve screen itself.
     await page.goto('/aggregator/inventory/a1/reserve');
     await expect(page.getByText(gate.notice)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Confirm reservation' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /Pay .* & reserve/ })).toBeDisabled();
   });
 }
 
@@ -265,19 +276,26 @@ test('a declined request stands for the window, and the piece cannot be asked ab
   await expect(page.getByRole('button', { name: 'Ask to keep it longer' })).toHaveCount(0);
 });
 
-// ---- The wallet: money comes in through Razorpay ---------------------------------------------
+// ---- Reservation payment through Razorpay: an intent is opened, paid, then verified -----------
 
-// The key id IS public (it identifies the merchant to Checkout.js), but note
-// what still is not here: no secret, and no amount the browser can tamper
-// with that the API will not re-check against its own record.
-const razorpaySession = (topupId: string, orderId: string) => ({
-  mode: 'razorpay', topupId, keyId: 'rzp_test_fake', razorpayOrderId: orderId, amountPaise: 2_500_000,
-  currency: 'INR', name: 'GalleryZone', description: 'Add funds to your GalleryZone wallet',
-  prefill: { name: '', email: '', contact: '' },
+/** What POST /v1/aggregator/reservation-intents answers when Razorpay is live. */
+const razorpayIntent = (intentId: string, orderId: string, amountPaise: number) => ({
+  mode: 'razorpay',
+  intentId,
+  keyId: 'rzp_test_fake',
+  razorpayOrderId: orderId,
+  amountPaise,
+  currency: 'INR',
+  name: 'GalleryZone',
+  description: 'Reserve artwork (advance + delivery)',
 });
 
 /** The signed success payload Checkout.js hands back. The API verifies its HMAC AND re-reads the order. */
-const SUCCESS = { razorpay_order_id: 'order_test_1', razorpay_payment_id: 'pay_test_1', razorpay_signature: 'deadbeef' };
+const SUCCESS = {
+  razorpay_order_id: 'order_test_1',
+  razorpay_payment_id: 'pay_test_1',
+  razorpay_signature: 'deadbeef',
+};
 
 /** Stands in for Razorpay Checkout.js: records what it was opened with, then completes or is dismissed. */
 async function fakeRazorpay(page: Page, behaviour: 'pay' | 'close') {
@@ -299,147 +317,154 @@ async function fakeRazorpay(page: Page, behaviour: 'pay' | 'close') {
         /* payment.failed is not exercised here */
       }
       open() {
-        setTimeout(() => (mode === 'pay' ? this.options.handler(success) : this.options.modal.ondismiss()), 50);
+        setTimeout(
+          () =>
+            mode === 'pay'
+              ? this.options.handler(success)
+              : this.options.modal.ondismiss(),
+          50,
+        );
       }
     };
   }, [behaviour, SUCCESS] as const);
 }
 
-async function walletThatFollows(page: Page) {
-  const state = { balancePaise: 0 };
-  await page.route('**/v1/aggregator/wallet', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ accountType: 'aggregator_payable', balancePaise: state.balancePaise, heldPaise: 0 }) }),
-  );
-  return state;
-}
-
-const freeToUse = (page: Page) => page.getByText('Free to use').locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]');
-
-test('topping up: Razorpay opens on our order, and the wallet is credited once the API has verified it', async ({ page, baseURL }, testInfo) => {
-  await open(page, baseURL!);
-  await fakeRazorpay(page, 'pay');
-  const wallet = await walletThatFollows(page);
-  const started: unknown[] = [];
-  const verified: unknown[] = [];
-  await page.route('**/v1/aggregator/wallet/topups', (route) => {
-    started.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(razorpaySession('t1', 'order_test_1')) });
-  });
-  await page.route('**/v1/aggregator/wallet/topups/t1/verify', (route) => {
-    verified.push(route.request().postDataJSON());
-    wallet.balancePaise = 2_500_000;
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'paid', amountPaise: 2_500_000 }) });
-  });
-  await page.goto('/aggregator/wallet');
-  await expect(freeToUse(page)).toContainText('₹0');
-
-  await page.getByLabel('Amount (₹)').first().fill('25000');
-  await page.getByRole('button', { name: 'Add to wallet' }).click();
-
-  // The amount goes to the API in paise; the API, not the browser, opens the gateway order.
-  await expect(page.getByText('Added to your wallet')).toBeVisible();
-  expect(started).toEqual([{ amountPaise: 2_500_000 }]);
-  // Checkout.js is opened on OUR order id and OUR amount, both of which the
-  // API re-checks against its own record before anything settles.
-  expect(await page.evaluate(() => (window as unknown as { __rzp: { key: string; order_id: string; amount: number } }).__rzp)).toMatchObject({
-    key: 'rzp_test_fake',
-    order_id: 'order_test_1',
-    amount: 2_500_000,
-  });
-  // The confirmation forwards the signed payload, and that is ALL it is: the
-  // API checks its HMAC and then re-reads the order from Razorpay, so a
-  // tampered browser cannot settle anything by sending a nicer-looking body.
-  expect(verified).toEqual([SUCCESS]);
-  await expect(freeToUse(page)).toContainText('₹25,000');
-  await page.screenshot({ path: testInfo.outputPath('wallet-topped-up.png'), fullPage: true });
-});
-
-test('closing the Razorpay window charges nothing and credits nothing', async ({ page, baseURL }) => {
-  await open(page, baseURL!);
-  await fakeRazorpay(page, 'close');
-  const wallet = await walletThatFollows(page);
-  const verified: unknown[] = [];
-  await json(page, '**/v1/aggregator/wallet/topups', razorpaySession('t2', 'order_test_2'), 'POST');
-  // The confirmation is made even when the window was closed: a dismissed
-  // modal can still have taken a payment (a UPI app completing out of band),
-  // so the API is always the one that decides. Here it reports the order was
-  // never paid.
-  await page.route('**/v1/aggregator/wallet/topups/t2/verify', (route) => {
-    verified.push(route.request().postDataJSON());
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'created' }) });
-  });
-  await page.goto('/aggregator/wallet');
-
-  await page.getByLabel('Amount (₹)').first().fill('25000');
-  await page.getByRole('button', { name: 'Add to wallet' }).click();
-
-  await expect(page.getByText('Payment cancelled — nothing was charged.')).toBeVisible();
-  // Asked once, with no payload to forward (the modal was dismissed before
-  // Checkout.js produced one) — and credited nothing, because Razorpay said
-  // the order was never paid.
-  expect(verified).toEqual([null]);
-  expect(wallet.balancePaise).toBe(0);
-  await expect(freeToUse(page)).toContainText('₹0');
-});
-
-test('with no gateway configured the top-up is simulated, not silently credited by the page', async ({ page, baseURL }) => {
-  await open(page, baseURL!);
-  const wallet = await walletThatFollows(page);
-  const calls: string[] = [];
-  await json(page, '**/v1/aggregator/wallet/topups', { mode: 'simulated', topupId: 't3', amountPaise: 1_000_000 }, 'POST');
-  await page.route('**/v1/aggregator/wallet/topups/t3/simulate', (route) => {
-    calls.push(route.request().url());
-    wallet.balancePaise = 1_000_000;
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'paid', amountPaise: 1_000_000 }) });
-  });
-  await page.goto('/aggregator/wallet');
-
-  await page.getByLabel('Amount (₹)').first().fill('10000');
-  await page.getByRole('button', { name: 'Add to wallet' }).click();
-  await expect(freeToUse(page)).toContainText('₹10,000');
-  expect(calls).toHaveLength(1);
-});
-
-test('a top-up outside ₹1,000 to ₹5,00,000 can’t be started', async ({ page, baseURL }) => {
-  await open(page, baseURL!);
-  await page.goto('/aggregator/wallet');
-  const amount = page.getByLabel('Amount (₹)').first();
-  const add = page.getByRole('button', { name: 'Add to wallet' });
-
-  for (const [value, ok] of [['500', false], ['600000', false], ['1000.5', false], ['1000', true], ['500000', true]] as const) {
-    await amount.fill(value);
-    if (ok) await expect(add).toBeEnabled(); else await expect(add).toBeDisabled();
-  }
-});
-
-test('the wallet history says what each entry was, and which piece it was for', async ({ page, baseURL }) => {
-  await open(page, baseURL!, { holdings: [holdingDto('h1', 'held', { artwork: artworkDto('held', { title: 'Held Abstract' }) })] });
-  await json(page, '**/v1/aggregator/wallet/transactions', {
-    transactions: [
-      { id: 'e1', amountPaise: 2_500_000, reason: 'wallet_topup', holdingId: null, at: '2026-09-29T10:00:00.000Z' },
-      { id: 'e2', amountPaise: -1_000_000, reason: 'reservation_hold', holdingId: 'h1', at: '2026-09-30T10:00:00.000Z' },
-      { id: 'e3', amountPaise: 750_000, reason: 'advance_returned_to_wallet', holdingId: 'h1', at: '2026-10-30T10:00:00.000Z' },
-    ],
-  });
-  await page.goto('/aggregator/wallet');
-
-  await expect(page.getByText('Added to wallet', { exact: true })).toBeVisible();
-  await expect(page.getByText('Held for reservation · Held Abstract')).toBeVisible();
-  await expect(page.getByText('Advance returned · Held Abstract')).toBeVisible();
-});
-
-test('a reservation the wallet can’t cover is refused with the reason', async ({ page, baseURL }) => {
+test('reservation opens Razorpay, and verifying the payment creates the holding', async ({ page, baseURL }) => {
   await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
-  await page.route('**/v1/aggregator/holdings', (route) => {
+  await fakeRazorpay(page, 'pay');
+  const created: unknown[] = [];
+  const verified: unknown[] = [];
+
+  await page.route('**/v1/aggregator/reservation-intents', (route) => {
     if (route.request().method() !== 'POST') return route.fallback();
+    created.push(route.request().postDataJSON());
     return route.fulfill({
-      status: 409, contentType: 'application/json', headers: CORS,
-      body: JSON.stringify({ type: 'about:blank', title: 'Your wallet needs ₹9,000 free to reserve this piece and has ₹0. Add funds in Earnings & Wallet.', status: 409, code: 'conflict' }),
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify(razorpayIntent('ri1', 'order_test_1', 900_000)),
     });
   });
+  await page.route('**/v1/aggregator/reservation-intents/ri1/verify', (route) => {
+    verified.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ status: 'finalized', holdingId: 'h1' }),
+    });
+  });
+  await json(page, '**/v1/aggregator/holdings/h1', holdingDto('h1', 'a1'));
+
   await page.goto('/aggregator/inventory/a1/reserve');
-  await page.getByRole('button', { name: 'Confirm reservation' }).click();
-  await expect(page.getByText(/Your wallet needs ₹9,000 free/)).toBeVisible();
+  await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
+  await page.waitForURL('**/aggregator/collection/h1');
+
+  expect(created).toEqual([{ artworkId: 'a1', sellingPricePaise: 13_000_000, idempotencyKey: expect.any(String) }]);
+  // The server re-reads the order itself; the page only hands over what Checkout.js returned.
+  expect(verified).toEqual([
+    {
+      razorpayOrderId: SUCCESS.razorpay_order_id,
+      razorpayPaymentId: SUCCESS.razorpay_payment_id,
+      razorpaySignature: SUCCESS.razorpay_signature,
+    },
+  ]);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as {
+          __rzp: { key: string; order_id: string; amount: number };
+        }).__rzp,
+    ),
+  ).toMatchObject({
+    key: 'rzp_test_fake',
+    order_id: 'order_test_1',
+    amount: 900_000,
+  });
+});
+
+test('closing Razorpay is still verified, and reserves nothing when the order is unpaid', async ({ page, baseURL }) => {
+  await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
+  await fakeRazorpay(page, 'close');
+  const verified: unknown[] = [];
+
+  await json(page, '**/v1/aggregator/reservation-intents', razorpayIntent('ri2', 'order_test_2', 900_000), 'POST');
+  await page.route('**/v1/aggregator/reservation-intents/ri2/verify', (route) => {
+    verified.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+  });
+
+  await page.goto('/aggregator/inventory/a1/reserve');
+  await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
+
+  await expect(page.getByText('Payment was cancelled')).toBeVisible();
+  // A UPI app can still complete a payment after the modal closes, so the server is asked anyway.
+  expect(verified).toEqual([null]);
+  await expect(page).toHaveURL(/\/aggregator\/inventory\/a1\/reserve$/);
+});
+
+test('simulated mode finalizes the intent without opening Razorpay', async ({ page, baseURL }) => {
+  await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
+  const verified: unknown[] = [];
+
+  await json(page, '**/v1/aggregator/reservation-intents', { mode: 'simulated', intentId: 'ri3', amountPaise: 900_000 }, 'POST');
+  await page.route('**/v1/aggregator/reservation-intents/ri3/verify', (route) => {
+    verified.push(route.request().postDataJSON());
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: CORS,
+      body: JSON.stringify({ status: 'finalized', holdingId: 'h3' }),
+    });
+  });
+  await json(page, '**/v1/aggregator/holdings/h3', holdingDto('h3', 'a1'));
+
+  await page.goto('/aggregator/inventory/a1/reserve');
+  await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
+  await page.waitForURL('**/aggregator/collection/h3');
+
+  expect(verified).toEqual([{}]);
+});
+
+test('earnings are read-only and expose no top-up or withdrawal controls', async ({ page, baseURL }) => {
+  await open(page, baseURL!);
+  await json(page, '**/v1/aggregator/wallet/transactions', {
+    transactions: [
+      {
+        id: 'e1',
+        amountPaise: 2_500_000,
+        reason: 'commission',
+        holdingId: null,
+        at: '2026-09-29T10:00:00.000Z',
+      },
+    ],
+  });
+
+  await page.goto('/aggregator/wallet');
+
+  await expect(page.getByText('Owed to you')).toBeVisible();
+  await expect(page.getByText('How the money moves')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add to wallet' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /withdraw/i })).toHaveCount(0);
+  await expect(page.getByText(/Commission/).last()).toBeVisible();
+});
+
+test('a paid reservation that loses the allocation race says the payment is being refunded', async ({ page, baseURL }) => {
+  await open(page, baseURL!, { inventory: [listed('a1', monthOne)] });
+  await fakeRazorpay(page, 'pay');
+  await json(page, '**/v1/aggregator/reservation-intents', razorpayIntent('ri4', 'order_test_4', 900_000), 'POST');
+  // Payment captured, but another aggregator got the piece first: the server queues the refund.
+  await json(page, '**/v1/aggregator/reservation-intents/ri4/verify', { status: 'needs_refund' }, 'POST');
+
+  await page.goto('/aggregator/inventory/a1/reserve');
+  await page.getByRole('button', { name: /Pay .* & reserve/ }).click();
+
+  await expect(page.getByText(/Your payment is being refunded/)).toBeVisible();
   await expect(page).toHaveURL(/\/reserve$/);
 });
 
@@ -452,18 +477,17 @@ const cashSale = (id: string, soldDaysAgo: number, over: Record<string, unknown>
   courierRef: null, soldAt: new Date(Date.now() - soldDaysAgo * DAY).toISOString(), ...over,
 });
 
-async function openSettlements(page: Page, baseURL: string, walletPaise: number) {
+async function openSettlements(page: Page, baseURL: string) {
   await open(page, baseURL);
   const sales = [cashSale('s1', 1), cashSale('s2', 4)];
   const remaining = [...sales];
-  await json(page, '**/v1/aggregator/wallet', { accountType: 'aggregator_payable', balancePaise: walletPaise, heldPaise: 0 });
   await page.route('**/v1/aggregator/sales', (route) => route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(sales) }));
   await page.route('**/v1/aggregator/sales/remittances-due', (route) => route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(remaining) }));
   return { sales, remaining };
 }
 
 test('a cash sale shows when it is due, and an overdue one says so', async ({ page, baseURL }) => {
-  await openSettlements(page, baseURL!, 20_000_000);
+  await openSettlements(page, baseURL!);
   await page.goto('/aggregator/settlements');
 
   await expect(page.getByRole('heading', { name: 'Owed to GalleryZone' })).toBeVisible();
@@ -473,8 +497,8 @@ test('a cash sale shows when it is due, and an overdue one says so', async ({ pa
   await expect(page.locator('li').filter({ hasText: 'Buyer s2' })).toContainText('Overdue by 2 days');
 });
 
-test('paying in a cash sale from the wallet, and by bank transfer, each say which they are', async ({ page, baseURL }) => {
-  const { remaining } = await openSettlements(page, baseURL!, 20_000_000);
+test('a cash sale can be marked transferred only through the bank-remittance path', async ({ page, baseURL }) => {
+  const { remaining } = await openSettlements(page, baseURL!);
   const bodies: Record<string, unknown> = {};
   for (const id of ['s1', 's2']) {
     await page.route(`**/v1/aggregator/sales/${id}/remit`, (route) => {
@@ -486,20 +510,16 @@ test('paying in a cash sale from the wallet, and by bank transfer, each say whic
   }
   await page.goto('/aggregator/settlements');
 
-  await page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('button', { name: 'Pay from wallet' }).click();
-  await expect(page.getByText('Paid from your wallet')).toBeVisible();
-  await page.locator('li').filter({ hasText: 'Buyer s2' }).getByRole('button', { name: 'Mark transferred' }).click();
+  await expect(page.getByRole('button', { name: 'Pay from wallet' })).toHaveCount(0);
+  await page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('button', { name: 'Mark transferred' }).click();
   await expect(page.getByText('Marked as transferred')).toBeVisible();
-  expect(bodies).toEqual({ s1: { via: 'wallet' }, s2: { via: 'bank' } });
+  expect(bodies).toEqual({ s1: { via: 'bank' } });
 });
 
-test('with too little in the wallet the wallet route is off and says how much to add', async ({ page, baseURL }) => {
-  await openSettlements(page, baseURL!, 5_000_000);
+test('bank remittance stays available without a prepaid wallet balance', async ({ page, baseURL }) => {
+  await openSettlements(page, baseURL!);
   await page.goto('/aggregator/settlements');
 
-  const pay = page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('button', { name: 'Pay from wallet' });
-  await expect(pay).toBeDisabled();
-  await expect(pay).toHaveAttribute('title', 'Add ₹1,07,500 to your wallet first');
-  // The bank route is still open.
+  await expect(page.getByRole('button', { name: 'Pay from wallet' })).toHaveCount(0);
   await expect(page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('button', { name: 'Mark transferred' })).toBeEnabled();
 });

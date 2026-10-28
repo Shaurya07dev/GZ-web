@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../data/mock/seed/artist_seed.dart' show currentArtistId;
 import '../../../data/models/artist_network.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -36,7 +37,7 @@ class ArtistNetworkScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Connections')),
       body: connectionsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, _) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your connections",

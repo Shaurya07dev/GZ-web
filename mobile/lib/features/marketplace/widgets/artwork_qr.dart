@@ -8,7 +8,12 @@ import '../../../core/verify_url.dart';
 /// opens the passport - no app, no NFC. Dark ink on white at medium error
 /// correction, so a printed-and-photographed label still reads.
 class ArtworkQr extends StatelessWidget {
-  const ArtworkQr({super.key, required this.artworkId, this.size = 128, this.showUrl = false});
+  const ArtworkQr({
+    super.key,
+    required this.artworkId,
+    this.size = 128,
+    this.showUrl = false,
+  });
 
   final String artworkId;
   final double size;
@@ -30,7 +35,9 @@ class ArtworkQr extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              ),
             ),
             child: QrImageView(
               data: url,
@@ -38,8 +45,14 @@ class ArtworkQr extends StatelessWidget {
               padding: EdgeInsets.zero,
               backgroundColor: Colors.white,
               errorCorrectionLevel: QrErrorCorrectLevel.M,
-              eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: ink),
-              dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: ink),
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: ink,
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: ink,
+              ),
             ),
           ),
           if (showUrl) ...[
@@ -50,7 +63,10 @@ class ArtworkQr extends StatelessWidget {
                 url,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(fontFamily: 'monospace', fontSize: 10),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                ),
               ),
             ),
           ],

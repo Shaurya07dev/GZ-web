@@ -9,7 +9,8 @@ enum WindowSize {
   medium, // 600 - 839
   expanded; // >= 840
 
-  static WindowSize of(BuildContext context) => fromWidth(MediaQuery.sizeOf(context).width);
+  static WindowSize of(BuildContext context) =>
+      fromWidth(MediaQuery.sizeOf(context).width);
 
   /// Takes a raw width so a `LayoutBuilder` subtree can classify its own
   /// constraints rather than the whole window.

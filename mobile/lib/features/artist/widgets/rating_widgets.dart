@@ -101,7 +101,10 @@ class RatingCard extends ConsumerWidget {
           height: 120,
           child: Center(
             child: ratingAsync.hasError
-                ? Text('Could not load your rating.', style: theme.textTheme.bodySmall)
+                ? Text(
+                    'Could not load your rating.',
+                    style: theme.textTheme.bodySmall,
+                  )
                 : const CircularProgressIndicator(),
           ),
         ),
@@ -142,7 +145,9 @@ class RatingCard extends ConsumerWidget {
             children: [
               Text(
                 composite.toStringAsFixed(1),
-                style: theme.textTheme.displaySmall?.copyWith(color: theme.colorScheme.tertiary),
+                style: theme.textTheme.displaySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
               ),
               const SizedBox(width: 14),
               Column(
@@ -157,13 +162,20 @@ class RatingCard extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           _FactorBar(label: 'Customer rating', value: factors.customerRating),
-          _FactorBar(label: 'Profile completion', value: factors.profileCompletion),
+          _FactorBar(
+            label: 'Profile completion',
+            value: factors.profileCompletion,
+          ),
           _FactorBar(label: 'Artworks posted', value: factors.artworkCount),
           const Divider(height: 24),
           if (rating.count == 0)
             Column(
               children: [
-                Icon(LucideIcons.star, size: 24, color: theme.colorScheme.outline),
+                Icon(
+                  LucideIcons.star,
+                  size: 24,
+                  color: theme.colorScheme.outline,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   'Buyers can rate you once an order is delivered. Your first rating will show here.',
@@ -179,7 +191,11 @@ class RatingCard extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             for (final star in starValues)
-              _BreakdownBar(star: star, count: rating.breakdown[star] ?? 0, total: rating.count),
+              _BreakdownBar(
+                star: star,
+                count: rating.breakdown[star] ?? 0,
+                total: rating.count,
+              ),
           ],
         ],
       ),
@@ -203,7 +219,12 @@ class _FactorBar extends StatelessWidget {
         children: [
           SizedBox(
             width: 124,
-            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelSmall),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall,
+            ),
           ),
           Expanded(
             child: ClipRRect(
@@ -219,7 +240,11 @@ class _FactorBar extends StatelessWidget {
           const SizedBox(width: 8),
           SizedBox(
             width: 30,
-            child: Text(value.toStringAsFixed(1), style: theme.textTheme.labelSmall, textAlign: TextAlign.right),
+            child: Text(
+              value.toStringAsFixed(1),
+              style: theme.textTheme.labelSmall,
+              textAlign: TextAlign.right,
+            ),
           ),
         ],
       ),

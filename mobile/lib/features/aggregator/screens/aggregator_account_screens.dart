@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
@@ -29,14 +30,16 @@ class AggregatorGallerySpacesScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final spaces = ref.watch(aggregatorGallerySpacesProvider);
     // Only one premises concept is modelled, so every active holding counts against it.
-    final occupancy = (ref.watch(aggregatorCollectionProvider).value ?? const <AggregatorHoldingView>[])
-        .where((view) => view.holding.status == HoldingStatus.reserved)
-        .length;
+    final occupancy =
+        (ref.watch(aggregatorCollectionProvider).value ??
+                const <AggregatorHoldingView>[])
+            .where((view) => view.holding.status == HoldingStatus.reserved)
+            .length;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Display Spaces')),
       body: spaces.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your display spaces",
@@ -52,7 +55,7 @@ class AggregatorGallerySpacesScreen extends ConsumerWidget {
                 title: 'No display spaces on file',
                 description: 'Your display premises will appear here once registered with GalleryZone.',
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(aggregatorGallerySpacesProvider);
                   ref.invalidate(aggregatorCollectionProvider);
@@ -71,22 +74,36 @@ class AggregatorGallerySpacesScreen extends ConsumerWidget {
                               child: PortalCard(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Icon(LucideIcons.building2, size: 16, color: theme.colorScheme.tertiary),
+                                        Icon(
+                                          LucideIcons.building2,
+                                          size: 16,
+                                          color: theme.colorScheme.tertiary,
+                                        ),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(space.name, style: theme.textTheme.titleMedium),
+                                              Text(
+                                                space.name,
+                                                style:
+                                                    theme.textTheme.titleMedium,
+                                              ),
                                               const SizedBox(height: 2),
                                               Text(
                                                 '${space.addressLine1}, ${space.city}, ${space.state} ${space.pincode}',
-                                                style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                                                style: theme
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(height: 1.4),
                                               ),
                                             ],
                                           ),
@@ -94,7 +111,12 @@ class AggregatorGallerySpacesScreen extends ConsumerWidget {
                                       ],
                                     ),
                                     const SizedBox(height: 10),
-                                    PortalDetailRow(label: 'Coordinator', value: space.coordinatorName.isEmpty ? '—' : space.coordinatorName),
+                                    PortalDetailRow(
+                                      label: 'Coordinator',
+                                      value: space.coordinatorName.isEmpty
+                                          ? '—'
+                                          : space.coordinatorName,
+                                    ),
                                     if (space.capacity > 0) ...[
                                       PortalDetailRow(
                                         label: 'Occupancy',
@@ -103,15 +125,22 @@ class AggregatorGallerySpacesScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(height: 6),
                                       LinearProgressIndicator(
-                                        value: (occupancy / space.capacity).clamp(0.0, 1.0),
+                                        value: (occupancy / space.capacity)
+                                            .clamp(0.0, 1.0),
                                         minHeight: 5,
-                                        backgroundColor: theme.colorScheme.outline,
-                                        valueColor: AlwaysStoppedAnimation(theme.colorScheme.tertiary),
+                                        backgroundColor:
+                                            theme.colorScheme.outline,
+                                        valueColor: AlwaysStoppedAnimation(
+                                          theme.colorScheme.tertiary,
+                                        ),
                                       ),
                                     ] else
                                       // The API hands back no capacity for a space that never
                                       // had one set; a bar over nothing would read as full.
-                                      PortalDetailRow(label: 'Occupancy', value: '$occupancy · capacity not set'),
+                                      PortalDetailRow(
+                                        label: 'Occupancy',
+                                        value: '$occupancy · capacity not set',
+                                      ),
                                   ],
                                 ),
                               ),
@@ -136,10 +165,12 @@ class AggregatorMessagesScreen extends ConsumerStatefulWidget {
   static const path = '/aggregator/dashboard/messages';
 
   @override
-  ConsumerState<AggregatorMessagesScreen> createState() => _AggregatorMessagesScreenState();
+  ConsumerState<AggregatorMessagesScreen> createState() =>
+      _AggregatorMessagesScreenState();
 }
 
-class _AggregatorMessagesScreenState extends ConsumerState<AggregatorMessagesScreen> {
+class _AggregatorMessagesScreenState
+    extends ConsumerState<AggregatorMessagesScreen> {
   String? _expandedId;
 
   Future<void> _toggle(MessageThread message) async {
@@ -164,7 +195,7 @@ class _AggregatorMessagesScreenState extends ConsumerState<AggregatorMessagesScr
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: messages.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your messages",
@@ -180,7 +211,7 @@ class _AggregatorMessagesScreenState extends ConsumerState<AggregatorMessagesScr
                 title: 'No messages',
                 description: 'Updates from GalleryZone about assignments, audits, and settlements will show up here.',
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(aggregatorMessagesProvider);
                   await ref.read(aggregatorMessagesProvider.future);
@@ -200,60 +231,103 @@ class _AggregatorMessagesScreenState extends ConsumerState<AggregatorMessagesScr
                                 child: Column(
                                   children: [
                                     InkWell(
-                                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.lg,
+                                      ),
                                       onTap: () => _toggle(message),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 12,
+                                        ),
                                         child: Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Padding(
-                                              padding: const EdgeInsets.only(top: 2),
+                                              padding: const EdgeInsets.only(
+                                                top: 2,
+                                              ),
                                               child: Icon(
-                                                message.unread ? LucideIcons.mail : LucideIcons.mailOpen,
+                                                message.unread
+                                                    ? LucideIcons.mail
+                                                    : LucideIcons.mailOpen,
                                                 size: 17,
-                                                color: message.unread ? theme.colorScheme.tertiary : theme.colorScheme.onSurfaceVariant,
+                                                color: message.unread
+                                                    ? theme.colorScheme.tertiary
+                                                    : theme
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
                                               ),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Row(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: [
                                                       Expanded(
                                                         child: Text(
                                                           message.subject,
                                                           maxLines: 2,
-                                                          overflow: TextOverflow.ellipsis,
-                                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                                            fontWeight: message.unread ? FontWeight.w600 : FontWeight.w500,
-                                                          ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodyMedium
+                                                              ?.copyWith(
+                                                                fontWeight:
+                                                                    message
+                                                                        .unread
+                                                                    ? FontWeight
+                                                                          .w600
+                                                                    : FontWeight
+                                                                          .w500,
+                                                              ),
                                                         ),
                                                       ),
                                                       const SizedBox(width: 8),
-                                                      Text(formatDay(message.receivedAt), style: theme.textTheme.labelSmall),
+                                                      Text(
+                                                        formatDay(
+                                                          message.receivedAt,
+                                                        ),
+                                                        style: theme
+                                                            .textTheme
+                                                            .labelSmall,
+                                                      ),
                                                     ],
                                                   ),
                                                   const SizedBox(height: 2),
                                                   Text(
                                                     '${message.from} · ${message.preview}',
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: theme.textTheme.labelSmall,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: theme
+                                                        .textTheme
+                                                        .labelSmall,
                                                   ),
                                                 ],
                                               ),
                                             ),
                                             const SizedBox(width: 8),
                                             Padding(
-                                              padding: const EdgeInsets.only(top: 2),
+                                              padding: const EdgeInsets.only(
+                                                top: 2,
+                                              ),
                                               child: Icon(
-                                                _expandedId == message.id ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                                                _expandedId == message.id
+                                                    ? LucideIcons.chevronUp
+                                                    : LucideIcons.chevronDown,
                                                 size: 16,
-                                                color: theme.colorScheme.onSurfaceVariant,
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
                                               ),
                                             ),
                                           ],
@@ -262,10 +336,19 @@ class _AggregatorMessagesScreenState extends ConsumerState<AggregatorMessagesScr
                                     ),
                                     if (_expandedId == message.id)
                                       Padding(
-                                        padding: const EdgeInsets.fromLTRB(43, 0, 14, 16),
+                                        padding: const EdgeInsets.fromLTRB(
+                                          43,
+                                          0,
+                                          14,
+                                          16,
+                                        ),
                                         child: Align(
                                           alignment: Alignment.centerLeft,
-                                          child: Text(message.body, style: theme.textTheme.bodySmall?.copyWith(height: 1.5)),
+                                          child: Text(
+                                            message.body,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(height: 1.5),
+                                          ),
                                         ),
                                       ),
                                   ],
@@ -302,7 +385,9 @@ class AggregatorSettingsScreen extends ConsumerWidget {
         await ref.read(aggregatorRepositoryProvider).updateSettings(next);
         container.invalidate(aggregatorSettingsProvider);
       } catch (error) {
-        messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+        messenger.showSnackBar(
+          SnackBar(content: Text(authErrorMessage(error))),
+        );
       }
     }
 
@@ -319,7 +404,7 @@ class AggregatorSettingsScreen extends ConsumerWidget {
                   child: const Text('Try again'),
                 ),
               )
-            : const Center(child: CircularProgressIndicator()),
+            : const PageSkeleton(),
       );
     }
 
@@ -334,29 +419,34 @@ class AggregatorSettingsScreen extends ConsumerWidget {
               children: [
                 Text('Notifications', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 8),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('New artwork assigned or reserved'),
                   value: settings.notifyNewAssignment,
-                  onChanged: (value) => update(settings.copyWith(notifyNewAssignment: value)),
+                  onChanged: (value) =>
+                      update(settings.copyWith(notifyNewAssignment: value)),
                 ),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Sale recorded'),
                   value: settings.notifySaleRecorded,
-                  onChanged: (value) => update(settings.copyWith(notifySaleRecorded: value)),
+                  onChanged: (value) =>
+                      update(settings.copyWith(notifySaleRecorded: value)),
                 ),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Settlement processed'),
                   value: settings.notifySettlementProcessed,
-                  onChanged: (value) => update(settings.copyWith(notifySettlementProcessed: value)),
+                  onChanged: (value) => update(
+                    settings.copyWith(notifySettlementProcessed: value),
+                  ),
                 ),
-                SwitchListTile(
+                SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('30-day display window expiring soon'),
                   value: settings.notifyExpiryReminder,
-                  onChanged: (value) => update(settings.copyWith(notifyExpiryReminder: value)),
+                  onChanged: (value) =>
+                      update(settings.copyWith(notifyExpiryReminder: value)),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -383,10 +473,12 @@ class AggregatorSupportScreen extends ConsumerStatefulWidget {
   static const path = '/aggregator/dashboard/support';
 
   @override
-  ConsumerState<AggregatorSupportScreen> createState() => _AggregatorSupportScreenState();
+  ConsumerState<AggregatorSupportScreen> createState() =>
+      _AggregatorSupportScreenState();
 }
 
-class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScreen> {
+class _AggregatorSupportScreenState
+    extends ConsumerState<AggregatorSupportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _subject = TextEditingController();
   final _message = TextEditingController();
@@ -405,12 +497,13 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = true);
     try {
-      await ref.read(aggregatorRepositoryProvider).submitSupportTicket(
-            subject: _subject.text,
-            message: _message.text,
-          );
+      await ref
+          .read(aggregatorRepositoryProvider)
+          .submitSupportTicket(subject: _subject.text, message: _message.text);
       container.invalidate(aggregatorSupportTicketsProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Ticket submitted.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Ticket submitted.')),
+      );
       if (mounted) {
         _subject.clear();
         _message.clear();
@@ -425,7 +518,9 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tickets = ref.watch(aggregatorSupportTicketsProvider).value ?? const <SupportTicket>[];
+    final tickets =
+        ref.watch(aggregatorSupportTicketsProvider).value ??
+        const <SupportTicket>[];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Support')),
@@ -442,7 +537,10 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Contact GalleryZone', style: theme.textTheme.titleMedium),
+                      Text(
+                        'Contact GalleryZone',
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 8),
                       ContactLinkRow(
                         icon: LucideIcons.mail,
@@ -475,7 +573,9 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
                           labelText: 'Subject',
                           hintText: 'e.g. Question about my advance payment',
                         ),
-                        validator: (value) => (value ?? '').trim().isEmpty ? 'A subject is required' : null,
+                        validator: (value) => (value ?? '').trim().isEmpty
+                            ? 'A subject is required'
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -488,7 +588,9 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
                           hintText: 'Describe your issue...',
                           alignLabelWithHint: true,
                         ),
-                        validator: (value) => (value ?? '').trim().isEmpty ? 'Enter a message' : null,
+                        validator: (value) => (value ?? '').trim().isEmpty
+                            ? 'Enter a message'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -517,7 +619,9 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
                                 Expanded(
                                   child: Text(
                                     ticket.subject,
-                                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -525,7 +629,12 @@ class _AggregatorSupportScreenState extends ConsumerState<AggregatorSupportScree
                               ],
                             ),
                             const SizedBox(height: 6),
-                            Text(ticket.message, style: theme.textTheme.labelSmall?.copyWith(height: 1.45)),
+                            Text(
+                              ticket.message,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                height: 1.45,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -549,9 +658,18 @@ class _TicketStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return switch (status) {
-      SupportTicketStatus.open => StatusPill(label: 'Open', color: theme.colorScheme.tertiary),
-      SupportTicketStatus.answered => const StatusPill(label: 'Answered', color: Color(0xFF34D399)),
-      SupportTicketStatus.closed => StatusPill(label: 'Closed', color: theme.colorScheme.outline),
+      SupportTicketStatus.open => StatusPill(
+        label: 'Open',
+        color: theme.colorScheme.tertiary,
+      ),
+      SupportTicketStatus.answered => const StatusPill(
+        label: 'Answered',
+        color: Color(0xFF34D399),
+      ),
+      SupportTicketStatus.closed => StatusPill(
+        label: 'Closed',
+        color: theme.colorScheme.outline,
+      ),
     };
   }
 }

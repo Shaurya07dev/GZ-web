@@ -4,17 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart' show DeliveryAddress;
 import '../../../data/models/artwork.dart';
 import '../../../data/models/customer.dart';
 import '../../../data/models/order.dart' show Address;
-import '../../../data/remote/mappers/catalog_mappers.dart' show artworkStatusToApi;
+import '../../../data/remote/mappers/catalog_mappers.dart'
+    show artworkStatusToApi;
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../../ownership/providers/ownership_providers.dart';
 import '../../ownership/widgets/transfer_widgets.dart';
 import '../providers/account_providers.dart';
+import '../widgets/customer_shell.dart';
 
 /// Port of `features/account/collection-board.tsx`. Owned = a delivered
 /// order, a piece bought in person at a gallery, or one handed over by its
@@ -34,7 +37,7 @@ class CollectionScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('My Collection')),
       body: collection.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your collection",
@@ -52,11 +55,11 @@ class CollectionScreen extends ConsumerWidget {
                     'Once an order is delivered, the artwork moves here with its '
                     'certificate, provenance, and ownership record.',
                 action: OutlinedButton(
-                  onPressed: () => context.push('/marketplace'),
+                  onPressed: () => context.go(customerShopPath),
                   child: const Text('Browse the marketplace'),
                 ),
               )
-            : RefreshIndicator(
+            : RefreshIndicator.adaptive(
                 onRefresh: () async {
                   ref.invalidate(collectionProvider);
                   await ref.read(collectionProvider.future);
@@ -71,7 +74,8 @@ class CollectionScreen extends ConsumerWidget {
                     contentHeight: 96,
                   ),
                   itemCount: items.length,
-                  itemBuilder: (context, index) => _CollectionTile(item: items[index]),
+                  itemBuilder: (context, index) =>
+                      _CollectionTile(item: items[index]),
                 ),
               ),
       ),
@@ -97,7 +101,8 @@ class _CollectionTile extends StatelessWidget {
           expand: false,
           initialChildSize: 0.9,
           maxChildSize: 0.95,
-          builder: (context, controller) => _CollectionDetailSheet(item: item, scrollController: controller),
+          builder: (context, controller) =>
+              _CollectionDetailSheet(item: item, scrollController: controller),
         ),
       ),
       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -124,7 +129,9 @@ class _CollectionTile extends StatelessWidget {
                     item.artwork.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -136,7 +143,10 @@ class _CollectionTile extends StatelessWidget {
                   // What was paid; a piece received by transfer cost nothing here.
                   if (item.paidPrice > 0) ...[
                     const SizedBox(height: 4),
-                    PriceTag(amount: item.paidPrice, style: theme.textTheme.bodyMedium),
+                    PriceTag(
+                      amount: item.paidPrice,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ],
                 ],
               ),
@@ -149,15 +159,23 @@ class _CollectionTile extends StatelessWidget {
 }
 
 class _CollectionDetailSheet extends ConsumerWidget {
-  const _CollectionDetailSheet({required this.item, required this.scrollController});
+  const _CollectionDetailSheet({
+    required this.item,
+    required this.scrollController,
+  });
 
   final CollectionItem item;
   final ScrollController scrollController;
 
   /// `pending_approval` -> `Pending Approval`, as the website words it.
-  static String _statusLabel(ArtworkStatus status) => artworkStatusToApi(
-    status,
-  ).split('_').map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}').join(' ');
+  static String _statusLabel(ArtworkStatus status) => artworkStatusToApi(status)
+      .split('_')
+      .map(
+        (word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}',
+      )
+      .join(' ');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -172,7 +190,9 @@ class _CollectionDetailSheet extends ConsumerWidget {
             .where((event) => event.status.name == 'delivered')
             .map((event) => event.changedAt)
             .lastOrNull;
-    final transfers = ref.watch(artworkTransfersProvider(artwork.id)).value ?? const <OwnershipTransfer>[];
+    final transfers =
+        ref.watch(artworkTransfersProvider(artwork.id)).value ??
+        const <OwnershipTransfer>[];
     final onDisplay = activeDisplayTransfer(transfers);
     // Whether the tag is linked and locked is on the public passport; the listing doesn't carry it.
     final passport = ref.watch(passportProvider(artwork.id)).value;
@@ -192,18 +212,28 @@ class _CollectionDetailSheet extends ConsumerWidget {
           decoration: BoxDecoration(
             color: theme.colorScheme.primary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            ),
           ),
           child: Column(
             children: [
-              Icon(LucideIcons.fingerprint, size: 32, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.fingerprint,
+                size: 32,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(height: 8),
               Text(
-                artwork.coaCertificateNumber.isEmpty ? 'Certificate pending' : artwork.coaCertificateNumber,
-                style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                artwork.coaCertificateNumber.isEmpty
+                    ? 'Certificate pending'
+                    : artwork.coaCertificateNumber,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                ),
               ),
               const SizedBox(height: 10),
-              _NfcPill(linked: linked, locked: locked),
+              NfcPill(linked: linked, locked: locked),
             ],
           ),
         ),
@@ -215,16 +245,26 @@ class _CollectionDetailSheet extends ConsumerWidget {
         _row(
           context,
           'Certificate issued',
-          artwork.coaIssueDate.isEmpty ? '—' : formatShortDate(artwork.coaIssueDate),
+          artwork.coaIssueDate.isEmpty
+              ? '—'
+              : formatShortDate(artwork.coaIssueDate),
         ),
-        _row(context, 'Acquired', acquired == null ? '—' : formatShortDate(acquired)),
-        if (order == null && item.fromName.isNotEmpty) _row(context, 'Received from', item.fromName),
+        _row(
+          context,
+          'Acquired',
+          acquired == null ? '—' : formatShortDate(acquired),
+        ),
+        if (order == null && item.fromName.isNotEmpty)
+          _row(context, 'Received from', item.fromName),
         const SizedBox(height: 8),
         Divider(color: theme.colorScheme.outline),
         const SizedBox(height: 12),
         Text(
           'PROVENANCE',
-          style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 1.2),
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.2,
+          ),
         ),
         const SizedBox(height: 8),
         for (final event in artwork.statusHistory)
@@ -233,9 +273,17 @@ class _CollectionDetailSheet extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Flexible(child: Text(_statusLabel(event.status), style: theme.textTheme.bodyMedium)),
+                Flexible(
+                  child: Text(
+                    _statusLabel(event.status),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Text(formatShortDate(event.changedAt), style: theme.textTheme.labelSmall),
+                Text(
+                  formatShortDate(event.changedAt),
+                  style: theme.textTheme.labelSmall,
+                ),
               ],
             ),
           ),
@@ -246,7 +294,7 @@ class _CollectionDetailSheet extends ConsumerWidget {
           _OnDisplayCard(transfer: onDisplay, artworkId: artwork.id),
         ],
         const SizedBox(height: 16),
-        _PaperCertificate(artwork: artwork),
+        PaperCertificate(artwork: artwork),
         const SizedBox(height: 16),
         Divider(color: theme.colorScheme.outline),
         const SizedBox(height: 12),
@@ -267,7 +315,10 @@ class _CollectionDetailSheet extends ConsumerWidget {
                 label: const Text('View order'),
               )
             else
-              Chip(label: const Text('Bought in person'), side: BorderSide(color: theme.colorScheme.outline)),
+              Chip(
+                label: const Text('Bought in person'),
+                side: BorderSide(color: theme.colorScheme.outline),
+              ),
             OutlinedButton.icon(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -293,7 +344,9 @@ class _CollectionDetailSheet extends ConsumerWidget {
                   context,
                   ref,
                   artwork: artwork,
-                  fromName: ref.read(customerProfileProvider).value?.name ?? 'The owner',
+                  fromName:
+                      ref.read(customerProfileProvider).value?.name ??
+                      'The owner',
                 );
               },
               icon: const Icon(LucideIcons.userRoundCheck, size: 14),
@@ -312,11 +365,16 @@ class _CollectionDetailSheet extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 130, child: Text(label, style: theme.textTheme.bodySmall)),
+          SizedBox(
+            width: 130,
+            child: Text(label, style: theme.textTheme.bodySmall),
+          ),
           Expanded(
             child: Text(
               value,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -327,8 +385,8 @@ class _CollectionDetailSheet extends ConsumerWidget {
 
 /// Whether a physical tag is on the piece. The chip's own identifier is not
 /// shown: that stays between the artist and GalleryZone.
-class _NfcPill extends StatelessWidget {
-  const _NfcPill({required this.linked, required this.locked});
+class NfcPill extends StatelessWidget {
+  const NfcPill({super.key, required this.linked, required this.locked});
 
   final bool linked;
   final bool locked;
@@ -343,17 +401,36 @@ class _NfcPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: tagged ? green.withValues(alpha: 0.1) : theme.colorScheme.secondary,
-        border: Border.all(color: tagged ? green.withValues(alpha: 0.3) : theme.colorScheme.outline),
+        color: tagged
+            ? green.withValues(alpha: 0.1)
+            : theme.colorScheme.secondary,
+        border: Border.all(
+          color: tagged
+              ? green.withValues(alpha: 0.3)
+              : theme.colorScheme.outline,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(tagged ? LucideIcons.scanLine : LucideIcons.badgeCheck, size: 12, color: color),
+          Icon(
+            tagged ? LucideIcons.scanLine : LucideIcons.badgeCheck,
+            size: 12,
+            color: color,
+          ),
           const SizedBox(width: 6),
-          Text(
-            locked ? 'NFC tagged · locked' : (tagged ? 'NFC tagged' : 'Digital certificate only'),
-            style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w500),
+          Flexible(
+            child: Text(
+              locked
+                  ? 'NFC tagged · locked'
+                  : (tagged ? 'NFC tagged' : 'Digital certificate only'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
@@ -375,23 +452,33 @@ class _OnDisplayCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(LucideIcons.frame, size: 16, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.frame,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('On display with ${transfer.toName}', style: theme.textTheme.bodyMedium),
+                child: Text(
+                  'On display with ${transfer.toName}',
+                  style: theme.textTheme.bodyMedium,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            'Until ${formatLongDate(transfer.displayEndsAt!)}. Ownership is unchanged - display rights end on that '
+            'From ${formatLongDate(transfer.displayStartsAt ?? transfer.acceptedAt ?? transfer.initiatedAt)} '
+            'to ${formatLongDate(transfer.displayEndsAt!)}. Ownership is unchanged - display rights end on that '
             'date on their own.',
             style: theme.textTheme.labelSmall?.copyWith(height: 1.5),
           ),
@@ -400,11 +487,17 @@ class _OnDisplayCard extends ConsumerWidget {
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
               try {
-                await ref.read(ownershipRepositoryProvider).endDisplay(transfer.id);
+                await ref
+                    .read(ownershipRepositoryProvider)
+                    .endDisplay(transfer.id);
                 ref.invalidate(artworkTransfersProvider(artworkId));
-                messenger.showSnackBar(const SnackBar(content: Text('Display ended')));
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Display ended')),
+                );
               } catch (error) {
-                messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+                messenger.showSnackBar(
+                  SnackBar(content: Text(authErrorMessage(error))),
+                );
               }
             },
             child: const Text('End display now'),
@@ -418,16 +511,16 @@ class _OnDisplayCard extends ConsumerWidget {
 /// The buyer's side of MOU §12: the digital certificate always exists; this
 /// asks the artist for the signed paper original, posted to the default
 /// address.
-class _PaperCertificate extends ConsumerStatefulWidget {
-  const _PaperCertificate({required this.artwork});
+class PaperCertificate extends ConsumerStatefulWidget {
+  const PaperCertificate({super.key, required this.artwork});
 
   final Artwork artwork;
 
   @override
-  ConsumerState<_PaperCertificate> createState() => _PaperCertificateState();
+  ConsumerState<PaperCertificate> createState() => _PaperCertificateState();
 }
 
-class _PaperCertificateState extends ConsumerState<_PaperCertificate> {
+class _PaperCertificateState extends ConsumerState<PaperCertificate> {
   bool _busy = false;
   String? _error;
 
@@ -459,10 +552,16 @@ class _PaperCertificateState extends ConsumerState<_PaperCertificate> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final requests = ref.watch(physicalCoaRequestsProvider).value ?? const <PhysicalCoaRequest>[];
-    final existing = requests.where((r) => r.artworkId == widget.artwork.id).firstOrNull;
+    final requests =
+        ref.watch(physicalCoaRequestsProvider).value ??
+        const <PhysicalCoaRequest>[];
+    final existing = requests
+        .where((r) => r.artworkId == widget.artwork.id)
+        .firstOrNull;
     final addresses = ref.watch(addressesProvider).value ?? const <Address>[];
-    final address = addresses.where((a) => a.isDefault).firstOrNull ?? addresses.firstOrNull;
+    final address =
+        addresses.where((a) => a.isDefault).firstOrNull ??
+        addresses.firstOrNull;
 
     Widget status(IconData icon, String title, String detail) => Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,7 +572,12 @@ class _PaperCertificateState extends ConsumerState<_PaperCertificate> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              Text(
+                title,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               Text(detail, style: theme.textTheme.labelSmall),
             ],
           ),
@@ -503,7 +607,9 @@ class _PaperCertificateState extends ConsumerState<_PaperCertificate> {
         OutlinedButton.icon(
           onPressed: address == null || _busy ? null : () => _request(address),
           icon: const Icon(LucideIcons.printer, size: 14),
-          label: Text(_busy ? 'Requesting…' : 'Request signed paper certificate'),
+          label: Text(
+            _busy ? 'Requesting…' : 'Request signed paper certificate',
+          ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -514,7 +620,12 @@ class _PaperCertificateState extends ConsumerState<_PaperCertificate> {
         ),
         if (_error != null) ...[
           const SizedBox(height: 4),
-          Text(_error!, style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.error)),
+          Text(
+            _error!,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
         ],
       ],
     );

@@ -1,63 +1,68 @@
 import type { LegalSection } from "../types";
 
-// Drafted fresh — no source document exists for Privacy specifically — but
-// scoped strictly to what the SAD confirms the platform actually collects
-// and how it's handled (§8.7 Sensitive Data Handling, §2.4-2.5), plus what
-// the Artist and Aggregator MOUs confirm is actually gathered during
-// onboarding (signature sample, artist profile, linked social accounts).
-// Contact details reused verbatim from the Onboarding Guide's closing
-// section.
+// This policy describes the data paths that exist in the web app, mobile app
+// and API. Keep the native copy in mobile/lib/features/legal/data in sync.
 export const privacySections: LegalSection[] = [
   {
     id: "information-we-collect",
     heading: "Information We Collect",
     body: [
-      "Identity & KYC documents: for artists, this includes a government ID, a signature sample, and Aadhaar number submitted during onboarding. Your Aadhaar number is encrypted at rest and is never exposed through any API. Only your verification status (verified / not verified) is ever visible, including to GalleryZone staff.",
-      "Artist profile & social accounts: your artist bio and portfolio details, and any social media profiles you choose to link (Instagram, Facebook, YouTube, X, TikTok) as part of artist verification.",
-      "Bank account details: collected to pay out artist settlements and aggregator commissions. Your account number is stored masked (shown as, for example, XXXXXXXX1234) everywhere in the product; the full number is only used transiently at the moment a withdrawal is actually processed.",
-      "Contact & address details: your name, email, phone number, and any delivery addresses you save for orders or shipments.",
-      "Browsing and wishlist activity: which artworks and artists you view and save, used to keep your wishlist in sync and to show you more relevant work.",
+      "Account and contact information: your name, email address, phone number, role, account identifiers, and the delivery or pickup addresses you choose to save.",
+      "Artist and gallery information: profile details, portfolio links, artwork images and descriptions, blog submissions, PAN or GSTIN where applicable, and the signature you provide when accepting an agreement.",
+      "Identity-verification results: Aadhaar verification takes place through a DigiLocker consent flow operated by our verification provider. GalleryZone does not ask the app to send a full Aadhaar number. We retain the masked number, verification status, provider reference, verified name, and limited evidence needed for review.",
+      "Payout information: artists may provide a bank account number and IFSC for settlements. The full account number is kept in a restricted server-side financial record; the app and ordinary profile APIs receive only a masked value.",
+      "Orders and platform activity: purchases, payments, refunds, delivery and ShipRocket tracking events, settlements, resale or ownership-transfer requests, saved artwork and followed-artist preferences, support messages, and NFC/QR passport actions.",
+      "Device-only preferences: some settings, saved artwork and followed-artist choices are stored on that device and are not currently synchronized to your GalleryZone account.",
     ],
   },
   {
     id: "how-we-use-it",
     heading: "How We Use It",
     body: [
-      "To operate your account: authenticating you, verifying artist and aggregator eligibility, processing sales, settlements, and withdrawals, and fulfilling shipments.",
-      "To communicate with you: order confirmations, settlement statements, verification status updates, and security notices.",
-      "To improve the platform: understanding which artworks and categories collectors engage with, so search, recommendations, and curation get better over time.",
+      "To create and secure accounts, provide the marketplace and role-specific portals, verify eligibility, process purchases and refunds, administer settlements, fulfil shipments, maintain artwork provenance, and respond to support or deletion requests.",
+      "To send transactional messages such as authentication, order, shipment, agreement, verification and settlement notices.",
+      "To prevent fraud, enforce platform rules, diagnose failures, maintain audit and financial records, and improve the reliability of GalleryZone.",
     ],
   },
   {
     id: "who-we-share-it-with",
     heading: "Who We Share It With",
     body: [
-      "Payment gateway: to process payments, settlements, and refunds. GalleryZone does not store your full card or payment credentials.",
-      "Resend: our transactional email provider, used to deliver account, order, and settlement emails.",
-      "Sentry: our error-monitoring provider, used to detect and diagnose bugs. Sentry receives technical error data, not your KYC or payment details.",
-      "We do not sell your personal information to third parties.",
+      "Firebase processes account authentication. Razorpay processes checkout payments and refunds; GalleryZone does not receive or store your full card, UPI PIN or other payment credentials.",
+      "Cashfree Secure ID processes GSTIN lookups and DigiLocker consent-based identity verification. ShipRocket and its assigned couriers receive the contact, address, parcel and order details needed to arrange delivery.",
+      "Resend delivers transactional email. Sentry may receive limited technical error information from our servers; it is configured not to send default personal information. Amazon receives information under its own policies when you choose to open an affiliate product link.",
+      "We do not sell personal information. We may disclose information when required by law, to protect users or the platform, or as part of a business reorganisation subject to applicable safeguards.",
+    ],
+  },
+  {
+    id: "security",
+    heading: "Security",
+    body: [
+      "Production app traffic uses HTTPS. Mobile refresh tokens are stored using the operating system's protected credential storage, and sensitive profile fields are excluded from public artist and artwork records.",
+      "No online system is risk-free. If you believe your account or personal information has been compromised, contact GalleryZone immediately.",
     ],
   },
   {
     id: "data-retention",
     heading: "Data Retention",
     body: [
-      "We retain account, transaction, and settlement records for as long as your account is active and for a reasonable period after closure, as needed to meet legal, tax, and accounting obligations. Encrypted KYC data is retained only as long as required to maintain your verification status.",
+      "We retain account data while your account is active and for the time reasonably needed to provide the service. After an account-deletion request is completed, data that is not subject to a legal or operational retention duty is deleted or de-identified.",
+      "Transaction, tax, settlement, provenance, fraud-prevention and dispute records may be retained after account closure where applicable law or a legitimate compliance need requires it. We limit retained records to that purpose and period.",
     ],
   },
   {
     id: "your-rights",
-    heading: "Your Rights",
+    heading: "Your Rights and Account Deletion",
     body: [
-      "You can request access to the personal information we hold about you, ask us to correct inaccurate details, or request deletion of your account and associated data, subject to what we're legally required to retain (such as completed transaction records).",
-      "To exercise any of these rights, contact us using the details below.",
+      "You can request access to or correction of your personal information, or request deletion of your GalleryZone account and associated data, subject to records we are legally required to retain.",
+      "In the mobile app, open your portal settings and select Delete account. You can also start a deletion request at https://www.galleryzone.art/account-deletion. GalleryZone confirms completion by email after required financial, shipment or dispute items have been reconciled.",
     ],
   },
   {
     id: "contact",
     heading: "Contact",
     body: [
-      "Questions about this Privacy Policy, or requests relating to your personal data, can be sent to galleryzone@zohomail.in.",
+      "Questions about this Privacy Policy or personal-data requests can be sent to galleryzone@zohomail.in.",
     ],
   },
 ];

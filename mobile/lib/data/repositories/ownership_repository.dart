@@ -19,13 +19,14 @@ abstract class OwnershipRepository {
   /// transfers would let two people each claim the same piece.
   ///
   /// [kind] picks what is being handed over. A display transfer needs
-  /// [displayEndsAt] and leaves the owner unchanged.
+  /// [displayStartsAt], [displayEndsAt] and leaves the owner unchanged.
   Future<OwnershipTransfer> initiate({
     required String artworkId,
     required String fromName,
     required String toName,
     required String toEmail,
     TransferKind kind,
+    String? displayStartsAt,
     String? displayEndsAt,
   });
 

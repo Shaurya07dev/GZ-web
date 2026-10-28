@@ -62,13 +62,19 @@ SubmitArtworkInput _input({
 void main() {
   group('edit window', () {
     test('7 days from listing, counting down', () {
-      final fresh = artworkEditState(_listed(ArtworkStatus.marketplace, 2), now: _now);
+      final fresh = artworkEditState(
+        _listed(ArtworkStatus.marketplace, 2),
+        now: _now,
+      );
       expect(fresh.editable, isTrue);
       expect(fresh.daysLeft, 5);
     });
 
     test('closes after the window, and on the boundary day', () {
-      final stale = artworkEditState(_listed(ArtworkStatus.marketplace, 8), now: _now);
+      final stale = artworkEditState(
+        _listed(ArtworkStatus.marketplace, 8),
+        now: _now,
+      );
       expect(stale.editable, isFalse);
       expect(stale.reason, ArtworkEditReason.windowClosed);
 
@@ -83,11 +89,20 @@ void main() {
       final sold = artworkEditState(_listed(ArtworkStatus.sold, 2), now: _now);
       expect(sold.editable, isFalse);
       expect(sold.reason, ArtworkEditReason.purchased);
-      expect(artworkEditState(_listed(ArtworkStatus.reserved, 1), now: _now).editable, isFalse);
+      expect(
+        artworkEditState(
+          _listed(ArtworkStatus.reserved, 1),
+          now: _now,
+        ).editable,
+        isFalse,
+      );
     });
 
     test("a draft's clock hasn't started", () {
-      expect(artworkEditState(_listed(ArtworkStatus.draft, 99), now: _now).editable, isTrue);
+      expect(
+        artworkEditState(_listed(ArtworkStatus.draft, 99), now: _now).editable,
+        isTrue,
+      );
     });
   });
 
@@ -132,56 +147,73 @@ void main() {
       artist = MockArtistRepository();
     });
 
-    test('an aggregator-only piece never reaches the marketplace grid', () async {
-      final submitted = await artist.submitArtwork(_input(listingType: ListingType.aggregatorOnly));
-      expect(isMarketplaceListed(submitted.listingType), isFalse);
-      // Insurance is not the artist's call once the piece leaves the studio.
-      expect(submitted.insured, isTrue);
+    test(
+      'an aggregator-only piece never reaches the marketplace grid',
+      () async {
+        final submitted = await artist.submitArtwork(
+          _input(listingType: ListingType.aggregatorOnly),
+        );
+        expect(isMarketplaceListed(submitted.listingType), isFalse);
+        // Insurance was removed from listing and is never silently re-enabled.
+        expect(submitted.insured, isFalse);
 
-      final browsable = await MockArtworkRepository().listAllLive();
-      expect(browsable.map((a) => a.id), isNot(contains(submitted.id)));
-    });
+        final browsable = await MockArtworkRepository().listAllLive();
+        expect(browsable.map((a) => a.id), isNot(contains(submitted.id)));
+      },
+    );
 
-    test('marking a piece sold elsewhere pulls it from every channel', () async {
-      final before = await MockArtworkRepository().listAllLive();
-      expect(before.map((a) => a.id), contains('aw-1'));
+    test(
+      'marking a piece sold elsewhere pulls it from every channel',
+      () async {
+        final before = await MockArtworkRepository().listAllLive();
+        expect(before.map((a) => a.id), contains('aw-1'));
 
-      final withdrawn = await artist.markSoldElsewhere('aw-1');
-      expect(withdrawn.status, ArtworkStatus.soldExternally);
-      expect(withdrawn.statusHistory.last.status, ArtworkStatus.soldExternally);
+        final withdrawn = await artist.markSoldElsewhere('aw-1');
+        expect(withdrawn.status, ArtworkStatus.soldExternally);
+        expect(
+          withdrawn.statusHistory.last.status,
+          ArtworkStatus.soldExternally,
+        );
 
-      final after = await MockArtworkRepository().listAllLive();
-      expect(after.map((a) => a.id), isNot(contains('aw-1')));
-      // The passport must still resolve — a tag on the wall outlives the listing.
-      expect(await MockArtworkRepository().get('aw-1'), isNotNull);
-    });
+        final after = await MockArtworkRepository().listAllLive();
+        expect(after.map((a) => a.id), isNot(contains('aw-1')));
+        // The passport must still resolve — a tag on the wall outlives the listing.
+        expect(await MockArtworkRepository().get('aw-1'), isNotNull);
+      },
+    );
 
-    test('the fee is 1% of the listed price, raised for review not charged', () async {
-      final withdrawn = await artist.markSoldElsewhere('aw-1');
-      final penalties = await artist.listPenalties();
-      expect(penalties, hasLength(1));
-      expect(penalties.single.amount, (withdrawn.customerPrice * 0.01).roundToDouble());
-      expect(penalties.single.settledAt, isNull);
-      // Raised, not imposed: an admin decides in the web console whether this
-      // stands, and nothing is taken until they do.
-      expect(penaltyStatusOf(penalties.single), PenaltyStatus.pendingReview);
+    test(
+      'the fee is 1% of the listed price, raised for review not charged',
+      () async {
+        final withdrawn = await artist.markSoldElsewhere('aw-1');
+        final penalties = await artist.listPenalties();
+        expect(penalties, hasLength(1));
+        expect(
+          penalties.single.amount,
+          (withdrawn.customerPrice * 0.01).roundToDouble(),
+        );
+        expect(penalties.single.settledAt, isNull);
+        // Raised, not imposed: an admin decides in the web console whether this
+        // stands, and nothing is taken until they do.
+        expect(penaltyStatusOf(penalties.single), PenaltyStatus.pendingReview);
 
-      final balanceBefore = (await artist.getWallet()).balance;
-      await artist.submitArtwork(_input(title: 'A listing while under review'));
-      expect((await artist.listPenalties()).single.settledAt, isNull);
-      expect((await artist.getWallet()).balance, balanceBefore);
-    });
+        final balanceBefore = (await artist.getWallet()).balance;
+        await artist.submitArtwork(
+          _input(title: 'A listing while under review'),
+        );
+        expect((await artist.listPenalties()).single.settledAt, isNull);
+        expect((await artist.getWallet()).balance, balanceBefore);
+      },
+    );
 
     test('an approved fee is collected on the next listing', () async {
       await artist.markSoldElsewhere('aw-1');
 
       // Stand in for the admin's decision — this app has no admin portal.
       final raised = (await artist.listPenalties()).single;
-      MockDb.setCollection(
-        'artistPenalties',
-        [raised.copyWith(status: PenaltyStatus.approved)],
-        (p) => p.toJson(),
-      );
+      MockDb.setCollection('artistPenalties', [
+        raised.copyWith(status: PenaltyStatus.approved),
+      ], (p) => p.toJson());
 
       // A draft is not a listing, so it still doesn't trigger collection.
       await artist.submitArtwork(_input(asDraft: true, title: 'A draft'));
@@ -191,7 +223,10 @@ void main() {
       await artist.submitArtwork(_input(title: 'A real listing'));
       final settled = (await artist.listPenalties()).single;
       expect(settled.settledAt, isNotNull);
-      expect((await artist.getWallet()).balance, balanceBefore - settled.amount);
+      expect(
+        (await artist.getWallet()).balance,
+        balanceBefore - settled.amount,
+      );
       final transactions = await artist.listWalletTransactions();
       expect(transactions.first.amount, -settled.amount);
     });
@@ -204,14 +239,23 @@ void main() {
     });
 
     test('an edit inside the window saves; a locked piece is refused', () async {
-      final draft = await artist.submitArtwork(_input(asDraft: true, title: 'Editable'));
+      final draft = await artist.submitArtwork(
+        _input(asDraft: true, title: 'Editable'),
+      );
       final updated = await artist.updateArtwork(
         artworkId: draft.id,
-        patch: _input(title: 'Renamed', listingType: ListingType.marketplaceAndAggregator),
+        patch: _input(
+          title: 'Renamed',
+          listingType: ListingType.marketplaceAndAggregator,
+        ),
       );
       expect(updated.title, 'Renamed');
       expect(updated.listingType, ListingType.marketplaceAndAggregator);
-      expect(updated.insured, isTrue, reason: 'aggregator channel forces insurance');
+      expect(
+        updated.insured,
+        isFalse,
+        reason: 'aggregator listings no longer force insurance',
+      );
 
       // aw-4 is a delivered piece in the artist's own seed — past every window.
       final locked = (await artist.listArtworks())

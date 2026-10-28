@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/artwork_filters.dart';
@@ -18,6 +20,7 @@ import '../../marketing/screens/about_screen.dart';
 import '../filter_options.dart';
 import '../providers/marketplace_providers.dart';
 import '../widgets/artwork_card.dart';
+import '../widgets/halo_reel.dart';
 import 'artists_directory_screen.dart';
 import 'marketplace_filter_sheet.dart';
 
@@ -29,13 +32,23 @@ import 'marketplace_filter_sheet.dart';
 /// bottom sheet and a list that keeps loading as it is scrolled; the filter
 /// model, defaults and reset semantics are the website's.
 class MarketplaceScreen extends ConsumerStatefulWidget {
-  const MarketplaceScreen({super.key, this.initialCategory, this.initialQuery});
+  const MarketplaceScreen({
+    super.key,
+    this.initialCategory,
+    this.initialQuery,
+    this.inShell = false,
+  });
 
   static const path = '/marketplace';
   static const defaultFilters = defaultMarketplaceFilters;
 
   final String? initialCategory;
   final String? initialQuery;
+
+  /// Shown as the collector's Shop tab rather than as a page of its own. The
+  /// tab bar is the way back to their account there, so the app bar drops its
+  /// account button.
+  final bool inShell;
 
   @override
   ConsumerState<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -55,10 +68,14 @@ const _loadAheadExtent = 600.0;
 
 class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   late ArtworkFilters _filters = MarketplaceScreen.defaultFilters.copyWith(
-    categories: widget.initialCategory == null ? const [] : [widget.initialCategory!],
+    categories: widget.initialCategory == null
+        ? const []
+        : [widget.initialCategory!],
     query: widget.initialQuery,
   );
-  late final TextEditingController _search = TextEditingController(text: widget.initialQuery ?? '');
+  late final TextEditingController _search = TextEditingController(
+    text: widget.initialQuery ?? '',
+  );
   final _catalogKey = GlobalKey();
   Timer? _debounce;
 
@@ -75,7 +92,9 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
     // box honest. Typing never arrives here with different text, so this never
     // overwrites what is being typed.
     final text = next.query ?? '';
-    if (next.query != _filters.query && text != _search.text) _search.text = text;
+    if (next.query != _filters.query && text != _search.text) {
+      _search.text = text;
+    }
     setState(() => _filters = next);
   }
 
@@ -84,7 +103,9 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) _apply(_filters.copyWith(query: value.isEmpty ? null : value));
+      if (mounted) {
+        _apply(_filters.copyWith(query: value.isEmpty ? null : value));
+      }
     });
   }
 
@@ -96,17 +117,42 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   /// The pills act like tabs: one category at a time, or All. The filter sheet
   /// still allows several.
   void _selectCategory(String? category) {
-    final alreadyOnly = _filters.categories.length == 1 && _filters.categories.first == category;
-    _apply(_filters.copyWith(categories: category == null || alreadyOnly ? const [] : [category]));
+    final alreadyOnly =
+        _filters.categories.length == 1 &&
+        _filters.categories.first == category;
+    _apply(
+      _filters.copyWith(
+        categories: category == null || alreadyOnly ? const [] : [category],
+      ),
+    );
   }
 
   /// A rank in the guide filters the catalogue to it and brings it into view.
   void _pickRank(ArtworkRarity rank) {
     _apply(_filters.copyWith(rarity: rank));
+    _showCatalog();
+  }
+
+  /// "Clear all filters" from the empty state, far down the page: the results
+  /// come back above where the reader is, so take them there.
+  void _clearFromEmpty() {
+    _apply(MarketplaceScreen.defaultFilters);
+    _showCatalog(ScrollPositionAlignmentPolicy.keepVisibleAtStart);
+  }
+
+  void _showCatalog([
+    ScrollPositionAlignmentPolicy policy =
+        ScrollPositionAlignmentPolicy.explicit,
+  ]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = _catalogKey.currentContext;
       if (context != null && context.mounted) {
-        Scrollable.ensureVisible(context, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+        Scrollable.ensureVisible(
+          context,
+          duration: AppMotion.medium,
+          curve: AppMotion.standard,
+          alignmentPolicy: policy,
+        );
       }
     });
   }
@@ -122,7 +168,8 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
   }
 
   bool _loadMoreIfNearEnd(ScrollMetrics metrics) {
-    if (metrics.axis == Axis.vertical && metrics.extentAfter < _loadAheadExtent) {
+    if (metrics.axis == Axis.vertical &&
+        metrics.extentAfter < _loadAheadExtent) {
       ref.read(marketplaceFeedProvider(_filters).notifier).loadMore();
     }
     return false;
@@ -135,13 +182,17 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
         _ActiveChip(
           'category-$value',
           humanize(value),
-          () => _apply(f.copyWith(categories: [...f.categories.where((c) => c != value)])),
+          () => _apply(
+            f.copyWith(categories: [...f.categories.where((c) => c != value)]),
+          ),
         ),
       for (final value in f.mediums)
         _ActiveChip(
           'medium-$value',
           humanize(value),
-          () => _apply(f.copyWith(mediums: [...f.mediums.where((m) => m != value)])),
+          () => _apply(
+            f.copyWith(mediums: [...f.mediums.where((m) => m != value)]),
+          ),
         ),
       if (f.minPrice != null || f.maxPrice != null)
         _ActiveChip(
@@ -150,16 +201,36 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           () => _apply(f.copyWith(minPrice: null, maxPrice: null)),
         ),
       if (f.size != null)
-        _ActiveChip('size', artworkSizeBandLabel[f.size]!, () => _apply(f.copyWith(size: null))),
+        _ActiveChip(
+          'size',
+          artworkSizeBandLabel[f.size]!,
+          () => _apply(f.copyWith(size: null)),
+        ),
       if (f.artistId != null)
         _ActiveChip(
           'artist',
-          facets.artists.where((a) => a.id == f.artistId).firstOrNull?.name ?? 'Artist',
+          facets.artists.where((a) => a.id == f.artistId).firstOrNull?.name ??
+              'Artist',
           () => _apply(f.copyWith(artistId: null)),
         ),
-      if (f.location != null) _ActiveChip('location', f.location!, () => _apply(f.copyWith(location: null))),
-      if (f.rarity != null) _ActiveChip('rarity', rankLabel(f.rarity!), () => _apply(f.copyWith(rarity: null))),
-      if (f.query != null) _ActiveChip('query', '“${f.query}”', () => _apply(f.copyWith(query: null))),
+      if (f.location != null)
+        _ActiveChip(
+          'location',
+          f.location!,
+          () => _apply(f.copyWith(location: null)),
+        ),
+      if (f.rarity != null)
+        _ActiveChip(
+          'rarity',
+          rankLabel(f.rarity!),
+          () => _apply(f.copyWith(rarity: null)),
+        ),
+      if (f.query != null)
+        _ActiveChip(
+          'query',
+          '“${f.query}”',
+          () => _apply(f.copyWith(query: null)),
+        ),
     ];
   }
 
@@ -178,7 +249,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           // The way out of the shop. An artist signs in and lands HERE (as on the website),
           // so without this there was no way on to their dashboard, and a visitor had no
           // way to sign in at all.
-          const _AccountAction(),
+          if (!widget.inShell) const _AccountAction(),
           IconButton(
             onPressed: () => context.push(ArtistsDirectoryScreen.path),
             tooltip: 'Artists',
@@ -191,7 +262,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: _refresh,
         child: NotificationListener<ScrollNotification>(
           onNotification: (n) => n.depth == 0 && _loadMoreIfNearEnd(n.metrics),
@@ -205,6 +276,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: _Hero(
+                    reel: switch (ref.watch(marketplaceOverviewProvider)) {
+                      AsyncData(:final value) => haloReelItems(value.artworks),
+                      _ => null,
+                    },
                     controller: _search,
                     onChanged: _onSearchChanged,
                     onSubmitted: _searchNow,
@@ -231,7 +306,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
                 ..._results(feed),
                 if (facets.hasValue)
                   SliverToBoxAdapter(
-                    child: _RankGuide(counts: facetData.rarityCounts, onPick: _pickRank),
+                    child: _RankGuide(
+                      counts: facetData.rarityCounts,
+                      onPick: _pickRank,
+                    ),
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 32)),
               ],
@@ -253,7 +331,8 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               title: "The marketplace didn't load",
               description: 'Check your connection and try again.',
               action: OutlinedButton(
-                onPressed: () => ref.invalidate(marketplaceFeedProvider(_filters)),
+                onPressed: () =>
+                    ref.invalidate(marketplaceFeedProvider(_filters)),
                 child: const Text('Try again'),
               ),
             ),
@@ -282,7 +361,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
             title: 'No artworks match these filters',
             description: 'Remove a filter or search with different words to see more work.',
             action: OutlinedButton(
-              onPressed: () => _apply(MarketplaceScreen.defaultFilters),
+              onPressed: _clearFromEmpty,
               child: const Text('Clear all filters'),
             ),
           ),
@@ -296,7 +375,17 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
         sliver: SliverGrid(
           gridDelegate: ArtworkGridDelegate.of(context),
           delegate: SliverChildBuilderDelegate(
-            (context, index) => ArtworkCard(key: ValueKey(loaded.artworks[index].id), artwork: loaded.artworks[index]),
+            (context, index) => Reveal(
+              key: ValueKey('reveal-${loaded.artworks[index].id}'),
+              // Only the first screenful cascades; cards further down are
+              // built just before they scroll in, and fade up as they arrive.
+              index: index < Reveal.maxStagger ? index : 0,
+              child: ArtworkCard(
+                key: ValueKey(loaded.artworks[index].id),
+                artwork: loaded.artworks[index],
+                hero: true,
+              ),
+            ),
             childCount: loaded.artworks.length,
           ),
         ),
@@ -305,7 +394,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
         const SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
           ),
         )
       else if (loaded.loadMoreFailed)
@@ -316,7 +411,9 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
               children: [
                 const Text("Couldn't load more artworks."),
                 TextButton(
-                  onPressed: () => ref.read(marketplaceFeedProvider(_filters).notifier).loadMore(),
+                  onPressed: () => ref
+                      .read(marketplaceFeedProvider(_filters).notifier)
+                      .loadMore(),
                   child: const Text('Try again'),
                 ),
               ],
@@ -355,13 +452,16 @@ class _AccountAction extends ConsumerWidget {
       key: const Key('marketplace-account'),
       onPressed: () => context.go(role.home),
       tooltip: account ? 'My account' : 'My dashboard',
-      icon: Icon(account ? LucideIcons.circleUser : LucideIcons.layoutDashboard),
+      icon: Icon(
+        account ? LucideIcons.circleUser : LucideIcons.layoutDashboard,
+      ),
     );
   }
 }
 
 class _Hero extends StatelessWidget {
   const _Hero({
+    required this.reel,
     required this.controller,
     required this.onChanged,
     required this.onSubmitted,
@@ -370,6 +470,9 @@ class _Hero extends StatelessWidget {
     required this.onSelectCategory,
   });
 
+  /// The paintings riding the halo reel; null until the catalogue has loaded,
+  /// so the ring never swaps its paintings out from under the eye.
+  final List<HaloReelItem>? reel;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
@@ -379,39 +482,47 @@ class _Hero extends StatelessWidget {
   /// Null is "All".
   final ValueChanged<String?> onSelectCategory;
 
+  static const _reelHeight = 168.0;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final reel = this.reel;
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      padding: const EdgeInsets.only(top: 4, bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The website's halo reel, leading as it does there: the shop opens
+          // on paintings rather than on a paragraph about them.
+          SizedBox(
+            height: _reelHeight,
+            child: reel == null
+                ? null
+                : Reveal(
+                    key: const ValueKey('halo-reel'),
+                    child: HaloReel(items: reel, height: _reelHeight),
+                  ),
+          ),
+          const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ORIGINAL ART. REAL PEOPLE. MEANINGFUL STORIES.',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.tertiary,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1.6,
+                  'Discover original art from independent artists',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    height: 1.12,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Discover original art from independent artists',
-                  style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600, height: 1.12),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Explore unique paintings, sculptures and more from talented artists across India and beyond.',
-                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.5, color: theme.textTheme.bodySmall?.color),
-                ),
                 const SizedBox(height: 20),
-                _SearchField(controller: controller, onChanged: onChanged, onSubmitted: onSubmitted),
+                _SearchField(
+                  controller: controller,
+                  onChanged: onChanged,
+                  onSubmitted: onSubmitted,
+                ),
               ],
             ),
           ),
@@ -423,7 +534,11 @@ class _Hero extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  _CategoryPill(label: 'All', active: selected.isEmpty, onTap: () => onSelectCategory(null)),
+                  _CategoryPill(
+                    label: 'All',
+                    active: selected.isEmpty,
+                    onTap: () => onSelectCategory(null),
+                  ),
                   for (final category in categories)
                     _CategoryPill(
                       label: humanize(category),
@@ -441,7 +556,11 @@ class _Hero extends StatelessWidget {
 }
 
 class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller, required this.onChanged, required this.onSubmitted});
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onSubmitted,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -450,7 +569,8 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    OutlineInputBorder border(Color color, [double width = 1]) => OutlineInputBorder(
+    OutlineInputBorder border(Color color, [double width = 1]) =>
+        OutlineInputBorder(
           borderRadius: BorderRadius.circular(999),
           borderSide: BorderSide(color: color, width: width),
         );
@@ -508,7 +628,11 @@ class _SearchField extends StatelessWidget {
 }
 
 class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({required this.label, required this.active, required this.onTap});
+  const _CategoryPill({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final bool active;
@@ -517,25 +641,47 @@ class _CategoryPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final duration = motionOf(context) ? AppMotion.medium : Duration.zero;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Semantics(
         button: true,
         selected: active,
-        child: Material(
-          color: active ? theme.colorScheme.primary : Colors.transparent,
-          shape: StadiumBorder(side: BorderSide(color: active ? Colors.transparent : theme.colorScheme.outline)),
-          child: InkWell(
-            customBorder: const StadiumBorder(),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Center(
-                child: Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: active ? _onGold : theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w500,
+        child: AnimatedContainer(
+          duration: duration,
+          curve: AppMotion.standard,
+          decoration: ShapeDecoration(
+            color: active
+                ? theme.colorScheme.primary
+                : theme.colorScheme.primary.withValues(alpha: 0),
+            shape: StadiumBorder(
+              side: BorderSide(
+                color: active
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outline,
+              ),
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () {
+                if (!active) HapticFeedback.selectionClick();
+                onTap();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Center(
+                  child: AnimatedDefaultTextStyle(
+                    duration: duration,
+                    style: theme.textTheme.labelLarge!.copyWith(
+                      color: active
+                          ? _onGold
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                    child: Text(label),
                   ),
                 ),
               ),
@@ -579,7 +725,9 @@ class _Toolbar extends StatelessWidget {
               Expanded(
                 child: _ToolbarButton(
                   onTap: onOpenFilters,
-                  semanticLabel: chips.isEmpty ? 'Filters' : 'Filters, ${chips.length} on',
+                  semanticLabel: chips.isEmpty
+                      ? 'Filters'
+                      : 'Filters, ${chips.length} on',
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -592,10 +740,16 @@ class _Toolbar extends StatelessWidget {
                           width: 20,
                           height: 20,
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
                           child: Text(
                             '${chips.length}',
-                            style: theme.textTheme.labelSmall?.copyWith(color: _onGold, fontWeight: FontWeight.w700),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: _onGold,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
@@ -643,7 +797,9 @@ class _Toolbar extends StatelessWidget {
                     liveRegion: true,
                     child: Text(
                       '$count ${count == 1 ? 'artwork' : 'artworks'}',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 for (final chip in chips)
@@ -677,7 +833,11 @@ class _Toolbar extends StatelessWidget {
 }
 
 class _ToolbarButton extends StatelessWidget {
-  const _ToolbarButton({required this.child, required this.semanticLabel, this.onTap});
+  const _ToolbarButton({
+    required this.child,
+    required this.semanticLabel,
+    this.onTap,
+  });
 
   final Widget child;
   final String semanticLabel;
@@ -699,14 +859,18 @@ class _ToolbarButton extends StatelessWidget {
           side: BorderSide(color: theme.colorScheme.outline),
         ),
         child: InkWell(
-          customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          customBorder: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
           onTap: onTap,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 44),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: DefaultTextStyle.merge(
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
                 child: FittedBox(fit: BoxFit.scaleDown, child: child),
               ),
             ),
@@ -761,7 +925,9 @@ class _RankGuide extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Every painting has a rank',
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -771,7 +937,11 @@ class _RankGuide extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             for (final rank in ArtworkRarity.values) ...[
-              _RankCard(rank: rank, count: counts[rank] ?? 0, onTap: () => onPick(rank)),
+              _RankCard(
+                rank: rank,
+                count: counts[rank] ?? 0,
+                onTap: () => onPick(rank),
+              ),
               if (rank != ArtworkRarity.values.last) const SizedBox(height: 12),
             ],
           ],
@@ -782,7 +952,11 @@ class _RankGuide extends StatelessWidget {
 }
 
 class _RankCard extends StatelessWidget {
-  const _RankCard({required this.rank, required this.count, required this.onTap});
+  const _RankCard({
+    required this.rank,
+    required this.count,
+    required this.onTap,
+  });
 
   final ArtworkRarity rank;
   final int count;
@@ -795,7 +969,8 @@ class _RankCard extends StatelessWidget {
     final radius = BorderRadius.circular(AppRadius.xl);
     return Semantics(
       button: count > 0,
-      label: '${rankLabel(rank)}, ${count == 0 ? 'none yet' : '$count ${count == 1 ? 'work' : 'works'}'}',
+      label:
+          '${rankLabel(rank)}, ${count == 0 ? 'none yet' : '$count ${count == 1 ? 'work' : 'works'}'}',
       excludeSemantics: true,
       child: Material(
         type: MaterialType.transparency,
@@ -808,11 +983,19 @@ class _RankCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: radius,
-              border: Border.all(color: Color.alphaBlend(color.withValues(alpha: 0.38), theme.colorScheme.outline)),
+              border: Border.all(
+                color: Color.alphaBlend(
+                  color.withValues(alpha: 0.38),
+                  theme.colorScheme.outline,
+                ),
+              ),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: const Alignment(0.6, 0.4),
-                colors: [color.withValues(alpha: 0.17), color.withValues(alpha: 0)],
+                colors: [
+                  color.withValues(alpha: 0.17),
+                  color.withValues(alpha: 0),
+                ],
               ),
             ),
             child: Row(
@@ -829,11 +1012,20 @@ class _RankCard extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [color, Color.lerp(color, Colors.black, 0.48)!],
                     ),
-                    boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 6))],
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: Text(
                     artworkRarityCode[rank]!,
-                    style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -848,23 +1040,37 @@ class _RankCard extends StatelessWidget {
                         children: [
                           Text(
                             rankLabel(rank),
-                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: count > 0
                                   ? color.withValues(alpha: 0.26)
-                                  : theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                                  : theme.colorScheme.onSurface.withValues(
+                                      alpha: 0.1,
+                                    ),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              count == 0 ? 'None yet' : '$count ${count == 1 ? 'work' : 'works'}',
+                              count == 0
+                                  ? 'None yet'
+                                  : '$count ${count == 1 ? 'work' : 'works'}',
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: count > 0
                                     ? theme.colorScheme.onSurface
-                                    : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                    : theme.colorScheme.onSurface.withValues(
+                                        alpha: 0.7,
+                                      ),
+                                fontFeatures: const [
+                                  FontFeature.liningFigures(),
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -873,7 +1079,9 @@ class _RankCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         artworkRarityDescription[rank]!,
-                        style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.35,
+                        ),
                       ),
                       if (count > 0) ...[
                         const SizedBox(height: 6),
@@ -888,7 +1096,11 @@ class _RankCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(LucideIcons.arrowRight, size: 14, color: theme.colorScheme.tertiary),
+                            Icon(
+                              LucideIcons.arrowRight,
+                              size: 14,
+                              color: theme.colorScheme.tertiary,
+                            ),
                           ],
                         ),
                       ],

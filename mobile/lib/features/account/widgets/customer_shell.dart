@@ -1,24 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shell/portal_widgets.dart';
+import '../../../data/models/auth.dart';
 
 /// Five real destinations, each its own branch — no drawer-opening special
-/// case. "More" is a full screen (see `CustomerMoreScreen`), not a
-/// slide-out drawer, so everything the web keeps in its sidebar (Wallet,
-/// Addresses, Resell, Support, FAQs, About) has a direct tab rather than
+/// case. Shop is the marketplace, one tap from anywhere: it is what a
+/// collector opens the app for, and on the website it sits in the header on
+/// every page. "More" is a full screen (see `CustomerMoreScreen`), not a
+/// slide-out drawer, so everything the web keeps in its sidebar (Collection,
+/// Addresses, Resell, Support, FAQs, About) is one tap from a tab rather than
 /// living behind the avatar.
 const shellDestinations = <ShellDestination>[
   ShellDestination(icon: LucideIcons.layoutGrid, label: 'Account'),
+  ShellDestination(icon: LucideIcons.store, label: 'Shop'),
   ShellDestination(icon: LucideIcons.shoppingBag, label: 'Orders'),
-  ShellDestination(icon: LucideIcons.frame, label: 'Collection'),
   ShellDestination(icon: LucideIcons.heart, label: 'Saved'),
   ShellDestination(icon: LucideIcons.menu, label: 'More'),
 ];
+
+/// The Shop tab: the marketplace inside the collector's shell. A collector's
+/// "browse the marketplace" links come here, so the tabs stay underneath.
+const customerShopPath = '/account/shop';
+
+/// Where "browse the marketplace" takes [role]: a collector's own Shop tab,
+/// anyone else the public marketplace.
+String marketplaceFor(Role? role) =>
+    role == Role.customer ? customerShopPath : '/marketplace';
 
 /// The customer's root shell. Branch state (scroll position, selected tab)
 /// survives resize because `StatefulShellRoute.indexedStack` keeps each
@@ -34,6 +49,7 @@ class CustomerShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   void _goBranch(int index) {
+    HapticFeedback.selectionClick();
     navigationShell.goBranch(
       index,
       // Tapping the active tab returns to that branch's first route.
@@ -44,20 +60,18 @@ class CustomerShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final size = WindowSize.of(context);
+    final body = BranchFade(
+      index: navigationShell.currentIndex,
+      child: navigationShell,
+    );
 
     if (size.isCompact) {
       return Scaffold(
-        body: navigationShell,
-        bottomNavigationBar: NavigationBar(
+        body: body,
+        bottomNavigationBar: ShellNavigationBar(
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: _goBranch,
-          destinations: [
-            for (final destination in shellDestinations)
-              NavigationDestination(
-                icon: Icon(destination.icon),
-                label: destination.label,
-              ),
-          ],
+          destinations: shellDestinations,
         ),
       );
     }
@@ -75,9 +89,9 @@ class CustomerShell extends ConsumerWidget {
               child: Text(
                 size.isExpanded ? 'GALLERYZONE' : 'GZ',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.tertiary,
-                      letterSpacing: 2,
-                    ),
+                  color: Theme.of(context).colorScheme.tertiary,
+                  letterSpacing: 2,
+                ),
               ),
             ),
             destinations: [
@@ -89,7 +103,7 @@ class CustomerShell extends ConsumerWidget {
             ],
           ),
           const VerticalDivider(width: 1),
-          Expanded(child: navigationShell),
+          Expanded(child: body),
         ],
       ),
     );

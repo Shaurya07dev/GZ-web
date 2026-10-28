@@ -7,7 +7,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Gallery Zone</string>
+		<string>GalleryZone</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -47,6 +47,17 @@
 				</array>
 			</dict>
 		</dict>
+		<!-- Artwork photos for a listing come from the camera or the photo library
+		     (image_picker). iOS ends the app the moment either is opened without
+		     these strings. -->
+		<key>NSCameraUsageDescription</key>
+		<string>GalleryZone uses the camera so you can photograph your artwork for its listing.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>GalleryZone opens your photo library so you can choose photos of your artwork for its listing.</string>
+		<!-- HTTPS only, which is exempt: App Store Connect stops asking about
+		     export compliance on every upload. -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 		<key>NFCReaderUsageDescription</key>
 		<string>GalleryZone uses NFC to write and lock the tag on your artwork, so a collector can scan it and see its record.</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>

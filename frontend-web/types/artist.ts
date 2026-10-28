@@ -1,5 +1,5 @@
 export interface ArtistSocialLink {
-  platform: "instagram" | "youtube" | "x" | "tiktok";
+  platform: "instagram" | "youtube" | "x" | "tiktok" | "website";
   url: string;
 }
 

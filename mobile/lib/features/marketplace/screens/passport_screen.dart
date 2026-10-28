@@ -87,7 +87,11 @@ class PassportScreen extends ConsumerWidget {
 /// The passport itself, given the piece and (when the API has one) its public
 /// record. Public so the artist's board can show the same preview.
 class PassportBody extends ConsumerWidget {
-  const PassportBody({super.key, required this.artwork, required this.passport});
+  const PassportBody({
+    super.key,
+    required this.artwork,
+    required this.passport,
+  });
 
   final Artwork artwork;
   final Passport? passport;
@@ -95,12 +99,16 @@ class PassportBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final sorted = [...artwork.images]..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final sorted = [...artwork.images]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final coverUrl = sorted.isEmpty ? artwork.thumbnailUrl : sorted.first.url;
     final custody = resolveCustody(artwork);
     // The passport names the owner; the piece's own custody is the fallback
     // for a piece the record doesn't hold yet.
-    final ownerName = passport?.ownerName ?? custody.legalOwnerName ?? custodyPartyLabel[custody.legalOwner]!;
+    final ownerName =
+        passport?.ownerName ??
+        custody.legalOwnerName ??
+        custodyPartyLabel[custody.legalOwner]!;
     final coaNumber = passport?.coaCertificateNumber ?? '';
     final coaIssued = passport?.coaIssuedAt ?? '';
     final artist = ref.watch(artistProfileProvider(artwork.artistId)).value;
@@ -123,7 +131,10 @@ class PassportBody extends ConsumerWidget {
               onPressed: () => context.push('/marketplace/${artwork.id}'),
               icon: const Icon(LucideIcons.arrowLeft, size: 14),
               label: const Text('Back to listing'),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: theme.textTheme.bodySmall?.color),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                foregroundColor: theme.textTheme.bodySmall?.color,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -141,7 +152,13 @@ class PassportBody extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: _FactCard(icon: LucideIcons.user, label: 'Owner', value: ownerName)),
+                Expanded(
+                  child: _FactCard(
+                    icon: LucideIcons.user,
+                    label: 'Owner',
+                    value: ownerName,
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _FactCard(
@@ -151,7 +168,13 @@ class PassportBody extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Expanded(child: _FactCard(icon: LucideIcons.mapPin, label: 'Location', value: custody.locationLabel)),
+                Expanded(
+                  child: _FactCard(
+                    icon: LucideIcons.mapPin,
+                    label: 'Location',
+                    value: custody.locationLabel,
+                  ),
+                ),
               ],
             ),
           ),
@@ -165,9 +188,16 @@ class PassportBody extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Icon(LucideIcons.clock, size: 14, color: theme.textTheme.bodySmall?.color),
+                  Icon(
+                    LucideIcons.clock,
+                    size: 14,
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
                   const SizedBox(width: 8),
-                  Text('COA issued ${formatLongDate(coaIssued)}', style: theme.textTheme.bodySmall),
+                  Text(
+                    'COA issued ${formatLongDate(coaIssued)}',
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -177,7 +207,9 @@ class PassportBody extends ConsumerWidget {
             _LifecycleTimeline(entries: lifecycle),
           ],
           const SizedBox(height: 36),
-          Center(child: ArtworkQr(artworkId: artwork.id, size: 128, showUrl: true)),
+          Center(
+            child: ArtworkQr(artworkId: artwork.id, size: 128, showUrl: true),
+          ),
           const SizedBox(height: 16),
           Center(
             child: DownloadCoaButton(
@@ -187,6 +219,9 @@ class PassportBody extends ConsumerWidget {
                 title: artwork.title,
                 artistName: artwork.artistName,
                 category: humanize(artwork.category),
+                artworkType: artwork.artworkType,
+                exclusive: artwork.exclusive,
+                artistSignatureDataUrl: passport?.artistSignatureDataUrl,
                 medium: humanize(artwork.medium),
                 dimensions: dimensionsLabel(artwork.dimensions),
                 yearCreated: artwork.yearCreated,
@@ -202,7 +237,11 @@ class PassportBody extends ConsumerWidget {
             const SizedBox(height: 20),
             Row(
               children: [
-                ArtistAvatar(name: artist?.name ?? artwork.artistName, imageUrl: artist?.profileImageUrl ?? '', size: 40),
+                ArtistAvatar(
+                  name: artist?.name ?? artwork.artistName,
+                  imageUrl: artist?.profileImageUrl ?? '',
+                  size: 40,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -210,9 +249,14 @@ class PassportBody extends ConsumerWidget {
                     children: [
                       Text(
                         artist?.name ?? artwork.artistName,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      Text('Verified GalleryZone artist', style: theme.textTheme.labelSmall),
+                      Text(
+                        'Verified GalleryZone artist',
+                        style: theme.textTheme.labelSmall,
+                      ),
                     ],
                   ),
                 ),
@@ -220,7 +264,9 @@ class PassportBody extends ConsumerWidget {
                   onPressed: () => context.push('/artists/${artwork.artistId}'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: theme.colorScheme.tertiary,
-                    side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+                    side: BorderSide(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: const Text('View portfolio'),
                 ),
@@ -229,7 +275,11 @@ class PassportBody extends ConsumerWidget {
             const SizedBox(height: 20),
             Row(
               children: [
-                Icon(LucideIcons.shieldCheck, size: 14, color: theme.colorScheme.tertiary),
+                Icon(
+                  LucideIcons.shieldCheck,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -265,7 +315,9 @@ class _NfcVerifiedBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -274,7 +326,9 @@ class _NfcVerifiedBanner extends StatelessWidget {
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                locked ? 'Verified via NFC + locked' : 'NFC tag linked — not yet locked',
+                locked
+                    ? 'Verified via NFC + locked'
+                    : 'NFC tag linked — not yet locked',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.tertiary,
                   fontWeight: FontWeight.w500,
@@ -282,7 +336,11 @@ class _NfcVerifiedBanner extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(LucideIcons.circleCheck, size: 16, color: theme.colorScheme.tertiary),
+            Icon(
+              LucideIcons.circleCheck,
+              size: 16,
+              color: theme.colorScheme.tertiary,
+            ),
           ],
         ),
       ),
@@ -313,9 +371,15 @@ class _PassportCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(AppRadius.xl2),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
         boxShadow: [
-          BoxShadow(color: theme.colorScheme.primary.withValues(alpha: 0.15), blurRadius: 40, spreadRadius: -8),
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.15),
+            blurRadius: 40,
+            spreadRadius: -8,
+          ),
         ],
       ),
       child: Column(
@@ -325,12 +389,18 @@ class _PassportCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppRadius.xl4),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.4),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(LucideIcons.shieldCheck, size: 13, color: theme.colorScheme.tertiary),
+                Icon(
+                  LucideIcons.shieldCheck,
+                  size: 13,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   'ARTWORK PASSPORT',
@@ -346,13 +416,19 @@ class _PassportCard extends StatelessWidget {
           const SizedBox(height: 24),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            child: SizedBox(width: 176, height: 176, child: ArtworkImageView(url: coverUrl)),
+            child: SizedBox(
+              width: 176,
+              height: 176,
+              child: ArtworkImageView(url: coverUrl),
+            ),
           ),
           const SizedBox(height: 20),
           Text(
             artwork.title,
             textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 6),
           Text.rich(
@@ -362,23 +438,51 @@ class _PassportCard extends StatelessWidget {
                 const TextSpan(text: 'by '),
                 TextSpan(
                   text: artwork.artistName,
-                  style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
+          if (artwork.exclusive) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.xl4),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Text(
+                'Exclusive to GalleryZone',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(LucideIcons.badgeCheck, size: 16, color: theme.colorScheme.tertiary),
+                Icon(
+                  LucideIcons.badgeCheck,
+                  size: 16,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Column(
@@ -386,7 +490,10 @@ class _PassportCard extends StatelessWidget {
                     children: [
                       Text(
                         'CERTIFICATE OF AUTHENTICITY',
-                        style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, letterSpacing: 0.8),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                       Text(
                         coaNumber.isEmpty ? 'Pending issuance' : coaNumber,
@@ -410,11 +517,17 @@ class _PassportCard extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(nfcLocked ? LucideIcons.lock : LucideIcons.nfc, size: 14, color: theme.colorScheme.tertiary),
+                Icon(
+                  nfcLocked ? LucideIcons.lock : LucideIcons.nfc,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(
-                    nfcLocked ? 'Verified via NFC + locked' : 'NFC tag linked · not yet locked',
+                    nfcLocked
+                        ? 'Verified via NFC + locked'
+                        : 'NFC tag linked · not yet locked',
                     key: const Key('passport-nfc-chip'),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall,
@@ -430,7 +543,11 @@ class _PassportCard extends StatelessWidget {
 }
 
 class _FactCard extends StatelessWidget {
-  const _FactCard({required this.icon, required this.label, required this.value});
+  const _FactCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -454,7 +571,9 @@ class _FactCard extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              ),
             ),
             child: Icon(icon, size: 14, color: theme.colorScheme.tertiary),
           ),
@@ -462,13 +581,19 @@ class _FactCard extends StatelessWidget {
           Text(
             label.toUpperCase(),
             textAlign: TextAlign.center,
-            style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, letterSpacing: 1.2),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontSize: 10,
+              letterSpacing: 1.2,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
             textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, height: 1.25),
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w500,
+              height: 1.25,
+            ),
           ),
         ],
       ),
@@ -491,7 +616,8 @@ class _LifecycleTimeline extends StatelessWidget {
     LifecycleKind.listed => LucideIcons.store,
     LifecycleKind.placedWithGallery => LucideIcons.building2,
     LifecycleKind.returnedFromGallery => LucideIcons.undo2,
-    LifecycleKind.soldMarketplace || LifecycleKind.soldAtGallery => LucideIcons.shoppingBag,
+    LifecycleKind.soldMarketplace ||
+    LifecycleKind.soldAtGallery => LucideIcons.shoppingBag,
     LifecycleKind.transferred => LucideIcons.arrowLeftRight,
     LifecycleKind.displayed => LucideIcons.frame,
     LifecycleKind.delivered => LucideIcons.packageCheck,
@@ -519,7 +645,10 @@ class _LifecycleTimeline extends StatelessWidget {
       children: [
         Text(
           'LIFECYCLE',
-          style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 1.5),
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.5,
+          ),
         ),
         const SizedBox(height: 16),
         for (var i = 0; i < entries.length; i++)
@@ -534,18 +663,32 @@ class _LifecycleTimeline extends StatelessWidget {
                       height: 28,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: i == last ? theme.colorScheme.primary.withValues(alpha: 0.15) : theme.cardTheme.color,
+                        color: i == last
+                            ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                            : theme.cardTheme.color,
                         border: Border.all(
-                          color: i == last ? theme.colorScheme.primary.withValues(alpha: 0.6) : theme.colorScheme.outline,
+                          color: i == last
+                              ? theme.colorScheme.primary.withValues(alpha: 0.6)
+                              : theme.colorScheme.outline,
                         ),
                       ),
                       child: Icon(
-                        i == last ? LucideIcons.sparkles : _iconOf(entries[i].kind),
+                        i == last
+                            ? LucideIcons.sparkles
+                            : _iconOf(entries[i].kind),
                         size: 14,
-                        color: i == last ? theme.colorScheme.tertiary : theme.textTheme.bodySmall?.color,
+                        color: i == last
+                            ? theme.colorScheme.tertiary
+                            : theme.textTheme.bodySmall?.color,
                       ),
                     ),
-                    if (i != last) Expanded(child: Container(width: 1, color: theme.colorScheme.outline)),
+                    if (i != last)
+                      Expanded(
+                        child: Container(
+                          width: 1,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(width: 16),
@@ -557,23 +700,42 @@ class _LifecycleTimeline extends StatelessWidget {
                       children: [
                         Text(
                           labelOf(entries[i]),
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        if (entries[i].place != null && entries[i].place!.label.isNotEmpty)
+                        if (entries[i].place != null &&
+                            entries[i].place!.label.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Row(
                               children: [
-                                Icon(LucideIcons.mapPin, size: 12, color: theme.textTheme.bodySmall?.color),
+                                Icon(
+                                  LucideIcons.mapPin,
+                                  size: 12,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
                                 const SizedBox(width: 4),
-                                Flexible(child: Text(entries[i].place!.label, style: theme.textTheme.labelSmall)),
+                                Flexible(
+                                  child: Text(
+                                    entries[i].place!.label,
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        if (entries[i].note != null && entries[i].note!.isNotEmpty)
-                          Text(entries[i].note!, style: theme.textTheme.labelSmall),
+                        if (entries[i].note != null &&
+                            entries[i].note!.isNotEmpty)
+                          Text(
+                            entries[i].note!,
+                            style: theme.textTheme.labelSmall,
+                          ),
                         const SizedBox(height: 2),
-                        Text(formatShortDate(entries[i].at), style: theme.textTheme.labelSmall),
+                        Text(
+                          formatShortDate(entries[i].at),
+                          style: theme.textTheme.labelSmall,
+                        ),
                       ],
                     ),
                   ),

@@ -12,8 +12,10 @@ import '../../models/passport.dart';
 /// ever learns the wire shape — the same split the website keeps in
 /// `lib/api-mappers.ts`.
 
-String _s(Object? value, [String fallback = '']) => value is String ? value : fallback;
-String? _sn(Object? value) => value is String && value.isNotEmpty ? value : null;
+String _s(Object? value, [String fallback = '']) =>
+    value is String ? value : fallback;
+String? _sn(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;
 
 ArtworkStatus artworkStatusFromApi(Object? code) => switch (code) {
   'draft' => ArtworkStatus.draft,
@@ -121,7 +123,8 @@ ArtworkImage imageFromApi(Map<String, dynamic> json) {
 }
 
 List<ArtworkImage> _imagesOf(Object? value) =>
-    asMapList(value).map(imageFromApi).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    asMapList(value).map(imageFromApi).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
 /// A piece as the public sees it (`CustomerArtworkDto`). The same function
 /// reads the owner's richer view, whose extra fields are all optional.
@@ -134,9 +137,7 @@ Artwork artworkFromApi(Map<String, dynamic> json) {
     title: _s(json['title']),
     artistId: _s(json['artistId']),
     artistName: _s(json['artistName']),
-    // Verification tiers aren't on the public DTO yet — the website defaults
-    // them to false too, so no badge is drawn rather than a guessed one.
-    verifiedArtist: false,
+    verifiedArtist: json['verifiedArtist'] == true,
     category: _s(json['category']),
     medium: _s(json['medium']),
     customerPrice: rupeesAt(json, 'displayPricePaise'),
@@ -144,6 +145,7 @@ Artwork artworkFromApi(Map<String, dynamic> json) {
     // honest "Image coming soon" rather than a shared stock picture.
     thumbnailUrl: images.firstOrNull?.thumbnailUrl ?? '',
     insured: json['insured'] == true,
+    exclusive: json['exclusive'] == true,
     status: status,
     listingType: listingTypeFromApi(json['listingType']),
     description: _s(json['description']),
@@ -164,7 +166,12 @@ Artwork artworkFromApi(Map<String, dynamic> json) {
                 changedAt: isoOf(event['changedAt']),
               ),
           ]
-        : [ArtworkStatusEvent(status: status, changedAt: isoOf(json['createdAt']))],
+        : [
+            ArtworkStatusEvent(
+              status: status,
+              changedAt: isoOf(json['createdAt']),
+            ),
+          ],
     nfcTagUid: _sn(json['nfcTagUid']),
     nfcLinkedAt: isoOrNull(json['nfcLinkedAt']),
     nfcLockedAt: isoOrNull(json['nfcLockedAt']),
@@ -186,7 +193,8 @@ ArtistArtwork ownerArtworkFromApi(Map<String, dynamic> json) {
   final net = asMap(json['artistNet']);
   final insuranceOpted = json['insuranceOpted'] == true;
   return ArtistArtwork(
-    artwork: artworkFromApi(json).copyWith(insured: insuranceOpted || json['insured'] == true),
+    artwork: artworkFromApi(json)
+        .copyWith(insured: insuranceOpted || json['insured'] == true),
     artistPrice: rupeesAt(json, 'artistPricePaise'),
     artistNetMarketplace: rupeesAt(net, 'marketplace'),
     artistNetAggregator: rupeesAt(net, 'aggregatorEstimate'),
@@ -195,20 +203,40 @@ ArtistArtwork ownerArtworkFromApi(Map<String, dynamic> json) {
   );
 }
 
-ArtistProfile artistProfileFromApi(Map<String, dynamic> json) => ArtistProfile(
-  id: _s(json['id']),
-  name: _s(json['name']),
-  bio: _s(json['bio']),
-  profileImageUrl: _s(json['profileImageUrl']),
-  verification: const ArtistVerificationState(
-    tier1SocialMedia: false,
-    tier2ActivePlan: false,
-    tier3FirstSale: false,
-  ),
-  socialLinks: const [],
-  headline: _s(json['headline']),
-  location: _s(json['location']),
-);
+SocialProofPlatform? _socialPlatform(Object? value) =>
+    switch (_s(value).toLowerCase()) {
+      'instagram' => SocialProofPlatform.instagram,
+      'youtube' => SocialProofPlatform.youtube,
+      'x' => SocialProofPlatform.x,
+      'tiktok' => SocialProofPlatform.tiktok,
+      'website' => SocialProofPlatform.website,
+      _ => null,
+    };
+
+List<SocialProofLink> _socialLinks(Object? value) => [
+  for (final link in asMapList(value))
+    if (_socialPlatform(link['platform']) case final platform?)
+      if (_s(link['url']).trim().isNotEmpty)
+        SocialProofLink(platform: platform, url: _s(link['url']).trim()),
+];
+
+ArtistProfile artistProfileFromApi(Map<String, dynamic> json) {
+  final verification = asMap(json['verification']);
+  return ArtistProfile(
+    id: _s(json['id']),
+    name: _s(json['name']),
+    bio: _s(json['bio']),
+    profileImageUrl: _s(json['profileImageUrl']),
+    verification: ArtistVerificationState(
+      tier1SocialMedia: verification['tier1SocialMedia'] == true,
+      tier2ActivePlan: verification['tier2ActivePlan'] == true,
+      tier3FirstSale: verification['tier3FirstSale'] == true,
+    ),
+    socialLinks: _socialLinks(json['socialLinks']),
+    headline: _s(json['headline']),
+    location: _s(json['location']),
+  );
+}
 
 ArtistCard artistCardFromApi(Map<String, dynamic> json) => ArtistCard(
   profile: artistProfileFromApi(json),
@@ -222,7 +250,9 @@ MarketplacePage marketplacePageFromApi(Map<String, dynamic> json) {
   // "N" and "S" are the same rank; fold any old rows onto Standard.
   asMap(facets['rarityCounts']).forEach((code, count) {
     final rank = artworkRarityFromCode(code);
-    if (rank != null && count is num) counts[rank] = (counts[rank] ?? 0) + count.toInt();
+    if (rank != null && count is num) {
+      counts[rank] = (counts[rank] ?? 0) + count.toInt();
+    }
   });
   final range = asMap(facets['priceRangePaise']);
   List<String> strings(Object? value) => [
@@ -262,21 +292,23 @@ TransferStatus transferStatusFromApi(Object? code) => switch (code) {
 };
 
 /// A transfer as one of its two parties sees it (`GET /v1/transfers/:id`).
-OwnershipTransfer transferFromApi(Map<String, dynamic> json) => OwnershipTransfer(
-  id: _s(json['id']),
-  artworkId: _s(json['artworkId']),
-  artworkTitle: _s(json['artworkTitle'], 'Artwork'),
-  fromName: _s(json['fromName']),
-  toName: _s(json['toName']),
-  toEmail: _s(json['toEmail']),
-  initiatedAt: isoOf(json['initiatedAt']),
-  acceptedAt: isoOrNull(json['acceptedAt']),
-  cancelledAt: isoOrNull(json['cancelledAt']),
-  status: transferStatusFromApi(json['status']),
-  kind: transferKindFromApi(json['kind']),
-  displayEndsAt: isoOrNull(json['displayEndsAt']),
-  displayEndedAt: isoOrNull(json['displayEndedAt']),
-);
+OwnershipTransfer transferFromApi(Map<String, dynamic> json) =>
+    OwnershipTransfer(
+      id: _s(json['id']),
+      artworkId: _s(json['artworkId']),
+      artworkTitle: _s(json['artworkTitle'], 'Artwork'),
+      fromName: _s(json['fromName']),
+      toName: _s(json['toName']),
+      toEmail: _s(json['toEmail']),
+      initiatedAt: isoOf(json['initiatedAt']),
+      acceptedAt: isoOrNull(json['acceptedAt']),
+      cancelledAt: isoOrNull(json['cancelledAt']),
+      status: transferStatusFromApi(json['status']),
+      kind: transferKindFromApi(json['kind']),
+      displayStartsAt: isoOrNull(json['displayStartsAt']),
+      displayEndsAt: isoOrNull(json['displayEndsAt']),
+      displayEndedAt: isoOrNull(json['displayEndedAt']),
+    );
 
 PassportEvent passportEventFromApi(Map<String, dynamic> json) => PassportEvent(
   id: _s(json['id']),
@@ -288,6 +320,7 @@ PassportEvent passportEventFromApi(Map<String, dynamic> json) => PassportEvent(
   initiatedAt: isoOf(json['initiatedAt']),
   acceptedAt: isoOrNull(json['acceptedAt']),
   cancelledAt: isoOrNull(json['cancelledAt']),
+  displayStartsAt: isoOrNull(json['displayStartsAt']),
   displayEndsAt: isoOrNull(json['displayEndsAt']),
   displayEndedAt: isoOrNull(json['displayEndedAt']),
 );
@@ -309,7 +342,11 @@ LifecycleEntry lifecycleEntryFromApi(Map<String, dynamic> json) {
   final actor = asMap(json['actor']);
   final location = json['location'];
   final place = location is Map<String, dynamic>
-      ? LifecyclePlace(city: _s(location['city']), state: _s(location['state']), country: _s(location['country']))
+      ? LifecyclePlace(
+          city: _s(location['city']),
+          state: _s(location['state']),
+          country: _s(location['country']),
+        )
       : null;
   return LifecycleEntry(
     id: _s(json['id']),
@@ -323,7 +360,9 @@ LifecycleEntry lifecycleEntryFromApi(Map<String, dynamic> json) {
     },
     actorName: _s(actor['displayName']),
     // A collector's place is never public: even a stray one is dropped here.
-    place: actor['kind'] == 'collector' || actor['kind'] == 'platform' ? null : place,
+    place: actor['kind'] == 'collector' || actor['kind'] == 'platform'
+        ? null
+        : place,
     note: _sn(json['note']),
   );
 }
@@ -344,8 +383,11 @@ Passport passportFromApi(Map<String, dynamic> json) {
     status: _s(json['status']),
     coaCertificateNumber: _sn(json['coaCertificateNumber']),
     coaIssuedAt: isoOrNull(json['coaIssuedAt']),
+    artistSignatureDataUrl: _sn(json['artistSignatureDataUrl']),
     listedAt: isoOf(json['listedAt']),
-    ownerKind: owner['kind'] == 'collector' ? PassportOwnerKind.collector : PassportOwnerKind.artist,
+    ownerKind: owner['kind'] == 'collector'
+        ? PassportOwnerKind.collector
+        : PassportOwnerKind.artist,
     ownerName: _s(owner['displayName']),
     events: asMapList(json['events']).map(passportEventFromApi).toList(),
     nfcLinked: json['nfcLinked'] == true,

@@ -8,6 +8,8 @@ import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/input_formatters.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
+import '../../../core/postal.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/mock/seed/artist_seed.dart' show currentArtistId;
 import '../../../data/models/artist_portal.dart';
@@ -60,7 +62,7 @@ class ArtistKycScreen extends ConsumerWidget {
                 child: Text(profile.isLoading ? 'Trying again…' : 'Try again'),
               ),
             )
-          : const Center(child: CircularProgressIndicator()),
+          : const PageSkeleton(),
     );
   }
 }
@@ -332,7 +334,7 @@ class _ProfileSummary extends ConsumerWidget {
                 cells: [
                   // The website's own labels here read "Withdrawable" for what is
                   // really the lifetime total and "On the way" for the pending
-                  // withdrawals; these say what the figures are.
+                  // payouts; these say what the figures are.
                   _Cell(
                     LucideIcons.landmark,
                     'Earned to date',
@@ -340,7 +342,7 @@ class _ProfileSummary extends ConsumerWidget {
                   ),
                   _Cell(
                     LucideIcons.clock,
-                    'Withdrawal pending',
+                    'Payout pending',
                     mine == null ? '—' : formatInr(mine.pending),
                   ),
                   _Cell(
@@ -537,11 +539,17 @@ class _SaveRow extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(LucideIcons.check, size: 14, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.check,
+                size: 14,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 4),
               Text(
                 'Saved',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.tertiary),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
               ),
             ],
           ),
@@ -588,6 +596,7 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
 
   bool _saving = false;
   bool _saved = false;
+  bool _verifyingGstin = false;
 
   /// Set by the first attempt to save, after which every mistake is spelled out.
   bool _tried = false;
@@ -611,9 +620,8 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
   }
 
   // GST is optional for artists (preferred, not required): leaving it blank is
-  // valid. When something IS entered its shape is still checked - there is no
-  // GST portal *integration* (the business doesn't want one); artists apply on
-  // the official portal themselves and paste the number in here.
+  // valid. When something IS entered its shape is checked locally before the
+  // SAVED value can be checked against the registry by the backend.
   bool get _gstinInvalid {
     final gstin = _gstin.text.trim();
     return gstin.isNotEmpty && !gstinPattern.hasMatch(gstin);
@@ -624,6 +632,14 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
   bool get _panInvalid => _panEmpty || !panPattern.hasMatch(_pan.text.trim());
   bool get _instagramInvalid => _instagram.text.trim().isEmpty;
   bool get _nameInvalid => _fullName.text.trim().length < 2;
+  String get _savedGstin => (widget.profile.gstin ?? '').trim().toUpperCase();
+  String get _enteredGstin => _gstin.text.trim().toUpperCase();
+  bool get _gstinHasUnsavedEdits => _enteredGstin != _savedGstin;
+  bool get _canVerifyGstin =>
+      !_verifyingGstin &&
+      _savedGstin.isNotEmpty &&
+      gstinPattern.hasMatch(_savedGstin) &&
+      !_gstinHasUnsavedEdits;
 
   Future<void> _save() async {
     setState(() => _tried = true);
@@ -665,6 +681,48 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
   }
 
   void _edited() => setState(() => _saved = false);
+
+  Future<void> _verifyGstin() async {
+    if (!_canVerifyGstin) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _verifyingGstin = true);
+    try {
+      final result = await ref
+          .read(artistRepositoryProvider)
+          .verifySavedGstin();
+      ref.invalidate(artistProfileDetailsProvider);
+      if (!mounted) return;
+      if (result.valid) {
+        final registered = (result.legalName ?? '').trim();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'GSTIN found in the GST registry. '
+              '${registered.isEmpty ? '' : 'Registered to $registered. '}'
+              'An admin will confirm it against your account.',
+            ),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              result.message ??
+                  'The GST registry has no active registration for this GSTIN.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(authErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _verifyingGstin = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -795,7 +853,10 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
           crossAxisAlignment: WrapCrossAlignment.center,
           runSpacing: 6,
           children: [
-            Text('GSTIN (optional · preferred)', style: theme.textTheme.labelLarge),
+            Text(
+              'GSTIN (optional · preferred)',
+              style: theme.textTheme.labelLarge,
+            ),
             GstStatusBadge(status: widget.profile.gstStatus),
           ],
         ),
@@ -826,6 +887,28 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
                 : null,
             errorMaxLines: 3,
           ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 10,
+          runSpacing: 4,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _canVerifyGstin ? _verifyGstin : null,
+              icon: const Icon(LucideIcons.shieldCheck, size: 14),
+              label: Text(
+                _verifyingGstin
+                    ? 'Checking the registry…'
+                    : 'Verify with the GST registry',
+              ),
+            ),
+            if (_gstinHasUnsavedEdits && _enteredGstin.isNotEmpty)
+              Text(
+                'Save your profile first, then check it.',
+                style: theme.textTheme.labelSmall,
+              ),
+          ],
         ),
         Align(
           alignment: Alignment.centerLeft,
@@ -862,14 +945,65 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
 
 // --- Identity ----------------------------------------------------------------------------------------------------
 
-class _AadhaarCard extends StatelessWidget {
+class _AadhaarCard extends ConsumerStatefulWidget {
   const _AadhaarCard({required this.profile});
 
   final ArtistProfileDetails profile;
 
   @override
+  ConsumerState<_AadhaarCard> createState() => _AadhaarCardState();
+}
+
+class _AadhaarCardState extends ConsumerState<_AadhaarCard>
+    with WidgetsBindingObserver {
+  bool _opening = false;
+  bool _awaitingReturn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _awaitingReturn) {
+      _awaitingReturn = false;
+      ref.invalidate(artistProfileDetailsProvider);
+    }
+  }
+
+  Future<void> _start() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _opening = true);
+    try {
+      final session = await ref
+          .read(artistRepositoryProvider)
+          .startAadhaarDigiLocker();
+      if (!mounted) return;
+      _awaitingReturn = true;
+      await openExternal(context, session.consentUrl);
+    } catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(authErrorMessage(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final profile = widget.profile;
     final status = profile.aadhaarStatus;
     return PortalCard(
       padding: const EdgeInsets.all(16),
@@ -915,10 +1049,33 @@ class _AadhaarCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Encrypted at rest and used only for identity verification. Contact support to update your Aadhaar '
-            'details.',
+            status == ReviewStatus.approved
+                ? 'Verified through DigiLocker. Only the last four digits are stored. Contact support to update '
+                      'your Aadhaar details.'
+                : status == ReviewStatus.submitted
+                ? 'Your DigiLocker result is with GalleryZone for review. Nothing more is needed from you.'
+                : status == ReviewStatus.rejected
+                ? "Your last attempt wasn't accepted. You can run it again through DigiLocker."
+                : "Verify through DigiLocker, the government's document service. You consent there, so your full "
+                      'Aadhaar number never reaches GalleryZone.',
             style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
           ),
+          if (status != ReviewStatus.approved) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: status == ReviewStatus.submitted || _opening
+                  ? null
+                  : _start,
+              icon: const Icon(LucideIcons.shieldCheck, size: 14),
+              label: Text(
+                _opening
+                    ? 'Opening DigiLocker…'
+                    : status == ReviewStatus.rejected
+                    ? 'Try DigiLocker again'
+                    : 'Verify with DigiLocker',
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1049,6 +1206,7 @@ class _PickupFormState extends ConsumerState<_PickupForm> {
   late final _pincode = TextEditingController(
     text: widget.profile.pickupPincode,
   );
+  late String _country = widget.profile.pickupCountry;
 
   bool _saving = false;
   bool _saved = false;
@@ -1061,14 +1219,15 @@ class _PickupFormState extends ConsumerState<_PickupForm> {
     super.dispose();
   }
 
+  PostalFormat get _postal => postalFormatFor(_country);
   bool get _pincodeInvalid =>
       _pincode.text.trim().isNotEmpty &&
-      !pincodePattern.hasMatch(_pincode.text.trim());
+      !isPostalValid(_country, _pincode.text);
   bool get _complete =>
       _line1.text.trim().isNotEmpty &&
       _city.text.trim().isNotEmpty &&
       _state.text.trim().isNotEmpty &&
-      pincodePattern.hasMatch(_pincode.text.trim());
+      isPostalValid(_country, _pincode.text);
 
   Future<void> _save() async {
     if (_pincodeInvalid) return;
@@ -1085,6 +1244,7 @@ class _PickupFormState extends ConsumerState<_PickupForm> {
           pickupLine2: _line2.text.trim(),
           pickupCity: _city.text.trim(),
           pickupState: _state.text.trim(),
+          pickupCountry: _country,
           pickupPincode: _pincode.text.trim(),
         ),
       );
@@ -1168,18 +1328,46 @@ class _PickupFormState extends ConsumerState<_PickupForm> {
           ],
         ),
         const SizedBox(height: 14),
+        DropdownButtonFormField<String>(
+          initialValue: _country,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Country'),
+          items: [
+            for (final country in postalCountries)
+              DropdownMenuItem(value: country.code, child: Text(country.name)),
+            DropdownMenuItem(
+              value: unknownPostalFormat.code,
+              child: const Text('Other'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null || value == _country) return;
+            setState(() {
+              _country = value;
+              _pincode.clear();
+              _saved = false;
+            });
+          },
+        ),
+        const SizedBox(height: 14),
         TextField(
           controller: _pincode,
           onChanged: (_) => _edited(),
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          keyboardType: _country == 'IN'
+              ? TextInputType.number
+              : TextInputType.text,
+          maxLength: _postal.maxLength,
+          inputFormatters: _country == 'IN'
+              ? [FilteringTextInputFormatter.digitsOnly]
+              : null,
           style: const TextStyle(fontFamily: 'monospace'),
           decoration: InputDecoration(
-            labelText: 'PIN code',
-            hintText: '313001',
+            labelText: _postal.label,
+            hintText: _postal.example,
             counterText: '',
-            errorText: _pincodeInvalid ? 'A PIN code is six digits.' : null,
+            errorText: _pincodeInvalid
+                ? 'Expected format: ${_postal.example}'
+                : null,
           ),
         ),
         const SizedBox(height: 18),
@@ -1275,7 +1463,7 @@ class _PayoutFormState extends ConsumerState<_PayoutForm> {
     final latest =
         ref.watch(artistProfileDetailsProvider).value ?? widget.profile;
     final onFile = latest.bankAccountMasked.isEmpty
-        ? 'Nothing on file yet — withdrawals need this.'
+        ? 'Nothing on file yet — automatic payouts need this.'
         : 'On file: ${latest.bankAccountMasked}${latest.ifsc.isEmpty ? '' : ' · ${latest.ifsc}'}.';
     return _FormCard(
       icon: LucideIcons.landmark,

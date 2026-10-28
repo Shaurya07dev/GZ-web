@@ -12,18 +12,47 @@
 //   2. Webhook — ShipRocket POSTs to us on every status change; the signature
 //      header is a SHA256 HMAC of the raw body using our webhook secret.
 //
-// When the env vars aren't set (dev / preview without credentials), the
-// client falls back to NO-OP creators that return a stub shipment with a
-// `demo-*` tracking id, so the UI's "booked a shipment" flow keeps working
-// end-to-end without hitting a real courier. Nothing goes to ShipRocket
-// unless both the API token endpoint AND webhook secret are configured.
+// When the env vars aren't set, booking fails explicitly. The reservation is
+// still valid and its caller logs the operations error, but no synthetic AWB
+// is written and no user is told a courier pickup exists when it does not.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-const SHIPROCKET_BASE = process.env.SHIPROCKET_BASE_URL ?? "https://apiv2.shiprocket.in/v1/external";
-const SHIPROCKET_EMAIL = process.env.SHIPROCKET_EMAIL ?? "";
-const SHIPROCKET_PASSWORD = process.env.SHIPROCKET_PASSWORD ?? "";
-const WEBHOOK_SECRET = process.env.SHIPROCKET_WEBHOOK_SECRET ?? "";
+export interface ShiprocketConfig {
+  baseUrl: string;
+  email: string;
+  password: string;
+  webhookSecret: string;
+  pickupLocationName: string;
+}
+
+/**
+ * All-or-nothing configuration: booking without the webhook token creates a
+ * shipment that can never advance in GalleryZone, which is not a usable live
+ * integration. Empty means deliberately disabled; a partial setup fails boot.
+ */
+export function shiprocketConfigFrom(source: NodeJS.ProcessEnv): ShiprocketConfig | null {
+  const email = source.SHIPROCKET_EMAIL?.trim() ?? "";
+  const password = source.SHIPROCKET_PASSWORD?.trim() ?? "";
+  const webhookSecret = source.SHIPROCKET_WEBHOOK_SECRET?.trim() ?? "";
+  const supplied = [email, password, webhookSecret].filter(Boolean).length;
+  if (supplied === 0) return null;
+  if (supplied !== 3) {
+    throw new Error(
+      "Incomplete ShipRocket configuration: SHIPROCKET_EMAIL, SHIPROCKET_PASSWORD and " +
+        "SHIPROCKET_WEBHOOK_SECRET must be set together.",
+    );
+  }
+  return {
+    baseUrl: (source.SHIPROCKET_BASE_URL?.trim() || "https://apiv2.shiprocket.in/v1/external").replace(/\/$/, ""),
+    email,
+    password,
+    webhookSecret,
+    pickupLocationName: source.SHIPROCKET_PICKUP_LOCATION_NAME?.trim() || "Primary",
+  };
+}
+
+const CONFIG = shiprocketConfigFrom(process.env);
 
 export type ShiprocketStage = "pickup" | "in_transit" | "out_for_delivery" | "delivered";
 
@@ -31,10 +60,7 @@ export interface BookedShipment {
   trackingId: string;
   carrier: string | null;
   stage: ShiprocketStage;
-  // True when this came back from the real ShipRocket API; false when the
-  // wrapper fell back to the local no-op stub. Loggable but not exposed to
-  // the user — a stub shipment reads the same in the UI as a real one.
-  real: boolean;
+  real: true;
 }
 
 export interface ShipmentBookingInput {
@@ -68,17 +94,17 @@ interface AuthCache {
 let authCache: AuthCache | null = null;
 
 export function isShiprocketConfigured(): boolean {
-  return Boolean(SHIPROCKET_EMAIL && SHIPROCKET_PASSWORD);
+  return CONFIG !== null;
 }
 
 async function getToken(): Promise<string> {
   if (!isShiprocketConfigured()) throw new Error("ShipRocket credentials are not configured");
   // Tokens are valid for 10 days; refresh a day early to leave a cushion.
   if (authCache && authCache.expiresAt > Date.now() + 86_400_000) return authCache.token;
-  const res = await fetch(`${SHIPROCKET_BASE}/auth/login`, {
+  const res = await fetch(`${CONFIG!.baseUrl}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: SHIPROCKET_EMAIL, password: SHIPROCKET_PASSWORD }),
+    body: JSON.stringify({ email: CONFIG!.email, password: CONFIG!.password }),
   });
   if (!res.ok) throw new Error(`ShipRocket auth failed (${res.status})`);
   const data = (await res.json()) as { token: string };
@@ -88,14 +114,7 @@ async function getToken(): Promise<string> {
 
 export async function bookShipment(input: ShipmentBookingInput): Promise<BookedShipment> {
   if (!isShiprocketConfigured()) {
-    // Local fallback — a deterministic demo id tied to the reference, so
-    // repeated bookings of the same leg don't rotate ids.
-    return {
-      trackingId: `demo-${input.orderReference}`,
-      carrier: null,
-      stage: "pickup",
-      real: false,
-    };
+    throw new Error("ShipRocket is not configured; no shipment was booked");
   }
   const token = await getToken();
   // `pickup_location` is the ACCOUNT-level nickname ShipRocket uses as a
@@ -105,7 +124,7 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
   // "pickup from the artist's studio" without registering each artist as a
   // separate warehouse. The nickname is configurable via env in case the
   // ShipRocket account uses a non-default one.
-  const pickupLocationNickname = process.env.SHIPROCKET_PICKUP_LOCATION_NAME ?? "Primary";
+  const pickupLocationNickname = CONFIG!.pickupLocationName;
   const payload = {
     order_id: input.orderReference,
     order_date: new Date().toISOString(),
@@ -143,7 +162,7 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     height: 10,
     weight: Math.max(0.5, input.weightKg),
   };
-  const res = await fetch(`${SHIPROCKET_BASE}/orders/create/adhoc`, {
+  const res = await fetch(`${CONFIG!.baseUrl}/orders/create/adhoc`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
@@ -185,9 +204,9 @@ export function stageFromWebhook(currentStatus: string): ShiprocketStage {
 // header as per selected Auth Token Type". So compare constant-time against
 // WEBHOOK_SECRET directly.
 export function verifyWebhookSignature(_rawBody: string | Buffer, tokenHeader: string | null): boolean {
-  if (!WEBHOOK_SECRET || !tokenHeader) return false;
+  if (!CONFIG || !tokenHeader) return false;
   const got = Buffer.from(tokenHeader, "utf8");
-  const exp = Buffer.from(WEBHOOK_SECRET, "utf8");
+  const exp = Buffer.from(CONFIG.webhookSecret, "utf8");
   if (got.length !== exp.length) return false;
   return timingSafeEqual(got, exp);
 }
@@ -195,8 +214,8 @@ export function verifyWebhookSignature(_rawBody: string | Buffer, tokenHeader: s
 // Kept exported in case we ever need to go back to HMAC signing (ShipRocket
 // supports it for enterprise plans). Not used by the live webhook path.
 export function verifyWebhookHmac(rawBody: string | Buffer, signatureHeader: string | null): boolean {
-  if (!WEBHOOK_SECRET || !signatureHeader) return false;
-  const expected = createHmac("sha256", WEBHOOK_SECRET).update(rawBody).digest("hex");
+  if (!CONFIG || !signatureHeader) return false;
+  const expected = createHmac("sha256", CONFIG.webhookSecret).update(rawBody).digest("hex");
   const got = Buffer.from(signatureHeader, "utf8");
   const exp = Buffer.from(expected, "utf8");
   if (got.length !== exp.length) return false;

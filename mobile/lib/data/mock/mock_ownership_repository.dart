@@ -3,7 +3,8 @@ import '../models/passport.dart';
 import '../remote/mappers/catalog_mappers.dart' show artworkStatusToApi;
 import '../repositories/ownership_repository.dart';
 import '../storage/mock_db.dart';
-import 'mock_artwork_repository.dart' show promoteApprovedSubmissions, seedArtworksCollection;
+import 'mock_artwork_repository.dart'
+    show promoteApprovedSubmissions, seedArtworksCollection;
 import 'mock_utils.dart';
 import 'seed/artist_seed.dart' show seedPendingArtworks;
 
@@ -49,18 +50,14 @@ class MockOwnershipRepository implements OwnershipRepository {
   void _writeArtwork(Artwork updated) {
     final live = _live();
     if (live.any((a) => a.id == updated.id)) {
-      MockDb.setCollection(
-        _artworksKey,
-        [for (final a in live) a.id == updated.id ? updated : a],
-        (a) => a.toJson(),
-      );
+      MockDb.setCollection(_artworksKey, [
+        for (final a in live) a.id == updated.id ? updated : a,
+      ], (a) => a.toJson());
       return;
     }
-    MockDb.setCollection(
-      _pendingArtworksKey,
-      [for (final a in _pending()) a.id == updated.id ? updated : a],
-      (a) => a.toJson(),
-    );
+    MockDb.setCollection(_pendingArtworksKey, [
+      for (final a in _pending()) a.id == updated.id ? updated : a,
+    ], (a) => a.toJson());
   }
 
   @override
@@ -83,11 +80,15 @@ class MockOwnershipRepository implements OwnershipRepository {
       yearCreated: artwork.yearCreated,
       images: artwork.images,
       status: artworkStatusToApi(artwork.status),
-      coaCertificateNumber: artwork.coaCertificateNumber.isEmpty ? null : artwork.coaCertificateNumber,
+      coaCertificateNumber: artwork.coaCertificateNumber.isEmpty
+          ? null
+          : artwork.coaCertificateNumber,
       coaIssuedAt: artwork.coaIssueDate.isEmpty ? null : artwork.coaIssueDate,
       listedAt: artwork.statusHistory.firstOrNull?.changedAt ?? '',
       ownerKind: held ? PassportOwnerKind.collector : PassportOwnerKind.artist,
-      ownerName: held ? (custody.legalOwnerName ?? 'Collector') : artwork.artistName,
+      ownerName: held
+          ? (custody.legalOwnerName ?? 'Collector')
+          : artwork.artistName,
       nfcLinked: artwork.nfcLinkedAt != null,
       nfcLocked: artwork.nfcLinkedAt != null && artwork.nfcLockedAt != null,
       lifecycle: mockLifecycle(artwork, transfers),
@@ -103,6 +104,7 @@ class MockOwnershipRepository implements OwnershipRepository {
             initiatedAt: t.initiatedAt,
             acceptedAt: t.acceptedAt,
             cancelledAt: t.cancelledAt,
+            displayStartsAt: t.displayStartsAt,
             displayEndsAt: t.displayEndsAt,
             displayEndedAt: t.displayEndedAt,
           ),
@@ -114,11 +116,12 @@ class MockOwnershipRepository implements OwnershipRepository {
   Future<MyPassports> myPassports() => mockDelay(() => MyPassports.empty);
 
   @override
-  Future<List<OwnershipTransfer>> listForArtwork(String artworkId) => mockDelay(() {
-    final matches = _read().where((t) => t.artworkId == artworkId).toList()
-      ..sort((a, b) => b.initiatedAt.compareTo(a.initiatedAt));
-    return matches;
-  });
+  Future<List<OwnershipTransfer>> listForArtwork(String artworkId) =>
+      mockDelay(() {
+        final matches = _read().where((t) => t.artworkId == artworkId).toList()
+          ..sort((a, b) => b.initiatedAt.compareTo(a.initiatedAt));
+        return matches;
+      });
 
   @override
   Future<OwnershipTransfer?> get(String transferId) =>
@@ -131,6 +134,7 @@ class MockOwnershipRepository implements OwnershipRepository {
     required String toName,
     required String toEmail,
     TransferKind kind = TransferKind.ownership,
+    String? displayStartsAt,
     String? displayEndsAt,
   }) {
     final artwork = _findArtwork(artworkId);
@@ -140,17 +144,26 @@ class MockOwnershipRepository implements OwnershipRepository {
       return mockError('Enter a valid email address');
     }
     if (kind == TransferKind.display) {
-      if (displayEndsAt == null) {
-        return mockError('Pick the date the display runs to');
+      if (displayStartsAt == null || displayEndsAt == null) {
+        return mockError('Pick the dates the display runs from and to');
       }
-      if (!DateTime.parse(displayEndsAt).isAfter(DateTime.now())) {
-        return mockError('The display end date has to be in the future');
+      if (DateTime.parse(displayStartsAt)
+          .isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+        return mockError('The display start date cannot be in the past');
+      }
+      if (!DateTime.parse(displayEndsAt)
+          .isAfter(DateTime.parse(displayStartsAt))) {
+        return mockError('The display end date must be after its start date');
       }
     }
     // One open transfer per artwork: two pending ones would let two people
     // each claim the same piece.
-    if (_read().any((t) => t.artworkId == artworkId && t.status == TransferStatus.pending)) {
-      return mockError('A transfer for this artwork is already waiting to be accepted');
+    if (_read().any(
+      (t) => t.artworkId == artworkId && t.status == TransferStatus.pending,
+    )) {
+      return mockError(
+        'A transfer for this artwork is already waiting to be accepted',
+      );
     }
     // A piece cannot be lent twice over. The active loan has to end — by its
     // own date or by the owner ending it — before another one starts.
@@ -171,6 +184,7 @@ class MockOwnershipRepository implements OwnershipRepository {
         initiatedAt: DateTime.now().toIso8601String(),
         status: TransferStatus.pending,
         kind: kind,
+        displayStartsAt: kind == TransferKind.display ? displayStartsAt : null,
         displayEndsAt: kind == TransferKind.display ? displayEndsAt : null,
       );
       _write([transfer, ..._read()]);
@@ -194,7 +208,10 @@ class MockOwnershipRepository implements OwnershipRepository {
 
     return mockDelay(() {
       final now = DateTime.now().toIso8601String();
-      final accepted = transfer.copyWith(status: TransferStatus.accepted, acceptedAt: now);
+      final accepted = transfer.copyWith(
+        status: TransferStatus.accepted,
+        acceptedAt: now,
+      );
       _write([for (final t in transfers) t.id == transferId ? accepted : t]);
 
       // Ownership moves; custody only follows if the artist was still
@@ -260,11 +277,21 @@ class MockOwnershipRepository implements OwnershipRepository {
 /// The lifecycle the offline demo shows: made, approved and listed from the
 /// piece's own status log, then each accepted hand-over. No place is ever
 /// given for a collector - same rule as the server's.
-List<LifecycleEntry> mockLifecycle(Artwork artwork, List<OwnershipTransfer> transfers) {
-  final firstLive = artwork.statusHistory.where((e) => e.status == ArtworkStatus.marketplace).firstOrNull;
-  final place = artwork.artistLocation == null || artwork.artistLocation!.trim().isEmpty
+List<LifecycleEntry> mockLifecycle(
+  Artwork artwork,
+  List<OwnershipTransfer> transfers,
+) {
+  final firstLive = artwork.statusHistory
+      .where((e) => e.status == ArtworkStatus.marketplace)
+      .firstOrNull;
+  final place =
+      artwork.artistLocation == null || artwork.artistLocation!.trim().isEmpty
       ? null
-      : LifecyclePlace(city: artwork.artistLocation!.split(',').first.trim(), state: '', country: 'India');
+      : LifecyclePlace(
+          city: artwork.artistLocation!.split(',').first.trim(),
+          state: '',
+          country: 'India',
+        );
   final entries = <LifecycleEntry>[
     LifecycleEntry(
       id: 'created',
@@ -295,7 +322,9 @@ List<LifecycleEntry> mockLifecycle(Artwork artwork, List<OwnershipTransfer> tran
       if (t.status == TransferStatus.accepted)
         LifecycleEntry(
           id: t.id,
-          kind: transferKindOf(t) == TransferKind.display ? LifecycleKind.displayed : LifecycleKind.transferred,
+          kind: transferKindOf(t) == TransferKind.display
+              ? LifecycleKind.displayed
+              : LifecycleKind.transferred,
           at: t.acceptedAt ?? t.initiatedAt,
           actorKind: LifecycleActorKind.collector,
           actorName: t.toName,

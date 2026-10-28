@@ -12,10 +12,11 @@
 class AppConfig {
   AppConfig._();
 
-  /// NestJS API, no trailing slash. Production is the only deployed one.
+  /// NestJS API, no trailing slash. Production is the only deployed one: the
+  /// same address the live website calls.
   static const apiBaseUrl = String.fromEnvironment(
     'GZ_API_URL',
-    defaultValue: 'https://api-production-9fd9.up.railway.app',
+    defaultValue: 'https://gz-web-production.up.railway.app',
   );
 
   /// Firebase project `galleryzone-prod` — the web API key, used for the

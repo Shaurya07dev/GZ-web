@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { PlayCircle } from "lucide-react";
+import { GuideLauncher } from "@/components/shared/guide-launcher";
+import { GUIDES_FOR } from "@/lib/guides";
 import {
   Accordion,
   AccordionItem,
@@ -23,6 +24,10 @@ export function SupportFaqPanel({ audience }: { audience: FaqAudience }) {
       ),
     [audience],
   );
+  const guides =
+    audience === "artists" || audience === "aggregators"
+      ? GUIDES_FOR[audience]
+      : [];
 
   return (
     <div className="flex flex-col gap-3">
@@ -49,24 +54,20 @@ export function SupportFaqPanel({ audience }: { audience: FaqAudience }) {
         </Accordion>
       </div>
 
-      {/* Placeholder for the walkthrough videos. Everything beyond the single
-          aggregator-terms explainer is hosted on YouTube and linked from
-          here — drop the links in when the channel is ready. */}
-      <div className="flex items-start gap-3 rounded-lg border border-dashed border-border p-4">
-        <PlayCircle
-          className="mt-0.5 size-5 shrink-0 text-gold-bright"
-          strokeWidth={1.5}
-        />
-        <div>
-          <p className="text-sm font-medium text-foreground">
+      {/* Everything beyond the one explainer under the aggregator terms
+          lives here, for this portal's own audience. */}
+      {guides.length > 0 && (
+        <>
+          <h2 className="mt-3 font-display text-base font-semibold text-foreground">
             Video walkthroughs
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Short videos explaining listing, aggregator display, and
-            settlement will be linked here. Coming soon.
-          </p>
-        </div>
-      </div>
+          </h2>
+          <div className="flex flex-col gap-2">
+            {guides.map((guide) => (
+              <GuideLauncher key={guide.src} guide={guide} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

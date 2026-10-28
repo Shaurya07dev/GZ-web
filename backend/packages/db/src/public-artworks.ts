@@ -15,7 +15,7 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import type { ArtworkStatus } from "@galleryzone/domain";
-import { Collections, publicRank, type ArtworkDoc } from "./collections.ts";
+import { Collections, publicRank, type ArtworkDoc, type PublicProfileDoc } from "./collections.ts";
 import { latestStatusOf, refreshListing } from "./listing-projection.ts";
 
 export { latestStatusOf as latestArtworkStatus };
@@ -26,6 +26,7 @@ export interface PublicArtworkView {
   productCode: string;
   artistId: string;
   artistName: string;
+  verifiedArtist: boolean;
   title: string;
   description: string;
   category: string;
@@ -61,15 +62,27 @@ export function toMarketplaceView(view: PublicArtworkView): MarketplaceArtworkVi
   return rest;
 }
 
-async function toPublicView(db: Firestore, id: string, artwork: ArtworkDoc): Promise<PublicArtworkView> {
+const hasPublicVerification = (profile: PublicProfileDoc | undefined): boolean =>
+  Boolean(profile?.tier1SocialMedia || profile?.tier2ArtistAgreement || profile?.tier3FirstSale);
+
+async function toPublicView(
+  db: Firestore,
+  id: string,
+  artwork: ArtworkDoc,
+  verifiedArtist?: boolean,
+): Promise<PublicArtworkView> {
   // Docs written before the projection existed get it built on first read.
   const listing = artwork.listing ?? (await refreshListing(db, id));
   if (!listing) throw new Error(`Artwork ${id} vanished during read`);
+  const verified = verifiedArtist ?? hasPublicVerification(
+    (await db.collection(Collections.publicProfiles).doc(artwork.artistId).get()).data() as PublicProfileDoc | undefined,
+  );
   return {
     id,
     productCode: artwork.productCode,
     artistId: artwork.artistId,
     artistName: listing.artistName,
+    verifiedArtist: verified,
     title: artwork.title,
     description: artwork.description,
     category: artwork.category,
@@ -134,7 +147,22 @@ const MAX_PAGE_SIZE = 60;
 /** Every live marketplace piece, unfiltered — the unit the API caches. */
 export async function loadMarketplace(db: Firestore): Promise<PublicArtworkView[]> {
   const snap = await db.collection(Collections.artworks).where("listing.onMarketplace", "==", true).get();
-  return Promise.all(snap.docs.map((doc) => toPublicView(db, doc.id, doc.data() as ArtworkDoc)));
+  const artworks = snap.docs.map((doc) => ({ id: doc.id, artwork: doc.data() as ArtworkDoc }));
+  const artistIds = [...new Set(artworks.map(({ artwork }) => artwork.artistId))];
+  const profiles = await Promise.all(
+    artistIds.map((artistId) => db.collection(Collections.publicProfiles).doc(artistId).get()),
+  );
+  const verifiedByArtist = new Map(
+    artistIds.map((artistId, index) => [
+      artistId,
+      hasPublicVerification(profiles[index]?.data() as PublicProfileDoc | undefined),
+    ]),
+  );
+  return Promise.all(
+    artworks.map(({ id, artwork }) =>
+      toPublicView(db, id, artwork, verifiedByArtist.get(artwork.artistId) ?? false),
+    ),
+  );
 }
 
 /** Pure: filter + sort + page over an already-loaded marketplace. Exported so the cache layer can reuse one load for many queries. */
@@ -200,12 +228,12 @@ export function queryMarketplace(all: PublicArtworkView[], query: MarketplaceQue
 
 /** One artist's public listings (artist page rail). */
 export async function listArtistPublicArtworks(db: Firestore, artistId: string): Promise<MarketplaceArtworkView[]> {
-  const snap = await db
-    .collection(Collections.artworks)
-    .where("artistId", "==", artistId)
-    .where("listing.onMarketplace", "==", true)
-    .get();
-  const views = await Promise.all(snap.docs.map((doc) => toPublicView(db, doc.id, doc.data() as ArtworkDoc)));
+  const [snap, profile] = await Promise.all([
+    db.collection(Collections.artworks).where("artistId", "==", artistId).where("listing.onMarketplace", "==", true).get(),
+    db.collection(Collections.publicProfiles).doc(artistId).get(),
+  ]);
+  const verified = hasPublicVerification(profile.data() as PublicProfileDoc | undefined);
+  const views = await Promise.all(snap.docs.map((doc) => toPublicView(db, doc.id, doc.data() as ArtworkDoc, verified)));
   return views.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(toMarketplaceView);
 }
 

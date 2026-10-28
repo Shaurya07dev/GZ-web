@@ -44,7 +44,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    for (final controller in [_name, _email, _phone, _password, _companyName, _contactPerson]) {
+    for (final controller in [
+      _name,
+      _email,
+      _phone,
+      _password,
+      _companyName,
+      _contactPerson,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -64,7 +71,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final ack = await ref.read(authRepositoryProvider).register(
+      final ack = await ref
+          .read(authRepositoryProvider)
+          .register(
             RegisterInput(
               role: _role,
               name: _name.text.trim(),
@@ -91,9 +100,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       setState(() => _isRegistered = true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -141,7 +149,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   const Expanded(child: Text('Skip the real email')),
                   TextButton(
-                    onPressed: () => context.push('${VerifyEmailScreen.path}?token=mock'),
+                    onPressed: () =>
+                        context.push('${VerifyEmailScreen.path}?token=mock'),
                     child: const Text('Skip to verification'),
                   ),
                 ],
@@ -245,7 +254,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       onChanged: (value) =>
                           setState(() => _acceptedTerms = value ?? false),
                     ),
-                    const Expanded(child: Text('I agree to the Terms of Service')),
+                    const Expanded(
+                      child: Text('I agree to the Terms of Service'),
+                    ),
                   ],
                 ),
                 if (!remote) ...[
@@ -261,7 +272,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ),
                             child: Column(
                               children: [
-                                Icon(option.icon, size: 16, color: theme.colorScheme.tertiary),
+                                Icon(
+                                  option.icon,
+                                  size: 16,
+                                  color: theme.colorScheme.tertiary,
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Demo ${option.label}',
@@ -272,7 +287,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ),
                           ),
                         ),
-                        if (option != roleOptions.last) const SizedBox(width: 8),
+                        if (option != roleOptions.last)
+                          const SizedBox(width: 8),
                       ],
                     ],
                   ),
@@ -292,7 +308,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Already have an account?', style: theme.textTheme.bodySmall),
+              Text(
+                'Already have an account?',
+                style: theme.textTheme.bodySmall,
+              ),
               TextButton(
                 onPressed: () => context.go(LoginScreen.path),
                 child: const Text('Sign in'),

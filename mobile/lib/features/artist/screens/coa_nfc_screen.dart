@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/verify_url.dart';
 import '../../../data/models/artwork.dart';
@@ -38,7 +39,7 @@ class CoaNfcScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('COA & NFC')),
       body: artworks.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "Couldn't load your certificates",
@@ -48,7 +49,7 @@ class CoaNfcScreen extends ConsumerWidget {
             child: const Text('Try again'),
           ),
         ),
-        data: (list) => RefreshIndicator(
+        data: (list) => RefreshIndicator.adaptive(
           onRefresh: () async {
             ref.invalidate(artistArtworksProvider);
             ref.invalidate(artistPhysicalCoaProvider);
@@ -61,7 +62,10 @@ class CoaNfcScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Certificates & tags', style: theme.textTheme.titleLarge),
+                    Text(
+                      'Certificates & tags',
+                      style: theme.textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Every submitted artwork gets a Certificate of Authenticity; physical pieces also get an '
@@ -82,7 +86,11 @@ class CoaNfcScreen extends ConsumerWidget {
                         key: const Key('nfc-lock-warning'),
                         icon: LucideIcons.triangleAlert,
                         danger: true,
-                        text: _unlockedSentence(list.where((entry) => entry.artwork.nfcNeedsLock).length),
+                        text: _unlockedSentence(
+                          list
+                              .where((entry) => entry.artwork.nfcNeedsLock)
+                              .length,
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -97,7 +105,10 @@ class CoaNfcScreen extends ConsumerWidget {
                       for (final entry in list)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 10),
-                          child: _CertificateRow(artwork: entry.artwork, hasNfc: hasNfc),
+                          child: _CertificateRow(
+                            artwork: entry.artwork,
+                            hasNfc: hasNfc,
+                          ),
                         ),
                   ],
                 ),
@@ -115,7 +126,12 @@ String _unlockedSentence(int count) =>
     '${count == 1 ? 'it' : 'each one'}: a piece can’t be dispatched to a buyer or a gallery until its tag is locked.';
 
 class _Banner extends StatelessWidget {
-  const _Banner({super.key, required this.icon, required this.text, this.danger = false});
+  const _Banner({
+    super.key,
+    required this.icon,
+    required this.text,
+    this.danger = false,
+  });
 
   final IconData icon;
   final String text;
@@ -124,7 +140,9 @@ class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = danger ? theme.colorScheme.error : theme.textTheme.bodySmall?.color ?? theme.colorScheme.outline;
+    final color = danger
+        ? theme.colorScheme.error
+        : theme.textTheme.bodySmall?.color ?? theme.colorScheme.outline;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -137,7 +155,12 @@ class _Banner extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: theme.textTheme.bodySmall?.copyWith(height: 1.45))),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(height: 1.45),
+            ),
+          ),
         ],
       ),
     );
@@ -160,6 +183,7 @@ class _CertificateRow extends ConsumerWidget {
       ref.invalidate(artistArtworksProvider);
       ref.invalidate(passportProvider(artwork.id));
     }
+
     return PortalCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +192,11 @@ class _CertificateRow extends ConsumerWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.sm),
-                child: SizedBox(width: 52, height: 52, child: ArtworkImageView(url: artwork.thumbnailUrl)),
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: ArtworkImageView(url: artwork.thumbnailUrl),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -179,10 +207,14 @@ class _CertificateRow extends ConsumerWidget {
                       artwork.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
-                      artwork.coaCertificateNumber.isEmpty ? 'Certificate pending' : artwork.coaCertificateNumber,
+                      artwork.coaCertificateNumber.isEmpty
+                          ? 'Certificate pending'
+                          : artwork.coaCertificateNumber,
                       style: theme.textTheme.labelSmall,
                     ),
                   ],
@@ -199,13 +231,20 @@ class _CertificateRow extends ConsumerWidget {
           if (tagged) ...[
             const SizedBox(height: 10),
             // The address written to the tag - the same one the QR carries.
-            Text('PUBLIC VERIFY URL (WRITTEN TO TAG)', style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, letterSpacing: 0.8)),
+            Text(
+              'PUBLIC VERIFY URL (WRITTEN TO TAG)',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 10,
+                letterSpacing: 0.8,
+              ),
+            ),
             InkWell(
               onTap: () => openExternal(context, verifyUrlFor(artwork.id)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  verifyUrlFor(artwork.id).replaceFirst(RegExp(r'^https?://'), ''),
+                  verifyUrlFor(artwork.id)
+                      .replaceFirst(RegExp(r'^https?://'), ''),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.tertiary,
                     fontWeight: FontWeight.w500,
@@ -222,16 +261,32 @@ class _CertificateRow extends ConsumerWidget {
               if (hasNfc && stage == NfcStage.linkedUnlocked)
                 FilledButton.icon(
                   key: Key('lock-nfc-${artwork.id}'),
-                  onPressed: () => showNfcSheet(context, artwork: artwork, mode: NfcMode.lock, onChanged: refresh),
+                  onPressed: () => showNfcSheet(
+                    context,
+                    artwork: artwork,
+                    mode: NfcMode.lock,
+                    onChanged: refresh,
+                  ),
                   icon: const Icon(LucideIcons.lock, size: 14),
                   label: const Text('Lock tag'),
                 ),
               if (hasNfc && stage != NfcStage.linkedLocked)
                 OutlinedButton.icon(
                   key: Key('link-nfc-${artwork.id}'),
-                  onPressed: () => showNfcSheet(context, artwork: artwork, mode: NfcMode.link, onChanged: refresh),
-                  icon: Icon(LucideIcons.link2, size: 14, color: theme.colorScheme.tertiary),
-                  label: Text(stage == NfcStage.unlinked ? 'Link tag' : 'Replace tag'),
+                  onPressed: () => showNfcSheet(
+                    context,
+                    artwork: artwork,
+                    mode: NfcMode.link,
+                    onChanged: refresh,
+                  ),
+                  icon: Icon(
+                    LucideIcons.link2,
+                    size: 14,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  label: Text(
+                    stage == NfcStage.unlinked ? 'Link tag' : 'Replace tag',
+                  ),
                 ),
               OutlinedButton.icon(
                 onPressed: () => Navigator.of(context).push(
@@ -240,7 +295,11 @@ class _CertificateRow extends ConsumerWidget {
                     builder: (_) => CertificatePreviewScreen(artwork: artwork),
                   ),
                 ),
-                icon: Icon(LucideIcons.badgeCheck, size: 14, color: theme.colorScheme.tertiary),
+                icon: Icon(
+                  LucideIcons.badgeCheck,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
                 label: const Text('Preview certificate'),
               ),
               // History answers a different question from the certificate -
@@ -248,7 +307,11 @@ class _CertificateRow extends ConsumerWidget {
               // gets its own way in.
               OutlinedButton.icon(
                 onPressed: () => _showHistory(context, artwork),
-                icon: Icon(LucideIcons.history, size: 14, color: theme.colorScheme.tertiary),
+                icon: Icon(
+                  LucideIcons.history,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
                 label: const Text('History'),
               ),
             ],
@@ -297,7 +360,9 @@ class _NfcPill extends StatelessWidget {
     final locked = stage == NfcStage.linkedLocked;
     final unlocked = stage == NfcStage.linkedUnlocked;
     const amber = Color(0xFFD9A441);
-    final color = locked ? theme.colorScheme.tertiary : (unlocked ? amber : theme.textTheme.bodySmall?.color);
+    final color = locked
+        ? theme.colorScheme.tertiary
+        : (unlocked ? amber : theme.textTheme.bodySmall?.color);
     return Flexible(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -305,18 +370,24 @@ class _NfcPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           color: locked
               ? theme.colorScheme.primary.withValues(alpha: 0.1)
-              : (unlocked ? amber.withValues(alpha: 0.1) : theme.colorScheme.secondary),
+              : (unlocked
+                    ? amber.withValues(alpha: 0.1)
+                    : theme.colorScheme.secondary),
           border: Border.all(
             color: locked
                 ? theme.colorScheme.primary.withValues(alpha: 0.4)
-                : (unlocked ? amber.withValues(alpha: 0.4) : theme.colorScheme.outline),
+                : (unlocked
+                      ? amber.withValues(alpha: 0.4)
+                      : theme.colorScheme.outline),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              locked ? LucideIcons.lock : (unlocked ? LucideIcons.shieldCheck : LucideIcons.scanLine),
+              locked
+                  ? LucideIcons.lock
+                  : (unlocked ? LucideIcons.shieldCheck : LucideIcons.scanLine),
               size: 12,
               color: color,
             ),
@@ -325,7 +396,10 @@ class _NfcPill extends StatelessWidget {
               child: Text(
                 nfcStageLabel(stage),
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w500),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -350,7 +424,10 @@ class _MustLock extends StatelessWidget {
         Flexible(
           child: Text(
             'Must lock before shipping',
-            style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -374,7 +451,7 @@ class CertificatePreviewScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Certificate of Authenticity')),
       body: passport.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: "The passport didn't load",
@@ -394,11 +471,14 @@ class CertificatePreviewScreen extends ConsumerWidget {
               context,
               ref,
               artwork: artwork,
-              fromName: resolveCustody(artwork).legalOwnerName ?? me?.name ?? '',
+              fromName:
+                  resolveCustody(artwork).legalOwnerName ?? me?.name ?? '',
             ),
             icon: const Icon(LucideIcons.userRoundCheck, size: 14),
             label: const Text('Transfer rights'),
-            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
           ),
         ),
       ),
@@ -433,23 +513,36 @@ class PhysicalCoaQueue extends ConsumerWidget {
                 children: [
                   Text(
                     request.artworkTitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  PortalDetailRow(label: 'Certificate', value: request.coaCertificateNumber),
-                  PortalDetailRow(label: 'Requested by', value: request.requestedByName),
-                  PortalDetailRow(label: 'Post to', value: request.deliveryAddress),
+                  PortalDetailRow(
+                    label: 'Certificate',
+                    value: request.coaCertificateNumber,
+                  ),
+                  PortalDetailRow(
+                    label: 'Requested by',
+                    value: request.requestedByName,
+                  ),
+                  PortalDetailRow(
+                    label: 'Post to',
+                    value: request.deliveryAddress,
+                  ),
                   if (request.status == PhysicalCoaStatus.dispatched)
                     PortalDetailRow(
                       label: 'Dispatched',
-                      value: '${formatLongDate(request.dispatchedAt!)} · ${request.courierRef}',
+                      value:
+                          '${formatLongDate(request.dispatchedAt!)} · ${request.courierRef}',
                       gold: true,
                     )
                   else
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: () => _showDispatchSheet(context, ref, request.id),
+                        onPressed: () =>
+                            _showDispatchSheet(context, ref, request.id),
                         icon: const Icon(LucideIcons.package, size: 14),
                         label: const Text('Mark dispatched'),
                         style: TextButton.styleFrom(padding: EdgeInsets.zero),
@@ -465,7 +558,11 @@ class PhysicalCoaQueue extends ConsumerWidget {
   }
 }
 
-Future<void> _showDispatchSheet(BuildContext context, WidgetRef ref, String requestId) {
+Future<void> _showDispatchSheet(
+  BuildContext context,
+  WidgetRef ref,
+  String requestId,
+) {
   final courier = TextEditingController();
   return showModalBottomSheet<void>(
     context: context,
@@ -481,7 +578,10 @@ Future<void> _showDispatchSheet(BuildContext context, WidgetRef ref, String requ
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Dispatch certificate', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Dispatch certificate',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 12),
           TextField(
             controller: courier,
@@ -496,12 +596,16 @@ Future<void> _showDispatchSheet(BuildContext context, WidgetRef ref, String requ
               final messenger = ScaffoldMessenger.of(context);
               final navigator = Navigator.of(context);
               try {
-                await ref.read(artistRepositoryProvider).dispatchPhysicalCoa(requestId, courier.text);
+                await ref
+                    .read(artistRepositoryProvider)
+                    .dispatchPhysicalCoa(requestId, courier.text);
                 ref.invalidate(artistPhysicalCoaProvider);
                 ref.invalidate(artistActivityProvider);
                 navigator.pop();
               } catch (error) {
-                messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+                messenger.showSnackBar(
+                  SnackBar(content: Text(authErrorMessage(error))),
+                );
               }
             },
             child: const Text('Mark dispatched'),

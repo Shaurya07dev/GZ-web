@@ -7,8 +7,10 @@ import 'catalog_mappers.dart';
 /// Wire JSON -> models for buying: orders, quotes, addresses, the collection,
 /// paper certificates, resale, wallets, tickets and messages.
 
-String _s(Object? value, [String fallback = '']) => value is String ? value : fallback;
-String? _sn(Object? value) => value is String && value.isNotEmpty ? value : null;
+String _s(Object? value, [String fallback = '']) =>
+    value is String ? value : fallback;
+String? _sn(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;
 
 OrderStatus orderStatusFromApi(Object? code) => switch (code) {
   'paid' => OrderStatus.paid,
@@ -92,7 +94,8 @@ Address addressFromApi(Map<String, dynamic> json) => Address(
 /// so a PATCH changes only what the person edited.
 Map<String, dynamic> addressToApi(Address address) => {
   'line1': address.line1,
-  if (address.line2 != null && address.line2!.trim().isNotEmpty) 'line2': address.line2,
+  if (address.line2 != null && address.line2!.trim().isNotEmpty)
+    'line2': address.line2,
   'city': address.city,
   'state': address.state,
   'pincode': address.pincode,
@@ -127,7 +130,9 @@ PhysicalCoaRequest coaRequestFromApi(Map<String, dynamic> json) {
     requestedByName: _s(json['requestedByName']),
     requestedAt: isoOf(json['requestedAt']),
     deliveryAddress: lines.join(', '),
-    status: json['status'] == 'dispatched' ? PhysicalCoaStatus.dispatched : PhysicalCoaStatus.requested,
+    status: json['status'] == 'dispatched'
+        ? PhysicalCoaStatus.dispatched
+        : PhysicalCoaStatus.requested,
     dispatchedAt: isoOrNull(json['dispatchedAt']),
     courierRef: _sn(json['courierRef']),
   );
@@ -161,31 +166,75 @@ SupportTicket supportTicketFromApi(Map<String, dynamic> json) => SupportTicket(
 
 /// What each ledger reason is called. The server sends the reason; the screen
 /// shows the label.
-({WalletTransactionType type, String label}) describeLedgerReason(String reason) {
+({WalletTransactionType type, String label}) describeLedgerReason(
+  String reason,
+) {
   const known = <String, ({WalletTransactionType type, String label})>{
     // Artist
-    'marketplace_settlement': (type: WalletTransactionType.settlement, label: 'Marketplace sale settled'),
-    'aggregator_settlement': (type: WalletTransactionType.settlement, label: 'Gallery sale settled'),
-    'withdrawal': (type: WalletTransactionType.withdrawal, label: 'Withdrawal to bank'),
-    'withdrawal_payout': (type: WalletTransactionType.withdrawal, label: 'Withdrawal to bank'),
-    'external_sale_penalty': (type: WalletTransactionType.adjustment, label: 'Off-platform sale fee'),
+    'marketplace_settlement': (
+      type: WalletTransactionType.settlement,
+      label: 'Marketplace sale settled',
+    ),
+    'aggregator_settlement': (
+      type: WalletTransactionType.settlement,
+      label: 'Gallery sale settled',
+    ),
+    'withdrawal': (
+      type: WalletTransactionType.withdrawal,
+      label: 'Withdrawal to bank',
+    ),
+    'withdrawal_payout': (
+      type: WalletTransactionType.withdrawal,
+      label: 'Withdrawal to bank',
+    ),
+    'external_sale_penalty': (
+      type: WalletTransactionType.adjustment,
+      label: 'Off-platform sale fee',
+    ),
     'refund': (type: WalletTransactionType.refund, label: 'Refund'),
     // Aggregator
-    'wallet_topup': (type: WalletTransactionType.adjustment, label: 'Added to wallet'),
-    'reservation_hold': (type: WalletTransactionType.adjustment, label: 'Held for reservation'),
-    'advance_returned_to_wallet': (type: WalletTransactionType.refund, label: 'Advance returned'),
-    'hold_returned_to_wallet': (type: WalletTransactionType.refund, label: 'Held amount returned after sale'),
-    'aggregator_commission': (type: WalletTransactionType.commission, label: 'Commission on sale'),
-    'cash_sale_paid_from_wallet': (type: WalletTransactionType.adjustment, label: 'Cash sale paid to GalleryZone'),
+    'wallet_topup': (
+      type: WalletTransactionType.adjustment,
+      label: 'Added to wallet',
+    ),
+    'reservation_hold': (
+      type: WalletTransactionType.adjustment,
+      label: 'Held for reservation',
+    ),
+    'advance_returned_to_wallet': (
+      type: WalletTransactionType.refund,
+      label: 'Advance returned',
+    ),
+    'hold_returned_to_wallet': (
+      type: WalletTransactionType.refund,
+      label: 'Held amount returned after sale',
+    ),
+    'aggregator_commission': (
+      type: WalletTransactionType.commission,
+      label: 'Commission on sale',
+    ),
+    'cash_sale_paid_from_wallet': (
+      type: WalletTransactionType.adjustment,
+      label: 'Cash sale paid to GalleryZone',
+    ),
     // Either wallet, once a withdrawal has actually been paid out.
-    'payable_discharged': (type: WalletTransactionType.withdrawal, label: 'Paid out to your bank'),
+    'payable_discharged': (
+      type: WalletTransactionType.withdrawal,
+      label: 'Paid out to your bank',
+    ),
   };
   final hit = known[reason];
   if (hit != null) return hit;
   if (reason.startsWith('order:')) {
-    return (type: WalletTransactionType.settlement, label: 'Order ${reason.substring(6)}');
+    return (
+      type: WalletTransactionType.settlement,
+      label: 'Order ${reason.substring(6)}',
+    );
   }
-  return (type: WalletTransactionType.adjustment, label: reason.replaceAll(RegExp(r'[_:]'), ' '));
+  return (
+    type: WalletTransactionType.adjustment,
+    label: reason.replaceAll(RegExp(r'[_:]'), ' '),
+  );
 }
 
 WalletTransactionStatus _walletStatus(Object? code) => switch (code) {

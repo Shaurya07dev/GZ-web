@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
 import '../../marketplace/widgets/artist_avatar.dart';
 import '../../marketplace/widgets/artwork_card.dart';
+import '../widgets/customer_shell.dart';
 
 /// Port of `app/account/wishlist/page.tsx`, widened: the collector keeps
 /// both saved artworks and followed artists here, on two segments, rather
@@ -45,11 +47,15 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
               segments: [
                 ButtonSegment(
                   value: _Segment.artworks,
-                  label: Text(savedCount == 0 ? 'Artworks' : 'Artworks ($savedCount)'),
+                  label: Text(
+                    savedCount == 0 ? 'Artworks' : 'Artworks ($savedCount)',
+                  ),
                 ),
                 ButtonSegment(
                   value: _Segment.artists,
-                  label: Text(followCount == 0 ? 'Artists' : 'Artists ($followCount)'),
+                  label: Text(
+                    followCount == 0 ? 'Artists' : 'Artists ($followCount)',
+                  ),
                 ),
               ],
               selected: {_segment},
@@ -79,7 +85,7 @@ class _SavedArtworks extends ConsumerWidget {
     final artworks = ref.watch(artworksByIdsProvider(key));
 
     return artworks.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PageSkeleton(),
       error: (error, stack) => EmptyState(
         icon: LucideIcons.triangleAlert,
         title: "Couldn't load your saved work",
@@ -100,10 +106,9 @@ class _SavedArtworks extends ConsumerWidget {
           return EmptyState(
             icon: LucideIcons.heart,
             title: 'Nothing saved yet',
-            description:
-                'Tap the heart on any artwork to keep it here while you decide.',
+            description: 'Tap the heart on any artwork to keep it here while you decide.',
             action: OutlinedButton(
-              onPressed: () => context.push('/marketplace'),
+              onPressed: () => context.go(customerShopPath),
               child: const Text('Browse the marketplace'),
             ),
           );
@@ -128,7 +133,7 @@ class _FollowedArtists extends ConsumerWidget {
     final artists = ref.watch(artistsProvider);
 
     return artists.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PageSkeleton(),
       error: (error, stack) => EmptyState(
         icon: LucideIcons.triangleAlert,
         title: "Couldn't load the artists you follow",
@@ -151,7 +156,7 @@ class _FollowedArtists extends ConsumerWidget {
                 'Follow an artist from their profile to keep their new work '
                 'together in one place.',
             action: OutlinedButton(
-              onPressed: () => context.push('/marketplace'),
+              onPressed: () => context.go(customerShopPath),
               child: const Text('Find an artist'),
             ),
           );
@@ -190,7 +195,11 @@ class _ArtistRow extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              ArtistAvatar(name: artist.name, imageUrl: artist.profileImageUrl, size: 48),
+              ArtistAvatar(
+                name: artist.name,
+                imageUrl: artist.profileImageUrl,
+                size: 48,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -200,15 +209,16 @@ class _ArtistRow extends ConsumerWidget {
                       artist.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyLarge
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       listings == null
                           ? 'Loading their work…'
                           : '${listings.length} '
-                              'piece${listings.length == 1 ? '' : 's'} listed',
+                                'piece${listings.length == 1 ? '' : 's'} listed',
                       style: theme.textTheme.labelSmall,
                     ),
                   ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/motion.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart' show EmptyState;
 import '../../shell/mou/mou_agreement_page.dart';
@@ -38,7 +39,7 @@ class MouScreen extends ConsumerWidget {
                   child: const Text('Try again'),
                 ),
               )
-            : const Center(child: CircularProgressIndicator()),
+            : const PageSkeleton(),
       );
     }
 

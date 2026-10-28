@@ -35,19 +35,22 @@ void main() {
     expect(container().read(followsProvider), {'meera-nair'});
   });
 
-  test('toggling twice unfollows, and follows are independent of the wishlist', () {
-    final c = container();
-    c.read(followsProvider.notifier).toggle('meera-nair');
-    c.read(followsProvider.notifier).toggle('meera-nair');
-    expect(c.read(followsProvider), isEmpty);
+  test(
+    'toggling twice unfollows, and follows are independent of the wishlist',
+    () {
+      final c = container();
+      c.read(followsProvider.notifier).toggle('meera-nair');
+      c.read(followsProvider.notifier).toggle('meera-nair');
+      expect(c.read(followsProvider), isEmpty);
 
-    // Both are id sets in the same store; a shared key would make one clear
-    // the other.
-    c.read(followsProvider.notifier).toggle('meera-nair');
-    c.read(wishlistProvider.notifier).toggle('tide-line-dusk');
-    expect(c.read(followsProvider), {'meera-nair'});
-    expect(c.read(wishlistProvider), {'tide-line-dusk'});
-  });
+      // Both are id sets in the same store; a shared key would make one clear
+      // the other.
+      c.read(followsProvider.notifier).toggle('meera-nair');
+      c.read(wishlistProvider.notifier).toggle('tide-line-dusk');
+      expect(c.read(followsProvider), {'meera-nair'});
+      expect(c.read(wishlistProvider), {'tide-line-dusk'});
+    },
+  );
 
   test('every followable artist id resolves to a real profile', () async {
     // The Following list joins ids against listArtists(); an id that does not
@@ -94,7 +97,9 @@ void main() {
     expect(find.text('Find an artist'), findsOneWidget);
   });
 
-  testWidgets('a followed artist appears in the Artists segment', (tester) async {
+  testWidgets('a followed artist appears in the Artists segment', (
+    tester,
+  ) async {
     // Read the fixture directly rather than awaiting the repository: inside
     // testWidgets everything runs in fake async, so a `mockDelay` future
     // never fires and the test hangs until the harness kills it.
@@ -141,6 +146,10 @@ void main() {
     expect(container().read(wishlistProvider), isEmpty);
     expect(container().read(followsProvider), isEmpty);
     final tickets = await MockArtistRepository().listSupportTickets();
-    expect(tickets, hasLength(1), reason: 'back to the seeded fixture, not the added one');
+    expect(
+      tickets,
+      hasLength(1),
+      reason: 'back to the seeded fixture, not the added one',
+    );
   });
 }

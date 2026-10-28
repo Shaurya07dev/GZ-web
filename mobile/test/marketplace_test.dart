@@ -108,18 +108,30 @@ void main() {
 
   group('ArtworkFilters', () {
     test('copyWith clears a field when passed null, keeps it when omitted', () {
-      const filters = ArtworkFilters(location: 'Pune', sortBy: ArtworkSortBy.newest);
+      const filters = ArtworkFilters(
+        location: 'Pune',
+        sortBy: ArtworkSortBy.newest,
+      );
       expect(filters.copyWith(query: 'rain').location, 'Pune');
       expect(filters.copyWith(location: null).location, isNull);
       expect(filters.copyWith(location: null).sortBy, ArtworkSortBy.newest);
     });
 
     test('category and medium are multi-select; clearing is an empty list', () {
-      const filters = ArtworkFilters(categories: ['painting', 'sculpture'], mediums: ['oil']);
-      expect(filters.copyWith(query: 'rain').categories, ['painting', 'sculpture']);
+      const filters = ArtworkFilters(
+        categories: ['painting', 'sculpture'],
+        mediums: ['oil'],
+      );
+      expect(filters.copyWith(query: 'rain').categories, [
+        'painting',
+        'sculpture',
+      ]);
       expect(filters.copyWith(categories: const []).categories, isEmpty);
       expect(filters.activeCount, 3);
-      expect(const ArtworkFilters(sortBy: ArtworkSortBy.priceAsc).isNarrowed, isFalse);
+      expect(
+        const ArtworkFilters(sortBy: ArtworkSortBy.priceAsc).isNarrowed,
+        isFalse,
+      );
     });
 
     test('any change to what is asked for starts again from page 1', () {
@@ -161,8 +173,9 @@ void main() {
     expect(reread.read(wishlistProvider), {'aw-2'});
   });
 
-  testWidgets('marketplace renders a card per artwork and its result count',
-      (tester) async {
+  testWidgets('marketplace renders a card per artwork and its result count', (
+    tester,
+  ) async {
     final repository = _FakeArtworkRepository([
       _artwork(),
       _artwork(id: 'aw-2', title: 'Backwater Light', price: 92000),
@@ -170,8 +183,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [artworkRepositoryProvider.overrideWithValue(repository), initialRoleProvider.overrideWithValue(null)],
-        child: MaterialApp(theme: AppTheme.dark, home: const MarketplaceScreen()),
+        overrides: [
+          artworkRepositoryProvider.overrideWithValue(repository),
+          initialRoleProvider.overrideWithValue(null),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const MarketplaceScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -188,8 +207,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [artworkRepositoryProvider.overrideWithValue(repository), initialRoleProvider.overrideWithValue(null)],
-        child: MaterialApp(theme: AppTheme.dark, home: const MarketplaceScreen()),
+        overrides: [
+          artworkRepositoryProvider.overrideWithValue(repository),
+          initialRoleProvider.overrideWithValue(null),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const MarketplaceScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();

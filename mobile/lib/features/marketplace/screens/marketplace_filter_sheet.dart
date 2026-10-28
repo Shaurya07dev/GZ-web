@@ -48,7 +48,9 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
   }
 
   List<String> _toggled(List<String> values, String value) =>
-      values.contains(value) ? [...values.where((v) => v != value)] : [...values, value];
+      values.contains(value)
+      ? [...values.where((v) => v != value)]
+      : [...values, value];
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +67,12 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('Filters', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Filters',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -85,10 +92,14 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text("The filter options didn't load.", style: theme.textTheme.bodyMedium),
+                      Text(
+                        "The filter options didn't load.",
+                        style: theme.textTheme.bodyMedium,
+                      ),
                       const SizedBox(height: 12),
                       OutlinedButton(
-                        onPressed: () => ref.invalidate(marketplaceOverviewProvider),
+                        onPressed: () =>
+                            ref.invalidate(marketplaceOverviewProvider),
                         child: const Text('Try again'),
                       ),
                     ],
@@ -98,7 +109,8 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
               data: (data) {
                 final priceOptions = [
                   for (var i = 0; i < priceBands.length; i++)
-                    if (counts == null || counts.price[i] != 0) (band: priceBands[i], count: counts?.price[i]),
+                    if (counts == null || counts.price[i] != 0)
+                      (band: priceBands[i], count: counts?.price[i]),
                 ];
                 final sizeOptions = [
                   for (final size in ArtworkSizeBand.values)
@@ -124,7 +136,12 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                               count: counts?.category[category],
                               checked: _draft.categories.contains(category),
                               onToggle: () => _update(
-                                _draft.copyWith(categories: _toggled(_draft.categories, category)),
+                                _draft.copyWith(
+                                  categories: _toggled(
+                                    _draft.categories,
+                                    category,
+                                  ),
+                                ),
                               ),
                             ),
                         ],
@@ -141,7 +158,9 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                               count: counts?.medium[medium],
                               checked: _draft.mediums.contains(medium),
                               onToggle: () => _update(
-                                _draft.copyWith(mediums: _toggled(_draft.mediums, medium)),
+                                _draft.copyWith(
+                                  mediums: _toggled(_draft.mediums, medium),
+                                ),
                               ),
                             ),
                         ],
@@ -155,15 +174,24 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                           for (final option in priceOptions)
                             Builder(
                               builder: (context) {
-                                final checked = option.band.matches(_draft.minPrice, _draft.maxPrice);
+                                final checked = option.band.matches(
+                                  _draft.minPrice,
+                                  _draft.maxPrice,
+                                );
                                 return _Option(
                                   label: option.band.label,
                                   count: option.count,
                                   checked: checked,
                                   onToggle: () => _update(
                                     checked
-                                        ? _draft.copyWith(minPrice: null, maxPrice: null)
-                                        : _draft.copyWith(minPrice: option.band.min, maxPrice: option.band.max),
+                                        ? _draft.copyWith(
+                                            minPrice: null,
+                                            maxPrice: null,
+                                          )
+                                        : _draft.copyWith(
+                                            minPrice: option.band.min,
+                                            maxPrice: option.band.max,
+                                          ),
                                   ),
                                 );
                               },
@@ -180,7 +208,11 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                               label: artworkSizeBandLabel[size]!,
                               count: counts?.size[size],
                               checked: _draft.size == size,
-                              onToggle: () => _update(_draft.copyWith(size: _draft.size == size ? null : size)),
+                              onToggle: () => _update(
+                                _draft.copyWith(
+                                  size: _draft.size == size ? null : size,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -195,7 +227,11 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                               count: counts?.artist[artist.id],
                               checked: _draft.artistId == artist.id,
                               onToggle: () => _update(
-                                _draft.copyWith(artistId: _draft.artistId == artist.id ? null : artist.id),
+                                _draft.copyWith(
+                                  artistId: _draft.artistId == artist.id
+                                      ? null
+                                      : artist.id,
+                                ),
                               ),
                             ),
                         ],
@@ -211,7 +247,11 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                               count: counts?.location[location],
                               checked: _draft.location == location,
                               onToggle: () => _update(
-                                _draft.copyWith(location: _draft.location == location ? null : location),
+                                _draft.copyWith(
+                                  location: _draft.location == location
+                                      ? null
+                                      : location,
+                                ),
                               ),
                             ),
                         ],
@@ -227,7 +267,11 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                               count: data.rarityCounts[rank],
                               checked: _draft.rarity == rank,
                               leading: _RankDot(rank: rank),
-                              onToggle: () => _update(_draft.copyWith(rarity: _draft.rarity == rank ? null : rank)),
+                              onToggle: () => _update(
+                                _draft.copyWith(
+                                  rarity: _draft.rarity == rank ? null : rank,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -244,7 +288,9 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _update(defaultMarketplaceFilters.copyWith(query: _draft.query)),
+                    onPressed: () => _update(
+                      defaultMarketplaceFilters.copyWith(query: _draft.query),
+                    ),
                     icon: const Icon(LucideIcons.rotateCcw, size: 16),
                     label: const Text('Reset'),
                     style: OutlinedButton.styleFrom(
@@ -277,7 +323,12 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
 
 /// One collapsible group of options — the website's accordion item.
 class _Group extends StatelessWidget {
-  const _Group({super.key, required this.title, required this.children, this.expanded = false});
+  const _Group({
+    super.key,
+    required this.title,
+    required this.children,
+    this.expanded = false,
+  });
 
   final String title;
   final List<Widget> children;
@@ -287,7 +338,9 @@ class _Group extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return DecoratedBox(
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: theme.colorScheme.outline))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: theme.colorScheme.outline)),
+      ),
       child: Theme(
         // ExpansionTile draws its own hairlines; the group already has one.
         data: theme.copyWith(dividerColor: Colors.transparent),
@@ -297,7 +350,12 @@ class _Group extends StatelessWidget {
           childrenPadding: const EdgeInsets.only(bottom: 8),
           shape: const Border(),
           collapsedShape: const Border(),
-          title: Text(title, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+          title: Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           children: children,
         ),
       ),
@@ -333,8 +391,11 @@ class _Option extends StatelessWidget {
       title: Row(
         children: [
           if (leading != null) ...[leading!, const SizedBox(width: 10)],
-          Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
-          if (count != null) Text('($count)', style: theme.textTheme.labelSmall),
+          Expanded(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          if (count != null)
+            Text('($count)', style: theme.textTheme.labelSmall),
         ],
       ),
     );
@@ -358,10 +419,10 @@ class _RankDot extends StatelessWidget {
       child: Text(
         artworkRarityCode[rank]!,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-              fontSize: 10,
-            ),
+          color: foreground,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
       ),
     );
   }

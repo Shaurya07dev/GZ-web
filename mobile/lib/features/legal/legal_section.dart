@@ -1,7 +1,11 @@
 /// Port of `frontend-web/features/legal/types.ts`. Every legal document is a
 /// list of these, so one screen renders all five.
 class LegalSection {
-  const LegalSection({required this.id, required this.heading, required this.body});
+  const LegalSection({
+    required this.id,
+    required this.heading,
+    required this.body,
+  });
 
   final String id;
   final String heading;

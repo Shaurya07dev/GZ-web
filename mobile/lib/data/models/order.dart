@@ -6,7 +6,15 @@ part 'order.g.dart';
 /// Mirrors `types/order.ts` and `types/customer.ts`'s `Address` — both are
 /// checkout inputs/outputs, so they live in one file rather than two
 /// three-field ones.
-enum OrderStatus { pending, paid, confirmed, packed, transit, delivered, cancelled }
+enum OrderStatus {
+  pending,
+  paid,
+  confirmed,
+  packed,
+  transit,
+  delivered,
+  cancelled,
+}
 
 /// How the buyer paid. No gateway is contacted — see the payment sheet.
 enum PaymentMethod { upi, card, netbanking }
@@ -29,7 +37,8 @@ abstract class Address with _$Address {
     required bool isDefault,
   }) = _Address;
 
-  factory Address.fromJson(Map<String, dynamic> json) => _$AddressFromJson(json);
+  factory Address.fromJson(Map<String, dynamic> json) =>
+      _$AddressFromJson(json);
 }
 
 @freezed
@@ -56,7 +65,8 @@ abstract class OrderArtwork with _$OrderArtwork {
     @Default('') String productCode,
   }) = _OrderArtwork;
 
-  factory OrderArtwork.fromJson(Map<String, dynamic> json) => _$OrderArtworkFromJson(json);
+  factory OrderArtwork.fromJson(Map<String, dynamic> json) =>
+      _$OrderArtworkFromJson(json);
 }
 
 /// The gateway's record of how an order was paid.
@@ -71,7 +81,8 @@ abstract class OrderPayment with _$OrderPayment {
     @Default(false) bool simulated,
   }) = _OrderPayment;
 
-  factory OrderPayment.fromJson(Map<String, dynamic> json) => _$OrderPaymentFromJson(json);
+  factory OrderPayment.fromJson(Map<String, dynamic> json) =>
+      _$OrderPaymentFromJson(json);
 }
 
 @freezed
@@ -80,6 +91,7 @@ abstract class Order with _$Order {
     required String id,
     required String artworkId,
     required String addressId,
+
     /// The artwork's customerPrice at time of purchase. GST is already
     /// inside this figure — see [gstAmount].
     required double amount,

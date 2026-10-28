@@ -38,13 +38,17 @@ class Ntag213 {
 
   /// WRITE puts exactly one page (4 bytes).
   static Uint8List write(int page, List<int> data) {
-    if (data.length != 4) throw ArgumentError('A page is 4 bytes, got ${data.length}');
+    if (data.length != 4) {
+      throw ArgumentError('A page is 4 bytes, got ${data.length}');
+    }
     return Uint8List.fromList([writeCommand, page, ...data]);
   }
 
   /// The first page of a READ response.
   static Uint8List firstPage(Uint8List response) {
-    if (response.length < 4) throw StateError('A READ answers 16 bytes, got ${response.length}');
+    if (response.length < 4) {
+      throw StateError('A READ answers 16 bytes, got ${response.length}');
+    }
     return Uint8List.sublistView(response, 0, 4);
   }
 
@@ -58,7 +62,12 @@ class Ntag213 {
   /// CC with the read-only access byte set. The first three bytes are kept as
   /// read, not assumed.
   static Uint8List lockedCapabilityContainer(Uint8List current) =>
-      Uint8List.fromList([current[0], current[1], current[2], current[3] | readOnlyAccess]);
+      Uint8List.fromList([
+        current[0],
+        current[1],
+        current[2],
+        current[3] | readOnlyAccess,
+      ]);
 
   /// Static lock bytes: pages 3–15 read-only and the lock bits themselves
   /// frozen. The two internal bytes are kept as read (the chip ignores them).
@@ -94,6 +103,7 @@ String toHex(List<int> bytes) =>
 
 /// A chip's UID in the one form the server stores: 7 bytes, 14 lowercase hex
 /// characters, no separators. Android and iOS report it upper-case.
-String normalizeTagUid(String raw) => raw.trim().toLowerCase().replaceAll(RegExp(r'[\s:\-]'), '');
+String normalizeTagUid(String raw) =>
+    raw.trim().toLowerCase().replaceAll(RegExp(r'[\s:\-]'), '');
 
 bool isNtagUid(String uid) => RegExp(r'^[0-9a-f]{14}$').hasMatch(uid);

@@ -17,14 +17,14 @@ import {
   aggregatorSalePostings,
   canPlaceWithAnotherAggregator,
   cashRemittanceDueAt,
-  commissionRateForLifetimeSales,
+  commissionRateForPreviousMonthSales,
   holdingStateMachine,
   isPriceWarning,
   placementWindow,
   withGst,
   type PricingRates,
 } from "@galleryzone/domain";
-import { aggregatorLifetimeMarkupPaise, startOfMonthUtc } from "./aggregator-commission.ts";
+import { aggregatorEligibleSalesInPreviousMonthPaise } from "./aggregator-commission.ts";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postArtistSale } from "./artist-sales.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
@@ -201,18 +201,17 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
 
   const rates = await requireActiveRates(db);
 
-  // Commission slab: the rate billed on THIS sale comes from the aggregator's
-  // lifetime pre-GST markup through the end of the previous month. Crossing a
-  // threshold mid-month doesn't raise this month's rate — client was explicit
-  // the new rate only kicks in next month.
+  // Aggregator MOU 2026.3 §9.4: this month's rate comes from the aggregate
+  // pre-GST listed selling prices of successful sales in the immediately
+  // preceding calendar month.
   const soldAt = new Date();
-  const lifetimeThroughLastMonth = await aggregatorLifetimeMarkupPaise(
+  const previousMonthEligibleSales = await aggregatorEligibleSalesInPreviousMonthPaise(
     db,
     holding.aggregatorId,
-    startOfMonthUtc(soldAt),
+    soldAt,
     rates,
   );
-  const commissionRate = commissionRateForLifetimeSales(lifetimeThroughLastMonth, rates);
+  const commissionRate = commissionRateForPreviousMonthSales(previousMonthEligibleSales, rates);
 
   const buildPostings = (tdsApplies: boolean) =>
     aggregatorSalePostings({

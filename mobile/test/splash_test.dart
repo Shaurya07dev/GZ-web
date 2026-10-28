@@ -31,8 +31,14 @@ void main() {
       final router = GoRouter(
         initialLocation: SplashScreen.path,
         routes: [
-          GoRoute(path: SplashScreen.path, builder: (_, _) => const SplashScreen()),
-          GoRoute(path: LoginScreen.path, builder: (_, _) => const Text('login')),
+          GoRoute(
+            path: SplashScreen.path,
+            builder: (_, _) => const SplashScreen(),
+          ),
+          GoRoute(
+            path: LoginScreen.path,
+            builder: (_, _) => const Text('login'),
+          ),
           for (final home in Role.values.map((r) => r.home))
             GoRoute(path: home, builder: (_, _) => Text('home $home')),
         ],
@@ -51,8 +57,9 @@ void main() {
     String locationOf(GoRouter router) =>
         router.routerDelegate.currentConfiguration.uri.path;
 
-    testWidgets('the mark holds for two seconds before anything moves',
-        (tester) async {
+    testWidgets('the mark holds for two seconds before anything moves', (
+      tester,
+    ) async {
       final router = await pumpSplash(tester, Role.artist);
 
       expect(find.text('GALLERYZONE'), findsOneWidget);
@@ -70,8 +77,9 @@ void main() {
       expect(locationOf(router), Role.artist.home);
     });
 
-    testWidgets('signed out skips the greeting and goes straight to login',
-        (tester) async {
+    testWidgets('signed out skips the greeting and goes straight to login', (
+      tester,
+    ) async {
       final router = await pumpSplash(tester, null);
 
       await tester.pump(splashHold);

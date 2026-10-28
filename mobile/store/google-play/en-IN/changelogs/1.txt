@@ -1,0 +1,8 @@
+Initial GalleryZone Android release:
+• Curated original-art marketplace and artist profiles
+• Razorpay checkout for physical artworks
+• Collector collection, COA and NFC/QR passport views
+• Artist artwork, agreement, verification and blog tools
+• Aggregator reservation, holding, condition and shipment workflows
+• Public blogs and disclosed Amazon art-supply recommendations
+• In-app support, privacy controls and account-deletion request

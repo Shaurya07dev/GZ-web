@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/order.dart';
 import '../../marketplace/widgets/artwork_card.dart';
@@ -24,26 +25,54 @@ class OrderStatusStyle {
   static const _emerald = Color(0xFF34D399);
 
   static OrderStatusStyle of(OrderStatus status) => switch (status) {
-        OrderStatus.pending => const OrderStatusStyle('Pending', LucideIcons.clock3, Color(0xFF9C9686)),
-        OrderStatus.paid => const OrderStatusStyle('Paid', LucideIcons.wallet, _sky),
-        OrderStatus.confirmed => const OrderStatusStyle('Confirmed', LucideIcons.circleCheckBig, _sky),
-        OrderStatus.packed => const OrderStatusStyle('Packed', LucideIcons.packageCheck, _amber),
-        OrderStatus.transit => const OrderStatusStyle('In transit', LucideIcons.truck, _amber),
-        OrderStatus.delivered => const OrderStatusStyle('Delivered', LucideIcons.checkCheck, _emerald),
-        OrderStatus.cancelled => const OrderStatusStyle('Cancelled', LucideIcons.circleX, AppColors.destructive),
-      };
+    OrderStatus.pending => const OrderStatusStyle(
+      'Pending',
+      LucideIcons.clock3,
+      Color(0xFF9C9686),
+    ),
+    OrderStatus.paid => const OrderStatusStyle(
+      'Paid',
+      LucideIcons.wallet,
+      _sky,
+    ),
+    OrderStatus.confirmed => const OrderStatusStyle(
+      'Confirmed',
+      LucideIcons.circleCheckBig,
+      _sky,
+    ),
+    OrderStatus.packed => const OrderStatusStyle(
+      'Packed',
+      LucideIcons.packageCheck,
+      _amber,
+    ),
+    OrderStatus.transit => const OrderStatusStyle(
+      'In transit',
+      LucideIcons.truck,
+      _amber,
+    ),
+    OrderStatus.delivered => const OrderStatusStyle(
+      'Delivered',
+      LucideIcons.checkCheck,
+      _emerald,
+    ),
+    OrderStatus.cancelled => const OrderStatusStyle(
+      'Cancelled',
+      LucideIcons.circleX,
+      AppColors.destructive,
+    ),
+  };
 
   /// The timeline's wording differs from the chip's — "Order placed" reads
   /// as an event, "Pending" as a state.
   static String timelineLabel(OrderStatus status) => switch (status) {
-        OrderStatus.pending => 'Order placed',
-        OrderStatus.paid => 'Payment received',
-        OrderStatus.confirmed => 'Order confirmed',
-        OrderStatus.packed => 'Packed for dispatch',
-        OrderStatus.transit => 'In transit',
-        OrderStatus.delivered => 'Delivered',
-        OrderStatus.cancelled => 'Order cancelled',
-      };
+    OrderStatus.pending => 'Order placed',
+    OrderStatus.paid => 'Payment received',
+    OrderStatus.confirmed => 'Order confirmed',
+    OrderStatus.packed => 'Packed for dispatch',
+    OrderStatus.transit => 'In transit',
+    OrderStatus.delivered => 'Delivered',
+    OrderStatus.cancelled => 'Order cancelled',
+  };
 }
 
 class OrderStatusChip extends StatelessWidget {
@@ -93,16 +122,15 @@ class OrderRow extends StatelessWidget {
     // What was bought comes with the order, so a row needs no second lookup and
     // still reads correctly once the piece has left the marketplace.
     final artwork = order.artwork;
-    return InkWell(
+    // The card is the tile's own material, so the press ripple draws over its
+    // fill instead of underneath it.
+    return Pressable(
       onTap: () => context.push('/account/orders/${order.id}'),
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Container(
+      color: theme.cardTheme.color,
+      side: BorderSide(color: theme.colorScheme.outline),
+      child: Padding(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: theme.colorScheme.outline),
-        ),
         child: Row(
           children: [
             ClipRRect(
@@ -111,7 +139,9 @@ class OrderRow extends StatelessWidget {
                 width: 56,
                 height: 56,
                 child: artwork == null
-                    ? ColoredBox(color: theme.colorScheme.surfaceContainerHighest)
+                    ? ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      )
                     : ArtworkImageView(url: artwork.thumbnailUrl),
               ),
             ),
@@ -124,7 +154,9 @@ class OrderRow extends StatelessWidget {
                     artwork?.title ?? 'Artwork no longer available',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (artwork != null)
                     Text(
@@ -134,8 +166,10 @@ class OrderRow extends StatelessWidget {
                       style: theme.textTheme.bodySmall,
                     ),
                   const SizedBox(height: 2),
-                  Text('Placed ${formatShortDate(order.createdAt)}',
-                      style: theme.textTheme.labelSmall),
+                  Text(
+                    'Placed ${formatShortDate(order.createdAt)}',
+                    style: theme.textTheme.labelSmall,
+                  ),
                 ],
               ),
             ),
@@ -145,7 +179,10 @@ class OrderRow extends StatelessWidget {
               children: [
                 OrderStatusChip(status: order.status),
                 const SizedBox(height: 8),
-                PriceTag(amount: order.total, style: theme.textTheme.bodyMedium),
+                PriceTag(
+                  amount: order.total,
+                  style: theme.textTheme.bodyMedium,
+                ),
               ],
             ),
           ],
@@ -167,7 +204,10 @@ class OrderStatusTimeline extends StatelessWidget {
     if (history.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
     final ordered = [...history]
-      ..sort((a, b) => DateTime.parse(a.changedAt).compareTo(DateTime.parse(b.changedAt)));
+      ..sort(
+        (a, b) =>
+            DateTime.parse(a.changedAt).compareTo(DateTime.parse(b.changedAt)),
+      );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,7 +223,8 @@ class OrderStatusTimeline extends StatelessWidget {
                   children: [
                     Builder(
                       builder: (context) {
-                        final isCancelled = ordered[i].status == OrderStatus.cancelled;
+                        final isCancelled =
+                            ordered[i].status == OrderStatus.cancelled;
                         final tint = isCancelled
                             ? theme.colorScheme.error
                             : theme.colorScheme.primary;
@@ -193,34 +234,51 @@ class OrderStatusTimeline extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: theme.cardTheme.color,
-                            border: Border.all(color: tint.withValues(alpha: 0.4)),
+                            border: Border.all(
+                              color: tint.withValues(alpha: 0.4),
+                            ),
                           ),
                           child: Icon(
-                            isCancelled ? LucideIcons.circleX : LucideIcons.check,
+                            isCancelled
+                                ? LucideIcons.circleX
+                                : LucideIcons.check,
                             size: 12,
-                            color: isCancelled ? theme.colorScheme.error : theme.colorScheme.tertiary,
+                            color: isCancelled
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.tertiary,
                           ),
                         );
                       },
                     ),
                     if (i != ordered.length - 1)
-                      Expanded(child: Container(width: 1, color: theme.colorScheme.outline)),
+                      Expanded(
+                        child: Container(
+                          width: 1,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(bottom: i == ordered.length - 1 ? 0 : 24),
+                    padding: EdgeInsets.only(
+                      bottom: i == ordered.length - 1 ? 0 : 24,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           OrderStatusStyle.timelineLabel(ordered[i].status),
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         const SizedBox(height: 2),
-                        Text(formatShortDate(ordered[i].changedAt),
-                            style: theme.textTheme.labelSmall),
+                        Text(
+                          formatShortDate(ordered[i].changedAt),
+                          style: theme.textTheme.labelSmall,
+                        ),
                       ],
                     ),
                   ),
@@ -262,5 +320,4 @@ class OrderPriceBreakdown extends StatelessWidget {
       ],
     );
   }
-
 }

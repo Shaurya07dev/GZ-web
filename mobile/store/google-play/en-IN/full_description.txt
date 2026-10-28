@@ -1,0 +1,19 @@
+Discover original art and follow its story with GalleryZone.
+
+Collectors can browse curated artworks and artist profiles, understand transparent pricing, purchase physical artwork through Razorpay, follow delivery progress, manage their collection, request physical certificates and view an artwork's QR/NFC provenance passport.
+
+Artists can manage their profile and verification, submit and update artwork, choose where each piece is listed, sign the Artist Agreement, follow sales and settlement status, maintain certificates and provenance records, write blog submissions and respond to operational requests.
+
+Gallery and aggregator partners can reserve eligible work, record condition reports and handovers, manage display holdings, track shipments, record sales, review commission and remittance status, and maintain their business verification details.
+
+Also included:
+• Public blogs from GalleryZone's artist community
+• Curated art-supply recommendations that open on Amazon
+• Saved artworks and followed artists on your device
+• Support, legal documents and an in-app account-deletion request
+
+Payments for physical artworks are processed by Razorpay. GalleryZone does not store full card details or UPI PINs. Identity and business verification may use Cashfree Secure ID and DigiLocker consent. Delivery information may be shared with ShipRocket and its assigned couriers when a shipment is arranged.
+
+Art-supply links are affiliate links. As an Amazon Associate, GalleryZone may earn from qualifying purchases at no extra cost to you. Product price, availability, delivery, reviews and checkout remain on Amazon.
+
+Some features require an approved artist or aggregator account, completed verification, or an active order. Administrative tools remain on the GalleryZone website.

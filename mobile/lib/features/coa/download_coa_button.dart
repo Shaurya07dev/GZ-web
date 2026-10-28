@@ -19,7 +19,11 @@ Future<void> shareCoaPdf(Uint8List bytes, String fileName) =>
 /// public passport, the buyer's collection). Disabled until a number exists:
 /// numbers are issued when the artwork is approved for listing.
 class DownloadCoaButton extends StatefulWidget {
-  const DownloadCoaButton({super.key, required this.certificate, this.share = shareCoaPdf});
+  const DownloadCoaButton({
+    super.key,
+    required this.certificate,
+    this.share = shareCoaPdf,
+  });
 
   final CoaPdfInput certificate;
 
@@ -46,7 +50,9 @@ class _DownloadCoaButtonState extends State<DownloadCoaButton> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            text.startsWith('Exception: ') ? text.substring(11) : "Couldn't build the certificate PDF.",
+            text.startsWith('Exception: ')
+                ? text.substring(11)
+                : "Couldn't build the certificate PDF.",
           ),
         ),
       );
@@ -61,16 +67,31 @@ class _DownloadCoaButtonState extends State<DownloadCoaButton> {
     final button = OutlinedButton.icon(
       onPressed: !_ready || _busy ? null : _download,
       icon: _busy
-          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           : const Icon(LucideIcons.download, size: 14),
       label: const Text('Download certificate (PDF)'),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 44),
         foregroundColor: theme.colorScheme.tertiary,
-        side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: _ready ? 0.6 : 0.25)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        side: BorderSide(
+          color: theme.colorScheme.primary.withValues(
+            alpha: _ready ? 0.6 : 0.25,
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
       ),
     );
-    return _ready ? button : Tooltip(message: 'Issued when the artwork is approved for listing', child: button);
+    return _ready
+        ? button
+        : Tooltip(
+            message: 'Issued when the artwork is approved for listing',
+            child: button,
+          );
   }
 }

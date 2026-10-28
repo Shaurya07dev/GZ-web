@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:intl/intl.dart';
@@ -17,6 +18,9 @@ class CoaPdfInput {
     required this.coaCertificateNumber,
     required this.coaIssueDate,
     required this.ownerName,
+    this.artworkType,
+    this.exclusive = false,
+    this.artistSignatureDataUrl,
     this.productCode,
     this.dimensions,
     this.yearCreated,
@@ -35,6 +39,9 @@ class CoaPdfInput {
 
   /// The current legal owner as the passport records it.
   final String ownerName;
+  final String? artworkType;
+  final bool exclusive;
+  final String? artistSignatureDataUrl;
 
   /// The file the person is offered.
   String get fileName => 'GalleryZone-CoA-$coaCertificateNumber.pdf';
@@ -80,8 +87,16 @@ String _longDate(String iso) {
 ///
 /// [now] and [compress] exist so a test can build it deterministically and read
 /// the text back out.
-Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress = true}) async {
-  final doc = pw.Document(title: 'Certificate of Authenticity', author: 'GalleryZone', compress: compress);
+Future<Uint8List> buildCoaPdf(
+  CoaPdfInput input, {
+  DateTime? now,
+  bool compress = true,
+}) async {
+  final doc = pw.Document(
+    title: 'Certificate of Authenticity',
+    author: 'GalleryZone',
+    compress: compress,
+  );
   final generated = DateFormat('d MMM y, h:mm a').format(now ?? DateTime.now());
   final url = verifyUrlFor(input.artworkId);
 
@@ -92,9 +107,19 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
   pw.TextStyle style(double size, PdfColor color, {pw.Font? font}) =>
       pw.TextStyle(font: font ?? regular, fontSize: size, color: color);
 
+  final artForm = [
+    input.category,
+    if (input.artworkType != null && input.artworkType!.trim().isNotEmpty)
+      input.artworkType!.trim(),
+    if (input.exclusive) 'Exclusive to GalleryZone',
+  ].join(' · ');
+  final signature = _signatureImage(input.artistSignatureDataUrl);
   final details = <(String, String)>[
-    ('Product code', (input.productCode ?? '').isEmpty ? '-' : input.productCode!),
-    ('Category', input.category),
+    (
+      'Product code',
+      (input.productCode ?? '').isEmpty ? '-' : input.productCode!,
+    ),
+    ('Art form', artForm),
     ('Medium', input.medium),
     ('Dimensions', (input.dimensions ?? '').isEmpty ? '-' : input.dimensions!),
     ('Year', input.yearCreated == null ? '-' : '${input.yearCreated}'),
@@ -114,10 +139,14 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
       pageFormat: PdfPageFormat.a4,
       margin: pw.EdgeInsets.all(10 * PdfPageFormat.mm),
       build: (context) => pw.Container(
-        decoration: pw.BoxDecoration(border: pw.Border.all(color: _gold, width: 0.6)),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: _gold, width: 0.6),
+        ),
         padding: pw.EdgeInsets.all(2.5 * PdfPageFormat.mm),
         child: pw.Container(
-          decoration: pw.BoxDecoration(border: pw.Border.all(color: _gold, width: 0.2)),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: _gold, width: 0.2),
+          ),
           padding: pw.EdgeInsets.fromLTRB(
             10 * PdfPageFormat.mm,
             20 * PdfPageFormat.mm,
@@ -129,13 +158,26 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
             children: [
               pw.Text('G A L L E R Y Z O N E', style: style(9, _gold)),
               pw.SizedBox(height: 12 * PdfPageFormat.mm),
-              pw.Text('Certificate of Authenticity', style: style(24, _ink, font: serifBold)),
+              pw.Text(
+                'Certificate of Authenticity',
+                style: style(24, _ink, font: serifBold),
+              ),
               pw.SizedBox(height: 3 * PdfPageFormat.mm),
-              pw.Text(pdfSafe('Certificate No. ${input.coaCertificateNumber}'), style: style(9.5, _muted)),
+              pw.Text(
+                pdfSafe('Certificate No. ${input.coaCertificateNumber}'),
+                style: style(9.5, _muted),
+              ),
               pw.SizedBox(height: 10 * PdfPageFormat.mm),
-              pw.Container(width: 30 * PdfPageFormat.mm, height: 0.5, color: _gold),
+              pw.Container(
+                width: 30 * PdfPageFormat.mm,
+                height: 0.5,
+                color: _gold,
+              ),
               pw.SizedBox(height: 10 * PdfPageFormat.mm),
-              pw.Text('This certifies that the artwork', style: style(10, _muted)),
+              pw.Text(
+                'This certifies that the artwork',
+                style: style(10, _muted),
+              ),
               pw.SizedBox(height: 8 * PdfPageFormat.mm),
               pw.Text(
                 pdfSafe(input.title),
@@ -143,7 +185,10 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
                 style: style(20, _ink, font: serifBoldItalic),
               ),
               pw.SizedBox(height: 3 * PdfPageFormat.mm),
-              pw.Text(pdfSafe('by ${input.artistName}'), style: style(11, _muted)),
+              pw.Text(
+                pdfSafe('by ${input.artistName}'),
+                style: style(11, _muted),
+              ),
               pw.SizedBox(height: 10 * PdfPageFormat.mm),
               for (final (label, value) in details)
                 pw.Padding(
@@ -152,19 +197,30 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.SizedBox(width: 12 * PdfPageFormat.mm),
-                      pw.SizedBox(width: 73 * PdfPageFormat.mm, child: pw.Text(label, style: style(10, _muted))),
-                      pw.Expanded(child: pw.Text(pdfSafe(value), style: style(10, _ink))),
+                      pw.SizedBox(
+                        width: 73 * PdfPageFormat.mm,
+                        child: pw.Text(label, style: style(10, _muted)),
+                      ),
+                      pw.Expanded(
+                        child: pw.Text(pdfSafe(value), style: style(10, _ink)),
+                      ),
                     ],
                   ),
                 ),
               pw.SizedBox(height: 4 * PdfPageFormat.mm),
-              pw.Text(statement, textAlign: pw.TextAlign.center, style: style(9, _muted)),
+              pw.Text(
+                statement,
+                textAlign: pw.TextAlign.center,
+                style: style(9, _muted),
+              ),
               pw.SizedBox(height: 8 * PdfPageFormat.mm),
               pw.SizedBox(
                 width: 38 * PdfPageFormat.mm,
                 height: 38 * PdfPageFormat.mm,
                 child: pw.BarcodeWidget(
-                  barcode: pw.Barcode.qrCode(errorCorrectLevel: pw.BarcodeQRCorrectionLevel.medium),
+                  barcode: pw.Barcode.qrCode(
+                    errorCorrectLevel: pw.BarcodeQRCorrectionLevel.medium,
+                  ),
                   data: url,
                   color: _ink,
                 ),
@@ -172,7 +228,19 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
               pw.SizedBox(height: 4 * PdfPageFormat.mm),
               pw.Text(url, style: style(8.5, _gold)),
               pw.SizedBox(height: 2 * PdfPageFormat.mm),
-              pw.Text('Scan to verify authenticity and current ownership', style: style(8.5, _muted)),
+              pw.Text(
+                'Scan to verify authenticity and current ownership',
+                style: style(8.5, _muted),
+              ),
+              if (signature != null) ...[
+                pw.SizedBox(height: 4 * PdfPageFormat.mm),
+                pw.SizedBox(
+                  width: 38 * PdfPageFormat.mm,
+                  height: 12 * PdfPageFormat.mm,
+                  child: pw.Image(signature, fit: pw.BoxFit.contain),
+                ),
+                pw.Text('Artist signature', style: style(8, _muted)),
+              ],
               pw.Spacer(),
               pw.Text(
                 'Generated $generated - GalleryZone acts as an intermediary; title passes directly from seller to buyer.',
@@ -186,4 +254,18 @@ Future<Uint8List> buildCoaPdf(CoaPdfInput input, {DateTime? now, bool compress =
     ),
   );
   return doc.save();
+}
+
+pw.MemoryImage? _signatureImage(String? dataUrl) {
+  if (dataUrl == null || dataUrl.trim().isEmpty) return null;
+  try {
+    final encoded = dataUrl.contains(',')
+        ? dataUrl.substring(dataUrl.indexOf(',') + 1)
+        : dataUrl;
+    return pw.MemoryImage(base64Decode(encoded));
+  } on FormatException {
+    // Keep certificate downloads working if an old MOU contains a malformed
+    // signature. The line remains available for a wet signature.
+    return null;
+  }
 }

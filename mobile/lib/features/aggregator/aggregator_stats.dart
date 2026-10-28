@@ -64,7 +64,9 @@ List<String> byFrequency(Iterable<String> values) {
   final keys = counts.keys.toList()
     ..sort((a, b) {
       final byCount = counts[b]!.compareTo(counts[a]!);
-      return byCount != 0 ? byCount : a.toLowerCase().compareTo(b.toLowerCase());
+      return byCount != 0
+          ? byCount
+          : a.toLowerCase().compareTo(b.toLowerCase());
     });
   return keys;
 }
@@ -77,16 +79,24 @@ AggregatorStats aggregatorStatsOf({
   required AggregatorProfile profile,
   required Map<String, double> commissions,
 }) {
-  int count(HoldingStatus status) => holdings.where((view) => view.holding.status == status).length;
+  int count(HoldingStatus status) =>
+      holdings.where((view) => view.holding.status == status).length;
 
   return AggregatorStats(
     onDisplay: count(HoldingStatus.reserved),
     piecesSold: count(HoldingStatus.soldPendingSettlement),
     returned: count(HoldingStatus.returned),
-    commissionEarned: commissions.values.fold(0.0, (sum, amount) => sum + amount),
+    commissionEarned: commissions.values.fold(
+      0.0,
+      (sum, amount) => sum + amount,
+    ),
     heldAgainstReservations: wallet.lockedBalance,
     owedToGalleryZone: sales
-        .where((sale) => sale.paymentRoute == PaymentRoute.cashAtPremises && sale.remittedAt == null)
+        .where(
+          (sale) =>
+              sale.paymentRoute == PaymentRoute.cashAtPremises &&
+              sale.remittedAt == null,
+        )
         .fold(0.0, (sum, sale) => sum + sale.soldPrice),
     gallerySpaces: spaces.length,
     displayCapacity: spaces.fold(0, (sum, space) => sum + space.capacity),

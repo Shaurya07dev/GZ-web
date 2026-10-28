@@ -96,7 +96,18 @@ export async function createUserProfile(
   await userRef.set(userDoc);
 
   if (role === "artist") {
-    const publicProfile: PublicProfileDoc = { name, headline: null, bio: null, location: null, profileImageUrl: null };
+    const publicProfile: PublicProfileDoc = {
+      name,
+      headline: null,
+      bio: null,
+      location: null,
+      profileImageUrl: null,
+      website: null,
+      socialProofVideoUrl: null,
+      tier1SocialMedia: false,
+      tier2ArtistAgreement: false,
+      tier3FirstSale: false,
+    };
     await db.collection(Collections.publicProfiles).doc(uid).set(publicProfile);
   }
 }

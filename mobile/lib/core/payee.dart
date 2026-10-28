@@ -40,8 +40,10 @@ String? upiIntentFor(double amount, String note) {
     'tn': note,
   };
   final query = params.entries
-      .map((e) =>
-          '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+      .map(
+        (e) =>
+            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+      )
       .join('&');
   return 'upi://pay?$query';
 }

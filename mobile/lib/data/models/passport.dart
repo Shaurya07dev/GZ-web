@@ -16,6 +16,7 @@ class PassportEvent {
     required this.initiatedAt,
     this.acceptedAt,
     this.cancelledAt,
+    this.displayStartsAt,
     this.displayEndsAt,
     this.displayEndedAt,
   });
@@ -31,27 +32,31 @@ class PassportEvent {
   final String initiatedAt;
   final String? acceptedAt;
   final String? cancelledAt;
+  final String? displayStartsAt;
   final String? displayEndsAt;
   final String? displayEndedAt;
 
   /// The record in the shape the existing ownership/display widgets draw.
-  OwnershipTransfer toTransfer({required String artworkId, required String artworkTitle}) =>
-      OwnershipTransfer(
-        id: id,
-        artworkId: artworkId,
-        artworkTitle: artworkTitle,
-        fromName: fromName,
-        toName: toName,
-        // The invite address never reaches the public record.
-        toEmail: '',
-        initiatedAt: initiatedAt,
-        acceptedAt: acceptedAt,
-        cancelledAt: cancelledAt,
-        status: status,
-        kind: kind,
-        displayEndsAt: displayEndsAt,
-        displayEndedAt: displayEndedAt,
-      );
+  OwnershipTransfer toTransfer({
+    required String artworkId,
+    required String artworkTitle,
+  }) => OwnershipTransfer(
+    id: id,
+    artworkId: artworkId,
+    artworkTitle: artworkTitle,
+    fromName: fromName,
+    toName: toName,
+    // The invite address never reaches the public record.
+    toEmail: '',
+    initiatedAt: initiatedAt,
+    acceptedAt: acceptedAt,
+    cancelledAt: cancelledAt,
+    status: status,
+    kind: kind,
+    displayStartsAt: displayStartsAt,
+    displayEndsAt: displayEndsAt,
+    displayEndedAt: displayEndedAt,
+  );
 }
 
 /// What happened at one step of a piece's life (NFC_IMPLEMENTATION.md §6).
@@ -75,14 +80,19 @@ enum LifecycleActorKind { artist, gallery, collector, platform }
 /// Where a step happened. Only ever the artist's or a gallery's: a collector's
 /// home is private, and the server sends none.
 class LifecyclePlace {
-  const LifecyclePlace({required this.city, required this.state, required this.country});
+  const LifecyclePlace({
+    required this.city,
+    required this.state,
+    required this.country,
+  });
 
   final String city;
   final String state;
   final String country;
 
   /// "Pune, Maharashtra, India", leaving out what the source did not say.
-  String get label => [city, state, country].where((part) => part.isNotEmpty).join(', ');
+  String get label =>
+      [city, state, country].where((part) => part.isNotEmpty).join(', ');
 }
 
 /// One step in a piece's life, oldest first on the passport: made, approved,
@@ -129,6 +139,7 @@ class Passport {
     this.yearCreated,
     this.coaCertificateNumber,
     this.coaIssuedAt,
+    this.artistSignatureDataUrl,
     this.nfcLinked = false,
     this.nfcLocked = false,
     this.lifecycle = const [],
@@ -151,6 +162,10 @@ class Passport {
   /// The certificate number, once issued on approval. Null before that.
   final String? coaCertificateNumber;
   final String? coaIssuedAt;
+
+  /// The artist signature captured with the current MOU, used on the digital
+  /// certificate exactly as it is on the website.
+  final String? artistSignatureDataUrl;
   final String listedAt;
   final PassportOwnerKind ownerKind;
   final String ownerName;

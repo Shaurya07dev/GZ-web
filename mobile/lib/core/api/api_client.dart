@@ -28,7 +28,9 @@ class ApiClient {
     Duration timeout = const Duration(seconds: 20),
   }) : _dio = dio ?? Dio() {
     _dio.options
-      ..baseUrl = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl
+      ..baseUrl = baseUrl.endsWith('/')
+          ? baseUrl.substring(0, baseUrl.length - 1)
+          : baseUrl
       ..connectTimeout = timeout
       ..receiveTimeout = timeout
       ..sendTimeout = timeout
@@ -42,8 +44,11 @@ class ApiClient {
   /// even after a refresh. The session layer signs the person out.
   final void Function()? onSessionExpired;
 
-  Future<dynamic> get(String path, {Map<String, dynamic>? query, bool auth = true}) =>
-      _send('GET', path, query: query, auth: auth);
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) => _send('GET', path, query: query, auth: auth);
 
   Future<dynamic> post(String path, {Object? body, bool auth = true}) =>
       _send('POST', path, body: body, auth: auth);
@@ -54,15 +59,22 @@ class ApiClient {
   Future<dynamic> put(String path, {Object? body, bool auth = true}) =>
       _send('PUT', path, body: body, auth: auth);
 
-  Future<dynamic> delete(String path, {bool auth = true}) => _send('DELETE', path, auth: auth);
+  Future<dynamic> delete(String path, {bool auth = true}) =>
+      _send('DELETE', path, auth: auth);
 
   /// [get], decoded as one JSON object.
-  Future<Map<String, dynamic>> getMap(String path, {Map<String, dynamic>? query, bool auth = true}) async =>
-      asMap(await get(path, query: query, auth: auth));
+  Future<Map<String, dynamic>> getMap(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) async => asMap(await get(path, query: query, auth: auth));
 
   /// [get], decoded as a list of JSON objects.
-  Future<List<Map<String, dynamic>>> getList(String path, {Map<String, dynamic>? query, bool auth = true}) async =>
-      asMapList(await get(path, query: query, auth: auth));
+  Future<List<Map<String, dynamic>>> getList(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) async => asMapList(await get(path, query: query, auth: auth));
 
   /// Sends raw bytes — the image upload routes take the file itself as the
   /// body, with its content type in the header, not a JSON envelope.
@@ -71,8 +83,7 @@ class ApiClient {
     List<int> bytes, {
     required Map<String, String> headers,
     Duration timeout = const Duration(seconds: 120),
-  }) =>
-      _send('POST', path, body: bytes, headers: headers, timeout: timeout);
+  }) => _send('POST', path, body: bytes, headers: headers, timeout: timeout);
 
   /// PUTs [bytes] to an absolute, pre-signed URL (the artwork image bucket).
   /// No credential is sent: the signature in the URL is the credential, and
@@ -83,7 +94,14 @@ class ApiClient {
     required Map<String, String> headers,
     Duration timeout = const Duration(seconds: 120),
   }) async {
-    await _send('PUT', url, body: bytes, headers: headers, auth: false, timeout: timeout);
+    await _send(
+      'PUT',
+      url,
+      body: bytes,
+      headers: headers,
+      auth: false,
+      timeout: timeout,
+    );
   }
 
   Future<dynamic> _send(
@@ -96,7 +114,7 @@ class ApiClient {
     Duration? timeout,
   }) async {
     var token = auth ? await _idToken() : null;
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       try {
         final response = await _dio.request<dynamic>(
           path,
@@ -115,7 +133,9 @@ class ApiClient {
         return response.data;
       } on DioException catch (error) {
         final sentCredential = token != null;
-        if (sentCredential && error.response?.statusCode == 401 && attempt == 0) {
+        if (sentCredential &&
+            error.response?.statusCode == 401 &&
+            attempt == 0) {
           token = await _idToken(forceRefresh: true);
           if (token != null) continue;
         }
@@ -155,5 +175,9 @@ ApiError _toApiError(DioException error) {
       message: 'Too many requests — wait a moment and try again.',
     );
   }
-  return ApiError(status: status, code: 'http_$status', message: 'Something went wrong ($status). Please try again.');
+  return ApiError(
+    status: status,
+    code: 'http_$status',
+    message: 'Something went wrong ($status). Please try again.',
+  );
 }

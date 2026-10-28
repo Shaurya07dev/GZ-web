@@ -24,7 +24,10 @@ import '../providers/aggregator_providers.dart';
 // screen that opened a sheet may be gone by the time the request returns.
 
 /// Records a sale of [view]'s piece. Port of `record-sale-dialog.tsx`.
-Future<void> showRecordSale(BuildContext context, AggregatorHoldingView view) async {
+Future<void> showRecordSale(
+  BuildContext context,
+  AggregatorHoldingView view,
+) async {
   final container = ProviderScope.containerOf(context);
   final messenger = ScaffoldMessenger.of(context);
   final router = GoRouter.of(context);
@@ -53,7 +56,10 @@ Future<void> showRecordSale(BuildContext context, AggregatorHoldingView view) as
 }
 
 /// Sends [view]'s piece back to GalleryZone. Port of `return-holding-dialog.tsx`.
-Future<void> showReturnHolding(BuildContext context, AggregatorHoldingView view) async {
+Future<void> showReturnHolding(
+  BuildContext context,
+  AggregatorHoldingView view,
+) async {
   final container = ProviderScope.containerOf(context);
   final messenger = ScaffoldMessenger.of(context);
   final release = await showDialog<HoldingRelease>(
@@ -75,7 +81,10 @@ Future<void> showReturnHolding(BuildContext context, AggregatorHoldingView view)
 
 /// Asks GalleryZone to let the aggregator keep a piece past its window. Port of
 /// `request-extension-dialog.tsx`.
-Future<void> showRequestExtension(BuildContext context, AggregatorHoldingView view) async {
+Future<void> showRequestExtension(
+  BuildContext context,
+  AggregatorHoldingView view,
+) async {
   final container = ProviderScope.containerOf(context);
   final messenger = ScaffoldMessenger.of(context);
   final sent = await showDialog<bool>(
@@ -95,6 +104,31 @@ Future<void> showRequestExtension(BuildContext context, AggregatorHoldingView vi
   );
 }
 
+/// Sends a condition or fulfilment problem to GalleryZone against the exact
+/// holding. This is the mobile counterpart of the web holding report dialog
+/// and uses the same issue codes and 10–2000 character contract as the API.
+Future<void> showReportHoldingIssue(
+  BuildContext context,
+  AggregatorHoldingView view,
+) async {
+  final container = ProviderScope.containerOf(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final sent = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => _ReportHoldingIssueSheet(view: view),
+  );
+  if (sent != true) return;
+
+  container
+    ..invalidate(aggregatorHoldingProvider(view.holding.id))
+    ..invalidate(aggregatorCollectionProvider);
+  messenger.showSnackBar(
+    const SnackBar(content: Text('Report sent to GalleryZone')),
+  );
+}
+
 /// A failed request, said where the person is still looking.
 class _InlineError extends StatelessWidget {
   const _InlineError(this.message);
@@ -103,7 +137,11 @@ class _InlineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PortalNotice(icon: LucideIcons.circleAlert, destructive: true, body: message);
+    return PortalNotice(
+      icon: LucideIcons.circleAlert,
+      destructive: true,
+      body: message,
+    );
   }
 }
 
@@ -119,7 +157,11 @@ class _PieceRow extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          child: SizedBox(width: 52, height: 52, child: ArtworkImageView(url: view.artwork.thumbnailUrl)),
+          child: SizedBox(
+            width: 52,
+            height: 52,
+            child: ArtworkImageView(url: view.artwork.thumbnailUrl),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -130,7 +172,9 @@ class _PieceRow extends StatelessWidget {
                 view.artwork.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               Text(
                 view.artwork.artistName,
@@ -142,8 +186,150 @@ class _PieceRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        PriceTag(amount: view.holding.displayPrice, style: theme.textTheme.bodyMedium),
+        PriceTag(
+          amount: view.holding.displayPrice,
+          style: theme.textTheme.bodyMedium,
+        ),
       ],
+    );
+  }
+}
+
+// --- Report an issue -----------------------------------------------------------------
+
+const _minReportLength = 10;
+
+class _ReportHoldingIssueSheet extends ConsumerStatefulWidget {
+  const _ReportHoldingIssueSheet({required this.view});
+
+  final AggregatorHoldingView view;
+
+  @override
+  ConsumerState<_ReportHoldingIssueSheet> createState() =>
+      _ReportHoldingIssueSheetState();
+}
+
+class _ReportHoldingIssueSheetState
+    extends ConsumerState<_ReportHoldingIssueSheet> {
+  final _description = TextEditingController();
+  HoldingReportIssueType? _issueType;
+  bool _pending = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _description.dispose();
+    super.dispose();
+  }
+
+  bool get _valid =>
+      _issueType != null && _description.text.trim().length >= _minReportLength;
+
+  Future<void> _send() async {
+    if (!_valid) return;
+    setState(() {
+      _pending = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(aggregatorRepositoryProvider)
+          .reportHoldingIssue(
+            widget.view.holding.id,
+            issueType: _issueType!,
+            description: _description.text.trim(),
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _pending = false;
+          _error = authErrorMessage(error);
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return PopScope(
+      canPop: !_pending,
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + keyboard),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Report an issue', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 6),
+              Text(
+                'Tell GalleryZone what arrived with “${widget.view.artwork.title}”. This creates a reviewable '
+                'case against this holding.',
+                style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<HoldingReportIssueType>(
+                initialValue: _issueType,
+                isExpanded: true,
+                hint: const Text('Pick what went wrong'),
+                decoration: const InputDecoration(labelText: 'Issue type'),
+                items: [
+                  for (final type in HoldingReportIssueType.values)
+                    DropdownMenuItem(
+                      value: type,
+                      child: Text(holdingReportIssueLabel[type]!),
+                    ),
+                ],
+                onChanged: _pending
+                    ? null
+                    : (value) => setState(() => _issueType = value),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _description,
+                minLines: 4,
+                maxLines: 7,
+                maxLength: 2000,
+                enabled: !_pending,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: "Describe what's wrong",
+                  hintText: 'Include visible damage, missing items, or a COA/NFC problem.',
+                  helperText: 'At least 10 characters. GalleryZone reviews this report.',
+                  helperMaxLines: 2,
+                  alignLabelWithHint: true,
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                _InlineError(_error!),
+              ],
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _pending
+                        ? null
+                        : () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: !_valid || _pending ? null : _send,
+                    child: Text(_pending ? 'Sending…' : 'Send report'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -169,7 +355,9 @@ class _ReturnDialogState extends ConsumerState<_ReturnDialog> {
       _error = null;
     });
     try {
-      final release = await ref.read(aggregatorRepositoryProvider).releaseHolding(widget.view.holding.id);
+      final release = await ref
+          .read(aggregatorRepositoryProvider)
+          .releaseHolding(widget.view.holding.id);
       if (mounted) Navigator.of(context).pop(release);
     } catch (error) {
       if (mounted) {
@@ -209,7 +397,7 @@ class _ReturnDialogState extends ConsumerState<_ReturnDialog> {
                   children: [
                     _MoneyLine(
                       label: 'Advance (${holding.advancePercent}%)',
-                      hint: 'Released back to your wallet',
+                      hint: 'Refundable advance released',
                       value: formatInr(holding.advanceAmount),
                     ),
                     const Divider(height: 18),
@@ -218,13 +406,17 @@ class _ReturnDialogState extends ConsumerState<_ReturnDialog> {
                       hint: deliveryLost > 0
                           ? 'Only refunded on a sale — forfeited on an unsold return'
                           : 'Nothing was held for delivery',
-                      value: '${deliveryLost > 0 ? '−' : ''}${formatInr(deliveryLost)}',
+                      value:
+                          '${deliveryLost > 0 ? '−' : ''}${formatInr(deliveryLost)}',
                       destructive: deliveryLost > 0,
                     ),
                   ],
                 ),
               ),
-              if (_error != null) ...[const SizedBox(height: 10), _InlineError(_error!)],
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                _InlineError(_error!),
+              ],
             ],
           ),
         ),
@@ -235,7 +427,10 @@ class _ReturnDialogState extends ConsumerState<_ReturnDialog> {
           ),
           FilledButton.icon(
             style: deliveryLost > 0
-                ? FilledButton.styleFrom(backgroundColor: theme.colorScheme.error, foregroundColor: theme.colorScheme.onError)
+                ? FilledButton.styleFrom(
+                    backgroundColor: theme.colorScheme.error,
+                    foregroundColor: theme.colorScheme.onError,
+                  )
                 : null,
             onPressed: _pending ? null : _confirm,
             icon: const Icon(LucideIcons.undo2, size: 14),
@@ -271,8 +466,17 @@ class _MoneyLine extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
-              if (hint != null) Text(hint!, style: theme.textTheme.labelSmall?.copyWith(height: 1.35)),
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (hint != null)
+                Text(
+                  hint!,
+                  style: theme.textTheme.labelSmall?.copyWith(height: 1.35),
+                ),
             ],
           ),
         ),
@@ -371,7 +575,10 @@ class _ExtensionDialogState extends ConsumerState<_ExtensionDialog> {
                   alignLabelWithHint: true,
                 ),
               ),
-              if (_error != null) ...[const SizedBox(height: 10), _InlineError(_error!)],
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                _InlineError(_error!),
+              ],
             ],
           ),
         ),
@@ -420,7 +627,15 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
 
   @override
   void dispose() {
-    for (final controller in [_buyerName, _buyerEmail, _buyerPhone, _line1, _city, _state, _pincode]) {
+    for (final controller in [
+      _buyerName,
+      _buyerEmail,
+      _buyerPhone,
+      _line1,
+      _city,
+      _state,
+      _pincode,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -437,7 +652,9 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
       _error = null;
     });
     try {
-      await ref.read(aggregatorRepositoryProvider).recordSale(
+      await ref
+          .read(aggregatorRepositoryProvider)
+          .recordSale(
             RecordSaleInput(
               artworkId: widget.view.artwork.id,
               // Always the holding's own price, set once when it was reserved: every
@@ -476,7 +693,11 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
     return PopScope(
       canPop: !_pending,
       child: Padding(
-        padding: EdgeInsets.only(left: 20, right: 20, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -497,14 +718,18 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                   child: Column(
                     children: [
                       _MoneyLine(
-                        label: 'Month ${holding.cycleMonth} of $aggregatorCycleMonths display price',
+                        label:
+                            'Month ${holding.cycleMonth} of $aggregatorCycleMonths display price',
                         value: formatInr(holding.displayPrice),
                       ),
                       const Divider(height: 18),
                       _MoneyLine(
-                        label: 'Advance (${holding.advancePercent}%) + delivery',
+                        label:
+                            'Advance (${holding.advancePercent}%) + delivery',
                         hint: 'Set off against this sale, not credited separately',
-                        value: formatInr(holding.advanceAmount + holding.deliveryDeposit),
+                        value: formatInr(
+                          holding.advanceAmount + holding.deliveryDeposit,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Align(
@@ -512,7 +737,9 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                         child: Text(
                           'Your ${(aggregatorCommissionRate * 100).round()}% commission on the markup settles '
                           'separately once delivery is confirmed.',
-                          style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ],
@@ -526,7 +753,10 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                     helperText: "This piece's selling price, including GST. It was set when you reserved the piece.",
                     helperMaxLines: 2,
                   ),
-                  child: Text(holding.displayPrice.toStringAsFixed(0), style: theme.textTheme.bodyLarge),
+                  child: Text(
+                    holding.displayPrice.toStringAsFixed(0),
+                    style: theme.textTheme.bodyLarge,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -534,7 +764,8 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                   enabled: !_pending,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(labelText: 'Buyer name'),
-                  validator: (value) => _atLeast(value, 2, "Enter the buyer's name"),
+                  validator: (value) =>
+                      _atLeast(value, 2, "Enter the buyer's name"),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -542,7 +773,8 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                   enabled: !_pending,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(labelText: 'Buyer phone'),
-                  validator: (value) => _atLeast(value, 10, 'Enter a valid phone number'),
+                  validator: (value) =>
+                      _atLeast(value, 10, 'Enter a valid phone number'),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -550,7 +782,9 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                   enabled: !_pending,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'Buyer email'),
-                  validator: (value) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((value ?? '').trim())
+                  validator: (value) =>
+                      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                          .hasMatch((value ?? '').trim())
                       ? null
                       : 'Enter a valid email',
                 ),
@@ -558,7 +792,9 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                 TextFormField(
                   controller: _line1,
                   enabled: !_pending,
-                  decoration: const InputDecoration(labelText: 'Delivery address'),
+                  decoration: const InputDecoration(
+                    labelText: 'Delivery address',
+                  ),
                   validator: (value) => _atLeast(value, 3, 'Enter the address'),
                 ),
                 const SizedBox(height: 12),
@@ -570,7 +806,8 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                         controller: _city,
                         enabled: !_pending,
                         decoration: const InputDecoration(labelText: 'City'),
-                        validator: (value) => _atLeast(value, 2, 'Enter the city'),
+                        validator: (value) =>
+                            _atLeast(value, 2, 'Enter the city'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -579,7 +816,8 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                         controller: _state,
                         enabled: !_pending,
                         decoration: const InputDecoration(labelText: 'State'),
-                        validator: (value) => _atLeast(value, 2, 'Enter the state'),
+                        validator: (value) =>
+                            _atLeast(value, 2, 'Enter the state'),
                       ),
                     ),
                   ],
@@ -592,24 +830,39 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                   maxLength: 6,
                   decoration: const InputDecoration(labelText: 'Pincode'),
                   validator: (value) =>
-                      RegExp(r'^\d{6}$').hasMatch((value ?? '').trim()) ? null : 'Enter a valid 6-digit pincode',
+                      RegExp(r'^\d{6}$').hasMatch((value ?? '').trim())
+                      ? null
+                      : 'Enter a valid 6-digit pincode',
                 ),
                 const SizedBox(height: 4),
                 Text('Delivery mode', style: theme.textTheme.labelLarge),
                 const SizedBox(height: 6),
                 SegmentedButton<DeliveryMode>(
                   segments: const [
-                    ButtonSegment(value: DeliveryMode.courier, label: Text('Courier')),
-                    ButtonSegment(value: DeliveryMode.selfPickup, label: Text('Self pickup')),
+                    ButtonSegment(
+                      value: DeliveryMode.courier,
+                      label: Text('Courier'),
+                    ),
+                    ButtonSegment(
+                      value: DeliveryMode.selfPickup,
+                      label: Text('Self pickup'),
+                    ),
                   ],
                   selected: {_mode},
-                  onSelectionChanged: _pending ? null : (selection) => setState(() => _mode = selection.first),
+                  onSelectionChanged: _pending
+                      ? null
+                      : (selection) => setState(() => _mode = selection.first),
                 ),
                 const SizedBox(height: 20),
                 // You collect on GalleryZone's behalf, never for yourself. Which of the
                 // two routes the money took decides what you owe afterwards, so it is
                 // recorded with the sale rather than sorted out later.
-                Text('How did the buyer pay?', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                Text(
+                  'How did the buyer pay?',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 RadioGroup<PaymentRoute>(
                   groupValue: _route,
@@ -621,12 +874,18 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                       RadioListTile<PaymentRoute>(
                         contentPadding: EdgeInsets.zero,
                         value: PaymentRoute.directToGalleryZone,
-                        title: Text('Paid GalleryZone directly (transfer or UPI)', style: theme.textTheme.bodySmall),
+                        title: Text(
+                          'Paid GalleryZone directly (transfer or UPI)',
+                          style: theme.textTheme.bodySmall,
+                        ),
                       ),
                       RadioListTile<PaymentRoute>(
                         contentPadding: EdgeInsets.zero,
                         value: PaymentRoute.cashAtPremises,
-                        title: Text('Cash, collected by you', style: theme.textTheme.bodySmall),
+                        title: Text(
+                          'Cash, collected by you',
+                          style: theme.textTheme.bodySmall,
+                        ),
                       ),
                     ],
                   ),
@@ -645,15 +904,21 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                 // the aggregator will remit to.
                 PayeeDetails(
                   amount: holding.displayPrice,
-                  note: '${widget.view.artwork.title} — ${widget.view.artwork.id}',
+                  note:
+                      '${widget.view.artwork.title} — ${widget.view.artwork.id}',
                 ),
-                if (_error != null) ...[const SizedBox(height: 12), _InlineError(_error!)],
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  _InlineError(_error!),
+                ],
                 const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _pending ? null : () => Navigator.of(context).pop(),
+                        onPressed: _pending
+                            ? null
+                            : () => Navigator.of(context).pop(),
                         child: const Text('Cancel'),
                       ),
                     ),

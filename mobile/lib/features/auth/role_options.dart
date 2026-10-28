@@ -30,8 +30,7 @@ const roleOptions = <RoleOption>[
   RoleOption(
     role: Role.aggregator,
     label: 'Aggregator',
-    description:
-        'Reserve, display, and distribute verified art through your gallery or space.',
+    description: 'Reserve, display, and distribute verified art through your gallery or space.',
     icon: LucideIcons.building2,
   ),
   RoleOption(
@@ -92,10 +91,10 @@ String landingAfterLogin(Role role, {String? next}) {
 /// profile to fill in (KYC, bank, GST, agreement) before anything else is
 /// useful, so land there instead of an empty dashboard.
 String landingAfterRegister(Role role) => switch (role) {
-      Role.artist => '/dashboard/profile',
-      Role.aggregator => '/aggregator/profile',
-      Role.customer => role.home,
-    };
+  Role.artist => '/dashboard/profile',
+  Role.aggregator => '/aggregator/profile',
+  Role.customer => role.home,
+};
 
 /// Only a path inside this app is a valid place to return to after signing
 /// in. Anything else — a full URL, a protocol-relative `//host`, a path with
@@ -105,10 +104,20 @@ String? safeNextPath(String? next) {
   if (next == null || next.isEmpty) return null;
   final uri = Uri.tryParse(next);
   if (uri == null || uri.hasScheme || uri.hasAuthority) return null;
-  if (!next.startsWith('/') || next.startsWith('//') || next.startsWith(r'/\')) return null;
+  if (!next.startsWith('/') || next.startsWith('//') || next.startsWith(r'/\')) {
+    return null;
+  }
   if (next.contains(RegExp(r'[\u0000-\u001f\u007f\\]'))) return null;
-  const authPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+  const authPaths = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+  ];
   final path = uri.path;
-  if (authPaths.any((auth) => path == auth || path.startsWith('$auth/'))) return null;
+  if (authPaths.any((auth) => path == auth || path.startsWith('$auth/'))) {
+    return null;
+  }
   return next;
 }

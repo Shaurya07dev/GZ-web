@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../data/models/artwork.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
@@ -23,7 +24,8 @@ class TransferAcceptScreen extends ConsumerStatefulWidget {
   final String transferId;
 
   @override
-  ConsumerState<TransferAcceptScreen> createState() => _TransferAcceptScreenState();
+  ConsumerState<TransferAcceptScreen> createState() =>
+      _TransferAcceptScreenState();
 }
 
 class _TransferAcceptScreenState extends ConsumerState<TransferAcceptScreen> {
@@ -33,7 +35,9 @@ class _TransferAcceptScreenState extends ConsumerState<TransferAcceptScreen> {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final accepted = await ref.read(ownershipRepositoryProvider).accept(widget.transferId);
+      final accepted = await ref
+          .read(ownershipRepositoryProvider)
+          .accept(widget.transferId);
       ref.invalidate(transferProvider(widget.transferId));
       ref.invalidate(artworkTransfersProvider(accepted.artworkId));
       ref.invalidate(artworkProvider(accepted.artworkId));
@@ -51,13 +55,14 @@ class _TransferAcceptScreenState extends ConsumerState<TransferAcceptScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Transfer rights')),
       body: transfer.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.triangleAlert,
           title: 'Something went wrong',
           description: "We couldn't open this transfer right now.",
           action: OutlinedButton(
-            onPressed: () => ref.invalidate(transferProvider(widget.transferId)),
+            onPressed: () =>
+                ref.invalidate(transferProvider(widget.transferId)),
             child: const Text('Try again'),
           ),
         ),
@@ -65,8 +70,7 @@ class _TransferAcceptScreenState extends ConsumerState<TransferAcceptScreen> {
             ? const EmptyState(
                 icon: LucideIcons.unlink,
                 title: "This transfer link isn't valid",
-                description:
-                    'It may have been mistyped, or the transfer was removed. Ask the sender for a new link.',
+                description: 'It may have been mistyped, or the transfer was removed. Ask the sender for a new link.',
               )
             : _Body(transfer: data, busy: _busy, onAccept: _accept),
       ),
@@ -75,7 +79,11 @@ class _TransferAcceptScreenState extends ConsumerState<TransferAcceptScreen> {
 }
 
 class _Body extends ConsumerWidget {
-  const _Body({required this.transfer, required this.busy, required this.onAccept});
+  const _Body({
+    required this.transfer,
+    required this.busy,
+    required this.onAccept,
+  });
 
   final OwnershipTransfer transfer;
   final bool busy;
@@ -121,7 +129,9 @@ class _Body extends ConsumerWidget {
                 ? '${transfer.fromName} is giving you display rights'
                 : '${transfer.fromName} is transferring ownership to you',
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
@@ -140,10 +150,24 @@ class _Body extends ConsumerWidget {
                 PortalDetailRow(label: 'From', value: transfer.fromName),
                 PortalDetailRow(
                   label: 'To',
-                  value: transfer.toEmail.isEmpty ? transfer.toName : '${transfer.toName} · ${transfer.toEmail}',
+                  value: transfer.toEmail.isEmpty
+                      ? transfer.toName
+                      : '${transfer.toName} · ${transfer.toEmail}',
                   gold: true,
                 ),
-                PortalDetailRow(label: 'Started', value: formatLongDate(transfer.initiatedAt)),
+                PortalDetailRow(
+                  label: 'Started',
+                  value: formatLongDate(transfer.initiatedAt),
+                ),
+                if (isDisplay)
+                  PortalDetailRow(
+                    label: 'On display from',
+                    value: formatLongDate(
+                      transfer.displayStartsAt ??
+                          transfer.acceptedAt ??
+                          transfer.initiatedAt,
+                    ),
+                  ),
                 if (isDisplay && transfer.displayEndsAt != null)
                   PortalDetailRow(
                     label: 'On display until',
@@ -153,7 +177,10 @@ class _Body extends ConsumerWidget {
                 // its full record are reachable from here rather than from a
                 // second URL the sender would have to send separately.
                 if (passport?.nfcLinked ?? false)
-                  PortalDetailRow(label: 'NFC tag', value: passport!.nfcLocked ? 'Linked and locked' : 'Linked'),
+                  PortalDetailRow(
+                    label: 'NFC tag',
+                    value: passport!.nfcLocked ? 'Linked and locked' : 'Linked',
+                  ),
               ],
             ),
           ),
@@ -174,7 +201,9 @@ class _Body extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  isDisplay ? 'Display rights recorded' : 'Ownership transferred',
+                  isDisplay
+                      ? 'Display rights recorded'
+                      : 'Ownership transferred',
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 6),
@@ -190,16 +219,24 @@ class _Body extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: () => context.push('/verify/${transfer.artworkId}'),
+                  onPressed: () =>
+                      context.push('/verify/${transfer.artworkId}'),
                   child: const Text('View the passport'),
                 ),
               ],
             ),
             TransferStatus.cancelled => Column(
               children: [
-                Icon(LucideIcons.circleX, size: 34, color: theme.colorScheme.outline),
+                Icon(
+                  LucideIcons.circleX,
+                  size: 34,
+                  color: theme.colorScheme.outline,
+                ),
                 const SizedBox(height: 10),
-                Text('This transfer was cancelled', style: theme.textTheme.titleMedium),
+                Text(
+                  'This transfer was cancelled',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   '${transfer.fromName} cancelled the hand-over of “${transfer.artworkTitle}”. Nothing has changed '

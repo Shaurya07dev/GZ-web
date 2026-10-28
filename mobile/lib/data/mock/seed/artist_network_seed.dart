@@ -25,106 +25,109 @@ String _daysAgo(int days) =>
   return (name: artist.name, avatar: artist.profileImageUrl);
 }
 
-const _reviewSeeds = <({
-  String artistId,
-  String reviewerName,
-  int rating,
-  String artworkTitle,
-  String comment,
-  int daysAgo,
-})>[
-  (
-    artistId: currentArtistId,
-    reviewerName: 'Aarav Shah',
-    rating: 5,
-    artworkTitle: 'Whispers in Bronze',
-    comment:
-        'Arrived exactly as photographed, packed properly, and the certificate '
-        'was in the box. Would buy again.',
-    daysAgo: 112,
-  ),
-  (
-    artistId: currentArtistId,
-    reviewerName: 'Nandini Verma',
-    rating: 5,
-    artworkTitle: 'Monsoon Reverie',
-    comment:
-        'The colour is richer in person than on screen. She answered two '
-        'questions before I bought, which decided it for me.',
-    daysAgo: 61,
-  ),
-  (
-    artistId: currentArtistId,
-    reviewerName: 'Karthik Menon',
-    rating: 4,
-    artworkTitle: 'Fragments of Dawn',
-    comment:
-        'Beautiful piece. Shipping took a few days longer than the estimate, '
-        'otherwise no complaints.',
-    daysAgo: 34,
-  ),
-  (
-    artistId: currentArtistId,
-    reviewerName: 'Sanjana Rao',
-    rating: 4,
-    artworkTitle: 'Eclipse of Thoughts',
-    comment:
-        'Saw it at the gallery before buying. Framed well and ready to hang '
-        'straight away.',
-    daysAgo: 21,
-  ),
-  (
-    artistId: currentArtistId,
-    reviewerName: 'Imran Qureshi',
-    rating: 3,
-    artworkTitle: 'Monsoon Reverie',
-    comment:
-        'Good work, but the dimensions read larger on the listing than the '
-        'piece felt on the wall.',
-    daysAgo: 9,
-  ),
-  (
-    artistId: 'meera-nair',
-    reviewerName: 'Divya Pillai',
-    rating: 5,
-    artworkTitle: 'Before the Rain',
-    comment: 'Second purchase from Meera. Consistent quality both times.',
-    daysAgo: 74,
-  ),
-  (
-    artistId: 'meera-nair',
-    reviewerName: 'Rahul Nanda',
-    rating: 4,
-    artworkTitle: 'Coastal Elegy',
-    comment: 'Lovely canvas, minor scuff on the frame corner in transit.',
-    daysAgo: 30,
-  ),
-  (
-    artistId: 'arjun-mehta',
-    reviewerName: 'Tara Bhatia',
-    rating: 5,
-    artworkTitle: 'Reclaimed Stone Vessel',
-    comment: 'The finish is extraordinary up close. Worth the wait.',
-    daysAgo: 96,
-  ),
-  (
-    artistId: 'kavya-iyer',
-    reviewerName: 'Aditi Roy',
-    rating: 4,
-    artworkTitle: 'Ink Field No. 2',
-    comment: 'Delicate work. Packaging could have been sturdier.',
-    daysAgo: 58,
-  ),
-  (
-    artistId: 'priya-subramaniam',
-    reviewerName: 'Gaurav Iyer',
-    rating: 5,
-    artworkTitle: 'Thread Count',
-    comment:
-        'Textile work that photographs badly and looks superb in person.',
-    daysAgo: 66,
-  ),
-];
+const _reviewSeeds =
+    <
+      ({
+        String artistId,
+        String reviewerName,
+        int rating,
+        String artworkTitle,
+        String comment,
+        int daysAgo,
+      })
+    >[
+      (
+        artistId: currentArtistId,
+        reviewerName: 'Aarav Shah',
+        rating: 5,
+        artworkTitle: 'Whispers in Bronze',
+        comment:
+            'Arrived exactly as photographed, packed properly, and the certificate '
+            'was in the box. Would buy again.',
+        daysAgo: 112,
+      ),
+      (
+        artistId: currentArtistId,
+        reviewerName: 'Nandini Verma',
+        rating: 5,
+        artworkTitle: 'Monsoon Reverie',
+        comment:
+            'The colour is richer in person than on screen. She answered two '
+            'questions before I bought, which decided it for me.',
+        daysAgo: 61,
+      ),
+      (
+        artistId: currentArtistId,
+        reviewerName: 'Karthik Menon',
+        rating: 4,
+        artworkTitle: 'Fragments of Dawn',
+        comment:
+            'Beautiful piece. Shipping took a few days longer than the estimate, '
+            'otherwise no complaints.',
+        daysAgo: 34,
+      ),
+      (
+        artistId: currentArtistId,
+        reviewerName: 'Sanjana Rao',
+        rating: 4,
+        artworkTitle: 'Eclipse of Thoughts',
+        comment:
+            'Saw it at the gallery before buying. Framed well and ready to hang '
+            'straight away.',
+        daysAgo: 21,
+      ),
+      (
+        artistId: currentArtistId,
+        reviewerName: 'Imran Qureshi',
+        rating: 3,
+        artworkTitle: 'Monsoon Reverie',
+        comment:
+            'Good work, but the dimensions read larger on the listing than the '
+            'piece felt on the wall.',
+        daysAgo: 9,
+      ),
+      (
+        artistId: 'meera-nair',
+        reviewerName: 'Divya Pillai',
+        rating: 5,
+        artworkTitle: 'Before the Rain',
+        comment: 'Second purchase from Meera. Consistent quality both times.',
+        daysAgo: 74,
+      ),
+      (
+        artistId: 'meera-nair',
+        reviewerName: 'Rahul Nanda',
+        rating: 4,
+        artworkTitle: 'Coastal Elegy',
+        comment: 'Lovely canvas, minor scuff on the frame corner in transit.',
+        daysAgo: 30,
+      ),
+      (
+        artistId: 'arjun-mehta',
+        reviewerName: 'Tara Bhatia',
+        rating: 5,
+        artworkTitle: 'Reclaimed Stone Vessel',
+        comment: 'The finish is extraordinary up close. Worth the wait.',
+        daysAgo: 96,
+      ),
+      (
+        artistId: 'kavya-iyer',
+        reviewerName: 'Aditi Roy',
+        rating: 4,
+        artworkTitle: 'Ink Field No. 2',
+        comment: 'Delicate work. Packaging could have been sturdier.',
+        daysAgo: 58,
+      ),
+      (
+        artistId: 'priya-subramaniam',
+        reviewerName: 'Gaurav Iyer',
+        rating: 5,
+        artworkTitle: 'Thread Count',
+        comment:
+            'Textile work that photographs badly and looks superb in person.',
+        daysAgo: 66,
+      ),
+    ];
 
 List<ArtistReview> seedArtistReviews() => [
   for (var i = 0; i < _reviewSeeds.length; i++)

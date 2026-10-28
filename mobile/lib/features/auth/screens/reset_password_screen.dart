@@ -19,7 +19,8 @@ class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String? token;
 
   @override
-  ConsumerState<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
 class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
@@ -40,7 +41,9 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
     try {
-      await ref.read(authRepositoryProvider).resetPassword(
+      await ref
+          .read(authRepositoryProvider)
+          .resetPassword(
             ResetPasswordInput(
               password: _password.text,
               confirmPassword: _confirmPassword.text,
@@ -51,9 +54,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       setState(() => _isDone = true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -113,7 +115,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 AuthTextField(
                   label: 'Confirm new password',
                   controller: _confirmPassword,
-                  validator: (value) => validateConfirmPassword(value, _password.text),
+                  validator: (value) =>
+                      validateConfirmPassword(value, _password.text),
                   icon: LucideIcons.lock,
                   obscure: true,
                   autofillHints: const [AutofillHints.newPassword],

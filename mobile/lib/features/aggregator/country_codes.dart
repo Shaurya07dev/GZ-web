@@ -3,7 +3,11 @@
 /// GalleryZone aggregators are India-based gallery and retail partners - and the
 /// rest cover the other countries support most commonly hears from.
 class CountryCode {
-  const CountryCode({required this.dial, required this.iso, required this.label});
+  const CountryCode({
+    required this.dial,
+    required this.iso,
+    required this.label,
+  });
 
   final String dial;
   final String iso;
@@ -33,7 +37,10 @@ const defaultCountryDial = '+91';
   final trimmed = (value ?? '').trim();
   for (final code in countryCodes) {
     if (trimmed.startsWith('${code.dial} ')) {
-      return (dial: code.dial, number: trimmed.substring(code.dial.length).trim());
+      return (
+        dial: code.dial,
+        number: trimmed.substring(code.dial.length).trim(),
+      );
     }
   }
   return (dial: defaultCountryDial, number: trimmed);
@@ -46,4 +53,5 @@ String joinPhone(String dial, String number) => '$dial ${number.trim()}'.trim();
 /// is shorter than 6. Spaces are ignored.
 final _phoneNumberPattern = RegExp(r'^[0-9]{6,14}$');
 
-bool isValidPhoneNumber(String value) => _phoneNumberPattern.hasMatch(value.replaceAll(RegExp(r'\s+'), ''));
+bool isValidPhoneNumber(String value) =>
+    _phoneNumberPattern.hasMatch(value.replaceAll(RegExp(r'\s+'), ''));

@@ -20,6 +20,8 @@ Artwork fixtureArtwork({
   ArtworkRarity? rank = ArtworkRarity.rare,
   List<ArtworkStatusEvent> history = const [],
   ArtworkCustody? custody,
+  String? artworkType,
+  bool exclusive = false,
 }) {
   return Artwork(
     id: id,
@@ -47,6 +49,8 @@ Artwork fixtureArtwork({
     nfcLockedAt: nfcLockedAt,
     rarityType: rank,
     custody: custody,
+    artworkType: artworkType,
+    exclusive: exclusive,
   );
 }
 
@@ -68,8 +72,14 @@ ArtistProfile fixtureArtist({
       tier3FirstSale: false,
     ),
     socialLinks: const [
-      SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://instagram.com/ananya'),
-      SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://youtube.com/@ananya'),
+      SocialProofLink(
+        platform: SocialProofPlatform.instagram,
+        url: 'https://instagram.com/ananya',
+      ),
+      SocialProofLink(
+        platform: SocialProofPlatform.youtube,
+        url: 'https://youtube.com/@ananya',
+      ),
     ],
     headline: headline,
     location: location,
@@ -85,6 +95,8 @@ PassportEvent fixtureEvent({
   String to = 'Dev Mehta',
   String initiatedAt = '2026-04-01T10:00:00.000Z',
   String? acceptedAt = '2026-04-02T10:00:00.000Z',
+  String? displayStartsAt,
+  String? displayEndsAt,
 }) {
   return PassportEvent(
     id: id,
@@ -95,6 +107,8 @@ PassportEvent fixtureEvent({
     viaSale: false,
     initiatedAt: initiatedAt,
     acceptedAt: acceptedAt,
+    displayStartsAt: displayStartsAt,
+    displayEndsAt: displayEndsAt,
   );
 }
 
@@ -107,6 +121,7 @@ Passport fixturePassport({
   bool nfcLinked = false,
   bool nfcLocked = false,
   List<LifecycleEntry> lifecycle = const [],
+  String? artistSignatureDataUrl,
 }) {
   return Passport(
     artworkId: artworkId,
@@ -129,5 +144,6 @@ Passport fixturePassport({
     nfcLinked: nfcLinked,
     nfcLocked: nfcLocked,
     lifecycle: lifecycle,
+    artistSignatureDataUrl: artistSignatureDataUrl,
   );
 }

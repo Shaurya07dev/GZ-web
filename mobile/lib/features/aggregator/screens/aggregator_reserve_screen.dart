@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/pricing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/repositories/aggregator_repository.dart';
@@ -19,10 +18,10 @@ import '../reserve_requirements.dart';
 import '../widgets/aggregator_widgets.dart';
 import 'aggregator_inventory_screen.dart';
 
-/// Port of `reserve-artwork-page.tsx`. Reserving is a real commitment - it holds
-/// money from the wallet for thirty days - so it gets its own screen and back
-/// button rather than a sheet to mis-tap through. Confirming lands on the new
-/// holding's page, which is the "what happens next".
+/// Port of `reserve-artwork-page.tsx`. Reserving is a real commitment: the
+/// advance and delivery charge are paid during checkout, so it gets its own
+/// screen and back button rather than a sheet to mis-tap through. Confirming
+/// lands on the new holding's page, which is the "what happens next".
 ///
 /// Month 1 is the one month the aggregator sets the price (client, 30 Sep 2026:
 /// "the aggregator can set the price only while reserving in month 1"). They may
@@ -37,10 +36,12 @@ class AggregatorReserveScreen extends ConsumerStatefulWidget {
   static const subPath = ':artworkId/reserve';
 
   @override
-  ConsumerState<AggregatorReserveScreen> createState() => _AggregatorReserveScreenState();
+  ConsumerState<AggregatorReserveScreen> createState() =>
+      _AggregatorReserveScreenState();
 }
 
-class _AggregatorReserveScreenState extends ConsumerState<AggregatorReserveScreen> {
+class _AggregatorReserveScreenState
+    extends ConsumerState<AggregatorReserveScreen> {
   /// Once the reservation is made the piece leaves the reservable list; keep
   /// drawing what was reserved while the page slides away, not "isn't reservable".
   ReservableArtwork? _reserved;
@@ -52,7 +53,7 @@ class _AggregatorReserveScreenState extends ConsumerState<AggregatorReserveScree
     return Scaffold(
       appBar: AppBar(title: const Text('Reserve artwork')),
       body: inventory.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.packageSearch,
           title: "Couldn't load this piece",
@@ -63,7 +64,11 @@ class _AggregatorReserveScreenState extends ConsumerState<AggregatorReserveScree
           ),
         ),
         data: (all) {
-          final item = _reserved ?? all.where((entry) => entry.artwork.id == widget.artworkId).firstOrNull;
+          final item =
+              _reserved ??
+              all
+                  .where((entry) => entry.artwork.id == widget.artworkId)
+                  .firstOrNull;
           if (item == null) {
             return EmptyState(
               icon: LucideIcons.packageSearch,
@@ -75,7 +80,10 @@ class _AggregatorReserveScreenState extends ConsumerState<AggregatorReserveScree
               ),
             );
           }
-          return _ReserveForm(item: item, onReserved: () => setState(() => _reserved = item));
+          return _ReserveForm(
+            item: item,
+            onReserved: () => setState(() => _reserved = item),
+          );
         },
       ),
     );
@@ -85,7 +93,9 @@ class _AggregatorReserveScreenState extends ConsumerState<AggregatorReserveScree
 /// `+(rate * 100).toFixed(2)` - 5, or 12.5.
 String _percentLabel(double fraction) {
   final value = double.parse((fraction * 100).toStringAsFixed(2));
-  return value == value.roundToDouble() ? value.round().toString() : value.toString();
+  return value == value.roundToDouble()
+      ? value.round().toString()
+      : value.toString();
 }
 
 class _ReserveForm extends ConsumerStatefulWidget {
@@ -99,7 +109,9 @@ class _ReserveForm extends ConsumerStatefulWidget {
 }
 
 class _ReserveFormState extends ConsumerState<_ReserveForm> {
-  late final _price = TextEditingController(text: widget.item.offer.sellingPrice.toStringAsFixed(0));
+  late final _price = TextEditingController(
+    text: widget.item.offer.sellingPrice.toStringAsFixed(0),
+  );
   bool _reserving = false;
 
   /// Mock only: asks the offline repository for the documented 409 "lost the race".
@@ -116,15 +128,29 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
     final title = widget.item.artwork.title;
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    final payable =
+        (offer.canSetPrice
+            ? (price * offer.advanceRate).round().toDouble()
+            : offer.advance) +
+        offer.deliveryCharge;
     setState(() => _reserving = true);
     try {
+      await ref.read(aggregatorRepositoryProvider).payReservation(payable);
       final holding = await ref
           .read(aggregatorRepositoryProvider)
-          .reserve(widget.item.artwork.id, sellingPrice: offer.canSetPrice ? price : null, simulateConflict: _simulateConflict);
+          .reserve(
+            widget.item.artwork.id,
+            sellingPrice: offer.canSetPrice ? price : null,
+            simulateConflict: _simulateConflict,
+          );
       if (!mounted) return;
       widget.onReserved();
       invalidateAggregatorSaleFlow(ref);
-      messenger.showSnackBar(SnackBar(content: Text('Artwork reserved — "$title" is now in My Inventory.')));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Artwork reserved — "$title" is now in My Inventory.'),
+        ),
+      );
       // Leave this page off the Browse tab's stack, then land on the holding.
       router
         ..pop()
@@ -144,19 +170,20 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
     final theme = Theme.of(context);
     final artwork = widget.item.artwork;
     final offer = widget.item.offer;
-    final wallet = ref.watch(aggregatorWalletProvider).value;
     final requirements = ref.watch(reserveRequirementsProvider);
     final remote = ref.watch(remoteBackendProvider);
 
     final typed = double.tryParse(_price.text.trim());
-    final chosen = offer.canSetPrice ? (typed ?? double.nan) : offer.sellingPrice;
+    final chosen = offer.canSetPrice
+        ? (typed ?? double.nan)
+        : offer.sellingPrice;
     final priceError = !offer.canSetPrice
         ? null
         : (!chosen.isFinite || chosen != chosen.roundToDouble() || chosen <= 0)
-            ? 'Enter a price in whole rupees.'
-            : chosen < offer.sellingPrice
-                ? "It can't be lower than GalleryZone's price, ${formatInr(offer.sellingPrice)}."
-                : null;
+        ? 'Enter a price in whole rupees.'
+        : chosen < offer.sellingPrice
+        ? "It can't be lower than GalleryZone's price, ${formatInr(offer.sellingPrice)}."
+        : null;
     // The numbers below follow what is typed, but never a price the API would refuse.
     final price = priceError != null ? offer.sellingPrice : chosen;
 
@@ -164,18 +191,26 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
     // price), before GST, whoever set the price. The artist's price is worked back
     // from GalleryZone's month-1 price.
     final artistPrice =
-        (offer.standardPrice / (1 + offer.gstRate) / (1 + platformMarkup)).round().toDouble();
-    final terms = aggregatorTermsAt(sellingPrice: price, artistPrice: artistPrice, gstRate: offer.gstRate);
+        (offer.standardPrice / (1 + offer.gstRate) / (1 + platformMarkup))
+            .round()
+            .toDouble();
+    final terms = aggregatorTermsAt(
+      sellingPrice: price,
+      artistPrice: artistPrice,
+      gstRate: offer.gstRate,
+    );
     final commissionPercent = (aggregatorCommissionRate * 100).round();
 
     // Month 1's advance follows the price they choose; after that it is fixed.
-    final advance = offer.canSetPrice ? (price * offer.advanceRate).round().toDouble() : offer.advance;
+    final advance = offer.canSetPrice
+        ? (price * offer.advanceRate).round().toDouble()
+        : offer.advance;
     final advanceBase = offer.canSetPrice ? price : offer.advanceBase;
     final payable = advance + offer.deliveryCharge;
-    final free = wallet == null ? 0.0 : wallet.balance - wallet.lockedBalance;
-    final shortfall = math.max(0.0, payable - free);
-    final priceWarning = offer.priceWarnFrom != null && price >= offer.priceWarnFrom!;
-    final canConfirm = !_reserving && shortfall <= 0 && priceError == null && requirements.blockedReason == null;
+    final priceWarning =
+        offer.priceWarnFrom != null && price >= offer.priceWarnFrom!;
+    final canConfirm =
+        !_reserving && priceError == null && requirements.blockedReason == null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -193,7 +228,11 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          child: SizedBox(width: 64, height: 64, child: ArtworkImageView(url: artwork.thumbnailUrl)),
+                          child: SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: ArtworkImageView(url: artwork.thumbnailUrl),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -204,7 +243,9 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                                 artwork.title,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               Text(
                                 artwork.artistName,
@@ -216,16 +257,19 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        PriceTag(amount: terms.displayPrice, style: theme.textTheme.titleSmall),
+                        PriceTag(
+                          amount: terms.displayPrice,
+                          style: theme.textTheme.titleSmall,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     CycleStepper(currentMonth: offer.month),
                     const SizedBox(height: 8),
                     Text(
-                      'Month ${offer.month} of $aggregatorCycleMonths. Confirming holds the advance from your '
-                      'wallet and moves this piece into My Inventory for 30 days. After that it moves on to the '
-                      'next aggregator and your advance is back in your wallet on day 31, unless you ask '
+                      'Month ${offer.month} of $aggregatorCycleMonths. Confirming takes the reservation payment '
+                      'and moves this piece into My Inventory for 30 days. After that it moves on to the '
+                      'next aggregator and your refundable advance is returned after reconciliation, unless you ask '
                       'GalleryZone to let you keep it and they agree.',
                       style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                     ),
@@ -235,18 +279,28 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Your selling price, before GST (₹)', style: theme.textTheme.labelLarge),
+                            Text(
+                              'Your selling price, before GST (₹)',
+                              style: theme.textTheme.labelLarge,
+                            ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _price,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9.]'),
+                                ),
+                              ],
                               onChanged: (_) => setState(() {}),
                               decoration: InputDecoration(
                                 errorText: priceError,
                                 helperText: priceError == null
                                     ? "GalleryZone's price is ${formatInr(offer.sellingPrice)}. Set it higher if "
-                                        "you like, not lower. You set it once: it can't be changed after you reserve."
+                                          "you like, not lower. You set it once: it can't be changed after you reserve."
                                     : null,
                                 helperMaxLines: 4,
                               ),
@@ -256,7 +310,8 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                               PortalNotice(
                                 icon: LucideIcons.triangleAlert,
                                 gold: true,
-                                body: "That's at least double GalleryZone's price. You can still reserve it, and "
+                                body:
+                                    "That's at least double GalleryZone's price. You can still reserve it, and "
                                     'GalleryZone will be told about the price.',
                               ),
                             ],
@@ -272,14 +327,25 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Price this month, before GST', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                                  Text(
+                                    'Price this month, before GST',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
-                                  Text('Set by GalleryZone. Only the first aggregator sets a price.', style: theme.textTheme.labelSmall),
+                                  Text(
+                                    'Set by GalleryZone. Only the first aggregator sets a price.',
+                                    style: theme.textTheme.labelSmall,
+                                  ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Text(formatInr(offer.sellingPrice), style: theme.textTheme.bodyMedium),
+                            Text(
+                              formatInr(offer.sellingPrice),
+                              style: theme.textTheme.bodyMedium,
+                            ),
                           ],
                         ),
                       ),
@@ -290,17 +356,32 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                         children: [
                           const _Caption('Where this price goes'),
                           _Line("Artist's price", formatInr(artistPrice)),
-                          _Line('GalleryZone (${100 - commissionPercent}% of the markup)', formatInr(terms.galleryZoneShare)),
-                          _Line('Your commission if it sells here ($commissionPercent%)', formatInr(terms.commission)),
-                          _Line('GST (${_percentLabel(offer.gstRate)}%)', formatInr(terms.gst)),
+                          _Line(
+                            'GalleryZone (${100 - commissionPercent}% of the markup)',
+                            formatInr(terms.galleryZoneShare),
+                          ),
+                          _Line(
+                            'Your commission if it sells here ($commissionPercent%)',
+                            formatInr(terms.commission),
+                          ),
+                          _Line(
+                            'GST (${_percentLabel(offer.gstRate)}%)',
+                            formatInr(terms.gst),
+                          ),
                           const Divider(height: 16),
-                          _Line('What customers see', formatInr(terms.displayPrice), strong: true),
+                          _Line(
+                            'What customers see',
+                            formatInr(terms.displayPrice),
+                            strong: true,
+                          ),
                           if (offer.canSetPrice) ...[
                             const SizedBox(height: 6),
                             Text(
                               "Every extra rupee you charge splits $commissionPercent% to you and ${100 - commissionPercent}% "
                               "to GalleryZone. The artist's price never changes.",
-                              style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                height: 1.4,
+                              ),
                             ),
                           ],
                         ],
@@ -313,10 +394,21 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const _Caption("Why this month's price is lower"),
-                            _Line('Month 1 price', formatInr(offer.standardPrice), strike: true),
-                            _Line('Month ${offer.month} reduction', '−${formatInr(offer.monthlyReduction)}'),
+                            _Line(
+                              'Month 1 price',
+                              formatInr(offer.standardPrice),
+                              strike: true,
+                            ),
+                            _Line(
+                              'Month ${offer.month} reduction',
+                              '−${formatInr(offer.monthlyReduction)}',
+                            ),
                             const Divider(height: 16),
-                            _Line('Your price today', formatInr(offer.offerPrice), strong: true),
+                            _Line(
+                              'Your price today',
+                              formatInr(offer.offerPrice),
+                              strong: true,
+                            ),
                           ],
                         ),
                       ),
@@ -330,7 +422,8 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                           _Line(
                             'Advance (${(offer.advanceRate * 100).round()}%)',
                             formatInr(advance),
-                            hint: 'of ${offer.advanceBasis == AdvanceBasis.sellingPrice ? 'your price before GST' : 'the artist price'}, '
+                            hint:
+                                'of ${offer.advanceBasis == AdvanceBasis.sellingPrice ? 'your price before GST' : 'the artist price'}, '
                                 '${formatInr(advanceBase)}',
                           ),
                           const SizedBox(height: 6),
@@ -341,36 +434,23 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                           ),
                           const Divider(height: 18),
                           _Line(
-                            'Held from your wallet',
+                            'Pay securely now',
                             formatInr(payable),
-                            hint: '${formatInr(math.max(0.0, free))} free right now',
+                            hint: 'Razorpay checkout for the reservation advance and delivery charge',
                             strong: true,
                             gold: true,
                           ),
                         ],
                       ),
                     ),
-                    if (shortfall > 0) ...[
-                      const SizedBox(height: 12),
-                      PortalNotice(
-                        icon: LucideIcons.wallet,
-                        title: '${formatInr(shortfall)} short',
-                        body: 'Top up your wallet to reserve this piece. Money is held, not spent: it comes back '
-                            'when the piece sells.',
-                        action: Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(0, 36),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () => context.go('/aggregator/wallet'),
-                            child: const Text('Go to wallet'),
-                          ),
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 12),
+                    const PortalNotice(
+                      icon: LucideIcons.shieldCheck,
+                      title: 'Secure reservation checkout',
+                      body:
+                          'You will pay through Razorpay. GalleryZone keeps the advance against this reservation; '
+                          'there is no prepaid app wallet to top up.',
+                    ),
                     // Only the offline mock can lose a race on demand.
                     if (!remote) ...[
                       const SizedBox(height: 8),
@@ -378,8 +458,12 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                         contentPadding: EdgeInsets.zero,
                         controlAffinity: ListTileControlAffinity.leading,
                         value: _simulateConflict,
-                        onChanged: (value) => setState(() => _simulateConflict = value ?? false),
-                        title: Text('Simulate reservation conflict (DEV)', style: theme.textTheme.labelMedium),
+                        onChanged: (value) =>
+                            setState(() => _simulateConflict = value ?? false),
+                        title: Text(
+                          'Simulate reservation conflict (DEV)',
+                          style: theme.textTheme.labelMedium,
+                        ),
                         subtitle: Text(
                           'Demos the 409 "lost the race" error another aggregator can trigger.',
                           style: theme.textTheme.labelSmall,
@@ -399,8 +483,14 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                         Expanded(
                           flex: 2,
                           child: FilledButton(
-                            onPressed: canConfirm ? () => _confirm(price) : null,
-                            child: Text(_reserving ? 'Reserving…' : 'Confirm reservation'),
+                            onPressed: canConfirm
+                                ? () => _confirm(price)
+                                : null,
+                            child: Text(
+                              _reserving
+                                  ? 'Opening secure payment…'
+                                  : 'Pay & reserve',
+                            ),
                           ),
                         ),
                       ],
@@ -409,7 +499,10 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                 ),
               ),
               const SizedBox(height: 24),
-              SuggestedArtworks(references: [artwork], title: 'Similar pieces you could reserve'),
+              SuggestedArtworks(
+                references: [artwork],
+                title: 'Similar pieces you could reserve',
+              ),
             ],
           ),
         ),
@@ -450,7 +543,8 @@ class _Caption extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 0.8, fontWeight: FontWeight.w500),
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(letterSpacing: 0.8, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -458,7 +552,14 @@ class _Caption extends StatelessWidget {
 
 /// One label/value line, with an optional second line of explanation.
 class _Line extends StatelessWidget {
-  const _Line(this.label, this.value, {this.hint, this.strong = false, this.gold = false, this.strike = false});
+  const _Line(
+    this.label,
+    this.value, {
+    this.hint,
+    this.strong = false,
+    this.gold = false,
+    this.strike = false,
+  });
 
   final String label;
   final String value;
@@ -486,7 +587,8 @@ class _Line extends StatelessWidget {
                     color: strong ? theme.colorScheme.onSurface : null,
                   ),
                 ),
-                if (hint != null) Text(hint!, style: theme.textTheme.labelSmall),
+                if (hint != null)
+                  Text(hint!, style: theme.textTheme.labelSmall),
               ],
             ),
           ),
@@ -495,9 +597,14 @@ class _Line extends StatelessWidget {
             value,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
-              color: gold ? theme.colorScheme.tertiary : (strike ? theme.colorScheme.onSurfaceVariant : null),
+              color: gold
+                  ? theme.colorScheme.tertiary
+                  : (strike ? theme.colorScheme.onSurfaceVariant : null),
               decoration: strike ? TextDecoration.lineThrough : null,
-              fontFeatures: const [FontFeature.tabularFigures()],
+              fontFeatures: const [
+                FontFeature.liningFigures(),
+                FontFeature.tabularFigures(),
+              ],
             ),
           ),
         ],

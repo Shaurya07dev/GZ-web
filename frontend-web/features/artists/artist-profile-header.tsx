@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { MapPin } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
+import { Globe2, MapPin } from "lucide-react";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import {
   InstagramGlyph,
@@ -10,12 +11,16 @@ import {
 import { verifiedTierCount } from "@/types/artist";
 import type { ArtistProfile, ArtistSocialLink } from "@/types/artist";
 
-const SOCIAL_ICON: Record<ArtistSocialLink["platform"], typeof InstagramGlyph> =
+const SOCIAL_ICON: Record<
+  ArtistSocialLink["platform"],
+  ComponentType<SVGProps<SVGSVGElement>>
+> =
   {
     instagram: InstagramGlyph,
     youtube: YoutubeGlyph,
     x: XGlyph,
     tiktok: TiktokGlyph,
+    website: Globe2,
   };
 
 const SOCIAL_LABEL: Record<ArtistSocialLink["platform"], string> = {
@@ -23,6 +28,7 @@ const SOCIAL_LABEL: Record<ArtistSocialLink["platform"], string> = {
   youtube: "YouTube",
   x: "X",
   tiktok: "TikTok",
+  website: "Website",
 };
 
 // Restates what the verification tier actually means for a general
@@ -32,7 +38,7 @@ const SOCIAL_LABEL: Record<ArtistSocialLink["platform"], string> = {
 function verificationSummary(artist: ArtistProfile): string {
   const tierCount = verifiedTierCount(artist.verification);
   if (tierCount === 3) {
-    return "Gold ✦ Verified: completed social media, active plan, and first-sale verification.";
+    return "Gold ✦ Verified: completed social media, artist-agreement, and first-sale verification.";
   }
   if (tierCount > 0) {
     return `Verified: ${tierCount} of 3 verification tiers complete.`;

@@ -81,7 +81,9 @@ class TokenManager {
   /// The ID token for the next request, or `null` when signed out.
   Future<String?> idToken({bool forceRefresh = false}) async {
     final current = _session;
-    if (current != null && !forceRefresh && current.isFresh(_now())) return current.idToken;
+    if (current != null && !forceRefresh && current.isFresh(_now())) {
+      return current.idToken;
+    }
 
     final refresh = current?.refreshToken ?? _refreshToken;
     if (refresh == null) return null;

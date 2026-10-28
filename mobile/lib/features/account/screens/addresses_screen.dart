@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/order.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -29,7 +30,7 @@ class AddressesScreen extends ConsumerWidget {
         label: const Text('Add address'),
       ),
       body: addresses.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.mapPin,
           title: "Couldn't load your addresses",
@@ -43,7 +44,8 @@ class AddressesScreen extends ConsumerWidget {
             ? EmptyState(
                 icon: LucideIcons.mapPin,
                 title: 'No saved addresses',
-                description: 'Add a delivery address to speed up checkout next time.',
+                description:
+                    'Add a delivery address to speed up checkout next time.',
                 action: FilledButton(
                   onPressed: () => _openForm(context, ref, null),
                   child: const Text('Add address'),
@@ -52,7 +54,8 @@ class AddressesScreen extends ConsumerWidget {
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 itemCount: list.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 10),
                 itemBuilder: (context, index) => ContentWidth(
                   child: _AddressCard(
                     address: list[index],
@@ -65,7 +68,11 @@ class AddressesScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openForm(BuildContext context, WidgetRef ref, Address? existing) async {
+  Future<void> _openForm(
+    BuildContext context,
+    WidgetRef ref,
+    Address? existing,
+  ) async {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -76,21 +83,37 @@ class AddressesScreen extends ConsumerWidget {
       ref.invalidate(addressesProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(existing == null ? 'Address added' : 'Address updated')),
+          SnackBar(
+            content: Text(
+              existing == null ? 'Address added' : 'Address updated',
+            ),
+          ),
         );
       }
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Address address) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Address address,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete this address?'),
-        content: Text('${address.line1}, ${address.city} will be removed from your address book.'),
+        content: Text(
+          '${address.line1}, ${address.city} will be removed from your address book.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -99,19 +122,23 @@ class AddressesScreen extends ConsumerWidget {
       await ref.read(customerRepositoryProvider).deleteAddress(address.id);
       ref.invalidate(addressesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Address removed')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Address removed')));
       }
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     }
   }
 }
 
 class _AddressCard extends StatelessWidget {
-  const _AddressCard({required this.address, required this.onEdit, required this.onDelete});
+  const _AddressCard({
+    required this.address,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final Address address;
   final VoidCallback onEdit;
@@ -141,29 +168,38 @@ class _AddressCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         address.line1,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     if (address.isDefault) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(AppRadius.xl4),
                           border: Border.all(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                         ),
                         child: Text(
                           'Default',
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: theme.colorScheme.tertiary),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.tertiary,
+                          ),
                         ),
                       ),
                     ],
                   ],
                 ),
-                if (address.line2 != null) Text(address.line2!, style: theme.textTheme.bodySmall),
+                if (address.line2 != null)
+                  Text(address.line2!, style: theme.textTheme.bodySmall),
                 Text(
                   '${address.city}, ${address.state} ${address.pincode}',
                   style: theme.textTheme.bodySmall,
@@ -179,7 +215,11 @@ class _AddressCard extends StatelessWidget {
           IconButton(
             onPressed: onDelete,
             tooltip: 'Delete',
-            icon: Icon(LucideIcons.trash2, size: 16, color: theme.colorScheme.error),
+            icon: Icon(
+              LucideIcons.trash2,
+              size: 16,
+              color: theme.colorScheme.error,
+            ),
           ),
         ],
       ),
@@ -202,7 +242,9 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
   late final _line2 = TextEditingController(text: widget.existing?.line2 ?? '');
   late final _city = TextEditingController(text: widget.existing?.city ?? '');
   late final _state = TextEditingController(text: widget.existing?.state ?? '');
-  late final _pincode = TextEditingController(text: widget.existing?.pincode ?? '');
+  late final _pincode = TextEditingController(
+    text: widget.existing?.pincode ?? '',
+  );
   late bool _isDefault = widget.existing?.isDefault ?? false;
   bool _isSaving = false;
 
@@ -238,9 +280,8 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     }
   }
 
@@ -265,11 +306,24 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
                 style: theme.textTheme.titleLarge,
               ),
               const SizedBox(height: 16),
-              _field(_line1, 'Address line 1',
-                  (v) => (v ?? '').trim().length < 3 ? 'Enter the address line' : null),
+              _field(
+                _line1,
+                'Address line 1',
+                (v) => (v ?? '').trim().length < 3
+                    ? 'Enter the address line'
+                    : null,
+              ),
               _field(_line2, 'Address line 2 (optional)', null),
-              _field(_city, 'City', (v) => (v ?? '').trim().length < 2 ? 'Enter the city' : null),
-              _field(_state, 'State', (v) => (v ?? '').trim().length < 2 ? 'Enter the state' : null),
+              _field(
+                _city,
+                'City',
+                (v) => (v ?? '').trim().length < 2 ? 'Enter the city' : null,
+              ),
+              _field(
+                _state,
+                'State',
+                (v) => (v ?? '').trim().length < 2 ? 'Enter the state' : null,
+              ),
               _field(
                 _pincode,
                 'Pincode',
@@ -278,7 +332,7 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
                     : 'Enter a valid 6-digit pincode',
                 keyboardType: TextInputType.number,
               ),
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 value: _isDefault,
                 onChanged: (value) => setState(() => _isDefault = value),

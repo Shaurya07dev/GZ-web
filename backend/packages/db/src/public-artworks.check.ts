@@ -10,6 +10,7 @@ const piece = (over: Partial<PublicArtworkView>): PublicArtworkView => ({
   productCode: "GZ000001",
   artistId: "art1",
   artistName: "Devika",
+  verifiedArtist: false,
   title: "Monsoon",
   description: "",
   category: "Painting",

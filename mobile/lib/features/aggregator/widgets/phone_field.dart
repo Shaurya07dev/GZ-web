@@ -71,7 +71,10 @@ class PhoneField extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text('Select dial code', style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                'Select dial code',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             Flexible(
               child: ListView(
@@ -80,7 +83,10 @@ class PhoneField extends StatelessWidget {
                   for (final code in countryCodes)
                     ListTile(
                       title: Text(code.label),
-                      trailing: Text(code.dial, style: Theme.of(context).textTheme.bodyMedium),
+                      trailing: Text(
+                        code.dial,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                       selected: code.dial == controller.dial,
                       onTap: () => Navigator.of(context).pop(code),
                     ),
@@ -122,7 +128,11 @@ class PhoneField extends StatelessWidget {
                     children: [
                       Text(controller.dial, style: theme.textTheme.bodyMedium),
                       const SizedBox(width: 4),
-                      Icon(LucideIcons.chevronDown, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      Icon(
+                        LucideIcons.chevronDown,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ],
                   ),
                 ),
@@ -135,9 +145,13 @@ class PhoneField extends StatelessWidget {
               controller: controller.number,
               enabled: enabled,
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]'))],
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9 ]')),
+              ],
               decoration: InputDecoration(labelText: label),
-              validator: validator == null ? null : (value) => validator!(value ?? ''),
+              validator: validator == null
+                  ? null
+                  : (value) => validator!(value ?? ''),
             ),
           ),
         ],

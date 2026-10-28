@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Receipt, Check, ClipboardCheck, ExternalLink, PlayCircle } from "lucide-react";
+import { Receipt, Check, ClipboardCheck, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GuideLauncher } from "@/components/shared/guide-launcher";
+import { GUIDES } from "@/lib/guides";
 
 // Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
 // literal "Z", then a checksum character.
@@ -121,24 +123,8 @@ export function GstNumberCard({
             GST compliance form — submit your details to GalleryZone
           </a>
 
-          {/* Placeholder for the GST application walkthrough video — same
-              one the Profile page's GSTIN field points to. Drop the embed or
-              a YouTube link in here when it's ready. */}
-          <div className="flex items-center gap-3 rounded-md border border-dashed border-gold/40 px-3.5 py-3">
-            <PlayCircle
-              className="size-5 shrink-0 text-gold-bright"
-              strokeWidth={1.5}
-            />
-            <div>
-              <p className="text-xs font-medium text-foreground">
-                GST application guide
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                A short walkthrough of registering for GST goes here. Coming
-                soon.
-              </p>
-            </div>
-          </div>
+          {/* The same guide the Profile page's GSTIN field offers. */}
+          <GuideLauncher guide={GUIDES.gstRegistration} />
         </>
       )}
 

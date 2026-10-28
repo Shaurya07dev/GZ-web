@@ -27,7 +27,9 @@ class MockDb {
   static SharedPreferences get _instance {
     final prefs = _prefs;
     if (prefs == null) {
-      throw StateError('MockDb.init() must be awaited before use (call it in main()).');
+      throw StateError(
+        'MockDb.init() must be awaited before use (call it in main()).',
+      );
     }
     return prefs;
   }
@@ -63,7 +65,10 @@ class MockDb {
   /// no business clearing them. Backs the in-app delete-account flow, which
   /// Google Play requires of any app with accounts.
   static Future<void> clearAll() async {
-    final keys = _instance.getKeys().where((k) => k.startsWith(_prefix)).toList();
+    final keys = _instance
+        .getKeys()
+        .where((k) => k.startsWith(_prefix))
+        .toList();
     for (final key in keys) {
       await _instance.remove(key);
     }

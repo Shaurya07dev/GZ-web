@@ -50,5 +50,6 @@ abstract class ArtistProfile with _$ArtistProfile {
     @Default('') String joinedAt,
   }) = _ArtistProfile;
 
-  factory ArtistProfile.fromJson(Map<String, dynamic> json) => _$ArtistProfileFromJson(json);
+  factory ArtistProfile.fromJson(Map<String, dynamic> json) =>
+      _$ArtistProfileFromJson(json);
 }

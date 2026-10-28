@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
@@ -24,7 +25,8 @@ class AggregatorCollectionScreen extends ConsumerStatefulWidget {
   static const path = '/aggregator/collection';
 
   @override
-  ConsumerState<AggregatorCollectionScreen> createState() => _AggregatorCollectionScreenState();
+  ConsumerState<AggregatorCollectionScreen> createState() =>
+      _AggregatorCollectionScreenState();
 }
 
 enum _StatusFilter {
@@ -36,13 +38,14 @@ enum _StatusFilter {
   final String label;
 
   bool matches(HoldingStatus status) => switch (this) {
-        all => true,
-        reserved => status == HoldingStatus.reserved,
-        sold => status == HoldingStatus.soldPendingSettlement,
-      };
+    all => true,
+    reserved => status == HoldingStatus.reserved,
+    sold => status == HoldingStatus.soldPendingSettlement,
+  };
 }
 
-class _AggregatorCollectionScreenState extends ConsumerState<AggregatorCollectionScreen> {
+class _AggregatorCollectionScreenState
+    extends ConsumerState<AggregatorCollectionScreen> {
   _StatusFilter _filter = _StatusFilter.all;
 
   @override
@@ -53,7 +56,7 @@ class _AggregatorCollectionScreenState extends ConsumerState<AggregatorCollectio
     return Scaffold(
       appBar: AppBar(title: const Text('My inventory')),
       body: collection.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
           icon: LucideIcons.galleryVerticalEnd,
           title: "Couldn't load your collection",
@@ -66,21 +69,28 @@ class _AggregatorCollectionScreenState extends ConsumerState<AggregatorCollectio
         data: (all) {
           // A piece that has gone back to GalleryZone is no longer this
           // aggregator's to show, so it leaves the list entirely (client, 30 Sep 2026).
-          final rows = [for (final view in all) if (view.holding.status != HoldingStatus.returned) view];
+          final rows = [
+            for (final view in all)
+              if (view.holding.status != HoldingStatus.returned) view,
+          ];
           if (rows.isEmpty) {
             return EmptyState(
               icon: LucideIcons.galleryVerticalEnd,
               title: 'No holdings yet',
-              description: 'Reserve an artwork from Inventory to see it appear here.',
+              description:
+                  'Reserve an artwork from Inventory to see it appear here.',
               action: FilledButton(
                 onPressed: () => context.go(AggregatorBrowseScreen.path),
                 child: const Text('Browse Inventory'),
               ),
             );
           }
-          final shown = [for (final view in rows) if (_filter.matches(view.holding.status)) view];
+          final shown = [
+            for (final view in rows)
+              if (_filter.matches(view.holding.status)) view,
+          ];
 
-          return RefreshIndicator(
+          return RefreshIndicator.adaptive(
             onRefresh: () async {
               ref.invalidate(aggregatorCollectionProvider);
               await ref.read(aggregatorCollectionProvider.future);
@@ -103,9 +113,12 @@ class _AggregatorCollectionScreenState extends ConsumerState<AggregatorCollectio
                         children: [
                           for (final filter in _StatusFilter.values)
                             ChoiceChip(
-                              label: Text('${filter.label}  ${rows.where((v) => filter.matches(v.holding.status)).length}'),
+                              label: Text(
+                                '${filter.label}  ${rows.where((v) => filter.matches(v.holding.status)).length}',
+                              ),
                               selected: _filter == filter,
-                              onSelected: (_) => setState(() => _filter = filter),
+                              onSelected: (_) =>
+                                  setState(() => _filter = filter),
                             ),
                         ],
                       ),
@@ -152,7 +165,9 @@ class _HoldingCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
+            ),
             onTap: () => context.push('/aggregator/collection/${holding.id}'),
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -161,7 +176,11 @@ class _HoldingCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    child: SizedBox(width: 56, height: 56, child: ArtworkImageView(url: view.artwork.thumbnailUrl)),
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: ArtworkImageView(url: view.artwork.thumbnailUrl),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -172,7 +191,9 @@ class _HoldingCard extends StatelessWidget {
                           view.artwork.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         Text(
                           view.artwork.artistName,
@@ -188,7 +209,10 @@ class _HoldingCard extends StatelessWidget {
                           runSpacing: 2,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            PriceTag(amount: holding.displayPrice, style: theme.textTheme.bodyMedium),
+                            PriceTag(
+                              amount: holding.displayPrice,
+                              style: theme.textTheme.bodyMedium,
+                            ),
                             if (reserved && asked)
                               Text(
                                 'Extension requested',

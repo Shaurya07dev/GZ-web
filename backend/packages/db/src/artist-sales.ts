@@ -92,6 +92,11 @@ export async function postArtistSale(db: Firestore, input: PostArtistSaleInput):
         soldAt: Timestamp.fromDate(now),
       };
       tx.create(db.collection(Collections.artistSales).doc(input.saleKey), doc);
+      tx.set(
+        db.collection(Collections.publicProfiles).doc(input.artistId),
+        { tier3FirstSale: true },
+        { merge: true },
+      );
     },
   });
 

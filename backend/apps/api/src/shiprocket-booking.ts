@@ -11,11 +11,10 @@ import { Collections, type ArtworkDoc, type Db, type ProfileDoc, type UserDoc } 
 import { bookShipment, isShiprocketConfigured } from "./shiprocket.ts";
 
 export async function bookInboundShipment(db: Db, holdingId: string, artworkId: string, aggregatorId: string): Promise<void> {
-  if (!isShiprocketConfigured()) {
-    // Dev / preview without credentials — the ShipRocket wrapper's own stub
-    // handles this case (returns demo- id). Returning here would skip the
-    // write-back below; we still want the holding to carry the demo stage.
-  }
+  // Without credentials there is nothing to book (the wrapper no longer fakes a
+  // demo id), so stop before reading anything. Callers log this; the
+  // reservation itself still stands.
+  if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured; inbound booking was not created");
   // Resolve the three parties: artwork → artist, artist profile → studio
   // address, aggregator profile → gallery address.
   const [artworkSnap, aggProfileSnap, aggUserSnap] = await Promise.all([

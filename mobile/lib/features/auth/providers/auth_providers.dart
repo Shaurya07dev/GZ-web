@@ -115,7 +115,9 @@ class SessionNotifier extends Notifier<Role?> {
   }
 }
 
-final sessionProvider = NotifierProvider<SessionNotifier, Role?>(SessionNotifier.new);
+final sessionProvider = NotifierProvider<SessionNotifier, Role?>(
+  SessionNotifier.new,
+);
 
 /// Set when a session ended on its own (not because the person signed out),
 /// so the sign-in screen can say why they are back there.
@@ -127,7 +129,9 @@ class SessionEndedNotifier extends Notifier<bool> {
   void clear() => state = false;
 }
 
-final sessionEndedProvider = NotifierProvider<SessionEndedNotifier, bool>(SessionEndedNotifier.new);
+final sessionEndedProvider = NotifierProvider<SessionEndedNotifier, bool>(
+  SessionEndedNotifier.new,
+);
 
 /// Who the server says is signed in — name, email, role, status. It watches
 /// the session, so it is read again whenever the role changes or the person
@@ -147,5 +151,7 @@ final accountProvider = FutureProvider<CurrentUser?>((ref) async {
 /// are written to read the same way, so every screen shows both alike.
 String authErrorMessage(Object error) {
   final text = error.toString();
-  return text.startsWith('Exception: ') ? text.substring(11) : 'Something went wrong.';
+  return text.startsWith('Exception: ')
+      ? text.substring(11)
+      : 'Something went wrong.';
 }

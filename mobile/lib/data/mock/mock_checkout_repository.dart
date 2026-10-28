@@ -5,10 +5,14 @@ import '../repositories/checkout_repository.dart';
 import '../storage/mock_db.dart';
 import '../models/customer.dart';
 import 'mock_artist_repository.dart'
-    show creditArtistForSale, markSettlementsDelivered, releaseDueArtistSettlements;
+    show
+        creditArtistForSale,
+        markSettlementsDelivered,
+        releaseDueArtistSettlements;
 import 'mock_customer_repository.dart'
     show activeResaleListing, creditSellerForResale, settleSellerForResale;
-import 'mock_artwork_repository.dart' show promoteApprovedSubmissions, seedArtworksCollection;
+import 'mock_artwork_repository.dart'
+    show promoteApprovedSubmissions, seedArtworksCollection;
 import 'mock_utils.dart';
 import 'seed/customer_seed.dart';
 
@@ -34,8 +38,12 @@ const orderProgression = [
 ];
 
 class MockCheckoutRepository implements CheckoutRepository {
-  List<Order> _readOrders() =>
-      MockDb.getCollection(_ordersKey, seedOrders, Order.fromJson, (o) => o.toJson());
+  List<Order> _readOrders() => MockDb.getCollection(
+    _ordersKey,
+    seedOrders,
+    Order.fromJson,
+    (o) => o.toJson(),
+  );
 
   List<Artwork> _readArtworks() {
     promoteApprovedSubmissions();
@@ -47,11 +55,9 @@ class MockCheckoutRepository implements CheckoutRepository {
     );
   }
 
-  void _writeArtwork(Artwork updated) => MockDb.setCollection(
-    _artworksKey,
-    [for (final a in _readArtworks()) a.id == updated.id ? updated : a],
-    (a) => a.toJson(),
-  );
+  void _writeArtwork(Artwork updated) => MockDb.setCollection(_artworksKey, [
+    for (final a in _readArtworks()) a.id == updated.id ? updated : a,
+  ], (a) => a.toJson());
 
   @override
   Future<CheckoutQuote> getQuote(String artworkId) {
@@ -77,7 +83,9 @@ class MockCheckoutRepository implements CheckoutRepository {
   /// read `order.artwork` in both worlds and never look the piece up themselves.
   Order _withSnapshot(Order order) {
     if (order.artwork != null) return order;
-    final artwork = _readArtworks().where((a) => a.id == order.artworkId).firstOrNull;
+    final artwork = _readArtworks()
+        .where((a) => a.id == order.artworkId)
+        .firstOrNull;
     if (artwork == null) return order;
     return order.copyWith(
       artwork: OrderArtwork(
@@ -91,11 +99,13 @@ class MockCheckoutRepository implements CheckoutRepository {
   }
 
   @override
-  Future<List<Order>> listOrders() => mockDelay(() => [for (final o in _readOrders()) _withSnapshot(o)]);
+  Future<List<Order>> listOrders() =>
+      mockDelay(() => [for (final o in _readOrders()) _withSnapshot(o)]);
 
   @override
-  Future<Order?> getOrder(String id) =>
-      mockDelay(() => _readOrders().where((o) => o.id == id).map(_withSnapshot).firstOrNull);
+  Future<Order?> getOrder(String id) => mockDelay(
+    () => _readOrders().where((o) => o.id == id).map(_withSnapshot).firstOrNull,
+  );
 
   @override
   Future<Order> createOrder({
@@ -108,7 +118,9 @@ class MockCheckoutRepository implements CheckoutRepository {
     // and an order. A real one goes here, behind this same call — which is
     // why the declined path is exercised rather than assumed.
     if (simulateFailure) {
-      return mockError('Payment declined by your bank. No money has been taken.');
+      return mockError(
+        'Payment declined by your bank. No money has been taken.',
+      );
     }
 
     final artworks = _readArtworks();
@@ -140,7 +152,10 @@ class MockCheckoutRepository implements CheckoutRepository {
         OrderStatusEvent(status: OrderStatus.paid, changedAt: now),
       ],
     );
-    MockDb.setCollection(_ordersKey, [order, ..._readOrders()], (o) => o.toJson());
+    MockDb.setCollection(_ordersKey, [
+      order,
+      ..._readOrders(),
+    ], (o) => o.toJson());
 
     // Sold artworks come off the open marketplace — pipeline Stage 9 ("Sale
     // & Ownership Transfer"): a sold one-of-a-kind original can't be bought
@@ -155,7 +170,10 @@ class MockCheckoutRepository implements CheckoutRepository {
                     status: ArtworkStatus.sold,
                     statusHistory: [
                       ...a.statusHistory,
-                      ArtworkStatusEvent(status: ArtworkStatus.sold, changedAt: now),
+                      ArtworkStatusEvent(
+                        status: ArtworkStatus.sold,
+                        changedAt: now,
+                      ),
                     ],
                   ),
           )
@@ -180,12 +198,19 @@ class MockCheckoutRepository implements CheckoutRepository {
   /// The resale listing this order bought, if any. Matched on the pending
   /// wallet row rather than the listing's status, because the listing was
   /// already closed at purchase time.
-  ResaleListing? _resaleListingFor(Order order) => MockDb.getCollection(
-    'customerResaleListings',
-    () => const <ResaleListing>[],
-    ResaleListing.fromJson,
-    (l) => l.toJson(),
-  ).where((l) => l.artworkId == order.artworkId && l.status == ResaleListingStatus.sold).firstOrNull;
+  ResaleListing? _resaleListingFor(Order order) =>
+      MockDb.getCollection(
+            'customerResaleListings',
+            () => const <ResaleListing>[],
+            ResaleListing.fromJson,
+            (l) => l.toJson(),
+          )
+          .where(
+            (l) =>
+                l.artworkId == order.artworkId &&
+                l.status == ResaleListingStatus.sold,
+          )
+          .firstOrNull;
 
   @override
   Future<Order> advanceOrder(String id) {
@@ -208,14 +233,14 @@ class MockCheckoutRepository implements CheckoutRepository {
           OrderStatusEvent(status: next, changedAt: now),
         ],
       );
-      MockDb.setCollection(
-        _ordersKey,
-        [for (final o in orders) o.id == id ? updated : o],
-        (o) => o.toJson(),
-      );
+      MockDb.setCollection(_ordersKey, [
+        for (final o in orders) o.id == id ? updated : o,
+      ], (o) => o.toJson());
 
       if (next == OrderStatus.delivered) {
-        final artwork = _readArtworks().where((a) => a.id == order.artworkId).firstOrNull;
+        final artwork = _readArtworks()
+            .where((a) => a.id == order.artworkId)
+            .firstOrNull;
         if (artwork != null) {
           // Delivery moves both the record and the money: the piece is now
           // owned by and with the collector, and the artist's pending credit
@@ -225,7 +250,10 @@ class MockCheckoutRepository implements CheckoutRepository {
               status: ArtworkStatus.delivered,
               statusHistory: [
                 ...artwork.statusHistory,
-                ArtworkStatusEvent(status: ArtworkStatus.delivered, changedAt: now),
+                ArtworkStatusEvent(
+                  status: ArtworkStatus.delivered,
+                  changedAt: now,
+                ),
               ],
               custody: const ArtworkCustody(
                 legalOwner: CustodyParty.customer,
@@ -236,7 +264,10 @@ class MockCheckoutRepository implements CheckoutRepository {
           );
           final soldResale = _resaleListingFor(order);
           if (soldResale != null) {
-            settleSellerForResale(listingId: soldResale.id, amount: order.amount);
+            settleSellerForResale(
+              listingId: soldResale.id,
+              amount: order.amount,
+            );
           } else {
             // Delivery starts the 7-day clock; it does not release the
             // money. releaseDueArtistSettlements() moves it when the clock

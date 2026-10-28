@@ -20,7 +20,8 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
   static const path = '/forgot-password';
 
   @override
-  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
@@ -68,7 +69,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                const TextSpan(text: ", we've sent a link to reset your password."),
+                const TextSpan(
+                  text: ", we've sent a link to reset your password.",
+                ),
               ],
             ),
           ),
@@ -83,7 +86,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 children: [
                   const Expanded(child: Text('Skip the real email')),
                   TextButton(
-                    onPressed: () => context.push('${ResetPasswordScreen.path}?token=mock'),
+                    onPressed: () =>
+                        context.push('${ResetPasswordScreen.path}?token=mock'),
                     child: const Text('Skip to reset form'),
                   ),
                 ],
@@ -100,7 +104,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         children: [
           const AuthFormHeader(
             title: 'Forgot your password?',
-            description: "Enter your email and we'll send you a link to reset it.",
+            description:
+                "Enter your email and we'll send you a link to reset it.",
           ),
           const SizedBox(height: 24),
           Form(

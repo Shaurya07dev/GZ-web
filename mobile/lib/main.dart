@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
@@ -14,9 +16,14 @@ import 'data/models/account.dart';
 import 'data/storage/mock_db.dart';
 import 'features/auth/providers/auth_providers.dart';
 import 'features/auth/role_options.dart';
+import 'features/splash/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Draw behind the status and gesture bars, which the theme makes
+  // transparent — the page runs to the glass instead of stopping at a strip.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  LicenseRegistry.addLicense(_fontLicenses);
   // Every mock repository reads collections synchronously, so the
   // shared_preferences handle behind them has to exist before the first
   // frame — same single init the web's mock-db does lazily on first read.
@@ -27,12 +34,18 @@ Future<void> main() async {
   // API: the session is the refresh token; a role with no token behind it is
   // a leftover and is ignored.
   var role = RoleX.fromId(await SecureSession.getRole());
+  // A new quote at the foot of the launch screen every time the app opens.
+  final quote = await nextLaunchQuote();
   final overrides = <Override>[];
   if (!AppConfig.useMockBackend) {
-    final tokens = TokenManager(auth: FirebaseRestAuth(apiKey: AppConfig.firebaseApiKey));
+    final tokens = TokenManager(
+      auth: FirebaseRestAuth(apiKey: AppConfig.firebaseApiKey),
+    );
     await tokens.load();
     if (!tokens.hasSession) role = null;
-    overrides.addAll(remoteBackendOverrides(tokens, gateway: const RazorpayGateway()));
+    overrides.addAll(
+      remoteBackendOverrides(tokens, gateway: const RazorpayGateway()),
+    );
   }
   runApp(
     ProviderScope(
@@ -40,10 +53,26 @@ Future<void> main() async {
       // default would quietly retry for most of a minute first, and a screen
       // sitting on a spinner that long looks hung.
       retry: (retryCount, error) => null,
-      overrides: [initialRoleProvider.overrideWithValue(role), ...overrides],
+      overrides: [
+        initialRoleProvider.overrideWithValue(role),
+        launchQuoteProvider.overrideWithValue(quote),
+        ...overrides,
+      ],
       child: const GalleryZoneApp(),
     ),
   );
+}
+
+/// The bundled fonts' Open Font Licenses, which travel with the fonts.
+Stream<LicenseEntry> _fontLicenses() async* {
+  for (final (family, file) in const [
+    ('Inter', 'OFL-Inter.txt'),
+    ('Playfair Display', 'OFL-PlayfairDisplay.txt'),
+  ]) {
+    yield LicenseEntryWithLineBreaks([
+      family,
+    ], await rootBundle.loadString('assets/fonts/$file'));
+  }
 }
 
 class GalleryZoneApp extends ConsumerWidget {
@@ -70,6 +99,13 @@ class GalleryZoneApp extends ConsumerWidget {
       // it today.
       themeMode: ThemeMode.light,
       routerConfig: ref.watch(routerProvider),
+      // Screens with an app bar set the system bars through the theme; this
+      // covers the ones without (splash, sign-in), so the bars never flash
+      // the platform default between pages.
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: AppTheme.overlayStyleFor(Theme.of(context).brightness),
+        child: child!,
+      ),
     );
   }
 }

@@ -9,6 +9,8 @@ export interface CustomerArtworkDto {
   productCode: string;
   artistId: string;
   artistName: string;
+  /** True once the artist has completed at least one public verification tier. */
+  verifiedArtist?: boolean;
   title: string;
   description: string;
   category: string;

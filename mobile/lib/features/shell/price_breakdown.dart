@@ -49,19 +49,24 @@ class PriceBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = displayPrice + deliveryCharge + convenienceFee + convenienceGst + platformFee;
+    final total =
+        displayPrice +
+        deliveryCharge +
+        convenienceFee +
+        convenienceGst +
+        platformFee;
     final rate = gstRate;
 
     Widget subRow(String label, double amount) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(child: Text(label, style: theme.textTheme.labelSmall)),
-              Text(formatInr(amount), style: theme.textTheme.labelSmall),
-            ],
-          ),
-        );
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(child: Text(label, style: theme.textTheme.labelSmall)),
+          Text(formatInr(amount), style: theme.textTheme.labelSmall),
+        ],
+      ),
+    );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -84,8 +89,13 @@ class PriceBreakdown extends StatelessWidget {
           // the payment step having never been mentioned is the thing buyers
           // hate.
           _Row(label: 'Platform fee', amount: platformFee, freeWhenZero: true),
-          _Row(label: 'Convenience fee', amount: convenienceFee, freeWhenZero: true),
-          if (convenienceGst > 0) subRow('GST on convenience fee (18%)', convenienceGst),
+          _Row(
+            label: 'Convenience fee',
+            amount: convenienceFee,
+            freeWhenZero: true,
+          ),
+          if (convenienceGst > 0)
+            subRow('GST on convenience fee (18%)', convenienceGst),
           _Row(label: 'Delivery', amount: deliveryCharge),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
@@ -100,7 +110,9 @@ class PriceBreakdown extends StatelessWidget {
   /// 0.05 -> "5", 0.125 -> "12.5".
   static String _percent(double fraction) {
     final percent = double.parse((fraction * 100).toStringAsFixed(2));
-    return percent == percent.roundToDouble() ? '${percent.round()}' : '$percent';
+    return percent == percent.roundToDouble()
+        ? '${percent.round()}'
+        : '$percent';
   }
 }
 
@@ -131,7 +143,9 @@ class _Row extends StatelessWidget {
           Text(
             label,
             style: emphasized
-                ? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
+                ? theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  )
                 : theme.textTheme.bodySmall,
           ),
           if (free)

@@ -8,6 +8,8 @@ import '../../../data/models/artwork.dart' show SocialProofPlatform;
 import '../../marketplace/widgets/social_glyphs.dart';
 import '../../legal/screens/faq_screen.dart';
 import '../../legal/screens/legal_document_screen.dart';
+import '../../content/screens/art_supplies_screen.dart';
+import '../../content/screens/blogs_screen.dart';
 import '../../shell/portal_widgets.dart';
 
 /// The company and legal hub.
@@ -26,53 +28,54 @@ class AboutScreen extends StatelessWidget {
   static const path = '/about';
 
   @visibleForTesting
-  static const companyLinks = <({IconData icon, String label, String subtitle, String path})>[
-    (
-      icon: LucideIcons.building2,
-      label: 'About GalleryZone',
-      subtitle: 'Who we are and how the platform works',
-      path: '/about'
-    ),
-    (
-      icon: LucideIcons.mail,
-      label: 'Contact us',
-      subtitle: 'Reach the artist or collector support desk',
-      path: '/contact'
-    ),
-    (
-      icon: LucideIcons.clipboardList,
-      label: 'Artist survey',
-      subtitle: 'Help shape the Early Artist Program',
-      path: '/artist-survey'
-    ),
-  ];
+  static const companyLinks =
+      <({IconData icon, String label, String subtitle, String path})>[
+        (
+          icon: LucideIcons.building2,
+          label: 'About GalleryZone',
+          subtitle: 'Who we are and how the platform works',
+          path: '/about',
+        ),
+        (
+          icon: LucideIcons.mail,
+          label: 'Contact us',
+          subtitle: 'Reach the artist or collector support desk',
+          path: '/contact',
+        ),
+        (
+          icon: LucideIcons.clipboardList,
+          label: 'Artist survey',
+          subtitle: 'Help shape the Early Artist Program',
+          path: '/artist-survey',
+        ),
+      ];
 
   @visibleForTesting
   static const legalDocs = <({LegalDoc doc, IconData icon, String subtitle})>[
     (
       doc: LegalDoc.terms,
       icon: LucideIcons.scale,
-      subtitle: 'The agreement covering your use of GalleryZone'
+      subtitle: 'The agreement covering your use of GalleryZone',
     ),
     (
       doc: LegalDoc.privacy,
       icon: LucideIcons.shieldCheck,
-      subtitle: 'What we collect and what we do with it'
+      subtitle: 'What we collect and what we do with it',
     ),
     (
       doc: LegalDoc.cookies,
       icon: LucideIcons.cookie,
-      subtitle: 'Cookies the website sets, and why'
+      subtitle: 'Cookies the website sets, and why',
     ),
     (
       doc: LegalDoc.artistTerms,
       icon: LucideIcons.palette,
-      subtitle: 'Listing, verification, pricing and settlement'
+      subtitle: 'Listing, verification, pricing and settlement',
     ),
     (
       doc: LegalDoc.aggregatorTerms,
       icon: LucideIcons.building2,
-      subtitle: 'Display, custody, commission and returns'
+      subtitle: 'Display, custody, commission and returns',
     ),
   ];
 
@@ -110,20 +113,26 @@ class AboutScreen extends StatelessWidget {
                           const SizedBox(width: 10),
                           Text(
                             'GALLERYZONE',
-                            style: theme.textTheme.labelMedium?.copyWith(letterSpacing: 3),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              letterSpacing: 3,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 14),
                       Text(
                         'Where original art finds its identity.',
-                        style: theme.textTheme.titleLarge?.copyWith(height: 1.25),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          height: 1.25,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Text(
                         'GalleryZone gives every artwork a trusted digital identity, a '
                         'verifiable history, and a global stage to be discovered.',
-                        style: theme.textTheme.bodySmall?.copyWith(height: 1.55),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          height: 1.55,
+                        ),
                       ),
                     ],
                   ),
@@ -138,14 +147,60 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 for (final item in companyLinks) _LinkRow(item: item),
+                const SizedBox(height: 20),
+                Text('Discover', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 8),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(LucideIcons.circleHelp,
-                      size: 20, color: theme.colorScheme.tertiary),
-                  title: Text('Frequently asked questions',
-                      style: theme.textTheme.bodyMedium),
-                  subtitle: Text('Buying, selling, authenticity and delivery',
-                      style: theme.textTheme.labelSmall),
+                  leading: Icon(
+                    LucideIcons.penTool,
+                    size: 20,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(
+                    'Artist blogs',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  subtitle: Text(
+                    'Studio stories reviewed by GalleryZone',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => context.push(BlogsScreen.path),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    LucideIcons.paintbrush,
+                    size: 20,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(
+                    'Art supplies',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  subtitle: Text(
+                    'Recommended tools that open on Amazon',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () => context.push(ArtSuppliesScreen.path),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    LucideIcons.circleHelp,
+                    size: 20,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  title: Text(
+                    'Frequently asked questions',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  subtitle: Text(
+                    'Buying, selling, authenticity and delivery',
+                    style: theme.textTheme.labelSmall,
+                  ),
                   trailing: const Icon(Icons.chevron_right, size: 18),
                   onTap: () => context.push(FaqScreen.path),
                 ),
@@ -159,7 +214,11 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 for (final item in legalDocs)
-                  LegalDocRow(doc: item.doc, icon: item.icon, subtitle: item.subtitle),
+                  LegalDocRow(
+                    doc: item.doc,
+                    icon: item.icon,
+                    subtitle: item.subtitle,
+                  ),
                 const SizedBox(height: 24),
                 Text('Get in touch', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 8),
@@ -177,7 +236,10 @@ class AboutScreen extends StatelessWidget {
                 // marks, but both point at "#" there — no account exists yet,
                 // and a tap that goes nowhere is worse than an absent icon.
                 ContactLinkRow(
-                  glyph: const SocialGlyph(platform: SocialProofPlatform.instagram, size: 16),
+                  glyph: const SocialGlyph(
+                    platform: SocialProofPlatform.instagram,
+                    size: 16,
+                  ),
                   label: '@galleryzone.in',
                   url: 'https://www.instagram.com/galleryzone.in',
                 ),

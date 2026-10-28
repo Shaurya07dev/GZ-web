@@ -49,7 +49,16 @@ and the screens in `lib/features/nfc/`. The rules are in
 
 ## Release builds
 
-`android/key.properties` (not committed) points at the release keystore. Without
-it a release build is signed with the debug key, which is fine for testing and
-not for the Play Store. Google sign-in is not available in the app yet; it needs
-the app registered in the Firebase console.
+Copy `android/key.properties.example` to `android/key.properties` and point it
+at the private Play upload keystore. Both files containing secrets are ignored.
+A release task fails closed when the file, any credential, or the keystore is
+missing; it never signs a release artifact with the debug key.
+
+```bash
+flutter build appbundle --release
+```
+
+The app uses Firebase email/password authentication through the REST API and
+therefore does not require `google-services.json`. Google sign-in is not in the
+mobile product today; adding it would require a registered Android OAuth client
+and the Play signing SHA-256 in Firebase.

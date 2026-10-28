@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/artwork.dart';
@@ -29,7 +30,7 @@ class GallerySpacesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Aggregator Display')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistGallerySpacesProvider);
           await ref.read(artistGallerySpacesProvider.future);
@@ -230,7 +231,7 @@ class PortfolioScreen extends ConsumerWidget {
                       child: const Text('Try again'),
                     ),
                   )
-                : const Center(child: CircularProgressIndicator())
+                : const PageSkeleton()
           : visible.isEmpty
           ? const EmptyState(
               icon: LucideIcons.images,
@@ -238,7 +239,7 @@ class PortfolioScreen extends ConsumerWidget {
               description:
                   'Nothing published yet — approved artworks will appear here.',
             )
-          : RefreshIndicator(
+          : RefreshIndicator.adaptive(
               onRefresh: () async {
                 ref.invalidate(artistArtworksProvider);
                 await ref.read(artistArtworksProvider.future);

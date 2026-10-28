@@ -16,7 +16,6 @@ class SubmitArtworkInput {
     required this.medium,
     required this.artistPrice,
     required this.listingType,
-    required this.insuranceOpted,
     required this.images,
     required this.asDraft,
     this.dimensions,
@@ -24,6 +23,8 @@ class SubmitArtworkInput {
     this.physical,
     this.artworkType,
     this.paintingStyle,
+    this.exclusive = false,
+    this.insuranceOpted = false,
     this.insuranceNumber,
   });
 
@@ -33,7 +34,6 @@ class SubmitArtworkInput {
   final String medium;
   final double artistPrice;
   final ListingType listingType;
-  final bool insuranceOpted;
   final List<ArtworkImage> images;
 
   /// Draft stays with the artist; otherwise it enters the review queue.
@@ -44,14 +44,23 @@ class SubmitArtworkInput {
   final String? dimensions;
   final int? yearCreated;
 
-  /// Original / limited edition / open edition / study / commission / other.
+  /// One of the 28 regional Indian art traditions, or artist-supplied text.
   final String? artworkType;
 
   /// Which painting tradition — only asked when the category is painting.
   final String? paintingStyle;
 
-  /// The policy number pasted back from the insurer. A new or changed number
-  /// goes to GalleryZone for verification.
+  /// One-way declaration: once an accepted artwork is exclusive, the backend
+  /// refuses attempts to clear it.
+  final bool exclusive;
+
+  /// Legacy read/test compatibility only. New clients neither ask for nor
+  /// transmit insurance details.
+  @Deprecated('Insurance was removed from artwork submission in October 2026.')
+  final bool insuranceOpted;
+
+  /// Legacy read/test compatibility only; omitted from every new API write.
+  @Deprecated('Insurance was removed from artwork submission in October 2026.')
   final String? insuranceNumber;
 
   /// Weight, framing and packing. Required in practice once the aggregator
@@ -88,6 +97,40 @@ class GallerySpacePlacement {
   final Artwork artwork;
 }
 
+/// A check of the GSTIN already saved on the signed-in profile. A successful
+/// registry match is evidence sent for review; it is not an admin approval.
+class GstinCheckResult {
+  const GstinCheckResult({
+    required this.valid,
+    required this.legalName,
+    required this.tradeName,
+    required this.registrationStatus,
+    required this.status,
+    required this.message,
+  });
+
+  final bool valid;
+  final String? legalName;
+  final String? tradeName;
+  final String? registrationStatus;
+  final String status;
+  final String? message;
+}
+
+/// Short-lived Cashfree/DigiLocker consent handoff. The verification result
+/// arrives later through the signed backend webhook, never through this call.
+class DigiLockerStart {
+  const DigiLockerStart({
+    required this.consentUrl,
+    required this.verificationId,
+    required this.expiresInSeconds,
+  });
+
+  final String consentUrl;
+  final String verificationId;
+  final int expiresInSeconds;
+}
+
 /// The artist portal (SAD §3.3 Artwork Service + §3.5 Order & Wallet, artist
 /// side). Mirrors `artistDashboardService.ts` plus the artist slices of
 /// `messagesService`/`supportService`.
@@ -112,7 +155,10 @@ abstract class ArtistRepository {
   /// or until the piece is bought or claimed, whichever comes first
   /// ([artworkEditState]). `patch.asDraft` is ignored — an edit never moves a
   /// piece between the draft and review queues.
-  Future<Artwork> updateArtwork({required String artworkId, required SubmitArtworkInput patch});
+  Future<Artwork> updateArtwork({
+    required String artworkId,
+    required SubmitArtworkInput patch,
+  });
 
   /// "Sold on another platform": the piece leaves every GalleryZone channel
   /// at once and can't be relisted, and a fee of [externalSalePenaltyRate] of
@@ -131,6 +177,14 @@ abstract class ArtistRepository {
 
   Future<ArtistProfileDetails> getProfile();
   Future<ArtistProfileDetails> updateProfile(ArtistProfileDetails profile);
+
+  /// Checks the GSTIN stored on the server. No GSTIN is accepted in the body,
+  /// so this cannot be used as an arbitrary registry lookup.
+  Future<GstinCheckResult> verifySavedGstin();
+
+  /// Opens a consent session; the backend webhook records the later result.
+  Future<DigiLockerStart> startAadhaarDigiLocker();
+
   /// The account number is write-only (only its last four digits ever come
   /// back). Leave it empty to change just the IFSC.
   Future<ArtistProfileDetails> updateBankDetails({
@@ -145,7 +199,10 @@ abstract class ArtistRepository {
   /// Paper-certificate requests from collectors, newest first, and the
   /// artist marking one dispatched.
   Future<List<PhysicalCoaRequest>> listPhysicalCoaRequests();
-  Future<PhysicalCoaRequest> dispatchPhysicalCoa(String requestId, String courierRef);
+  Future<PhysicalCoaRequest> dispatchPhysicalCoa(
+    String requestId,
+    String courierRef,
+  );
 
   /// The artist's acceptance of the MOU version in force, or null if they have
   /// not signed it (an older version counts as unsigned).
@@ -175,5 +232,8 @@ abstract class ArtistRepository {
   Future<MessageThread> markMessageRead(String id);
 
   Future<List<SupportTicket>> listSupportTickets();
-  Future<SupportTicket> submitSupportTicket({required String subject, required String message});
+  Future<SupportTicket> submitSupportTicket({
+    required String subject,
+    required String message,
+  });
 }

@@ -8,7 +8,15 @@ import 'nfc_device.dart';
 import 'ntag213.dart';
 
 /// Where the person is in a link or a lock, for the sheet that guides them.
-enum NfcProgress { waitingForTag, checking, writing, verifyingWrite, recording, locking, verifyingLock }
+enum NfcProgress {
+  waitingForTag,
+  checking,
+  writing,
+  verifyingWrite,
+  recording,
+  locking,
+  verifyingLock,
+}
 
 /// A link or lock that did not happen, with the step it stopped at. [message]
 /// is written for the person holding the phone.
@@ -37,8 +45,11 @@ class NfcFlowException implements Exception {
 ///  * The lock is judged by reading the lock bytes back, not by trusting the
 ///    write: whether a refused write raises an error differs between phones.
 class NfcFlow {
-  NfcFlow({required this.device, required this.repository, String Function(String artworkId)? urlFor})
-    : _urlFor = urlFor ?? verifyUrlFor;
+  NfcFlow({
+    required this.device,
+    required this.repository,
+    String Function(String artworkId)? urlFor,
+  }) : _urlFor = urlFor ?? verifyUrlFor;
 
   final NfcDevice device;
   final NfcRepository repository;
@@ -46,7 +57,10 @@ class NfcFlow {
 
   /// Writes the artwork's verify URL to a blank (or to-be-replaced) chip and
   /// records the link.
-  Future<NfcState> link(String artworkId, {void Function(NfcProgress progress)? onProgress}) {
+  Future<NfcState> link(
+    String artworkId, {
+    void Function(NfcProgress progress)? onProgress,
+  }) {
     return _session(artworkId, (session) async {
       final url = _urlFor(artworkId);
       onProgress?.call(NfcProgress.waitingForTag);
@@ -55,7 +69,11 @@ class NfcFlow {
 
       session.step = NfcFailureStep.uidMismatch;
       onProgress?.call(NfcProgress.checking);
-      final action = await repository.check(artworkId, chip.uid, NfcIntent.link);
+      final action = await repository.check(
+        artworkId,
+        chip.uid,
+        NfcIntent.link,
+      );
 
       // Already linked to this very chip: leave a good write alone.
       if (action != NfcCheckAction.noop || await device.readUrl() != url) {
@@ -88,7 +106,10 @@ class NfcFlow {
   }
 
   /// Sets the chip's lock bytes for good, checks they took, and records it.
-  Future<NfcState> lock(String artworkId, {void Function(NfcProgress progress)? onProgress}) {
+  Future<NfcState> lock(
+    String artworkId, {
+    void Function(NfcProgress progress)? onProgress,
+  }) {
     return _session(artworkId, (session) async {
       final url = _urlFor(artworkId);
       onProgress?.call(NfcProgress.waitingForTag);
@@ -97,7 +118,11 @@ class NfcFlow {
 
       session.step = NfcFailureStep.uidMismatch;
       onProgress?.call(NfcProgress.checking);
-      final action = await repository.check(artworkId, chip.uid, NfcIntent.lock);
+      final action = await repository.check(
+        artworkId,
+        chip.uid,
+        NfcIntent.lock,
+      );
 
       if (action != NfcCheckAction.noop) {
         // Permanent means permanent: never lock a chip that doesn't point here.
@@ -142,25 +167,43 @@ class NfcFlow {
   // --- The lock sequence (§7.5): CC, then static, then dynamic. Page 3 has to go
   // first: the static lock bytes lock page 3 itself.
 
-  Future<Uint8List> _readPage(int page) async => Ntag213.firstPage(await device.transceive(Ntag213.read(page)));
+  Future<Uint8List> _readPage(int page) async =>
+      Ntag213.firstPage(await device.transceive(Ntag213.read(page)));
 
   Future<void> _lockChip(_Session session) async {
     session.step = NfcFailureStep.lockCc;
     final cc = await _readPage(Ntag213.capabilityContainerPage);
     if ((cc[3] & Ntag213.readOnlyAccess) != Ntag213.readOnlyAccess) {
-      await device.transceive(Ntag213.write(Ntag213.capabilityContainerPage, Ntag213.lockedCapabilityContainer(cc)));
+      await device.transceive(
+        Ntag213.write(
+          Ntag213.capabilityContainerPage,
+          Ntag213.lockedCapabilityContainer(cc),
+        ),
+      );
     }
 
     session.step = NfcFailureStep.lockStatic;
     final staticPage = await _readPage(Ntag213.staticLockPage);
     if (staticPage[2] != 0xFF || staticPage[3] != 0xFF) {
-      await device.transceive(Ntag213.write(Ntag213.staticLockPage, Ntag213.lockedStaticPage(staticPage)));
+      await device.transceive(
+        Ntag213.write(
+          Ntag213.staticLockPage,
+          Ntag213.lockedStaticPage(staticPage),
+        ),
+      );
     }
 
     session.step = NfcFailureStep.lockDynamic;
     final dynamicPage = await _readPage(Ntag213.dynamicLockPage);
-    if (dynamicPage[0] != 0xFF || dynamicPage[1] != 0xFF || dynamicPage[2] != 0xFF) {
-      await device.transceive(Ntag213.write(Ntag213.dynamicLockPage, Ntag213.lockedDynamicPage(dynamicPage)));
+    if (dynamicPage[0] != 0xFF ||
+        dynamicPage[1] != 0xFF ||
+        dynamicPage[2] != 0xFF) {
+      await device.transceive(
+        Ntag213.write(
+          Ntag213.dynamicLockPage,
+          Ntag213.lockedDynamicPage(dynamicPage),
+        ),
+      );
     }
   }
 
@@ -176,15 +219,27 @@ class NfcFlow {
   /// wrong into one [NfcFlowException] naming the step, and tells the server
   /// about it (except a tap that never came, which is just a person changing
   /// their mind).
-  Future<NfcState> _session(String artworkId, Future<NfcState> Function(_Session session) body) async {
+  Future<NfcState> _session(
+    String artworkId,
+    Future<NfcState> Function(_Session session) body,
+  ) async {
     final session = _Session(device);
     try {
       return await body(session);
     } catch (error) {
-      final failure = error is NfcFlowException ? error : NfcFlowException(session.step, _textOf(error));
+      final failure = error is NfcFlowException
+          ? error
+          : NfcFlowException(session.step, _textOf(error));
       await device.finish(error: failure.message);
       if (failure.step != NfcFailureStep.poll) {
-        unawaited(repository.reportFailure(artworkId, failure.step, failure.message, tagUid: session.uid));
+        unawaited(
+          repository.reportFailure(
+            artworkId,
+            failure.step,
+            failure.message,
+            tagUid: session.uid,
+          ),
+        );
       }
       throw failure;
     }
@@ -224,9 +279,14 @@ class _Session {
     if (!chip.isMifareUltralight || !isNtagUid(chip.uid)) throw refusal;
     final Uint8List cc;
     try {
-      cc = Ntag213.firstPage(await device.transceive(Ntag213.read(Ntag213.capabilityContainerPage)));
+      cc = Ntag213.firstPage(
+        await device.transceive(Ntag213.read(Ntag213.capabilityContainerPage)),
+      );
     } catch (_) {
-      throw const NfcFlowException(NfcFailureStep.chipType, "The tag couldn't be read. Hold it steady and try again.");
+      throw const NfcFlowException(
+        NfcFailureStep.chipType,
+        "The tag couldn't be read. Hold it steady and try again.",
+      );
     }
     if (!Ntag213.isNtag213(cc)) throw refusal;
   }
@@ -234,5 +294,7 @@ class _Session {
 
 String _textOf(Object error) {
   final text = error.toString();
-  return text.startsWith('Exception: ') ? text.substring('Exception: '.length) : text;
+  return text.startsWith('Exception: ')
+      ? text.substring('Exception: '.length)
+      : text;
 }

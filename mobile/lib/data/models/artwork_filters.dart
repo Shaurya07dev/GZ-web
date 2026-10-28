@@ -114,19 +114,19 @@ class ArtworkFilters {
 
   @override
   int get hashCode => Object.hash(
-        Object.hashAll(categories),
-        Object.hashAll(mediums),
-        rarity,
-        artistId,
-        location,
-        size,
-        minPrice,
-        maxPrice,
-        query,
-        sortBy,
-        page,
-        pageSize,
-      );
+    Object.hashAll(categories),
+    Object.hashAll(mediums),
+    rarity,
+    artistId,
+    location,
+    size,
+    minPrice,
+    maxPrice,
+    query,
+    sortBy,
+    page,
+    pageSize,
+  );
 }
 
 /// Sentinel so [ArtworkFilters.copyWith] can tell "leave this alone" apart

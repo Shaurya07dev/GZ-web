@@ -24,11 +24,15 @@ final artistKpisProvider = FutureProvider.autoDispose<List<ArtistKpi>>((ref) {
   return ref.watch(artistRepositoryProvider).getKpis();
 });
 
-final artistActivityProvider = FutureProvider.autoDispose<List<ActivityEntry>>((ref) {
+final artistActivityProvider = FutureProvider.autoDispose<List<ActivityEntry>>((
+  ref,
+) {
   return ref.watch(artistRepositoryProvider).listActivity();
 });
 
-final artistArtworksProvider = FutureProvider.autoDispose<List<ArtistArtwork>>((ref) {
+final artistArtworksProvider = FutureProvider.autoDispose<List<ArtistArtwork>>((
+  ref,
+) {
   return ref.watch(artistRepositoryProvider).listArtworks();
 });
 
@@ -36,8 +40,8 @@ final artistArtworksProvider = FutureProvider.autoDispose<List<ArtistArtwork>>((
 /// they are actually charged.
 final artistPenaltiesProvider =
     FutureProvider.autoDispose<List<ExternalSalePenalty>>((ref) {
-  return ref.watch(artistRepositoryProvider).listPenalties();
-});
+      return ref.watch(artistRepositoryProvider).listPenalties();
+    });
 
 /// The published commercial terms (`GET /v1/pricing-rules`) the submit form
 /// quotes its price ladder from. Null when there are none to give; callers fall
@@ -52,30 +56,35 @@ final artistWalletProvider = FutureProvider.autoDispose<WalletSummary>((ref) {
 
 final artistWalletTransactionsProvider =
     FutureProvider.autoDispose<List<WalletTransaction>>((ref) {
-  return ref.watch(artistRepositoryProvider).listWalletTransactions();
-});
+      return ref.watch(artistRepositoryProvider).listWalletTransactions();
+    });
 
-final artistProfileDetailsProvider = FutureProvider.autoDispose<ArtistProfileDetails>((ref) {
-  return ref.watch(artistRepositoryProvider).getProfile();
-});
+final artistProfileDetailsProvider =
+    FutureProvider.autoDispose<ArtistProfileDetails>((ref) {
+      return ref.watch(artistRepositoryProvider).getProfile();
+    });
 
-final artistOrdersProvider = FutureProvider.autoDispose<List<ArtistOrder>>((ref) {
+final artistOrdersProvider = FutureProvider.autoDispose<List<ArtistOrder>>((
+  ref,
+) {
   return ref.watch(artistRepositoryProvider).listOrders();
 });
 
-final artistSettlementsProvider = FutureProvider.autoDispose<List<Settlement>>((ref) {
+final artistSettlementsProvider = FutureProvider.autoDispose<List<Settlement>>((
+  ref,
+) {
   return ref.watch(artistRepositoryProvider).listSettlements();
 });
 
 final artistGallerySpacesProvider =
     FutureProvider.autoDispose<List<GallerySpacePlacement>>((ref) {
-  return ref.watch(artistRepositoryProvider).listGallerySpaces();
-});
+      return ref.watch(artistRepositoryProvider).listGallerySpaces();
+    });
 
 final artistPhysicalCoaProvider =
     FutureProvider.autoDispose<List<PhysicalCoaRequest>>((ref) {
-  return ref.watch(artistRepositoryProvider).listPhysicalCoaRequests();
-});
+      return ref.watch(artistRepositoryProvider).listPhysicalCoaRequests();
+    });
 
 /// The agreement with the artist's details filled in, and whether it is signed.
 final artistMouStateProvider = FutureProvider.autoDispose<MouState>((ref) {
@@ -86,23 +95,30 @@ final mouAcceptanceProvider = FutureProvider.autoDispose<MouAcceptance?>((ref) {
   return ref.watch(artistRepositoryProvider).getMouAcceptance();
 });
 
-final artistSettingsProvider = FutureProvider.autoDispose<ArtistSettings>((ref) {
+final artistSettingsProvider = FutureProvider.autoDispose<ArtistSettings>((
+  ref,
+) {
   return ref.watch(artistRepositoryProvider).getSettings();
 });
 
-final artistMessagesProvider = FutureProvider.autoDispose<List<MessageThread>>((ref) {
+final artistMessagesProvider = FutureProvider.autoDispose<List<MessageThread>>((
+  ref,
+) {
   return ref.watch(artistRepositoryProvider).listMessages();
 });
 
-final artistSupportTicketsProvider = FutureProvider.autoDispose<List<SupportTicket>>((ref) {
-  return ref.watch(artistRepositoryProvider).listSupportTickets();
-});
+final artistSupportTicketsProvider =
+    FutureProvider.autoDispose<List<SupportTicket>>((ref) {
+      return ref.watch(artistRepositoryProvider).listSupportTickets();
+    });
 
 /// The verification ladder, projected from the profile, the signed agreement
 /// and the artworks. Falls back to "nothing done yet" while they load, and when
 /// one fails: a ladder that blanks out on a flaky connection is worse than one
 /// that briefly shows the first rung open.
-final verificationTiersProvider = Provider.autoDispose<List<VerificationTier>>((ref) {
+final verificationTiersProvider = Provider.autoDispose<List<VerificationTier>>((
+  ref,
+) {
   return verificationTiersFor(
     profile: ref.watch(artistProfileDetailsProvider).value,
     mou: ref.watch(mouAcceptanceProvider).value,
@@ -111,7 +127,9 @@ final verificationTiersProvider = Provider.autoDispose<List<VerificationTier>>((
 });
 
 /// What needs doing next, most pressing first.
-final artistAttentionProvider = Provider.autoDispose<List<AttentionItem>>((ref) {
+final artistAttentionProvider = Provider.autoDispose<List<AttentionItem>>((
+  ref,
+) {
   return attentionItemsFor(
     artworks: ref.watch(artistArtworksProvider).value ?? const [],
     settlements: ref.watch(artistSettlementsProvider).value ?? const [],

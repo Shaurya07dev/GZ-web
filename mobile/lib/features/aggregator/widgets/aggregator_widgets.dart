@@ -149,17 +149,10 @@ class ExpiryCountdown extends ConsumerWidget {
   }
 }
 
-/// The standing caveat on every commission figure in this portal. The split
-/// is an open product decision, so the number is shown, sourced, and
-/// labelled rather than quietly presented as final.
-/// How the wallet actually works, said once where the balance is.
-///
-/// This replaced a notice calling the commission "provisional" and computing
-/// it off the marketplace price. It is neither any more: MOU §8's 20% of the
-/// markup over the artist's price is settled, and the sheet is explicit that
-/// the advance is held rather than spent.
-class WalletMechanicsNotice extends StatelessWidget {
-  const WalletMechanicsNotice({super.key});
+/// Explains the real payment and settlement path without presenting the
+/// internal accounting ledger as a customer-facing stored-value wallet.
+class SettlementMechanicsNotice extends StatelessWidget {
+  const SettlementMechanicsNotice({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -172,11 +165,9 @@ class WalletMechanicsNotice extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Reserving a piece HOLDS its advance and delivery from your '
-              'balance rather than charging you. The hold is released when the '
-              'piece sells; if it goes back unsold the advance is released but '
-              'the delivery leg is spent. Commission is 20% of your markup '
-              "over the artist's price, before GST.",
+              'Reservations are paid securely through Razorpay. The advance is recorded in the settlement ledger; '
+              'if the piece returns unsold, the refundable advance is released after reconciliation while completed '
+              'delivery charges remain spent. Earnings are transferred to your verified bank account.',
               style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
             ),
           ),
@@ -224,7 +215,9 @@ class CycleStepper extends StatelessWidget {
           border: Border.all(
             color: current
                 ? gold
-                : (past ? gold.withValues(alpha: 0.4) : theme.colorScheme.outline),
+                : (past
+                      ? gold.withValues(alpha: 0.4)
+                      : theme.colorScheme.outline),
           ),
         ),
         child: small
@@ -293,8 +286,15 @@ class SuggestedArtworks extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final inventory = ref.watch(aggregatorInventoryProvider).value ?? const <ReservableArtwork>[];
-    final suggestions = similarTo(references, inventory, (item) => item.artwork, limit: limit);
+    final inventory =
+        ref.watch(aggregatorInventoryProvider).value ??
+        const <ReservableArtwork>[];
+    final suggestions = similarTo(
+      references,
+      inventory,
+      (item) => item.artwork,
+      limit: limit,
+    );
     if (suggestions.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -320,7 +320,9 @@ class SuggestedArtworks extends ConsumerWidget {
                 width: 122,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(AppRadius.lg),
-                  onTap: () => context.push('/aggregator/inventory/${item.artwork.id}/reserve'),
+                  onTap: () => context.push(
+                    '/aggregator/inventory/${item.artwork.id}/reserve',
+                  ),
                   child: PortalCard(
                     padding: const EdgeInsets.all(6),
                     child: Column(
@@ -329,7 +331,9 @@ class SuggestedArtworks extends ConsumerWidget {
                         Expanded(
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(AppRadius.sm),
-                            child: ArtworkImageView(url: item.artwork.thumbnailUrl),
+                            child: ArtworkImageView(
+                              url: item.artwork.thumbnailUrl,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -337,7 +341,9 @@ class SuggestedArtworks extends ConsumerWidget {
                           item.artwork.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         PriceTag(
                           amount: item.offer.offerPrice,

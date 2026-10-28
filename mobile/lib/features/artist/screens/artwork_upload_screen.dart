@@ -9,7 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
-import '../../../core/launch.dart';
+import '../../../core/motion.dart';
 import '../../../core/pricing.dart' as pricing;
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
@@ -29,16 +29,16 @@ enum _SubmitMode { draft, review }
 /// a file just picked from the device.
 class _FormImage {
   _FormImage.existing(ArtworkImage image)
-      : url = image.url,
-        thumbnailUrl = image.thumbnailUrl,
-        id = image.id,
-        isNew = false;
+    : url = image.url,
+      thumbnailUrl = image.thumbnailUrl,
+      id = image.id,
+      isNew = false;
 
   _FormImage.picked(String path)
-      : url = path,
-        thumbnailUrl = path,
-        id = null,
-        isNew = true;
+    : url = path,
+      thumbnailUrl = path,
+      id = null,
+      isNew = true;
 
   final String url;
   final String thumbnailUrl;
@@ -76,7 +76,8 @@ class ArtworkUploadScreen extends ConsumerStatefulWidget {
   final String? artworkId;
 
   @override
-  ConsumerState<ArtworkUploadScreen> createState() => _ArtworkUploadScreenState();
+  ConsumerState<ArtworkUploadScreen> createState() =>
+      _ArtworkUploadScreenState();
 }
 
 class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
@@ -91,7 +92,6 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
   final _height = TextEditingController();
   final _weight = TextEditingController();
   final _price = TextEditingController();
-  final _insuranceNumber = TextEditingController();
 
   String _category = '';
   String _medium = '';
@@ -101,9 +101,9 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
   String _format = '';
   FramingState? _framing;
   ListingType _listingType = ListingType.marketplaceAndAggregator;
-  bool _insuranceOpted = false;
   bool _hangers = false;
   bool _packaging = false;
+  bool _exclusive = false;
 
   /// Re-confirmed on every edit rather than assumed: the physical facts they
   /// attest to may have changed since the last time.
@@ -126,37 +126,42 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
   ArtistArtwork? _editing;
   String? _loadError;
 
-  /// Aggregator display puts the piece in someone else's custody, so
-  /// insurance stops being a choice the moment that channel is picked. The
-  /// repository enforces the same rule.
   bool get _aggregatorSelected => isAggregatorListed(_listingType);
-  bool get _insuranceRequired => _aggregatorSelected;
 
   double get _artistPrice => double.tryParse(_price.text.trim()) ?? 0;
 
   ArtworkPhysical get _physical => ArtworkPhysical(
-        weightKg: double.tryParse(_weight.text.trim()),
-        framing: _framing,
-        format: _format.isEmpty ? null : _format,
-        hangingHardwareIncluded: _hangers,
-        packagingConfirmed: _packaging,
-      );
+    weightKg: double.tryParse(_weight.text.trim()),
+    framing: _framing,
+    format: _format.isEmpty ? null : _format,
+    hangingHardwareIncluded: _hangers,
+    packagingConfirmed: _packaging,
+  );
 
-  List<String> get _missingForAggregator =>
-      _aggregatorSelected ? missingForAggregatorListing(_physical, termsAccepted: _termsAccepted) : const [];
+  List<String> get _missingForAggregator => _aggregatorSelected
+      ? missingForAggregatorListing(_physical, termsAccepted: _termsAccepted)
+      : const [];
 
   Dimensions get _dimensions => (
-        length: tidyMeasurement(_length.text) ?? '',
-        width: tidyMeasurement(_width.text) ?? '',
-        height: tidyMeasurement(_height.text) ?? '',
-        unit: _unit,
-      );
+    length: tidyMeasurement(_length.text) ?? '',
+    width: tidyMeasurement(_width.text) ?? '',
+    height: tidyMeasurement(_height.text) ?? '',
+    unit: _unit,
+  );
 
   @override
   void initState() {
     super.initState();
     // The preview and the ladder follow what is typed.
-    for (final controller in [_title, _year, _weight, _price, _length, _width, _height]) {
+    for (final controller in [
+      _title,
+      _year,
+      _weight,
+      _price,
+      _length,
+      _width,
+      _height,
+    ]) {
       controller.addListener(_refresh);
     }
     if (_isEdit) _loadForEdit();
@@ -168,7 +173,9 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
 
   Future<void> _loadForEdit() async {
     try {
-      final entry = await ref.read(artistRepositoryProvider).getArtwork(widget.artworkId!);
+      final entry = await ref
+          .read(artistRepositoryProvider)
+          .getArtwork(widget.artworkId!);
       if (!mounted) return;
       if (entry == null) {
         setState(() => _loadError = 'Artwork not found');
@@ -186,9 +193,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       _length.text = dimensions.length;
       _width.text = dimensions.width;
       _height.text = dimensions.height;
-      _price.text = entry.artistPrice <= 0 ? '' : entry.artistPrice.round().toString();
+      _price.text = entry.artistPrice <= 0
+          ? ''
+          : entry.artistPrice.round().toString();
       _weight.text = _weightText(artwork.physical?.weightKg);
-      _insuranceNumber.text = artwork.insuranceNumber ?? '';
       setState(() {
         _editing = entry;
         _category = normalizeOption(artwork.category, artworkCategories);
@@ -196,12 +204,15 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         _type = type.type;
         _style = style.style;
         _unit = dimensions.unit;
-        _format = normalizeOption(artwork.physical?.format ?? '', artworkFormats);
+        _format = normalizeOption(
+          artwork.physical?.format ?? '',
+          artworkFormats,
+        );
         _framing = artwork.physical?.framing;
         _listingType = artwork.listingType;
-        _insuranceOpted = artwork.insured;
         _hangers = artwork.physical?.hangingHardwareIncluded ?? false;
         _packaging = artwork.physical?.packagingConfirmed ?? false;
+        _exclusive = artwork.exclusive;
         _images
           ..clear()
           ..addAll(artwork.images.map(_FormImage.existing));
@@ -230,7 +241,6 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       _height,
       _weight,
       _price,
-      _insuranceNumber,
     ]) {
       controller.dispose();
     }
@@ -248,9 +258,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       // slot take one.
       final picked = source == ImageSource.gallery && room >= 2
           ? await picker.pickMultiImage(maxWidth: 2000, limit: room)
-          : [
-              ?await picker.pickImage(source: source, maxWidth: 2000),
-            ];
+          : [?await picker.pickImage(source: source, maxWidth: 2000)];
       if (picked.isEmpty || !mounted) return;
 
       final accepted = <_FormImage>[];
@@ -259,7 +267,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         // A refused file doesn't use up a place.
         if (accepted.length >= room) break;
         // The file's own name, whichever way the platform writes its paths.
-        final problem = imageProblem(file.path.split(RegExp(r'[\\/]')).last, await file.length());
+        final problem = imageProblem(
+          file.path.split(RegExp(r'[\\/]')).last,
+          await file.length(),
+        );
         if (problem == null) {
           accepted.add(_FormImage.picked(file.path));
         } else {
@@ -269,14 +280,19 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       if (!mounted) return;
       setState(() => _images.addAll(accepted));
       if (problems.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(problems.join('\n'))));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(problems.join('\n'))));
       }
     } on Exception catch (error) {
       if (!mounted) return;
       // A denied camera/photos permission surfaces here as a PlatformException
       // - say so plainly instead of silently doing nothing.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open that source: ${authErrorMessage(error)}')),
+        SnackBar(
+          content: Text(
+            'Could not open that source: ${authErrorMessage(error)}',
+          ),
+        ),
       );
     }
   }
@@ -312,7 +328,11 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       _formKey.currentContext?.visitChildElements(visit);
       final target = first;
       if (target != null) {
-        Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 250), alignment: 0.15);
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 250),
+          alignment: 0.15,
+        );
       }
     });
   }
@@ -331,9 +351,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       return;
     }
 
-    final title = _title.text.trim().isEmpty ? 'Untitled artwork' : _title.text.trim();
+    final title = _title.text.trim().isEmpty
+        ? 'Untitled artwork'
+        : _title.text.trim();
     final composed = composeDimensions(_dimensions);
-    final insuranceNumber = _insuranceNumber.text.trim();
     final input = SubmitArtworkInput(
       title: title,
       description: _description.text.trim(),
@@ -341,7 +362,6 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       medium: _medium,
       artistPrice: _artistPrice,
       listingType: _listingType,
-      insuranceOpted: _insuranceRequired || _insuranceOpted,
       images: [
         for (var i = 0; i < _images.length; i++)
           ArtworkImage(
@@ -362,7 +382,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       physical: _physical,
       artworkType: artworkTypeToStore(_type, _typeOther.text),
       paintingStyle: paintingStyleToStore(_category, _style, _styleOther.text),
-      insuranceNumber: insuranceNumber.isEmpty ? null : insuranceNumber,
+      exclusive: _exclusive,
     );
 
     setState(() => _busy = true);
@@ -372,7 +392,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     final container = ProviderScope.containerOf(context);
     try {
       final saved = _isEdit
-          ? await repository.updateArtwork(artworkId: widget.artworkId!, patch: input)
+          ? await repository.updateArtwork(
+              artworkId: widget.artworkId!,
+              patch: input,
+            )
           : await repository.submitArtwork(input);
       _refreshLists(container);
       if (!mounted) return;
@@ -407,25 +430,37 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
 
   /// The words follow what the API says happened, not what was asked for: a
   /// submission is live only if it actually went live.
-  _Outcome _outcomeFor(Artwork saved, {required String title, required _SubmitMode mode}) {
+  _Outcome _outcomeFor(
+    Artwork saved, {
+    required String title,
+    required _SubmitMode mode,
+  }) {
     final name = _title.text.trim().isEmpty ? 'Your artwork' : title;
-    if (_isEdit) return _Outcome(title: 'Changes saved.', body: '“$name” has been updated.');
+    if (_isEdit) {
+      return _Outcome(
+        title: 'Changes saved.',
+        body: '“$name” has been updated.',
+      );
+    }
     if (mode == _SubmitMode.draft) {
       return _Outcome(
         title: 'Saved as draft.',
-        body: '“$name” has been saved. You can continue editing it any time from My Artworks.',
+        body:
+            '“$name” has been saved. You can continue editing it any time from My Artworks.',
       );
     }
     if (saved.status == ArtworkStatus.marketplace) {
       return _Outcome(
         title: 'Approved and live.',
-        body: '“$name” is on the marketplace now. Collectors can see it and buy it.',
+        body:
+            '“$name” is on the marketplace now. Collectors can see it and buy it.',
         artworkId: saved.id,
       );
     }
     return _Outcome(
       title: 'Submitted for review.',
-      body: '“$name” is with the GalleryZone team. We’ll let you know once it’s approved and live.',
+      body:
+          '“$name” is with the GalleryZone team. We’ll let you know once it’s approved and live.',
     );
   }
 
@@ -440,7 +475,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       return Scaffold(
         appBar: AppBar(title: const Text('Edit artwork')),
         body: _loadError == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const PageSkeleton()
             : EmptyState(
                 icon: LucideIcons.triangleAlert,
                 title: "Couldn't open this artwork",
@@ -450,24 +485,37 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     }
 
     final theme = Theme.of(context);
-    final editState = _editing == null ? null : artworkEditState(_editing!.artwork);
+    final editState = _editing == null
+        ? null
+        : artworkEditState(_editing!.artwork);
 
     // PAN, not GST, is what gates going live. A draft is never blocked, and
     // neither is an edit to a piece that is already listed.
     final profile = ref.watch(artistProfileDetailsProvider);
-    final panMissing = !_isEdit && profile.hasValue && (profile.requireValue.pan ?? '').trim().isEmpty;
+    final panMissing =
+        !_isEdit &&
+        profile.hasValue &&
+        (profile.requireValue.pan ?? '').trim().isEmpty;
     final panPending = !_isEdit && profile.isLoading;
 
     // Two different things, and conflating them is what made the old banner
     // lie: an approved fee WILL be charged on this listing; one still under
     // review may never be charged at all.
-    final penalties = _isEdit ? const <ExternalSalePenalty>[] : (ref.watch(artistPenaltiesProvider).value ?? []);
-    final approvedFee = penalties.where(isPenaltyCollectable).fold<double>(0, (sum, p) => sum + p.amount);
+    final penalties = _isEdit
+        ? const <ExternalSalePenalty>[]
+        : (ref.watch(artistPenaltiesProvider).value ?? []);
+    final approvedFee = penalties
+        .where(isPenaltyCollectable)
+        .fold<double>(0, (sum, p) => sum + p.amount);
     final reviewingFee = penalties
         .where((p) => penaltyStatusOf(p) == PenaltyStatus.pendingReview)
         .fold<double>(0, (sum, p) => sum + p.amount);
     final waived = penalties
-        .where((p) => penaltyStatusOf(p) == PenaltyStatus.waived && (p.decisionNote ?? '').isNotEmpty)
+        .where(
+          (p) =>
+              penaltyStatusOf(p) == PenaltyStatus.waived &&
+              (p.decisionNote ?? '').isNotEmpty,
+        )
         .firstOrNull;
 
     // The whole ladder is quoted from the rules GalleryZone published; the
@@ -475,11 +523,15 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     final rules = ref.watch(pricingRulesProvider).value;
     final markup = rules?.platformMarkup ?? pricing.platformMarkup;
     final gstRate = rules?.gstRate ?? pricing.gstRate;
-    final threshold = rules?.insuranceThreshold ?? insuranceRecommendedThreshold;
-    final ladder = priceLadderFor(_artistPrice, markup: markup, gstRate: gstRate);
+    final ladder = priceLadderFor(
+      _artistPrice,
+      markup: markup,
+      gstRate: gstRate,
+    );
 
     final missing = _missingForAggregator;
-    final canSubmit = !_busy &&
+    final canSubmit =
+        !_busy &&
         missing.isEmpty &&
         !panMissing &&
         !panPending &&
@@ -505,7 +557,8 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                     icon: LucideIcons.triangleAlert,
                     gold: true,
                     title: 'PAN required before this can go live',
-                    body: 'Add your PAN on your Profile page — you can still save this as a draft. GST is '
+                    body:
+                        'Add your PAN on your Profile page — you can still save this as a draft. GST is '
                         "optional and won't block this listing.",
                     action: TextButton(
                       onPressed: () => context.push('/dashboard/profile'),
@@ -518,9 +571,11 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                   PortalNotice(
                     icon: LucideIcons.triangleAlert,
                     destructive: true,
-                    title: '${formatInr(approvedFee)} off-platform sale fee is due on this listing',
-                    body: 'You marked artwork as sold on another platform and GalleryZone approved the fee. It '
-                        "is charged to your wallet when you submit this piece for review. Saving a draft doesn't "
+                    title:
+                        '${formatInr(approvedFee)} off-platform sale fee is due on this listing',
+                    body:
+                        'You marked artwork as sold on another platform and GalleryZone approved the fee. It '
+                        "is deducted from your next eligible settlement when you submit this piece for review. Saving a draft doesn't "
                         'trigger it.',
                   ),
                   const SizedBox(height: 16),
@@ -529,8 +584,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                   PortalNotice(
                     icon: LucideIcons.clock3,
                     gold: true,
-                    title: '${formatInr(reviewingFee)} off-platform sale fee is with GalleryZone for review',
-                    body: "Selling elsewhere doesn't always mean a fee — a piece promised to a gallery before you "
+                    title:
+                        '${formatInr(reviewingFee)} off-platform sale fee is with GalleryZone for review',
+                    body:
+                        "Selling elsewhere doesn't always mean a fee — a piece promised to a gallery before you "
                         'listed it, say. Nothing is charged unless GalleryZone approves it, and this listing goes '
                         'through either way.',
                   ),
@@ -545,17 +602,17 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                 ],
                 if (editState != null) ...[
                   PortalNotice(
-                    icon: editState.editable ? LucideIcons.clock3 : LucideIcons.lock,
+                    icon: editState.editable
+                        ? LucideIcons.clock3
+                        : LucideIcons.lock,
                     gold: editState.editable,
                     destructive: !editState.editable,
                     body: switch (editState.reason) {
-                      ArtworkEditReason.draft =>
-                        'This piece is still a draft — edit it freely until you send it for review.',
+                      ArtworkEditReason.draft => 'This piece is still a draft — edit it freely until you send it for review.',
                       ArtworkEditReason.withinWindow =>
                         '${editState.daysLeft} ${editState.daysLeft == 1 ? "day" : "days"} left of the '
                             '$artworkEditWindowDays-day edit window.',
-                      ArtworkEditReason.purchased =>
-                        'This artwork has been claimed or sold — changes can no longer be saved.',
+                      ArtworkEditReason.purchased => 'This artwork has been claimed or sold — changes can no longer be saved.',
                       ArtworkEditReason.windowClosed =>
                         'The $artworkEditWindowDays-day edit window for this artwork has closed.',
                     },
@@ -568,20 +625,21 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                 const SizedBox(height: 16),
                 _channelSection(theme, ladder: ladder, gstRate: gstRate),
                 const SizedBox(height: 16),
-                _insuranceSection(theme, threshold: threshold),
-                const SizedBox(height: 16),
                 _Preview(
                   image: _images.firstOrNull,
                   title: _title.text.trim(),
                   medium: _medium.isEmpty
                       ? 'Medium'
-                      : artworkMediums.where((m) => m.value == _medium).firstOrNull?.label ?? humanize(_medium),
+                      : artworkMediums
+                                .where((m) => m.value == _medium)
+                                .firstOrNull
+                                ?.label ??
+                            humanize(_medium),
                   year: _year.text.trim(),
                   artistPrice: _artistPrice,
                   customerPrice: ladder.customer,
                   markup: markup,
                   gstRate: gstRate,
-                  insured: _insuranceRequired || _insuranceOpted,
                 ),
                 const SizedBox(height: 16),
                 const _CertificateNote(),
@@ -595,7 +653,9 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                           text: missing.join(', '),
                           style: TextStyle(color: theme.colorScheme.onSurface),
                         ),
-                        const TextSpan(text: '. You can still save this as a draft.'),
+                        const TextSpan(
+                          text: '. You can still save this as a draft.',
+                        ),
                       ],
                     ),
                     style: theme.textTheme.bodySmall,
@@ -603,18 +663,31 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
                   const SizedBox(height: 12),
                 ],
                 if (_error != null) ...[
-                  Text(_error!, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.destructive)),
+                  Text(
+                    _error!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.destructive,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                 ],
                 FilledButton(
-                  onPressed: canSubmit ? () => _submit(_SubmitMode.review) : null,
-                  child: Text(_busy ? 'Saving…' : (_isEdit ? 'Save changes' : 'Submit for review')),
+                  onPressed: canSubmit
+                      ? () => _submit(_SubmitMode.review)
+                      : null,
+                  child: Text(
+                    _busy
+                        ? 'Saving…'
+                        : (_isEdit ? 'Save changes' : 'Submit for review'),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton(
                   onPressed: _busy
                       ? null
-                      : (_isEdit ? () => context.pop() : () => _submit(_SubmitMode.draft)),
+                      : (_isEdit
+                            ? () => context.pop()
+                            : () => _submit(_SubmitMode.draft)),
                   child: Text(_isEdit ? 'Cancel' : 'Save as draft'),
                 ),
               ],
@@ -663,7 +736,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('${_images.length} / $maxArtworkImages uploaded', style: theme.textTheme.labelSmall),
+        Text(
+          '${_images.length} / $maxArtworkImages uploaded',
+          style: theme.textTheme.labelSmall,
+        ),
       ],
     );
   }
@@ -683,7 +759,9 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           ),
           validator: (value) {
             final title = (value ?? '').trim();
-            if (title.isEmpty) return _mode == _SubmitMode.review ? 'A title is required' : null;
+            if (title.isEmpty) {
+              return _mode == _SubmitMode.review ? 'A title is required' : null;
+            }
             return title.length < 3 ? 'Use at least 3 characters' : null;
           },
         ),
@@ -746,7 +824,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           TextFormField(
             controller: _typeOther,
             maxLength: 80,
-            decoration: const InputDecoration(hintText: 'Describe the type', counterText: ''),
+            decoration: const InputDecoration(
+              hintText: 'Describe the type',
+              counterText: '',
+            ),
           ),
         ],
         if (_category == 'painting') ...[
@@ -758,7 +839,8 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
               decoration: InputDecoration(
                 labelText: 'Painting style',
                 suffixIcon: const Icon(LucideIcons.chevronsUpDown, size: 16),
-                helperText: 'One of ${paintingStyles.length} world painting traditions — search by name, region, '
+                helperText:
+                    'One of ${paintingStyles.length} world painting traditions — search by name, region, '
                     'or category.',
                 helperMaxLines: 2,
               ),
@@ -771,7 +853,10 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
             TextFormField(
               controller: _styleOther,
               maxLength: 80,
-              decoration: const InputDecoration(hintText: 'Name the painting style', counterText: ''),
+              decoration: const InputDecoration(
+                hintText: 'Name the painting style',
+                counterText: '',
+              ),
             ),
           ],
         ],
@@ -779,20 +864,32 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         TextFormField(
           controller: _year,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)],
-          decoration: InputDecoration(labelText: 'Year created', hintText: '${DateTime.now().year}'),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(4),
+          ],
+          decoration: InputDecoration(
+            labelText: 'Year created',
+            hintText: '${DateTime.now().year}',
+          ),
           autovalidateMode: AutovalidateMode.disabled,
           validator: (value) {
             final text = (value ?? '').trim();
             if (text.isEmpty) return null;
             final year = int.tryParse(text);
-            return year == null || year < 1900 || year > 2100 ? 'Enter a year between 1900 and 2100' : null;
+            return year == null || year < 1900 || year > 2100
+                ? 'Enter a year between 1900 and 2100'
+                : null;
           },
         ),
         const SizedBox(height: 18),
         Row(
           children: [
-            Icon(LucideIcons.ruler, size: 14, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              LucideIcons.ruler,
+              size: 14,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(width: 6),
             Text('Dimensions', style: theme.textTheme.labelLarge),
           ],
@@ -801,42 +898,73 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _MeasureField(controller: _length, label: 'Length', validator: _dimensionPair)),
+            Expanded(
+              child: _MeasureField(
+                controller: _length,
+                label: 'Length',
+                validator: _dimensionPair,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _MeasureField(controller: _width, label: 'Width', validator: _dimensionPair)),
+            Expanded(
+              child: _MeasureField(
+                controller: _width,
+                label: 'Width',
+                validator: _dimensionPair,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _MeasureField(controller: _height, label: 'Height', validator: _dimensionPair)),
+            Expanded(
+              child: _MeasureField(
+                controller: _height,
+                label: 'Height',
+                validator: _dimensionPair,
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<String>(
                 initialValue: _unit,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Unit'),
-                items: [for (final unit in dimensionUnits) DropdownMenuItem(value: unit, child: Text(unit))],
+                items: [
+                  for (final unit in dimensionUnits)
+                    DropdownMenuItem(value: unit, child: Text(unit)),
+                ],
                 onChanged: (value) => setState(() => _unit = value ?? 'in'),
               ),
             ),
           ],
         ),
         const SizedBox(height: 6),
-        Text("Length and width, and height if it's a 3D piece.", style: theme.textTheme.labelSmall),
+        Text(
+          "Length and width, and height if it's a 3D piece.",
+          style: theme.textTheme.labelSmall,
+        ),
         const SizedBox(height: 18),
         TextFormField(
           controller: _weight,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
-          decoration: const InputDecoration(labelText: 'Weight (kg)', hintText: '3.5'),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
+          ],
+          decoration: const InputDecoration(
+            labelText: 'Weight (kg)',
+            hintText: '3.5',
+          ),
           autovalidateMode: AutovalidateMode.disabled,
           validator: (value) {
             final text = (value ?? '').trim();
             if (text.isEmpty) return null;
             final kg = double.tryParse(text);
-            return kg == null || kg <= 0 || kg > 500 ? 'Enter the weight in kg (up to 500)' : null;
+            return kg == null || kg <= 0 || kg > 500
+                ? 'Enter the weight in kg (up to 500)'
+                : null;
           },
         ),
         const SizedBox(height: 14),
@@ -865,11 +993,18 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     final length = tidyMeasurement(_length.text) != null;
     final width = tidyMeasurement(_width.text) != null;
     if (!length || !width) return 'Add the length and width';
-    if (_height.text.trim().isNotEmpty && tidyMeasurement(_height.text) == null) return 'Enter a number above 0';
+    if (_height.text.trim().isNotEmpty &&
+        tidyMeasurement(_height.text) == null) {
+      return 'Enter a number above 0';
+    }
     return null;
   }
 
-  Widget _channelSection(ThemeData theme, {required PriceLadder ladder, required double gstRate}) {
+  Widget _channelSection(
+    ThemeData theme, {
+    required PriceLadder ladder,
+    required double gstRate,
+  }) {
     return _Section(
       title: 'Sales channel & pricing',
       children: [
@@ -889,16 +1024,41 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           ),
           const SizedBox(height: 10),
         ],
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _exclusive,
+          enabled: !(_isEdit && (_editing?.artwork.exclusive ?? false)),
+          onChanged: (checked) => setState(() => _exclusive = checked ?? false),
+          title: Text(
+            _exclusive
+                ? 'Exclusive to GalleryZone'
+                : 'Mark as exclusive to GalleryZone',
+          ),
+          subtitle: const Text(
+            'This piece is one of a kind and will not be sold on another platform. Once saved as exclusive, this cannot be undone in the app.',
+          ),
+        ),
         const SizedBox(height: 4),
         TextFormField(
           controller: _price,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(8)],
-          decoration: const InputDecoration(labelText: 'Your rate (₹)', hintText: '18000'),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(8),
+          ],
+          decoration: const InputDecoration(
+            labelText: 'Your rate (₹)',
+            hintText: '18000',
+          ),
           validator: (value) {
             final price = int.tryParse((value ?? '').trim());
-            if (price == null || price <= 0) return 'Enter your price for this artwork';
-            return price > 10000000 ? 'The most a piece can be listed at is ₹1,00,00,000' : null;
+            if (price == null || price <= 0) {
+              return 'Enter your price for this artwork';
+            }
+            return price > 10000000
+                ? 'The most a piece can be listed at is ₹1,00,00,000'
+                : null;
           },
         ),
         const SizedBox(height: 6),
@@ -916,16 +1076,32 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
             gold: true,
             child: Column(
               children: [
-                PortalDetailRow(label: 'You receive', value: formatInr(_artistPrice)),
-                PortalDetailRow(label: 'GalleryZone margin', value: formatInr(ladder.base - _artistPrice)),
-                PortalDetailRow(label: 'GST (${percentLabel(gstRate)}%)', value: formatInr(ladder.gstIncluded)),
+                PortalDetailRow(
+                  label: 'You receive',
+                  value: formatInr(_artistPrice),
+                ),
+                PortalDetailRow(
+                  label: 'GalleryZone margin',
+                  value: formatInr(ladder.base - _artistPrice),
+                ),
+                PortalDetailRow(
+                  label: 'GST (${percentLabel(gstRate)}%)',
+                  value: formatInr(ladder.gstIncluded),
+                ),
                 const Divider(height: 16),
-                PortalDetailRow(label: 'Listed price buyers see', value: formatInr(ladder.customer), gold: true),
+                PortalDetailRow(
+                  label: 'Listed price buyers see',
+                  value: formatInr(ladder.customer),
+                  gold: true,
+                ),
               ],
             ),
           ),
           const SizedBox(height: 8),
-          Text('Listing is free for your first 6 months.', style: theme.textTheme.labelSmall),
+          Text(
+            'Listing is free for your first 6 months.',
+            style: theme.textTheme.labelSmall,
+          ),
         ],
         if (_aggregatorSelected) ...[
           const SizedBox(height: 16),
@@ -937,7 +1113,8 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
 
   Widget _aggregatorRequirements(ThemeData theme) {
     final physical = _physical;
-    final framingOk = _framing != null && aggregatorReadyFraming.contains(_framing);
+    final framingOk =
+        _framing != null && aggregatorReadyFraming.contains(_framing);
     return PortalCard(
       gold: true,
       padding: const EdgeInsets.all(14),
@@ -946,9 +1123,18 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         children: [
           Row(
             children: [
-              Icon(LucideIcons.building2, size: 16, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.building2,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 8),
-              Expanded(child: Text('Aggregator requirements', style: theme.textTheme.titleSmall)),
+              Expanded(
+                child: Text(
+                  'Aggregator requirements',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -958,9 +1144,18 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
             style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
           ),
           const SizedBox(height: 10),
-          _Requirement(met: (physical.weightKg ?? 0) > 0, text: 'Weight entered — the piece has to be moved and hung'),
-          _Requirement(met: framingOk, text: 'Framed, or professionally stretched on canvas (MOU §12)'),
-          _Requirement(met: _format.isNotEmpty, text: 'Format / surface stated'),
+          _Requirement(
+            met: (physical.weightKg ?? 0) > 0,
+            text: 'Weight entered — the piece has to be moved and hung',
+          ),
+          _Requirement(
+            met: framingOk,
+            text: 'Framed, or professionally stretched on canvas (MOU §12)',
+          ),
+          _Requirement(
+            met: _format.isNotEmpty,
+            text: 'Format / surface stated',
+          ),
           const SizedBox(height: 10),
           _CheckTile(
             value: _hangers,
@@ -981,11 +1176,13 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
             onChanged: (value) => setState(() => _termsAccepted = value),
             gold: true,
             title: 'I accept the aggregator display terms for this artwork.',
-            detail: 'Initial display period is 30 days per aggregator; if unsold GalleryZone may relocate the '
+            detail:
+                'Initial display period is 30 days per aggregator; if unsold GalleryZone may relocate the '
                 'piece to another aggregator or channel. Transport to the assigned aggregator is deducted from '
                 'your settlement after a sale.',
             action: TextButton(
-              onPressed: () => context.push(LegalDocumentScreen.routeFor(LegalDoc.terms)),
+              onPressed: () =>
+                  context.push(LegalDocumentScreen.routeFor(LegalDoc.terms)),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(0, 28),
@@ -1001,114 +1198,13 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
             text: 'A short walkthrough of the aggregator process goes here. Coming soon.',
           ),
           const SizedBox(height: 8),
-          const ComingSoonTile(icon: LucideIcons.layoutTemplate, title: 'Display card', text: 'Coming soon.'),
+          const ComingSoonTile(
+            icon: LucideIcons.layoutTemplate,
+            title: 'Display card',
+            text: 'Coming soon.',
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _insuranceSection(ThemeData theme, {required double threshold}) {
-    final on = _insuranceRequired || _insuranceOpted;
-    final status = _editing?.artwork.insuranceStatus ?? ReviewStatus.notSubmitted;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        PortalCard(
-          gold: _insuranceRequired,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      children: [
-                        Text('Insure this artwork', style: theme.textTheme.titleSmall),
-                        if (_insuranceRequired)
-                          Text(
-                            'Required',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.tertiary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _insuranceRequired
-                          ? 'Mandatory for aggregator listings — the piece leaves your studio and is held by a '
-                              'partner while on display. Cover is arranged with $insurancePartner; the premium is '
-                              'deducted from your settlement.'
-                          : _artistPrice > threshold
-                              ? 'Strongly recommended for a piece at this price ($insurancePartner). Decline it and '
-                                  'theft, fire, transit damage and loss are yours alone.'
-                              : 'Optional, arranged with $insurancePartner. Uninsured artworks carry no platform '
-                                  'liability in transit.',
-                      style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Switch(
-                value: on,
-                // Locked on, not merely defaulted on, for an aggregator listing.
-                onChanged: _insuranceRequired ? null : (value) => setState(() => _insuranceOpted = value),
-              ),
-            ],
-          ),
-        ),
-        if (on) ...[
-          const SizedBox(height: 12),
-          PortalCard(
-            gold: true,
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: Text('Insurance verification', style: theme.textTheme.titleSmall)),
-                    if (_isEdit)
-                      StatusPill(label: insuranceStatusLabel[status]!, color: reviewStatusColor(context, status)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  onPressed: () => openExternal(context, insurancePartnerUrl),
-                  icon: const Icon(LucideIcons.externalLink, size: 14),
-                  label: const Text('Take out cover with $insurancePartner'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 32),
-                    alignment: Alignment.centerLeft,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _insuranceNumber,
-                  maxLength: 80,
-                  decoration: const InputDecoration(
-                    labelText: 'Policy / certificate number',
-                    hintText: 'Paste the number once your policy is issued',
-                    helperText:
-                        'Enter it here once you have it — GalleryZone verifies it before the piece can be marked '
-                        'insured.',
-                    helperMaxLines: 3,
-                    counterText: '',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const _InsuranceFaq(),
-              ],
-            ),
-          ),
-        ],
-      ],
     );
   }
 }
@@ -1164,12 +1260,15 @@ class _OptionField extends StatelessWidget {
       isExpanded: true,
       decoration: InputDecoration(labelText: label),
       items: [
-        if (value.isNotEmpty && !known) DropdownMenuItem(value: value, child: Text(humanize(value))),
-        for (final option in options) DropdownMenuItem(value: option.value, child: Text(option.label)),
+        if (value.isNotEmpty && !known)
+          DropdownMenuItem(value: value, child: Text(humanize(value))),
+        for (final option in options)
+          DropdownMenuItem(value: option.value, child: Text(option.label)),
       ],
       validator: requiredMessage == null
           ? null
-          : (selected) => selected == null || selected.isEmpty ? requiredMessage : null,
+          : (selected) =>
+                selected == null || selected.isEmpty ? requiredMessage : null,
       onChanged: (selected) {
         if (selected != null) onChanged(selected);
       },
@@ -1178,7 +1277,11 @@ class _OptionField extends StatelessWidget {
 }
 
 class _FramingField extends StatelessWidget {
-  const _FramingField({required this.value, required this.aggregatorOnly, required this.onChanged});
+  const _FramingField({
+    required this.value,
+    required this.aggregatorOnly,
+    required this.onChanged,
+  });
 
   final FramingState? value;
   final bool aggregatorOnly;
@@ -1188,13 +1291,19 @@ class _FramingField extends StatelessWidget {
   Widget build(BuildContext context) {
     final offered = [
       for (final state in FramingState.values)
-        if (!aggregatorOnly || aggregatorReadyFraming.contains(state) || state == value) state,
+        if (!aggregatorOnly ||
+            aggregatorReadyFraming.contains(state) ||
+            state == value)
+          state,
     ];
     return DropdownButtonFormField<FramingState>(
       initialValue: value,
       isExpanded: true,
       decoration: const InputDecoration(labelText: 'Framing'),
-      items: [for (final state in offered) DropdownMenuItem(value: state, child: Text(framingLabel[state]!))],
+      items: [
+        for (final state in offered)
+          DropdownMenuItem(value: state, child: Text(framingLabel[state]!)),
+      ],
       onChanged: (selected) {
         if (selected != null) onChanged(selected);
       },
@@ -1203,7 +1312,11 @@ class _FramingField extends StatelessWidget {
 }
 
 class _MeasureField extends StatelessWidget {
-  const _MeasureField({required this.controller, required this.label, required this.validator});
+  const _MeasureField({
+    required this.controller,
+    required this.label,
+    required this.validator,
+  });
 
   final TextEditingController controller;
   final String label;
@@ -1224,7 +1337,12 @@ class _MeasureField extends StatelessWidget {
 }
 
 class _ChoiceCard extends StatelessWidget {
-  const _ChoiceCard({required this.label, required this.description, required this.active, required this.onTap});
+  const _ChoiceCard({
+    required this.label,
+    required this.description,
+    required this.active,
+    required this.onTap,
+  });
 
   final String label;
   final String description;
@@ -1246,7 +1364,11 @@ class _ChoiceCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: active ? gold.withValues(alpha: 0.1) : null,
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: active ? gold.withValues(alpha: 0.5) : theme.colorScheme.outline),
+            border: Border.all(
+              color: active
+                  ? gold.withValues(alpha: 0.5)
+                  : theme.colorScheme.outline,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1259,7 +1381,10 @@ class _ChoiceCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(description, style: theme.textTheme.labelSmall?.copyWith(height: 1.4)),
+              Text(
+                description,
+                style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+              ),
             ],
           ),
         ),
@@ -1287,7 +1412,9 @@ class _Requirement extends StatelessWidget {
             child: Icon(
               met ? LucideIcons.check : LucideIcons.circle,
               size: 14,
-              color: met ? theme.colorScheme.tertiary : theme.colorScheme.onSurfaceVariant,
+              color: met
+                  ? theme.colorScheme.tertiary
+                  : theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(width: 8),
@@ -1295,7 +1422,9 @@ class _Requirement extends StatelessWidget {
             child: Text(
               text,
               style: theme.textTheme.labelMedium?.copyWith(
-                color: met ? theme.colorScheme.onSurface : theme.colorScheme.onSurfaceVariant,
+                color: met
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -1333,7 +1462,9 @@ class _CheckTile extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: gold ? theme.colorScheme.primary.withValues(alpha: 0.3) : theme.colorScheme.outline,
+            color: gold
+                ? theme.colorScheme.primary.withValues(alpha: 0.3)
+                : theme.colorScheme.outline,
           ),
         ),
         child: Row(
@@ -1350,9 +1481,15 @@ class _CheckTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: theme.textTheme.labelLarge?.copyWith(height: 1.4)),
+                    Text(
+                      title,
+                      style: theme.textTheme.labelLarge?.copyWith(height: 1.4),
+                    ),
                     const SizedBox(height: 2),
-                    Text(detail, style: theme.textTheme.labelSmall?.copyWith(height: 1.4)),
+                    Text(
+                      detail,
+                      style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                    ),
                     ?action,
                   ],
                 ),
@@ -1360,85 +1497,6 @@ class _CheckTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Port of `insurance-faq-chat.tsx`: not a chatbot - there is nothing to answer
-/// a free question - but a fixed set of questions that read as a conversation.
-class _InsuranceFaq extends StatefulWidget {
-  const _InsuranceFaq();
-
-  @override
-  State<_InsuranceFaq> createState() => _InsuranceFaqState();
-}
-
-class _InsuranceFaqState extends State<_InsuranceFaq> {
-  final _asked = <String>[];
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final remaining = insuranceFaqs.where((faq) => !_asked.contains(faq.question)).toList();
-    return PortalCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(LucideIcons.messageCircleQuestionMark, size: 16, color: theme.colorScheme.tertiary),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Insurance — common questions', style: theme.textTheme.labelLarge)),
-            ],
-          ),
-          for (final question in _asked) ...[
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Text(question, style: theme.textTheme.labelMedium),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                border: Border.all(color: theme.colorScheme.outline),
-              ),
-              child: Text(
-                insuranceFaqs.firstWhere((faq) => faq.question == question).answer,
-                style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          if (remaining.isEmpty)
-            Text(
-              "That's everything we've got preset — for anything else, reach Support.",
-              style: theme.textTheme.labelSmall,
-            )
-          else
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final faq in remaining)
-                  ActionChip(
-                    label: Text(faq.question),
-                    labelStyle: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.tertiary),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: () => setState(() => _asked.add(faq.question)),
-                  ),
-              ],
-            ),
-        ],
       ),
     );
   }
@@ -1456,7 +1514,11 @@ class _CertificateNote extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(LucideIcons.scrollText, size: 16, color: theme.colorScheme.tertiary),
+            child: Icon(
+              LucideIcons.scrollText,
+              size: 16,
+              color: theme.colorScheme.tertiary,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1465,7 +1527,9 @@ class _CertificateNote extends StatelessWidget {
               children: [
                 Text(
                   'Certificate of Authenticity — required',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1495,7 +1559,6 @@ class _Preview extends StatelessWidget {
     required this.customerPrice,
     required this.markup,
     required this.gstRate,
-    required this.insured,
   });
 
   final _FormImage? image;
@@ -1506,7 +1569,6 @@ class _Preview extends StatelessWidget {
   final double customerPrice;
   final double markup;
   final double gstRate;
-  final bool insured;
 
   @override
   Widget build(BuildContext context) {
@@ -1519,7 +1581,9 @@ class _Preview extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
+            ),
             child: AspectRatio(
               aspectRatio: 4 / 3,
               child: ColoredBox(
@@ -1528,15 +1592,18 @@ class _Preview extends StatelessWidget {
                     ? Icon(
                         LucideIcons.imagePlus,
                         size: 32,
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.4,
+                        ),
                       )
                     : cover.isNew
-                        ? Image.file(
-                            File(cover.url),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stack) => const SizedBox.shrink(),
-                          )
-                        : ArtworkImageView(url: cover.url),
+                    ? Image.file(
+                        File(cover.url),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stack) =>
+                            const SizedBox.shrink(),
+                      )
+                    : ArtworkImageView(url: cover.url),
               ),
             ),
           ),
@@ -1560,7 +1627,10 @@ class _Preview extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium,
                 ),
-                Text(year.isEmpty ? medium : '$medium · $year', style: theme.textTheme.labelSmall),
+                Text(
+                  year.isEmpty ? medium : '$medium · $year',
+                  style: theme.textTheme.labelSmall,
+                ),
                 const Divider(height: 24),
                 PortalDetailRow(
                   label: 'Your price (private)',
@@ -1578,27 +1648,6 @@ class _Preview extends StatelessWidget {
                   'see.',
                   style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
                 ),
-                if (insured) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(LucideIcons.shieldCheck, size: 14, color: theme.colorScheme.tertiary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Insured artwork',
-                          style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.tertiary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1652,8 +1701,9 @@ class _ImageGrid extends StatelessWidget {
                   ? Image.file(
                       File(image.url),
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stack) =>
-                          ColoredBox(color: theme.colorScheme.surfaceContainerHighest),
+                      errorBuilder: (context, error, stack) => ColoredBox(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      ),
                     )
                   : ArtworkImageView(url: image.url),
             ),
@@ -1664,7 +1714,11 @@ class _ImageGrid extends StatelessWidget {
                 iconSize: 14,
                 tooltip: 'Remove photo ${index + 1}',
                 visualDensity: VisualDensity.compact,
-                style: IconButton.styleFrom(backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.85)),
+                style: IconButton.styleFrom(
+                  backgroundColor: theme.colorScheme.surface.withValues(
+                    alpha: 0.85,
+                  ),
+                ),
                 icon: const Icon(Icons.close),
                 onPressed: () => onRemove(index),
               ),
@@ -1674,7 +1728,10 @@ class _ImageGrid extends StatelessWidget {
                 bottom: 4,
                 left: 4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface.withValues(alpha: 0.85),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1699,7 +1756,10 @@ class _Done extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false, title: const Text('Artwork')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Artwork'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1717,14 +1777,23 @@ class _Done extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                      ),
                     ),
-                    child: Icon(LucideIcons.check, size: 20, color: theme.colorScheme.tertiary),
+                    child: Icon(
+                      LucideIcons.check,
+                      size: 20,
+                      color: theme.colorScheme.tertiary,
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(outcome.title, style: theme.textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Text(outcome.body, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+                  Text(
+                    outcome.body,
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                  ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: () => context.go('/dashboard/artworks'),
@@ -1734,7 +1803,8 @@ class _Done extends StatelessWidget {
                   if (outcome.artworkId != null) ...[
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: () => context.push('/marketplace/${outcome.artworkId}'),
+                      onPressed: () =>
+                          context.push('/marketplace/${outcome.artworkId}'),
                       child: const Text('View it on the marketplace'),
                     ),
                   ],

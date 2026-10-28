@@ -206,6 +206,15 @@ export interface PublicProfileDoc {
   bio: string | null;
   location: string | null;
   profileImageUrl: string | null;
+  /** Public portfolio URL. Optional because profiles created before this
+   * projection existed do not carry it yet. */
+  website?: string | null;
+  /** Public behind-the-scenes proof video. Instagram remains private. */
+  socialProofVideoUrl?: string | null;
+  /** Public verification projection; optional on legacy documents. */
+  tier1SocialMedia?: boolean;
+  tier2ArtistAgreement?: boolean;
+  tier3FirstSale?: boolean;
 }
 
 export interface AddressDoc {
@@ -616,10 +625,10 @@ export interface AggregatorSaleDoc {
   /** When the ShipRocket webhook last updated the record. */
   trackedAt?: FirebaseFirestore.Timestamp | null;
   soldAt: FirebaseFirestore.Timestamp;
-  /** The commission rate (fraction of markup) actually billed on this sale.
-   *  Picked from aggregatorCommissionSlabs at sale time, based on the
-   *  aggregator's lifetime pre-GST total through the end of the previous
-   *  month. Stored for audit so a changed slab table never retroactively
+   /** The commission rate (fraction of markup) actually billed on this sale.
+    *  Picked from aggregatorCommissionSlabs at sale time, based on the
+    *  immediately previous calendar month's eligible pre-GST listed sales.
+    *  Stored for audit so a changed slab table never retroactively
    *  rewrites what was billed. Absent on sales recorded before the slab
    *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
   commissionRate?: number;

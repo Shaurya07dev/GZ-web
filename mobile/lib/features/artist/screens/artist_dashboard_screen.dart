@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/mock/seed/artist_seed.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/artwork.dart';
@@ -42,8 +44,9 @@ class ArtistDashboardScreen extends ConsumerWidget {
   static const path = '/dashboard';
 
   /// "Good morning", by the phone's own clock.
-  static String greeting(DateTime now) =>
-      now.hour < 12 ? 'Good morning' : (now.hour < 17 ? 'Good afternoon' : 'Good evening');
+  static String greeting(DateTime now) => now.hour < 12
+      ? 'Good morning'
+      : (now.hour < 17 ? 'Good afternoon' : 'Good evening');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -59,7 +62,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dashboard')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistKpisProvider);
           ref.invalidate(artistActivityProvider);
@@ -76,7 +79,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
             ContentWidth(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+                children: revealInOrder([
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -84,9 +87,15 @@ class ArtistDashboardScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${greeting(DateTime.now())}, $firstName', style: theme.textTheme.headlineSmall),
+                            Text(
+                              '${greeting(DateTime.now())}, $firstName',
+                              style: theme.textTheme.headlineMedium,
+                            ),
                             const SizedBox(height: 4),
-                            Text("Here's what needs your attention.", style: theme.textTheme.bodySmall),
+                            Text(
+                              "Here's what needs your attention.",
+                              style: theme.textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),
@@ -112,33 +121,49 @@ class ArtistDashboardScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Couldn't load your artworks.", style: theme.textTheme.bodyMedium),
+                          Text(
+                            "Couldn't load your artworks.",
+                            style: theme.textTheme.bodyMedium,
+                          ),
                           TextButton(
-                            onPressed: () => ref.invalidate(artistArtworksProvider),
+                            onPressed: () =>
+                                ref.invalidate(artistArtworksProvider),
                             child: const Text('Try again'),
                           ),
                         ],
                       ),
                     )
                   else if (artworks == null)
-                    const Center(
-                      child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()),
+                    const Shimmer(
+                      child: SkeletonBlock(height: 180, radius: AppRadius.lg),
                     )
                   else
-                    _ArtworkOverview(artworks: artworks),
+                    // Keyed apart from its placeholder, so it eases in when
+                    // the artworks land rather than swapping in a frame.
+                    Reveal(
+                      key: const ValueKey('artwork-overview'),
+                      child: _ArtworkOverview(artworks: artworks),
+                    ),
                   const SizedBox(height: 16),
                   PortalCard(
                     gold: true,
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.imagePlus, size: 22, color: theme.colorScheme.tertiary),
+                        Icon(
+                          LucideIcons.imagePlus,
+                          size: 22,
+                          color: theme.colorScheme.tertiary,
+                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Share your new work', style: theme.textTheme.titleSmall),
+                              Text(
+                                'Share your new work',
+                                style: theme.textTheme.titleSmall,
+                              ),
                               const SizedBox(height: 2),
                               Text(
                                 'Reach collectors, galleries and aggregators.',
@@ -149,7 +174,8 @@ class ArtistDashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         FilledButton(
-                          onPressed: () => context.push('/dashboard/artworks/upload'),
+                          onPressed: () =>
+                              context.push('/dashboard/artworks/upload'),
                           child: const Text('Upload'),
                         ),
                       ],
@@ -158,30 +184,49 @@ class ArtistDashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   const _NeedsAttentionCard(),
                   const SizedBox(height: 16),
-                  kpis.when(
-                    loading: () => const Center(
-                      child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()),
-                    ),
-                    error: (error, stack) => PortalCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  Reveal(
+                    key: ValueKey(kpis.hasValue),
+                    child: kpis.when(
+                      loading: () => Shimmer(
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < 3; i++)
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 12),
+                                child: SkeletonBlock(
+                                  height: 92,
+                                  radius: AppRadius.lg,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      error: (error, stack) => PortalCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Couldn't load your figures.",
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  ref.invalidate(artistKpisProvider),
+                              child: const Text('Try again'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      data: (list) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text("Couldn't load your figures.", style: theme.textTheme.bodyMedium),
-                          TextButton(
-                            onPressed: () => ref.invalidate(artistKpisProvider),
-                            child: const Text('Try again'),
-                          ),
+                          for (final kpi in list)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _KpiCard(kpi: kpi),
+                            ),
                         ],
                       ),
-                    ),
-                    data: (list) => Column(
-                      children: [
-                        for (final kpi in list)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _KpiCard(kpi: kpi),
-                          ),
-                      ],
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -189,7 +234,10 @@ class ArtistDashboardScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Recent activity', style: theme.textTheme.titleMedium),
+                        Text(
+                          'Recent activity',
+                          style: theme.textTheme.titleMedium,
+                        ),
                         const SizedBox(height: 14),
                         if (activity.isEmpty)
                           Text('Nothing yet.', style: theme.textTheme.bodySmall)
@@ -210,7 +258,7 @@ class ArtistDashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     const CommunityTeaser(),
                   ],
-                ],
+                ]),
               ),
             ),
           ],
@@ -237,14 +285,20 @@ class _FreeAccessNote extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(LucideIcons.gift, size: 16, color: theme.colorScheme.tertiary),
+            child: Icon(
+              LucideIcons.gift,
+              size: 16,
+              color: theme.colorScheme.tertiary,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -259,8 +313,11 @@ class _FreeAccessNote extends StatelessWidget {
                   ),
                   if (until != null)
                     TextSpan(
-                      text: 'It runs until ${DateFormat('d MMMM y').format(until.toLocal())}.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.textTheme.bodySmall?.color),
+                      text:
+                          'It runs until ${DateFormat('d MMMM y').format(until.toLocal())}.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
                     ),
                 ],
               ),
@@ -294,7 +351,9 @@ class _VerificationProgress extends ConsumerWidget {
                 child: Text(
                   'Unlocks the Gold ✦ Verified badge',
                   textAlign: TextAlign.end,
-                  style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.tertiary),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                  ),
                 ),
               ),
             ],
@@ -323,8 +382,14 @@ class _VerificationProgress extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Tier ${tier.tier}: ${tier.title}', style: theme.textTheme.bodyMedium),
-                        Text(tier.description, style: theme.textTheme.labelSmall),
+                        Text(
+                          'Tier ${tier.tier}: ${tier.title}',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        Text(
+                          tier.description,
+                          style: theme.textTheme.labelSmall,
+                        ),
                       ],
                     ),
                   ),
@@ -359,7 +424,11 @@ class _NextActionCard extends ConsumerWidget {
         padding: const EdgeInsets.all(18),
         child: Row(
           children: [
-            Icon(LucideIcons.partyPopper, size: 20, color: theme.colorScheme.tertiary),
+            Icon(
+              LucideIcons.partyPopper,
+              size: 20,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(width: 12),
             Text("You're all caught up.", style: theme.textTheme.bodyMedium),
           ],
@@ -372,7 +441,10 @@ class _NextActionCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('NEXT UP', style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 1.4)),
+          Text(
+            'NEXT UP',
+            style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 1.4),
+          ),
           const SizedBox(height: 8),
           Text(top.message, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 8),
@@ -405,7 +477,11 @@ class _NeedsAttentionCard extends ConsumerWidget {
           if (items.isEmpty)
             Row(
               children: [
-                Icon(LucideIcons.circleCheckBig, size: 16, color: theme.colorScheme.tertiary),
+                Icon(
+                  LucideIcons.circleCheckBig,
+                  size: 16,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 8),
                 Text("You're all caught up.", style: theme.textTheme.bodySmall),
               ],
@@ -418,9 +494,18 @@ class _NeedsAttentionCard extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
-                      Icon(LucideIcons.circleAlert, size: 16, color: theme.colorScheme.tertiary),
+                      Icon(
+                        LucideIcons.circleAlert,
+                        size: 16,
+                        color: theme.colorScheme.tertiary,
+                      ),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(item.message, style: theme.textTheme.bodyMedium)),
+                      Expanded(
+                        child: Text(
+                          item.message,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -441,7 +526,8 @@ class _ArtworkOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    int count(bool Function(ArtworkStatus) test) => artworks.where((a) => test(a.artwork.status)).length;
+    int count(bool Function(ArtworkStatus) test) =>
+        artworks.where((a) => test(a.artwork.status)).length;
     final rows = [
       ('Live', count(_liveFamily.contains)),
       ('Under review', count((s) => s == ArtworkStatus.pendingApproval)),
@@ -460,11 +546,15 @@ class _ArtworkOverview extends StatelessWidget {
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text('Your artworks', style: theme.textTheme.titleMedium),
-              Text(
-                '${artworks.length}',
+              CountUp(
+                value: artworks.length.toDouble(),
+                format: (shown) => '${shown.round()}',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontFeatures: const [
+                    FontFeature.liningFigures(),
+                    FontFeature.tabularFigures(),
+                  ],
                 ),
               ),
             ],
@@ -476,12 +566,20 @@ class _ArtworkOverview extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(row.$1, style: theme.textTheme.bodyMedium?.copyWith(color: theme.textTheme.bodySmall?.color)),
+                  Text(
+                    row.$1,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
                   Text(
                     '${row.$2}',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontFeatures: const [
+                        FontFeature.liningFigures(),
+                        FontFeature.tabularFigures(),
+                      ],
                     ),
                   ),
                 ],
@@ -518,11 +616,14 @@ class _KpiCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: CountUpText(
               kpi.value,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
+                fontFeatures: const [
+                  FontFeature.liningFigures(),
+                  FontFeature.tabularFigures(),
+                ],
               ),
             ),
           ),
@@ -545,12 +646,12 @@ class _ActivityRow extends StatelessWidget {
   final ActivityEntry entry;
 
   static IconData _icon(ActivityKind kind) => switch (kind) {
-        ActivityKind.artworkApproved => LucideIcons.circleCheckBig,
-        ActivityKind.artworkSubmitted => LucideIcons.upload,
-        ActivityKind.settlement => LucideIcons.banknote,
-        ActivityKind.verification => LucideIcons.shieldCheck,
-        ActivityKind.withdrawal => LucideIcons.arrowDownRight,
-      };
+    ActivityKind.artworkApproved => LucideIcons.circleCheckBig,
+    ActivityKind.artworkSubmitted => LucideIcons.upload,
+    ActivityKind.settlement => LucideIcons.banknote,
+    ActivityKind.verification => LucideIcons.shieldCheck,
+    ActivityKind.withdrawal => LucideIcons.arrowDownRight,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -563,9 +664,15 @@ class _ActivityRow extends StatelessWidget {
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            ),
           ),
-          child: Icon(_icon(entry.kind), size: 16, color: theme.colorScheme.tertiary),
+          child: Icon(
+            _icon(entry.kind),
+            size: 16,
+            color: theme.colorScheme.tertiary,
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(

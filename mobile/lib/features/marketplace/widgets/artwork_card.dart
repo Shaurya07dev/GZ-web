@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/format.dart';
+import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist.dart';
 import '../../../data/models/artwork.dart';
@@ -33,6 +35,24 @@ class ArtworkImageView extends StatelessWidget {
     return 'assets/images$withoutExtension.jpg';
   }
 
+  /// A photo that has to be fetched or decoded fades up from the placeholder
+  /// instead of snapping in a few frames after its card; one already in the
+  /// image cache (back on a page just seen) is drawn at once.
+  static Widget _fadeIn(
+    BuildContext context,
+    Widget child,
+    int? frame,
+    bool wasSynchronouslyLoaded,
+  ) {
+    if (wasSynchronouslyLoaded) return child;
+    return AnimatedOpacity(
+      opacity: frame == null ? 0 : 1,
+      duration: motionOf(context) ? AppMotion.medium : Duration.zero,
+      curve: Curves.easeOut,
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // No photo yet reads as exactly that — never a shared stock picture, so
@@ -42,17 +62,73 @@ class ArtworkImageView extends StatelessWidget {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: const SizedBox.expand(),
     );
-    if (url.startsWith('http')) {
-      return Image.network(
-        url,
-        fit: fit,
-        errorBuilder: (context, error, stack) => placeholder,
-      );
-    }
-    return Image.asset(
-      _assetFor(url),
-      fit: fit,
-      errorBuilder: (context, error, stack) => placeholder,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // A thumbnail — an order row's square, the gallery strip, the reel —
+        // decodes near the size it is drawn at, not at the photo's full
+        // 1200px, so a long list of them stays light to scroll. Twice the box
+        // still covers a photo up to twice as wide as it is tall. Cards and
+        // the gallery keep the full photo: it is what flies between them.
+        final side = math.max(constraints.maxWidth, constraints.maxHeight);
+        final cacheWidth = side.isFinite && side < 160
+            ? (side * MediaQuery.devicePixelRatioOf(context) * 2).ceil()
+            : null;
+        if (url.startsWith('http')) {
+          return Image.network(
+            url,
+            fit: fit,
+            cacheWidth: cacheWidth,
+            frameBuilder: _fadeIn,
+            errorBuilder: (context, error, stack) => placeholder,
+          );
+        }
+        return Image.asset(
+          _assetFor(url),
+          fit: fit,
+          cacheWidth: cacheWidth,
+          frameBuilder: _fadeIn,
+          errorBuilder: (context, error, stack) => placeholder,
+        );
+      },
+    );
+  }
+}
+
+/// The wishlist heart. Filling it pops it — a quick swell and settle — and
+/// clearing it just lets it go, so the two directions never feel alike.
+class WishlistHeart extends StatelessWidget {
+  const WishlistHeart({
+    super.key,
+    required this.saved,
+    this.size = 18,
+    this.color,
+  });
+
+  final bool saved;
+  final double size;
+
+  /// Outline colour while not saved; a saved heart is always the brand gold.
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AnimatedSwitcher(
+      duration: motionOf(context) ? AppMotion.slow : Duration.zero,
+      switchInCurve: Curves.easeOutBack,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) => ScaleTransition(
+        scale: Tween(begin: saved ? 0.4 : 0.85, end: 1.0).animate(animation),
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+      child: Icon(
+        saved ? Icons.favorite : Icons.favorite_border,
+        key: ValueKey(saved),
+        size: size,
+        color: saved
+            ? theme.colorScheme.tertiary
+            : (color ?? theme.colorScheme.onSurface),
+      ),
     );
   }
 }
@@ -77,7 +153,8 @@ class ImageComingSoon extends StatelessWidget {
           'assets/brand/gz-logo.png',
           width: size,
           height: size,
-          errorBuilder: (context, error, stack) => SizedBox(width: size, height: size),
+          errorBuilder: (context, error, stack) =>
+              SizedBox(width: size, height: size),
         ),
       ),
     );
@@ -88,9 +165,14 @@ class ImageComingSoon extends StatelessWidget {
         builder: (context, constraints) {
           // A thumbnail in a list row is too small to carry the words; it keeps
           // just the faded mark, scaled to the box.
-          final compact = constraints.maxHeight < 120 || constraints.maxWidth < 110;
+          final compact =
+              constraints.maxHeight < 120 || constraints.maxWidth < 110;
           if (compact) {
-            final size = (constraints.biggest.shortestSide.isFinite ? constraints.biggest.shortestSide : 40) * 0.5;
+            final size =
+                (constraints.biggest.shortestSide.isFinite
+                    ? constraints.biggest.shortestSide
+                    : 40) *
+                0.5;
             return Center(child: logo(size));
           }
           return Center(
@@ -130,7 +212,10 @@ class PriceTag extends StatelessWidget {
       formatInr(amount),
       style: (style ?? theme.textTheme.titleMedium)?.copyWith(
         fontWeight: FontWeight.w600,
-        fontFeatures: const [FontFeature.tabularFigures()],
+        fontFeatures: const [
+          FontFeature.liningFigures(),
+          FontFeature.tabularFigures(),
+        ],
       ),
     );
   }
@@ -204,14 +289,27 @@ class VerifiedBadge extends StatelessWidget {
 ///
 /// What it shows follows the website's card: GalleryZone's rank as a stamp
 /// over the photo, the title, the artist, medium and year, size, the price —
-/// with "Reserved" / "Sold" beside it when it is not on sale — and an
-/// "Insured" tag only when the piece is. There is no certificate or passport
+/// with "Reserved" / "Sold" beside it when it is not on sale. There is no certificate or passport
 /// tag: the marketplace carries none (1 Oct 2026).
-class ArtworkCard extends ConsumerWidget {
-  const ArtworkCard({super.key, required this.artwork, this.width});
+///
+/// The whole card presses in under a tap, and with [hero] its photo flies
+/// into the artwork page's gallery (and back) instead of the page sliding in
+/// over it.
+class ArtworkCard extends ConsumerStatefulWidget {
+  const ArtworkCard({
+    super.key,
+    required this.artwork,
+    this.width,
+    this.hero = false,
+  });
 
   final Artwork artwork;
   final double? width;
+
+  /// Off by default: a page may show the same piece twice (a grid and a rail),
+  /// and two heroes with one tag on a page is an error — only the grid the
+  /// artwork page is opened from turns it on.
+  final bool hero;
 
   // Only `reserved` and `sold` ever occur as the *current* status of a listed
   // piece; any other off-market status reads "Unavailable" instead of breaking.
@@ -221,187 +319,199 @@ class ArtworkCard extends ConsumerWidget {
   };
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ArtworkCard> createState() => _ArtworkCardState();
+}
+
+/// The tag shared by an artwork's photo on a card and in its page's gallery.
+Object artworkHeroTag(String artworkId) => ('artwork-photo', artworkId);
+
+class _ArtworkCardState extends ConsumerState<ArtworkCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final artwork = widget.artwork;
     final theme = Theme.of(context);
     final isWishlisted = ref.watch(wishlistProvider).contains(artwork.id);
     final isAvailable = artwork.status == ArtworkStatus.marketplace;
     final status = isAvailable
         ? null
-        : (_statusLabels[artwork.status] ?? 'Unavailable');
+        : (ArtworkCard._statusLabels[artwork.status] ?? 'Unavailable');
     final details = [
       if (artwork.medium.isNotEmpty) humanize(artwork.medium),
       if (artwork.yearCreated != null) '${artwork.yearCreated}',
     ].join(', ');
     final size = dimensionsLabel(artwork.dimensions);
 
+    final photo = Opacity(
+      opacity: isAvailable ? 1 : 0.65,
+      child: ArtworkImageView(url: artwork.thumbnailUrl),
+    );
+
     return SizedBox(
-      width: width,
-      child: Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: theme.cardTheme.color,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: theme.colorScheme.outline),
-        ),
-        child: Stack(
-          children: [
-            InkWell(
-              onTap: () => context.push('/marketplace/${artwork.id}'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AspectRatio(
-                    aspectRatio: 4 / 5,
-                    // Unavailable pieces stay visible but visibly dimmed, like
-                    // the website's faded, part-greyscale treatment.
-                    child: Opacity(
-                      opacity: isAvailable ? 1 : 0.65,
-                      child: ArtworkImageView(url: artwork.thumbnailUrl),
+      width: widget.width,
+      child: PressScale(
+        pressed: _pressed,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: theme.cardTheme.color,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: theme.colorScheme.outline),
+          ),
+          child: Stack(
+            children: [
+              InkWell(
+                onTap: () =>
+                    context.push('/marketplace/${artwork.id}', extra: artwork),
+                onHighlightChanged: (down) => setState(() => _pressed = down),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 4 / 5,
+                      // Unavailable pieces stay visible but visibly dimmed, like
+                      // the website's faded, part-greyscale treatment.
+                      child: widget.hero
+                          ? Hero(tag: artworkHeroTag(artwork.id), child: photo)
+                          : photo,
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          artwork.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                artwork.artistName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall,
-                              ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            artwork.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
-                            if (artwork.verifiedArtist) ...[
-                              const SizedBox(width: 6),
-                              const VerifiedBadge(
-                                verification: VerifiedBadge.minimumVerification,
-                                small: true,
-                              ),
-                            ],
-                          ],
-                        ),
-                        if (details.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            details,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall,
                           ),
-                        ],
-                        if (size.isNotEmpty)
-                          Text(
-                            size,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall,
-                          ),
-                        const SizedBox(height: 8),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            PriceTag(amount: artwork.customerPrice),
-                            if (status != null)
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
                               Flexible(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Text(
-                                    status,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.labelSmall,
-                                  ),
+                                child: Text(
+                                  artwork.artistName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall,
                                 ),
                               ),
+                              if (artwork.verifiedArtist) ...[
+                                const SizedBox(width: 6),
+                                const VerifiedBadge(
+                                  verification:
+                                      VerifiedBadge.minimumVerification,
+                                  small: true,
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (details.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              details,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall,
+                            ),
                           ],
-                        ),
-                        if (artwork.insured) ...[
+                          if (size.isNotEmpty)
+                            Text(
+                              size,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall,
+                            ),
                           const SizedBox(height: 8),
-                          // Clear of the buy button that sits in this corner.
-                          const Padding(
-                            padding: EdgeInsets.only(right: 40),
-                            child: _Pill(label: 'Insured', gold: true),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              PriceTag(amount: artwork.customerPrice),
+                              if (status != null)
+                                Flexible(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Text(
+                                      status,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.labelSmall,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
-                      ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (artwork.rarityType != null)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: IgnorePointer(
+                    child: RarityBadge(
+                      rarity: artwork.rarityType!,
+                      stamp: true,
                     ),
                   ),
-                ],
-              ),
-            ),
-            if (artwork.rarityType != null)
+                ),
               Positioned(
-                top: 8,
-                left: 8,
-                child: IgnorePointer(
-                  child: RarityBadge(rarity: artwork.rarityType!, stamp: true),
-                ),
-              ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                onPressed: () =>
-                    ref.read(wishlistProvider.notifier).toggle(artwork.id),
-                tooltip: isWishlisted
-                    ? 'Remove from wishlist'
-                    : 'Add to wishlist',
-                icon: Icon(
-                  isWishlisted ? Icons.favorite : Icons.favorite_border,
-                  size: 18,
-                  color: isWishlisted
-                      ? theme.colorScheme.tertiary
-                      : theme.colorScheme.onSurface,
-                ),
-                style: IconButton.styleFrom(
-                  backgroundColor: theme.colorScheme.surface.withValues(
-                    alpha: 0.85,
-                  ),
-                ),
-              ),
-            ),
-            // One tap from the grid to buying, as on the website - only while
-            // the piece is actually on sale.
-            if (isAvailable)
-              Positioned(
-                right: 8,
-                bottom: 8,
+                top: 4,
+                right: 4,
                 child: IconButton(
-                  onPressed: () =>
-                      context.push('/checkout?artworkId=${artwork.id}'),
-                  tooltip: 'Buy ${artwork.title}',
-                  icon: Icon(
-                    LucideIcons.shoppingBag,
-                    size: 16,
-                    color: theme.colorScheme.tertiary,
-                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    ref.read(wishlistProvider.notifier).toggle(artwork.id);
+                  },
+                  tooltip: isWishlisted
+                      ? 'Remove from wishlist'
+                      : 'Add to wishlist',
+                  icon: WishlistHeart(saved: isWishlisted),
                   style: IconButton.styleFrom(
-                    side: BorderSide(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                    backgroundColor: theme.colorScheme.surface.withValues(
+                      alpha: 0.85,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    minimumSize: const Size(36, 36),
                   ),
                 ),
               ),
-          ],
+              // One tap from the grid to buying, as on the website - only while
+              // the piece is actually on sale.
+              if (isAvailable)
+                Positioned(
+                  right: 8,
+                  bottom: 8,
+                  child: IconButton(
+                    onPressed: () =>
+                        context.push('/checkout?artworkId=${artwork.id}'),
+                    tooltip: 'Buy ${artwork.title}',
+                    icon: Icon(
+                      LucideIcons.shoppingBag,
+                      size: 16,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                    style: IconButton.styleFrom(
+                      side: BorderSide(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.5),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      minimumSize: const Size(36, 36),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -443,7 +553,7 @@ class ArtworkGridDelegate extends SliverGridDelegate {
   /// marketplace card, a plainer tile passes less.
   final double contentHeight;
 
-  /// Title, artist, medium and year, size, price and the "Insured" tag, with
+  /// Title, artist, medium and year, size and price, with
   /// the card's padding and border — at the default text size.
   static const textHeight = 170.0;
 
@@ -497,68 +607,37 @@ class ArtworkCardSkeleton extends StatelessWidget {
     return Semantics(
       label: 'Loading artwork',
       child: ExcludeSemantics(
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: theme.cardTheme.color,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: theme.colorScheme.outline),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AspectRatio(
-                aspectRatio: 4 / 5,
-                child: ColoredBox(color: block),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    bar(0.8, 14),
-                    const SizedBox(height: 8),
-                    bar(0.5, 12),
-                    const SizedBox(height: 12),
-                    bar(0.4, 16),
-                  ],
+        child: Shimmer(
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: theme.cardTheme.color,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: theme.colorScheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AspectRatio(
+                  aspectRatio: 4 / 5,
+                  child: ColoredBox(color: block),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      bar(0.8, 14),
+                      const SizedBox(height: 8),
+                      bar(0.5, 12),
+                      const SizedBox(height: 12),
+                      bar(0.4, 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, this.gold = false});
-
-  final String label;
-  final bool gold;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = gold
-        ? theme.colorScheme.tertiary
-        : theme.colorScheme.onSurface;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadius.xl4),
-        border: Border.all(
-          color: gold
-              ? theme.colorScheme.primary.withValues(alpha: 0.5)
-              : theme.colorScheme.outline,
-        ),
-      ),
-      child: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -583,31 +662,50 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-      child: Column(
-        // Callers hand this the whole body of a screen, so start-aligned
-        // content parks it under the app bar with the rest of the page
-        // empty. Centering is a no-op where the height is unbounded.
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 32, color: theme.colorScheme.tertiary),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+    // Callers hand this the whole body of a screen, so it centres itself both
+    // ways; where the height is unbounded (a list, a sliver) the centring is
+    // only across.
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: Reveal(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Icon(icon, size: 28, color: theme.colorScheme.tertiary),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.5,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (action != null) ...[const SizedBox(height: 24), action!],
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
-          ),
-          if (action != null) ...[const SizedBox(height: 20), action!],
-        ],
+        ),
       ),
     );
   }

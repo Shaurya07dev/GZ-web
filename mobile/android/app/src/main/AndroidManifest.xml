@@ -1,5 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Debug/profile manifests also declare this for Flutter tooling, but a
+         Play release only inherits the main manifest. The production API,
+         Firebase Auth, Razorpay checkout and external links all require it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- The artist portal's artwork upload asks for no runtime permissions,
          deliberately. `image_picker` captures through ACTION_IMAGE_CAPTURE and
          reads through the system photo picker; both hand back a result the app
@@ -23,10 +28,14 @@
     <uses-permission android:name="android.permission.NFC" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
+    <!-- enableOnBackInvokedCallback: Android 13+ predictive back. A back swipe peeks at the
+         page underneath (Flutter's PredictiveBackPageTransitionsBuilder draws it) instead of
+         jumping there when the finger lifts. -->
     <application
         android:label="GalleryZone"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

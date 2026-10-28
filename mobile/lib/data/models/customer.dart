@@ -56,7 +56,13 @@ abstract class WalletSummary with _$WalletSummary {
       _$WalletSummaryFromJson(json);
 }
 
-enum WalletTransactionType { settlement, withdrawal, commission, refund, adjustment }
+enum WalletTransactionType {
+  settlement,
+  withdrawal,
+  commission,
+  refund,
+  adjustment,
+}
 
 enum WalletTransactionStatus { completed, pending, failed }
 

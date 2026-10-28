@@ -5,7 +5,12 @@ import 'artwork_card.dart';
 /// An artist's round portrait, or their initial while they have none - never a
 /// stock face, and never the "Image coming soon" panel squeezed into a circle.
 class ArtistAvatar extends StatelessWidget {
-  const ArtistAvatar({super.key, required this.name, required this.imageUrl, this.size = 80});
+  const ArtistAvatar({
+    super.key,
+    required this.name,
+    required this.imageUrl,
+    this.size = 80,
+  });
 
   final String name;
   final String imageUrl;
@@ -14,7 +19,9 @@ class ArtistAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final initial = name.trim().isEmpty ? '?' : name.trim().characters.first.toUpperCase();
+    final initial = name.trim().isEmpty
+        ? '?'
+        : name.trim().characters.first.toUpperCase();
     return Container(
       width: size,
       height: size,

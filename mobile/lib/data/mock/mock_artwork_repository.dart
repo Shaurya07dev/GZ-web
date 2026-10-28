@@ -21,7 +21,10 @@ const _artworksKey = 'artworks';
 /// Every reader of this collection must seed it through this function. A
 /// second reader seeding it with `[]` would persist an empty marketplace for
 /// whichever repository happened to touch it first.
-List<Artwork> seedArtworksCollection() => [...seedArtworks(), ...seedArtistListedArtworks()];
+List<Artwork> seedArtworksCollection() => [
+  ...seedArtworks(),
+  ...seedArtistListedArtworks(),
+];
 
 /// One gate for every public listing surface (marketplace grid, artist page
 /// rails). Aggregator-only pieces are sold through partner premises and
@@ -30,7 +33,8 @@ List<Artwork> seedArtworksCollection() => [...seedArtworks(), ...seedArtistListe
 /// deliberately skip this — a passport/COA link must still resolve after the
 /// piece is gone.
 bool isPubliclyListed(Artwork artwork) =>
-    isMarketplaceListed(artwork.listingType) && artwork.status != ArtworkStatus.soldExternally;
+    isMarketplaceListed(artwork.listingType) &&
+    artwork.status != ArtworkStatus.soldExternally;
 
 // --- Review queue ------------------------------------------------------------
 
@@ -95,7 +99,9 @@ void promoteApprovedSubmissions({DateTime? now}) {
     (a) => a.toJson(),
   );
   final ready = pending
-      .where((a) => due.contains(a.id) && a.status == ArtworkStatus.pendingApproval)
+      .where(
+        (a) => due.contains(a.id) && a.status == ArtworkStatus.pendingApproval,
+      )
       .toList();
 
   final changedAt = now.toIso8601String();
@@ -105,7 +111,10 @@ void promoteApprovedSubmissions({DateTime? now}) {
         status: ArtworkStatus.marketplace,
         statusHistory: [
           ...artwork.statusHistory,
-          ArtworkStatusEvent(status: ArtworkStatus.marketplace, changedAt: changedAt),
+          ArtworkStatusEvent(
+            status: ArtworkStatus.marketplace,
+            changedAt: changedAt,
+          ),
         ],
       ),
   ];
@@ -123,7 +132,10 @@ void promoteApprovedSubmissions({DateTime? now}) {
       Artwork.fromJson,
       (a) => a.toJson(),
     );
-    MockDb.setCollection(_artworksKey, [...approved, ...live], (a) => a.toJson());
+    MockDb.setCollection(_artworksKey, [
+      ...approved,
+      ...live,
+    ], (a) => a.toJson());
 
     final activity = MockDb.getCollection(
       _activityKey,
@@ -170,10 +182,14 @@ class MockArtworkRepository implements ArtworkRepository {
     var results = [...live];
 
     if (filters.categories.isNotEmpty) {
-      results = results.where((a) => filters.categories.contains(a.category)).toList();
+      results = results
+          .where((a) => filters.categories.contains(a.category))
+          .toList();
     }
     if (filters.mediums.isNotEmpty) {
-      results = results.where((a) => filters.mediums.contains(a.medium)).toList();
+      results = results
+          .where((a) => filters.mediums.contains(a.medium))
+          .toList();
     }
     if (filters.rarity != null) {
       results = results.where((a) => a.rarityType == filters.rarity).toList();
@@ -185,15 +201,23 @@ class MockArtworkRepository implements ArtworkRepository {
       results = results.where((a) => a.sizeBand == filters.size).toList();
     }
     if (filters.minPrice != null) {
-      results = results.where((a) => a.customerPrice >= filters.minPrice!).toList();
+      results = results
+          .where((a) => a.customerPrice >= filters.minPrice!)
+          .toList();
     }
     if (filters.maxPrice != null) {
-      results = results.where((a) => a.customerPrice <= filters.maxPrice!).toList();
+      results = results
+          .where((a) => a.customerPrice <= filters.maxPrice!)
+          .toList();
     }
     if (filters.query != null && filters.query!.trim().isNotEmpty) {
       final q = filters.query!.toLowerCase();
       results = results
-          .where((a) => a.title.toLowerCase().contains(q) || a.artistName.toLowerCase().contains(q))
+          .where(
+            (a) =>
+                a.title.toLowerCase().contains(q) ||
+                a.artistName.toLowerCase().contains(q),
+          )
           .toList();
     }
 
@@ -234,11 +258,15 @@ class MockArtworkRepository implements ArtworkRepository {
   /// The filter choices across the whole live marketplace, not just the page.
   MarketplaceFacets _facetsOf(List<Artwork> live) {
     final prices = live.map((a) => a.customerPrice).toList()..sort();
-    final artists = <String, String>{for (final a in live) a.artistId: a.artistName};
+    final artists = <String, String>{
+      for (final a in live) a.artistId: a.artistName,
+    };
     return MarketplaceFacets(
       categories: (live.map((a) => a.category).toSet().toList()..sort()),
       mediums: (live.map((a) => a.medium).toSet().toList()..sort()),
-      artists: [for (final e in artists.entries) FacetArtist(id: e.key, name: e.value)],
+      artists: [
+        for (final e in artists.entries) FacetArtist(id: e.key, name: e.value),
+      ],
       rarityCounts: {
         for (final rank in ArtworkRarity.values)
           if (live.any((a) => a.rarityType == rank))
@@ -270,7 +298,9 @@ class MockArtworkRepository implements ArtworkRepository {
 
   @override
   Future<List<Artwork>> listByArtist(String artistId) => mockDelay(
-    () => _readAll().where((a) => a.artistId == artistId && isPubliclyListed(a)).toList(),
+    () => _readAll()
+        .where((a) => a.artistId == artistId && isPubliclyListed(a))
+        .toList(),
   );
 
   @override
@@ -294,7 +324,9 @@ class MockArtworkRepository implements ArtworkRepository {
           ArtistCard(
             profile: profile,
             artworkCount: live.where((a) => a.artistId == profile.id).length,
-            coverImageUrl: live.firstWhere((a) => a.artistId == profile.id).thumbnailUrl,
+            coverImageUrl: live
+                .firstWhere((a) => a.artistId == profile.id)
+                .thumbnailUrl,
           ),
     ];
   });

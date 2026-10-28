@@ -22,6 +22,8 @@ Artwork _artwork({
   double price = 48000,
   ArtworkStatus status = ArtworkStatus.marketplace,
   String thumbnail = '',
+  bool exclusive = false,
+  String? artworkType,
 }) {
   return Artwork(
     id: id,
@@ -43,6 +45,8 @@ Artwork _artwork({
     socialProofLinks: const [],
     statusHistory: const [],
     rarityType: ArtworkRarity.rare,
+    exclusive: exclusive,
+    artworkType: artworkType,
   );
 }
 
@@ -63,8 +67,14 @@ ArtistProfile _artist({
       tier3FirstSale: false,
     ),
     socialLinks: const [
-      SocialProofLink(platform: SocialProofPlatform.instagram, url: 'https://instagram.com/ananya'),
-      SocialProofLink(platform: SocialProofPlatform.youtube, url: 'https://youtube.com/@ananya'),
+      SocialProofLink(
+        platform: SocialProofPlatform.instagram,
+        url: 'https://instagram.com/ananya',
+      ),
+      SocialProofLink(
+        platform: SocialProofPlatform.youtube,
+        url: 'https://youtube.com/@ananya',
+      ),
     ],
     headline: headline,
     location: location,
@@ -73,7 +83,11 @@ ArtistProfile _artist({
 }
 
 class _Catalog implements ArtworkRepository {
-  _Catalog({this.artworks = const [], this.artists = const [], this.failArtists = false});
+  _Catalog({
+    this.artworks = const [],
+    this.artists = const [],
+    this.failArtists = false,
+  });
 
   final List<Artwork> artworks;
   final List<ArtistProfile> artists;
@@ -86,25 +100,28 @@ class _Catalog implements ArtworkRepository {
 
   @override
   Future<MarketplacePage> list(ArtworkFilters filters) async => MarketplacePage(
-        artworks: artworks,
-        total: artworks.length,
-        page: 1,
-        pageSize: filters.pageSize,
-      );
+    artworks: artworks,
+    total: artworks.length,
+    page: 1,
+    pageSize: filters.pageSize,
+  );
 
   @override
   Future<Artwork?> get(String id) async {
     if (failArtwork) {
       failArtwork = false;
-      throw Exception("Can't reach GalleryZone. Check your connection and try again.");
+      throw Exception(
+        "Can't reach GalleryZone. Check your connection and try again.",
+      );
     }
     return artworks.where((a) => a.id == id).firstOrNull;
   }
 
   @override
   Future<List<Artwork>> getMany(Iterable<String> ids) async => [
-        for (final a in artworks) if (ids.contains(a.id)) a,
-      ];
+    for (final a in artworks)
+      if (ids.contains(a.id)) a,
+  ];
 
   @override
   Future<List<ArtistCard>> listArtistCards() async => const [];
@@ -115,14 +132,19 @@ class _Catalog implements ArtworkRepository {
       failListings = false;
       throw Exception('Too many requests — wait a moment and try again.');
     }
-    return [for (final a in artworks) if (a.artistId == artistId) a];
+    return [
+      for (final a in artworks)
+        if (a.artistId == artistId) a,
+    ];
   }
 
   @override
   Future<ArtistProfile?> getArtistProfile(String id) async {
     if (failProfile) {
       failProfile = false;
-      throw Exception("Can't reach GalleryZone. Check your connection and try again.");
+      throw Exception(
+        "Can't reach GalleryZone. Check your connection and try again.",
+      );
     }
     return artists.where((a) => a.id == id).firstOrNull;
   }
@@ -138,13 +160,13 @@ class _Catalog implements ArtworkRepository {
 }
 
 Widget _app(_Catalog catalog, Widget home) => ProviderScope(
-      retry: (retryCount, error) => null,
-      overrides: [
-        artworkRepositoryProvider.overrideWithValue(catalog),
-        initialRoleProvider.overrideWithValue(null),
-      ],
-      child: MaterialApp(theme: AppTheme.light, home: home),
-    );
+  retry: (retryCount, error) => null,
+  overrides: [
+    artworkRepositoryProvider.overrideWithValue(catalog),
+    initialRoleProvider.overrideWithValue(null),
+  ],
+  child: MaterialApp(theme: AppTheme.light, home: home),
+);
 
 void _phone(WidgetTester tester) {
   tester.view.physicalSize = const Size(390 * 3, 844 * 3);
@@ -170,12 +192,19 @@ void main() {
       expect(stats.mediums, ['oil-on-canvas', 'watercolour']);
       expect(stats.priceLow, 12000);
       expect(stats.priceHigh, 90000);
-      expect(stats.worksSold, 0, reason: 'the public API cannot tell; the website shows 0 too');
+      expect(
+        stats.worksSold,
+        0,
+        reason: 'the public API cannot tell; the website shows 0 too',
+      );
       expect(stats.joinedLabel, 'March 2026');
     });
 
     test('say so plainly when there is nothing to count', () {
-      final stats = ArtistPublicStats.of(_artist().copyWith(joinedAt: ''), const []);
+      final stats = ArtistPublicStats.of(
+        _artist().copyWith(joinedAt: ''),
+        const [],
+      );
       expect(stats.priceLow, isNull);
       expect(stats.mediums, isEmpty);
       expect(stats.joinedLabel, '—');
@@ -183,22 +212,37 @@ void main() {
   });
 
   group('the artists directory', () {
-    testWidgets('lists each artist with their headline, or a plain excerpt of the bio', (tester) async {
-      _phone(tester);
-      final catalog = _Catalog(artists: [
-        _artist(),
-        _artist(id: 'ar-2', headline: '', bio: '<p>Hand-built <b>ceramics</b> from Khurja.</p>'),
-      ]);
-      await tester.pumpWidget(_app(catalog, const ArtistsDirectoryScreen()));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'lists each artist with their headline, or a plain excerpt of the bio',
+      (tester) async {
+        _phone(tester);
+        final catalog = _Catalog(
+          artists: [
+            _artist(),
+            _artist(
+              id: 'ar-2',
+              headline: '',
+              bio: '<p>Hand-built <b>ceramics</b> from Khurja.</p>',
+            ),
+          ],
+        );
+        await tester.pumpWidget(_app(catalog, const ArtistsDirectoryScreen()));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Our Artists'), findsOneWidget);
-      expect(find.text('Coastal light in oils'), findsOneWidget);
-      expect(find.text('Hand-built ceramics from Khurja.'), findsOneWidget);
-      expect(find.text('A'), findsWidgets, reason: 'no portrait yet shows an initial, not a stock face');
-    });
+        expect(find.text('Our Artists'), findsOneWidget);
+        expect(find.text('Coastal light in oils'), findsOneWidget);
+        expect(find.text('Hand-built ceramics from Khurja.'), findsOneWidget);
+        expect(
+          find.text('A'),
+          findsWidgets,
+          reason: 'no portrait yet shows an initial, not a stock face',
+        );
+      },
+    );
 
-    testWidgets('an empty directory explains when artists appear', (tester) async {
+    testWidgets('an empty directory explains when artists appear', (
+      tester,
+    ) async {
       _phone(tester);
       await tester.pumpWidget(_app(_Catalog(), const ArtistsDirectoryScreen()));
       await tester.pumpAndSettle();
@@ -221,35 +265,58 @@ void main() {
   });
 
   group('an artist\'s profile', () {
-    testWidgets('opens with what they make and where, then the numbers - and never their Instagram', (tester) async {
-      _phone(tester);
-      final catalog = _Catalog(artists: [_artist()], artworks: [_artwork()]);
-      await tester.pumpWidget(_app(catalog, const ArtistProfileScreen(artistId: 'ar-1')));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'opens with what they make and where, then the numbers - and never their Instagram',
+      (tester) async {
+        _phone(tester);
+        final catalog = _Catalog(artists: [_artist()], artworks: [_artwork()]);
+        await tester.pumpWidget(
+          _app(catalog, const ArtistProfileScreen(artistId: 'ar-1')),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Coastal light in oils'), findsOneWidget);
-      expect(find.text('Pune, Maharashtra'), findsOneWidget);
-      expect(find.text('YouTube'), findsOneWidget);
-      expect(find.text('Instagram'), findsNothing, reason: 'collected for verification, never shown publicly');
+        expect(find.text('Coastal light in oils'), findsOneWidget);
+        expect(find.text('Pune, Maharashtra'), findsOneWidget);
+        expect(find.text('YouTube'), findsOneWidget);
+        expect(
+          find.text('Instagram'),
+          findsNothing,
+          reason: 'collected for verification, never shown publicly',
+        );
 
-      await tester.scrollUntilVisible(find.text('Works listed'), 300);
-      await tester.pumpAndSettle(); // the rating read has its own mock delay
-      expect(find.text('Works listed'), findsOneWidget);
-      expect(find.text('₹48,000'), findsWidgets);
-      expect(find.text('Listed price, GST included'), findsOneWidget);
-      expect(find.text('March 2026'), findsOneWidget);
-      expect(find.text('Oil on canvas'), findsWidgets, reason: 'mediums are written as words, not slugs');
-    });
+        await tester.scrollUntilVisible(find.text('Works listed'), 300);
+        await tester.pumpAndSettle(); // the rating read has its own mock delay
+        expect(find.text('Works listed'), findsOneWidget);
+        expect(find.text('₹48,000'), findsWidgets);
+        expect(find.text('Listed price, GST included'), findsOneWidget);
+        expect(find.text('March 2026'), findsOneWidget);
+        expect(
+          find.text('Oil on canvas'),
+          findsWidgets,
+          reason: 'mediums are written as words, not slugs',
+        );
+      },
+    );
   });
 
   group('a failed read is never a dead end', () {
-    testWidgets("the artwork page says why, and Try again brings it back", (tester) async {
+    testWidgets("the artwork page says why, and Try again brings it back", (
+      tester,
+    ) async {
       _phone(tester);
-      final catalog = _Catalog(artworks: [_artwork()], artists: [_artist()])..failArtwork = true;
-      await tester.pumpWidget(_app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')));
+      final catalog = _Catalog(artworks: [_artwork()], artists: [_artist()])
+        ..failArtwork = true;
+      await tester.pumpWidget(
+        _app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')),
+      );
       await tester.pumpAndSettle();
       expect(find.text("Couldn't load this artwork"), findsOneWidget);
-      expect(find.text("Can't reach GalleryZone. Check your connection and try again."), findsOneWidget);
+      expect(
+        find.text(
+          "Can't reach GalleryZone. Check your connection and try again.",
+        ),
+        findsOneWidget,
+      );
 
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
@@ -258,49 +325,75 @@ void main() {
 
     testWidgets("an artist's profile does the same", (tester) async {
       _phone(tester);
-      final catalog = _Catalog(artists: [_artist()], artworks: [_artwork()])..failProfile = true;
-      await tester.pumpWidget(_app(catalog, const ArtistProfileScreen(artistId: 'ar-1')));
+      final catalog = _Catalog(artists: [_artist()], artworks: [_artwork()])
+        ..failProfile = true;
+      await tester.pumpWidget(
+        _app(catalog, const ArtistProfileScreen(artistId: 'ar-1')),
+      );
       await tester.pumpAndSettle();
       expect(find.text("Couldn't load this profile"), findsOneWidget);
 
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
       expect(find.text('Coastal light in oils'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 1)); // the rating read has its own mock delay
+      await tester.pump(
+        const Duration(seconds: 1),
+      ); // the rating read has its own mock delay
     });
 
-    testWidgets("and so does their list of work, leaving the profile above it in place", (tester) async {
-      _phone(tester);
-      final catalog = _Catalog(artists: [_artist()], artworks: [_artwork()])..failListings = true;
-      await tester.pumpWidget(_app(catalog, const ArtistProfileScreen(artistId: 'ar-1')));
-      await tester.pumpAndSettle();
-      expect(find.text('Coastal light in oils'), findsOneWidget);
+    testWidgets(
+      "and so does their list of work, leaving the profile above it in place",
+      (tester) async {
+        _phone(tester);
+        final catalog = _Catalog(artists: [_artist()], artworks: [_artwork()])
+          ..failListings = true;
+        await tester.pumpWidget(
+          _app(catalog, const ArtistProfileScreen(artistId: 'ar-1')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Coastal light in oils'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text("Couldn't load these listings"), 300);
-      expect(find.text('Too many requests — wait a moment and try again.'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text("Couldn't load these listings"),
+          300,
+        );
+        expect(
+          find.text('Too many requests — wait a moment and try again.'),
+          findsOneWidget,
+        );
 
-      await tester.ensureVisible(find.text('Try again'));
-      await tester.pump();
-      await tester.tap(find.text('Try again'));
-      await tester.pumpAndSettle();
-      expect(find.text("Couldn't load these listings"), findsNothing);
-      expect(find.text('Monsoon, Madurai'), findsWidgets);
-      await tester.pump(const Duration(seconds: 1)); // the rating read has its own mock delay
-    });
+        await tester.ensureVisible(find.text('Try again'));
+        await tester.pump();
+        await tester.tap(find.text('Try again'));
+        await tester.pumpAndSettle();
+        expect(find.text("Couldn't load these listings"), findsNothing);
+        expect(find.text('Monsoon, Madurai'), findsWidgets);
+        await tester.pump(
+          const Duration(seconds: 1),
+        ); // the rating read has its own mock delay
+      },
+    );
   });
 
   group('the artwork page', () {
-    testWidgets('puts buying beside the price and carries no certificate', (tester) async {
+    testWidgets('puts buying beside the price and carries no certificate', (
+      tester,
+    ) async {
       _phone(tester);
       final catalog = _Catalog(artworks: [_artwork()], artists: [_artist()]);
-      await tester.pumpWidget(_app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')));
+      await tester.pumpWidget(
+        _app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Buy Now'), findsOneWidget);
       expect(find.text('Wishlist'), findsOneWidget);
       expect(find.text('incl. GST'), findsOneWidget);
-      expect(find.text('Insured'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text("View this artwork's digital passport"), 300);
+      expect(find.text('Insured'), findsNothing);
+      await tester.scrollUntilVisible(
+        find.text("View this artwork's digital passport"),
+        300,
+      );
       expect(find.textContaining('Certificate'), findsNothing);
       expect(find.textContaining('Authenticity'), findsNothing);
       // Spec rows read as words, with the proper multiplication sign.
@@ -310,10 +403,72 @@ void main() {
       expect(find.text('Image coming soon'), findsOneWidget);
     });
 
+    testWidgets(
+      'shows the one-way GalleryZone exclusivity commitment and regional art form',
+      (tester) async {
+        _phone(tester);
+        final catalog = _Catalog(
+          artworks: [
+            _artwork(exclusive: true, artworkType: 'Rajasthan: Phad Painting'),
+          ],
+          artists: [_artist()],
+        );
+        await tester.pumpWidget(
+          _app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.scrollUntilVisible(
+          find.text('Exclusive to GalleryZone'),
+          300,
+        );
+        expect(find.text('Exclusive to GalleryZone'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('Rajasthan: Phad Painting'),
+          300,
+        );
+        expect(find.text('Rajasthan: Phad Painting'), findsOneWidget);
+      },
+    );
+
+    testWidgets('the full-size photo fills the screen and drags away', (
+      tester,
+    ) async {
+      _phone(tester);
+      final catalog = _Catalog(
+        artworks: [_artwork(thumbnail: '/artworks/bird.png')],
+        artists: [_artist()],
+      );
+      await tester.pumpWidget(
+        _app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('View full size'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSize(find.byType(InteractiveViewer)),
+        const Size(390, 844),
+      );
+
+      // A short drag springs back; a long one puts the photo away.
+      await tester.drag(find.byType(InteractiveViewer), const Offset(0, 60));
+      await tester.pumpAndSettle();
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      await tester.drag(find.byType(InteractiveViewer), const Offset(0, 300));
+      await tester.pumpAndSettle();
+      expect(find.byType(InteractiveViewer), findsNothing);
+    });
+
     testWidgets('a reserved piece cannot be bought', (tester) async {
       _phone(tester);
-      final catalog = _Catalog(artworks: [_artwork(status: ArtworkStatus.reserved)], artists: [_artist()]);
-      await tester.pumpWidget(_app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')));
+      final catalog = _Catalog(
+        artworks: [_artwork(status: ArtworkStatus.reserved)],
+        artists: [_artist()],
+      );
+      await tester.pumpWidget(
+        _app(catalog, const ArtworkDetailScreen(artworkId: 'aw-1')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Reserved'), findsOneWidget);

@@ -1,12 +1,15 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/launch.dart';
 import '../../core/format.dart';
+import '../../core/motion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/artwork.dart' show ReviewStatus;
-import '../../data/models/customer.dart' show WalletTransaction, WalletTransactionStatus;
+import '../../data/models/customer.dart'
+    show WalletTransaction, WalletTransactionStatus;
 import '../legal/data/faq_data.dart';
 import '../legal/screens/faq_screen.dart';
 
@@ -21,11 +24,130 @@ class ShellDestination {
   final String label;
 }
 
+/// The portals' bottom bar on a phone: the theme's [NavigationBar] under a
+/// hairline, so the page ends on a clean edge instead of fading into the bar.
+/// On an iPhone it is Apple's own tab bar instead — translucent, a hairline
+/// on top, the chosen tab tinted gold rather than set in a pill — so the app
+/// sits among the phone's other apps rather than looking like a visitor.
+class ShellNavigationBar extends StatelessWidget {
+  const ShellNavigationBar({
+    super.key,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<ShellDestination> destinations;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    if (theme.platform case TargetPlatform.iOS || TargetPlatform.macOS) {
+      return CupertinoTabBar(
+        currentIndex: selectedIndex,
+        onTap: onDestinationSelected,
+        activeColor: scheme.tertiary,
+        inactiveColor: scheme.onSurfaceVariant,
+        // Translucent, so the bar blurs whatever passes beneath it.
+        backgroundColor: scheme.surface.withValues(alpha: 0.9),
+        border: Border(
+          top: BorderSide(color: scheme.outlineVariant, width: 0.5),
+        ),
+        iconSize: 24,
+        items: [
+          for (final destination in destinations)
+            BottomNavigationBarItem(
+              icon: Icon(destination.icon),
+              // Built fresh each time its tab is chosen, so the icon gives one
+              // small bounce, as Apple's own tab bars do.
+              activeIcon: _TabBounce(child: Icon(destination.icon)),
+              label: destination.label,
+            ),
+        ],
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onDestinationSelected,
+        destinations: [
+          for (final destination in destinations)
+            NavigationDestination(
+              icon: Icon(destination.icon),
+              label: destination.label,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A tab icon that swells a touch and settles when its tab is chosen.
+class _TabBounce extends StatefulWidget {
+  const _TabBounce({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_TabBounce> createState() => _TabBounceState();
+}
+
+class _TabBounceState extends State<_TabBounce>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 360),
+  );
+  late final Animation<double> _scale = TweenSequence([
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.0,
+        end: 1.16,
+      ).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 40,
+    ),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.16,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 60,
+    ),
+  ]).animate(_controller);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller.isDismissed && motionOf(context)) _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
+}
+
 /// Card frame the customer, artist and aggregator portals' rows and panels
 /// sit in — one place for the surface + hairline ring treatment, rather
 /// than the same `BoxDecoration` copied down forty screens.
 class PortalCard extends StatelessWidget {
-  const PortalCard({super.key, required this.child, this.padding, this.gold = false});
+  const PortalCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.gold = false,
+  });
 
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -37,7 +159,9 @@ class PortalCard extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: gold ? theme.colorScheme.primary.withValues(alpha: 0.05) : theme.cardTheme.color,
+        color: gold
+            ? theme.colorScheme.primary.withValues(alpha: 0.05)
+            : theme.cardTheme.color,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(
           color: gold
@@ -56,7 +180,12 @@ class PortalCard extends StatelessWidget {
 /// Label/value row used across settlements, KYC, COA, gallery-space and
 /// sale-detail panels.
 class PortalDetailRow extends StatelessWidget {
-  const PortalDetailRow({super.key, required this.label, required this.value, this.gold = false});
+  const PortalDetailRow({
+    super.key,
+    required this.label,
+    required this.value,
+    this.gold = false,
+  });
 
   final String label;
   final String value;
@@ -93,7 +222,13 @@ class PortalDetailRow extends StatelessWidget {
 /// previously rendered the same address as plain selectable text because the
 /// app had no `url_launcher`.
 class ContactLinkRow extends StatelessWidget {
-  const ContactLinkRow({super.key, this.icon, this.glyph, required this.label, required this.url});
+  const ContactLinkRow({
+    super.key,
+    this.icon,
+    this.glyph,
+    required this.label,
+    required this.url,
+  });
 
   final IconData? icon;
   final Widget? glyph;
@@ -115,10 +250,16 @@ class ContactLinkRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.tertiary),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                  ),
                 ),
               ),
-              Icon(LucideIcons.externalLink, size: 14, color: theme.colorScheme.outline),
+              Icon(
+                LucideIcons.externalLink,
+                size: 14,
+                color: theme.colorScheme.outline,
+              ),
             ],
           ),
         ),
@@ -150,11 +291,17 @@ class SupportFaqPanel extends StatelessWidget {
         PortalCard(
           child: InkWell(
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => FaqScreen(initialAudience: audience)),
+              MaterialPageRoute(
+                builder: (_) => FaqScreen(initialAudience: audience),
+              ),
             ),
             child: Row(
               children: [
-                Icon(LucideIcons.circleHelp, size: 16, color: theme.colorScheme.tertiary),
+                Icon(
+                  LucideIcons.circleHelp,
+                  size: 16,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -164,7 +311,11 @@ class SupportFaqPanel extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right, size: 18, color: theme.colorScheme.outline),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: theme.colorScheme.outline,
+                ),
               ],
             ),
           ),
@@ -177,7 +328,11 @@ class SupportFaqPanel extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(LucideIcons.circlePlay, size: 16, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.circlePlay,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -185,7 +340,9 @@ class SupportFaqPanel extends StatelessWidget {
                   children: [
                     Text(
                       'Video walkthroughs',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -235,7 +392,13 @@ class PortalNotice extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: 16, color: destructive ? AppColors.destructive : theme.colorScheme.tertiary),
+            child: Icon(
+              icon,
+              size: 16,
+              color: destructive
+                  ? AppColors.destructive
+                  : theme.colorScheme.tertiary,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -243,10 +406,18 @@ class PortalNotice extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (title != null) ...[
-                  Text(title!, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  Text(
+                    title!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                 ],
-                Text(body, style: theme.textTheme.labelSmall?.copyWith(height: 1.45)),
+                Text(
+                  body,
+                  style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
+                ),
                 ?action,
               ],
             ),
@@ -261,7 +432,12 @@ class PortalNotice extends StatelessWidget {
 /// built (a walkthrough video, a preview card), so the gap is visible and
 /// labelled rather than silently absent.
 class ComingSoonTile extends StatelessWidget {
-  const ComingSoonTile({super.key, required this.icon, required this.title, required this.text});
+  const ComingSoonTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
 
   final IconData icon;
   final String title;
@@ -274,7 +450,9 @@ class ComingSoonTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.4),
+        ),
       ),
       child: Row(
         children: [
@@ -299,7 +477,12 @@ class ComingSoonTile extends StatelessWidget {
 /// (holding, shipment, settlement, review verdicts) all render as one, so the
 /// colour choice lives in a single place rather than a copy per screen.
 class StatusPill extends StatelessWidget {
-  const StatusPill({super.key, required this.label, required this.color, this.icon});
+  const StatusPill({
+    super.key,
+    required this.label,
+    required this.color,
+    this.icon,
+  });
 
   final String label;
   final Color color;
@@ -327,7 +510,10 @@ class StatusPill extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w500),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -338,8 +524,11 @@ class StatusPill extends StatelessWidget {
 
 /// The colour a review verdict reads in: quiet when nothing has happened,
 /// gold while it is with GalleryZone, green once approved, red when it is not.
-Color reviewStatusColor(BuildContext context, ReviewStatus status) => switch (status) {
-      ReviewStatus.notSubmitted => Theme.of(context).colorScheme.onSurfaceVariant,
+Color reviewStatusColor(BuildContext context, ReviewStatus status) =>
+    switch (status) {
+      ReviewStatus.notSubmitted => Theme.of(
+        context,
+      ).colorScheme.onSurfaceVariant,
       ReviewStatus.submitted => Theme.of(context).colorScheme.tertiary,
       ReviewStatus.approved => const Color(0xFF34D399),
       ReviewStatus.rejected => AppColors.destructive,
@@ -362,13 +551,18 @@ class GstStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusPill(label: labels[status]!, color: reviewStatusColor(context, status));
+    return StatusPill(
+      label: labels[status]!,
+      color: reviewStatusColor(context, status),
+    );
   }
 }
 
 /// Standard GSTIN shape: 2-digit state code, 10-char PAN, entity number, a
 /// literal "Z", then a checksum character.
-final gstinPattern = RegExp(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$');
+final gstinPattern = RegExp(
+  r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$',
+);
 
 /// Shown at the foot of every portal's wallet. GST is optional for everyone —
 /// leaving it blank is a valid answer and must never block a payout. When a
@@ -394,8 +588,9 @@ class GstNumberCard extends StatefulWidget {
 }
 
 class _GstNumberCardState extends State<GstNumberCard> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.value);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.value,
+  );
   bool _saving = false;
   bool _saved = false;
 
@@ -437,7 +632,11 @@ class _GstNumberCardState extends State<GstNumberCard> {
         children: [
           Row(
             children: [
-              Icon(LucideIcons.receipt, size: 17, color: theme.colorScheme.tertiary),
+              Icon(
+                LucideIcons.receipt,
+                size: 17,
+                color: theme.colorScheme.tertiary,
+              ),
               const SizedBox(width: 8),
               Text('GST number', style: theme.textTheme.titleMedium),
               const SizedBox(width: 6),
@@ -498,15 +697,28 @@ class WalletTransactionRow extends StatelessWidget {
     final theme = Theme.of(context);
     final isCredit = transaction.amount >= 0;
     final status = switch (transaction.status) {
-      WalletTransactionStatus.pending =>
-        Text('Pending', style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.tertiary)),
-      WalletTransactionStatus.failed =>
-        Text('Failed', style: theme.textTheme.labelSmall?.copyWith(color: AppColors.destructive)),
-      WalletTransactionStatus.completed => Text(formatDay(transaction.date), style: theme.textTheme.labelSmall),
+      WalletTransactionStatus.pending => Text(
+        'Pending',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.tertiary,
+        ),
+      ),
+      WalletTransactionStatus.failed => Text(
+        'Failed',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: AppColors.destructive,
+        ),
+      ),
+      WalletTransactionStatus.completed => Text(
+        formatDay(transaction.date),
+        style: theme.textTheme.labelSmall,
+      ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: theme.colorScheme.outline))),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: theme.colorScheme.outline)),
+      ),
       child: Row(
         children: [
           Container(
@@ -514,7 +726,9 @@ class WalletTransactionRow extends StatelessWidget {
             height: 28,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isCredit ? _emerald.withValues(alpha: 0.1) : theme.colorScheme.surfaceContainerHighest,
+              color: isCredit
+                  ? _emerald.withValues(alpha: 0.1)
+                  : theme.colorScheme.surfaceContainerHighest,
             ),
             child: Icon(
               isCredit ? LucideIcons.arrowUpRight : LucideIcons.arrowDownRight,
@@ -527,7 +741,12 @@ class WalletTransactionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(transaction.label, maxLines: 2, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodyMedium),
+                Text(
+                  transaction.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                ),
                 status,
               ],
             ),
@@ -536,7 +755,10 @@ class WalletTransactionRow extends StatelessWidget {
           Text(
             '${isCredit ? '+' : '−'}${formatInr(transaction.amount.abs())}',
             style: theme.textTheme.bodyMedium?.copyWith(
-              fontFeatures: const [FontFeature.tabularFigures()],
+              fontFeatures: const [
+                FontFeature.liningFigures(),
+                FontFeature.tabularFigures(),
+              ],
               color: isCredit ? _emerald : null,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../legal/data/faq_data.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -43,17 +44,16 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       icon: LucideIcons.rotateCcw,
       question: 'Can I return or cancel an order?',
       answer:
-          'Orders can be cancelled before dispatch. Refunds credit to your '
-          'GalleryZone wallet as store credit and apply automatically at your next '
-          'checkout.',
+          'Orders can be cancelled before dispatch. Approved refunds are returned to the original payment method '
+          'in line with the order terms and payment-provider timelines.',
     ),
     (
       icon: LucideIcons.repeat2,
       question: 'How does reselling my artwork work?',
       answer:
           'Any artwork in your collection can be listed for resale from the Resale '
-          "page. This build covers listing and withdrawing — buyer matching isn't "
-          'wired to a live marketplace yet.',
+          'page and withdraw your listing later. Buyer matching, checkout and '
+          'seller payout are not live yet.',
     ),
   ];
 
@@ -68,22 +68,19 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSending = true);
     try {
-      await ref.read(customerRepositoryProvider).submitSupportTicket(
-            subject: _subject.text,
-            message: _message.text,
-          );
+      await ref
+          .read(customerRepositoryProvider)
+          .submitSupportTicket(subject: _subject.text, message: _message.text);
       ref.invalidate(supportTicketsProvider);
       _subject.clear();
       _message.clear();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ticket submitted')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Ticket submitted')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -108,12 +105,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Contact GalleryZone', style: theme.textTheme.titleMedium),
+                      Text(
+                        'Contact GalleryZone',
+                        style: theme.textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 10),
                       ContactLinkRow(
                         icon: LucideIcons.mail,
@@ -130,10 +132,20 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
                     childrenPadding: const EdgeInsets.only(bottom: 12),
-                    leading: Icon(faq.icon, size: 18, color: theme.colorScheme.tertiary),
-                    title: Text(faq.question, style: theme.textTheme.bodyMedium),
+                    leading: Icon(
+                      faq.icon,
+                      size: 18,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                    title: Text(
+                      faq.question,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     children: [
-                      Text(faq.answer, style: theme.textTheme.bodySmall?.copyWith(height: 1.5)),
+                      Text(
+                        faq.answer,
+                        style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+                      ),
                     ],
                   ),
                 const SizedBox(height: 24),
@@ -149,8 +161,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       TextFormField(
                         controller: _subject,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) =>
-                            (value ?? '').trim().isEmpty ? 'A subject is required' : null,
+                        validator: (value) => (value ?? '').trim().isEmpty
+                            ? 'A subject is required'
+                            : null,
                         decoration: const InputDecoration(labelText: 'Subject'),
                       ),
                       const SizedBox(height: 14),
@@ -159,8 +172,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         minLines: 3,
                         maxLines: 6,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (value) =>
-                            (value ?? '').trim().isEmpty ? 'Enter a message' : null,
+                        validator: (value) => (value ?? '').trim().isEmpty
+                            ? 'Enter a message'
+                            : null,
                         decoration: const InputDecoration(labelText: 'Message'),
                       ),
                       const SizedBox(height: 16),
@@ -168,7 +182,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         height: 46,
                         child: FilledButton(
                           onPressed: _isSending ? null : _submit,
-                          child: Text(_isSending ? 'Sending…' : 'Submit ticket'),
+                          child: Text(
+                            _isSending ? 'Sending…' : 'Submit ticket',
+                          ),
                         ),
                       ),
                     ],
@@ -197,18 +213,27 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                               Expanded(
                                 child: Text(
                                   ticket.subject,
-                                  style: theme.textTheme.bodyMedium
-                                      ?.copyWith(fontWeight: FontWeight.w500),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                              Text(ticket.status.name, style: theme.textTheme.labelSmall),
+                              Text(
+                                ticket.status.name,
+                                style: theme.textTheme.labelSmall,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          Text(ticket.message, style: theme.textTheme.bodySmall),
+                          Text(
+                            ticket.message,
+                            style: theme.textTheme.bodySmall,
+                          ),
                           const SizedBox(height: 6),
-                          Text(formatShortDate(ticket.createdAt),
-                              style: theme.textTheme.labelSmall),
+                          Text(
+                            formatShortDate(ticket.createdAt),
+                            style: theme.textTheme.labelSmall,
+                          ),
                         ],
                       ),
                     ),

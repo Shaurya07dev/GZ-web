@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
+import '../../../core/motion.dart';
 import '../../../data/models/customer.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../auth/screens/login_screen.dart';
@@ -21,7 +22,8 @@ class AccountSettingsScreen extends ConsumerStatefulWidget {
   static const path = '/account/settings';
 
   @override
-  ConsumerState<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
+  ConsumerState<AccountSettingsScreen> createState() =>
+      _AccountSettingsScreenState();
 }
 
 class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
@@ -44,7 +46,9 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
     try {
-      await ref.read(customerRepositoryProvider).updateProfile(
+      await ref
+          .read(customerRepositoryProvider)
+          .updateProfile(
             CustomerProfile(
               name: _name.text.trim(),
               email: _email.text.trim(),
@@ -53,14 +57,12 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
           );
       ref.invalidate(customerProfileProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Profile updated')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(error))),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -84,7 +86,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: profile.isLoading && !_isSeeded
-          ? const Center(child: CircularProgressIndicator())
+          ? const PageSkeleton()
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               children: [
@@ -98,11 +100,13 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                         Center(
                           child: CircleAvatar(
                             radius: 34,
-                            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                            backgroundColor: theme.colorScheme.primary
+                                .withValues(alpha: 0.12),
                             child: Text(
                               initials(loaded?.name ?? ''),
-                              style: theme.textTheme.titleLarge
-                                  ?.copyWith(color: theme.colorScheme.tertiary),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.tertiary,
+                              ),
                             ),
                           ),
                         ),
@@ -111,7 +115,9 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                           controller: _name,
                           validator: validateName,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          decoration: const InputDecoration(labelText: 'Full name'),
+                          decoration: const InputDecoration(
+                            labelText: 'Full name',
+                          ),
                         ),
                         const SizedBox(height: 14),
                         TextFormField(

@@ -26,7 +26,7 @@ typedef FileBytes = Future<List<int>> Function(String path);
 /// profile and its payout account, paper certificates and the MOU.
 class RemoteArtistRepository implements ArtistRepository {
   RemoteArtistRepository(this.api, {FileBytes? readFile})
-      : _readFile = readFile ?? ((path) => File(path).readAsBytes());
+    : _readFile = readFile ?? ((path) => File(path).readAsBytes());
 
   final ApiClient api;
   final FileBytes _readFile;
@@ -55,27 +55,32 @@ class RemoteArtistRepository implements ArtistRepository {
   @override
   Future<ArtistArtwork?> getArtwork(String artworkId) async {
     try {
-      return ownerArtworkFromApi(await api.getMap('/v1/artist/artworks/${Uri.encodeComponent(artworkId)}'));
+      return ownerArtworkFromApi(
+        await api.getMap(
+          '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}',
+        ),
+      );
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
       rethrow;
     }
   }
 
-  Map<String, dynamic> _artworkBody(SubmitArtworkInput input, {String? mode}) => {
+  Map<String, dynamic> _artworkBody(SubmitArtworkInput input, {String? mode}) =>
+      {
         'title': input.title.trim(),
         'description': input.description.trim(),
         'category': input.category,
         'medium': input.medium,
         'artistPricePaise': rupeesToPaise(input.artistPrice),
         'listingType': listingTypeToApi(input.listingType),
-        if (input.dimensions != null && input.dimensions!.trim().isNotEmpty) 'dimensions': input.dimensions!.trim(),
+        if (input.dimensions != null && input.dimensions!.trim().isNotEmpty)
+          'dimensions': input.dimensions!.trim(),
         'yearCreated': ?input.yearCreated,
         'mode': ?mode,
         'artworkType': input.artworkType,
         'paintingStyle': input.paintingStyle,
-        'insuranceOpted': input.insuranceOpted,
-        'insuranceNumber': input.insuranceNumber,
+        'exclusive': input.exclusive,
         if (input.physical != null) 'physical': physicalToApi(input.physical!),
       };
 
@@ -87,14 +92,19 @@ class RemoteArtistRepository implements ArtistRepository {
   @override
   Future<Artwork> submitArtwork(SubmitArtworkInput input) async {
     if (input.title.trim().isEmpty) throw Exception('A title is required');
-    if (input.artistPrice <= 0) throw Exception('Enter your price for this artwork');
+    if (input.artistPrice <= 0) {
+      throw Exception('Enter your price for this artwork');
+    }
 
     final hasUploads = input.images.any((image) => image.id == null);
     final created = ownerArtworkFromApi(
       asMap(
         await api.post(
           '/v1/artist/artworks',
-          body: _artworkBody(input, mode: hasUploads || input.asDraft ? 'draft' : 'review'),
+          body: _artworkBody(
+            input,
+            mode: hasUploads || input.asDraft ? 'draft' : 'review',
+          ),
         ),
       ),
     );
@@ -110,20 +120,31 @@ class RemoteArtistRepository implements ArtistRepository {
       );
     }
     if (hasUploads && !input.asDraft) {
-      await api.patch('/v1/artist/artworks/${Uri.encodeComponent(id)}', body: {'mode': 'review'});
+      await api.patch(
+        '/v1/artist/artworks/${Uri.encodeComponent(id)}',
+        body: {'mode': 'review'},
+      );
     }
     return (await _owned(id)).artwork;
   }
 
   @override
-  Future<Artwork> updateArtwork({required String artworkId, required SubmitArtworkInput patch}) async {
+  Future<Artwork> updateArtwork({
+    required String artworkId,
+    required SubmitArtworkInput patch,
+  }) async {
     if (patch.title.trim().isEmpty) throw Exception('A title is required');
-    if (patch.artistPrice <= 0) throw Exception('Enter your price for this artwork');
+    if (patch.artistPrice <= 0) {
+      throw Exception('Enter your price for this artwork');
+    }
 
     final current = await _owned(artworkId);
     // `asDraft` is ignored on purpose: an edit never moves a piece between the
     // draft and review queues.
-    await api.patch('/v1/artist/artworks/${Uri.encodeComponent(artworkId)}', body: _artworkBody(patch));
+    await api.patch(
+      '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}',
+      body: _artworkBody(patch),
+    );
     await _syncImages(artworkId, patch.images, [
       for (final image in current.artwork.images)
         if (image.id != null) image.id!,
@@ -133,32 +154,52 @@ class RemoteArtistRepository implements ArtistRepository {
 
   @override
   Future<Artwork> submitForReview(String artworkId) async {
-    await api.patch('/v1/artist/artworks/${Uri.encodeComponent(artworkId)}', body: {'mode': 'review'});
+    await api.patch(
+      '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}',
+      body: {'mode': 'review'},
+    );
     return (await _owned(artworkId)).artwork;
   }
 
   Future<ArtistArtwork> _owned(String artworkId) async {
     final artwork = await getArtwork(artworkId);
     if (artwork == null) {
-      throw const ApiError(status: 404, code: 'not_found', message: 'That artwork could not be found.');
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'That artwork could not be found.',
+      );
     }
     return artwork;
   }
 
   /// Brings the piece's photos in line with the form: delete the removed
   /// ones, upload the new ones, then apply the order.
-  Future<void> _syncImages(String artworkId, List<ArtworkImage> images, List<String> existingIds) async {
+  Future<void> _syncImages(
+    String artworkId,
+    List<ArtworkImage> images,
+    List<String> existingIds,
+  ) async {
     final base = '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}/images';
-    final keep = {for (final image in images) if (image.id != null) image.id!};
+    final keep = {
+      for (final image in images)
+        if (image.id != null) image.id!,
+    };
     for (final id in existingIds) {
-      if (!keep.contains(id)) await api.delete('$base/${Uri.encodeComponent(id)}');
+      if (!keep.contains(id)) {
+        await api.delete('$base/${Uri.encodeComponent(id)}');
+      }
     }
     final finalIds = <String>[];
     for (final image in images) {
       finalIds.add(image.id ?? await _uploadOne(base, image));
     }
-    final unchanged = finalIds.length == existingIds.length &&
-        [for (var i = 0; i < finalIds.length; i++) finalIds[i] == existingIds[i]].every((same) => same);
+    final unchanged =
+        finalIds.length == existingIds.length &&
+        [
+          for (var i = 0; i < finalIds.length; i++)
+            finalIds[i] == existingIds[i],
+        ].every((same) => same);
     if (finalIds.length > 1 && !unchanged) {
       await api.put('$base/order', body: {'imageIds': finalIds});
     }
@@ -171,25 +212,42 @@ class RemoteArtistRepository implements ArtistRepository {
   Future<String> _uploadOne(String base, ArtworkImage image) async {
     final path = image.url;
     final name = path.split(RegExp(r'[\\/]')).last;
-    final extension = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    final extension = name.contains('.')
+        ? name.split('.').last.toLowerCase()
+        : '';
     final contentType = imageTypes[extension];
-    if (contentType == null) throw Exception('"$name" isn\'t a JPEG, PNG or WebP image.');
+    if (contentType == null) {
+      throw Exception('"$name" isn\'t a JPEG, PNG or WebP image.');
+    }
 
     final bytes = await _readFile(path);
     if (bytes.length > maxImageBytes) {
-      throw Exception('"$name" is larger than 15 MB. Please resize it and try again.');
+      throw Exception(
+        '"$name" is larger than 15 MB. Please resize it and try again.',
+      );
     }
 
     try {
       final slot = asMap(
-        await api.post('$base/upload-url', body: {'contentType': contentType, 'contentLength': bytes.length}),
+        await api.post(
+          '$base/upload-url',
+          body: {'contentType': contentType, 'contentLength': bytes.length},
+        ),
       );
       final headers = <String, String>{
-        for (final entry in asMap(slot['headers']).entries) entry.key: '${entry.value}',
+        for (final entry in asMap(slot['headers']).entries)
+          entry.key: '${entry.value}',
       };
-      await api.putToSignedUrl(slot['uploadUrl'] as String, bytes, headers: headers);
+      await api.putToSignedUrl(
+        slot['uploadUrl'] as String,
+        bytes,
+        headers: headers,
+      );
       final confirmed = asMap(
-        await api.post('$base/confirm', body: {'key': slot['key'], 'altText': image.altText}),
+        await api.post(
+          '$base/confirm',
+          body: {'key': slot['key'], 'altText': image.altText},
+        ),
       );
       return confirmed['id'] as String;
     } on ApiError catch (error) {
@@ -203,22 +261,35 @@ class RemoteArtistRepository implements ArtistRepository {
         await api.postBytes(
           '$base/upload',
           bytes,
-          headers: {'Content-Type': contentType, 'X-Alt-Text': Uri.encodeComponent(image.altText)},
+          headers: {
+            'Content-Type': contentType,
+            'X-Alt-Text': Uri.encodeComponent(image.altText),
+          },
         ),
       );
       return uploaded['id'] as String;
     } on ApiError catch (error) {
       if (error.status != 0) throw Exception('"$name": ${error.message}');
-      throw Exception('"$name" couldn\'t be uploaded — check your connection and try again.');
+      throw Exception(
+        '"$name" couldn\'t be uploaded — check your connection and try again.',
+      );
     }
   }
 
   @override
   Future<Artwork> markSoldElsewhere(String artworkId) async {
-    final json = asMap(await api.post('/v1/artist/artworks/${Uri.encodeComponent(artworkId)}/sold-elsewhere'));
+    final json = asMap(
+      await api.post(
+        '/v1/artist/artworks/${Uri.encodeComponent(artworkId)}/sold-elsewhere',
+      ),
+    );
     final artwork = json['artwork'];
     if (artwork is! Map) {
-      throw const ApiError(status: 404, code: 'not_found', message: 'That artwork could not be found.');
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'That artwork could not be found.',
+      );
     }
     return ownerArtworkFromApi(asMap(artwork)).artwork;
   }
@@ -248,13 +319,22 @@ class RemoteArtistRepository implements ArtistRepository {
   @override
   Future<List<WalletTransaction>> listWalletTransactions() async {
     final json = await api.getMap('/v1/artist/wallet/transactions');
-    return asMapList(json['transactions']).map(walletTransactionFromApi).toList();
+    return asMapList(json['transactions'])
+        .map(walletTransactionFromApi)
+        .toList();
   }
 
   @override
   Future<WalletTransaction> requestWithdrawal(double amount) async {
-    if (amount < minimumWithdrawal) throw Exception('Minimum withdrawal is ₹1,000');
-    final json = asMap(await api.post('/v1/artist/withdrawals', body: {'amountPaise': rupeesToPaise(amount)}));
+    if (amount < minimumWithdrawal) {
+      throw Exception('Minimum withdrawal is ₹1,000');
+    }
+    final json = asMap(
+      await api.post(
+        '/v1/artist/withdrawals',
+        body: {'amountPaise': rupeesToPaise(amount)},
+      ),
+    );
     return WalletTransaction(
       id: json['withdrawalId'] as String? ?? '',
       type: WalletTransactionType.withdrawal,
@@ -275,7 +355,9 @@ class RemoteArtistRepository implements ArtistRepository {
   /// part of this — see [updateBankDetails]; the masked value on [profile]
   /// must never be sent back.
   @override
-  Future<ArtistProfileDetails> updateProfile(ArtistProfileDetails profile) async {
+  Future<ArtistProfileDetails> updateProfile(
+    ArtistProfileDetails profile,
+  ) async {
     final current = await getProfile();
     final patch = <String, dynamic>{};
 
@@ -286,14 +368,19 @@ class RemoteArtistRepository implements ArtistRepository {
       patch[key] = value.isEmpty ? null : value;
     }
 
-    if (profile.fullName.trim() != current.fullName && profile.fullName.trim().length >= 2) {
+    if (profile.fullName.trim() != current.fullName &&
+        profile.fullName.trim().length >= 2) {
       patch['fullName'] = profile.fullName.trim();
     }
     text('phone', profile.phone, current.phone);
     text('bio', profile.bio, current.bio);
     text('instagram', profile.instagram, current.instagram);
     text('website', profile.website, current.website);
-    text('socialProofVideoUrl', profile.socialProofVideoUrl, current.socialProofVideoUrl);
+    text(
+      'socialProofVideoUrl',
+      profile.socialProofVideoUrl,
+      current.socialProofVideoUrl,
+    );
     text('pan', profile.pan, current.pan, upper: true);
     text('gstin', profile.gstin, current.gstin, upper: true);
     text('headline', profile.headline, current.headline);
@@ -302,25 +389,59 @@ class RemoteArtistRepository implements ArtistRepository {
     text('pickupLine2', profile.pickupLine2, current.pickupLine2);
     text('pickupCity', profile.pickupCity, current.pickupCity);
     text('pickupState', profile.pickupState, current.pickupState);
+    text(
+      'pickupCountry',
+      profile.pickupCountry,
+      current.pickupCountry,
+      upper: true,
+    );
     text('pickupPincode', profile.pickupPincode, current.pickupPincode);
 
     if (patch.isEmpty) return current;
-    return artistProfileDetailsFromApi(asMap(await api.patch('/v1/me/profile', body: patch)));
+    return artistProfileDetailsFromApi(
+      asMap(await api.patch('/v1/me/profile', body: patch)),
+    );
   }
 
   @override
-  Future<ArtistProfileDetails> updateBankDetails({String accountNumber = '', required String ifsc}) async =>
-      artistProfileDetailsFromApi(
-        asMap(
-          await api.patch(
-            '/v1/me/profile',
-            body: {
-              if (accountNumber.trim().isNotEmpty) 'bankAccountNumber': accountNumber.trim(),
-              'ifsc': ifsc.trim().toUpperCase(),
-            },
-          ),
-        ),
-      );
+  Future<GstinCheckResult> verifySavedGstin() async {
+    final json = asMap(await api.post('/v1/profile/gstin/verify'));
+    return GstinCheckResult(
+      valid: json['valid'] == true,
+      legalName: json['legalName'] as String?,
+      tradeName: json['tradeName'] as String?,
+      registrationStatus: json['registrationStatus'] as String?,
+      status: json['status'] as String? ?? 'not_verified',
+      message: json['message'] as String?,
+    );
+  }
+
+  @override
+  Future<DigiLockerStart> startAadhaarDigiLocker() async {
+    final json = asMap(await api.post('/v1/profile/aadhaar/digilocker'));
+    return DigiLockerStart(
+      consentUrl: json['consentUrl'] as String? ?? '',
+      verificationId: json['verificationId'] as String? ?? '',
+      expiresInSeconds: (json['expiresInSeconds'] as num?)?.toInt() ?? 600,
+    );
+  }
+
+  @override
+  Future<ArtistProfileDetails> updateBankDetails({
+    String accountNumber = '',
+    required String ifsc,
+  }) async => artistProfileDetailsFromApi(
+    asMap(
+      await api.patch(
+        '/v1/me/profile',
+        body: {
+          if (accountNumber.trim().isNotEmpty)
+            'bankAccountNumber': accountNumber.trim(),
+          'ifsc': ifsc.trim().toUpperCase(),
+        },
+      ),
+    ),
+  );
 
   // --- Orders and settlements -----------------------------------------------------------------
 
@@ -329,7 +450,10 @@ class RemoteArtistRepository implements ArtistRepository {
     final json = await api.getMap('/v1/artist/orders');
     return [
       for (final row in asMapList(json['orders']))
-        ArtistOrder(order: orderFromApi(row), artistPayout: rupeesAt(row, 'artistNetPaise')),
+        ArtistOrder(
+          order: orderFromApi(row),
+          artistPayout: rupeesAt(row, 'artistNetPaise'),
+        ),
     ];
   }
 
@@ -342,7 +466,8 @@ class RemoteArtistRepository implements ArtistRepository {
     final now = DateTime.now();
     return [
       for (final entry in orders)
-        if (entry.order.status != OrderStatus.pending && entry.order.status != OrderStatus.cancelled)
+        if (entry.order.status != OrderStatus.pending &&
+            entry.order.status != OrderStatus.cancelled)
           _settlementOf(entry, now),
     ];
   }
@@ -355,7 +480,8 @@ class RemoteArtistRepository implements ArtistRepository {
         .lastOrNull;
     final releaseAfter = deliveredAt == null
         ? null
-        : DateTime.parse(deliveredAt).add(const Duration(days: artistPayoutDaysAfterDelivery));
+        : DateTime.parse(deliveredAt)
+              .add(const Duration(days: artistPayoutDaysAfterDelivery));
     final released = releaseAfter != null && !releaseAfter.isAfter(now);
     return Settlement(
       id: 'stl-${order.id}',
@@ -364,7 +490,10 @@ class RemoteArtistRepository implements ArtistRepository {
       artistName: '',
       artistAmount: entry.artistPayout,
       aggregatorCommission: 0,
-      platformRevenue: (order.amount - entry.artistPayout).clamp(0, double.infinity),
+      platformRevenue: (order.amount - entry.artistPayout).clamp(
+        0,
+        double.infinity,
+      ),
       status: released ? SettlementStatus.processed : SettlementStatus.pending,
       createdAt: order.createdAt,
       processedAt: released ? releaseAfter.toUtc().toIso8601String() : null,
@@ -381,7 +510,11 @@ class RemoteArtistRepository implements ArtistRepository {
 
   @override
   Future<List<ArtistKpi>> getKpis() async {
-    final results = await Future.wait([getWallet(), listArtworks(), listWalletTransactions()]);
+    final results = await Future.wait([
+      getWallet(),
+      listArtworks(),
+      listWalletTransactions(),
+    ]);
     final wallet = results[0] as WalletSummary;
     final artworks = results[1] as List<ArtistArtwork>;
     final transactions = results[2] as List<WalletTransaction>;
@@ -392,16 +525,26 @@ class RemoteArtistRepository implements ArtistRepository {
       ArtworkStatus.delivered,
       ArtworkStatus.completed,
     };
-    final pending = artworks.where((a) => a.artwork.status == ArtworkStatus.pendingApproval).length;
-    final soldCount = artworks.where((a) => soldStatuses.contains(a.artwork.status)).length;
+    final pending = artworks
+        .where((a) => a.artwork.status == ArtworkStatus.pendingApproval)
+        .length;
+    final soldCount = artworks
+        .where((a) => soldStatuses.contains(a.artwork.status))
+        .length;
     final revenue = transactions
-        .where((t) => t.type == WalletTransactionType.settlement && t.status == WalletTransactionStatus.completed)
+        .where(
+          (t) =>
+              t.type == WalletTransactionType.settlement &&
+              t.status == WalletTransactionStatus.completed,
+        )
         .fold<double>(0, (sum, t) => sum + (t.amount > 0 ? t.amount : 0));
     return [
       ArtistKpi(
         label: 'Total revenue',
         value: formatInr(revenue),
-        delta: soldCount > 0 ? '$soldCount ${soldCount == 1 ? 'sale' : 'sales'} settled' : 'No sales settled yet',
+        delta: soldCount > 0
+            ? '$soldCount ${soldCount == 1 ? 'sale' : 'sales'} settled'
+            : 'No sales settled yet',
         positive: soldCount > 0,
       ),
       ArtistKpi(
@@ -425,7 +568,10 @@ class RemoteArtistRepository implements ArtistRepository {
   /// transactions, newest first. No stored feed, so nothing to drift.
   @override
   Future<List<ActivityEntry>> listActivity() async {
-    final results = await Future.wait([listArtworks(), listWalletTransactions()]);
+    final results = await Future.wait([
+      listArtworks(),
+      listWalletTransactions(),
+    ]);
     final artworks = results[0] as List<ArtistArtwork>;
     final transactions = results[1] as List<WalletTransaction>;
     final entries = <({String sortKey, ActivityEntry entry})>[];
@@ -435,21 +581,25 @@ class RemoteArtistRepository implements ArtistRepository {
       for (final event in a.statusHistory) {
         final (kind, title, detail) = switch (event.status) {
           ArtworkStatus.pendingApproval => (
-              ActivityKind.artworkSubmitted,
-              'Submitted for review',
-              '"${a.title}" is with the curation team',
-            ),
+            ActivityKind.artworkSubmitted,
+            'Submitted for review',
+            '"${a.title}" is with the curation team',
+          ),
           ArtworkStatus.marketplace => (
-              ActivityKind.artworkApproved,
-              'Artwork approved',
-              '"${a.title}" is live on the marketplace',
-            ),
+            ActivityKind.artworkApproved,
+            'Artwork approved',
+            '"${a.title}" is live on the marketplace',
+          ),
           ArtworkStatus.returned => (
-              ActivityKind.artworkSubmitted,
-              'Artwork returned',
-              '"${a.title}" needs changes before it can be listed',
-            ),
-          ArtworkStatus.sold => (ActivityKind.settlement, 'Artwork sold', '"${a.title}" has a buyer'),
+            ActivityKind.artworkSubmitted,
+            'Artwork returned',
+            '"${a.title}" needs changes before it can be listed',
+          ),
+          ArtworkStatus.sold => (
+            ActivityKind.settlement,
+            'Artwork sold',
+            '"${a.title}" has a buyer',
+          ),
           _ => (null, '', ''),
         };
         if (kind == null) continue;
@@ -472,7 +622,9 @@ class RemoteArtistRepository implements ArtistRepository {
           entry: ActivityEntry(
             id: 'wt:${t.id}',
             kind: ActivityKind.withdrawal,
-            title: t.status == WalletTransactionStatus.pending ? 'Withdrawal requested' : 'Withdrawal processed',
+            title: t.status == WalletTransactionStatus.pending
+                ? 'Withdrawal requested'
+                : 'Withdrawal processed',
             detail: '${formatInr(t.amount.abs())} · ${t.label}',
             time: t.date,
           ),
@@ -498,14 +650,21 @@ class RemoteArtistRepository implements ArtistRepository {
 
   @override
   Future<List<PhysicalCoaRequest>> listPhysicalCoaRequests() async {
-    final requests = (await api.getList('/v1/artist/coa/requests')).map(coaRequestFromApi).toList();
+    final requests = (await api.getList('/v1/artist/coa/requests'))
+        .map(coaRequestFromApi)
+        .toList();
     requests.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
     return requests;
   }
 
   @override
-  Future<PhysicalCoaRequest> dispatchPhysicalCoa(String requestId, String courierRef) async {
-    if (courierRef.trim().isEmpty) throw Exception('Enter the courier or tracking reference');
+  Future<PhysicalCoaRequest> dispatchPhysicalCoa(
+    String requestId,
+    String courierRef,
+  ) async {
+    if (courierRef.trim().isEmpty) {
+      throw Exception('Enter the courier or tracking reference');
+    }
     return coaRequestFromApi(
       asMap(
         await api.post(
@@ -519,25 +678,30 @@ class RemoteArtistRepository implements ArtistRepository {
   // --- MOU -----------------------------------------------------------------------------------------------
 
   @override
-  Future<MouState> getMouState() async => mouStateFromApi(await api.getMap('/v1/artist/mou'));
+  Future<MouState> getMouState() async =>
+      mouStateFromApi(await api.getMap('/v1/artist/mou'));
 
   @override
-  Future<MouAcceptance?> getMouAcceptance() async => (await getMouState()).acceptance;
+  Future<MouAcceptance?> getMouAcceptance() async =>
+      (await getMouState()).acceptance;
 
   @override
   Future<MouAcceptance> acceptMou({
     required String signatureName,
     required String version,
     String signatureDataUrl = '',
-  }) async =>
-      mouAcceptanceFromApi(
-        asMap(
-          await api.post(
-            '/v1/artist/mou/accept',
-            body: {'version': version, 'signatureName': signatureName.trim(), 'signatureDataUrl': signatureDataUrl},
-          ),
-        ),
-      );
+  }) async => mouAcceptanceFromApi(
+    asMap(
+      await api.post(
+        '/v1/artist/mou/accept',
+        body: {
+          'version': version,
+          'signatureName': signatureName.trim(),
+          'signatureDataUrl': signatureDataUrl,
+        },
+      ),
+    ),
+  );
 
   // --- Rules ---------------------------------------------------------------------------------------------------
 
@@ -556,18 +720,18 @@ class RemoteArtistRepository implements ArtistRepository {
   /// today.
   @override
   Future<ArtistSettings> getSettings() async => MockDb.getCollection(
-        _settingsKey,
-        () => [
-          const ArtistSettings(
-            notifyArtworkApproved: true,
-            notifyNewSale: true,
-            notifyWithdrawalProcessed: true,
-            notifyNewMessage: true,
-          ),
-        ],
-        ArtistSettings.fromJson,
-        (s) => s.toJson(),
-      ).first;
+    _settingsKey,
+    () => [
+      const ArtistSettings(
+        notifyArtworkApproved: true,
+        notifyNewSale: true,
+        notifyWithdrawalProcessed: true,
+        notifyNewMessage: true,
+      ),
+    ],
+    ArtistSettings.fromJson,
+    (s) => s.toJson(),
+  ).first;
 
   @override
   Future<ArtistSettings> updateSettings(ArtistSettings settings) async {
@@ -579,7 +743,9 @@ class RemoteArtistRepository implements ArtistRepository {
 
   @override
   Future<List<MessageThread>> listMessages() async {
-    final messages = (await api.getList('/v1/messages')).map(messageThreadFromApi).toList();
+    final messages = (await api.getList('/v1/messages'))
+        .map(messageThreadFromApi)
+        .toList();
     messages.sort((a, b) => b.receivedAt.compareTo(a.receivedAt));
     return messages;
   }
@@ -589,22 +755,38 @@ class RemoteArtistRepository implements ArtistRepository {
     await api.post('/v1/messages/${Uri.encodeComponent(id)}/read');
     final updated = (await listMessages()).where((m) => m.id == id).firstOrNull;
     if (updated == null) {
-      throw const ApiError(status: 404, code: 'not_found', message: 'That message could not be found.');
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'That message could not be found.',
+      );
     }
     return updated;
   }
 
   @override
   Future<List<SupportTicket>> listSupportTickets() async {
-    final tickets = (await api.getList('/v1/support')).map(supportTicketFromApi).toList();
+    final tickets = (await api.getList('/v1/support'))
+        .map(supportTicketFromApi)
+        .toList();
     tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return tickets;
   }
 
   @override
-  Future<SupportTicket> submitSupportTicket({required String subject, required String message}) async {
-    if (subject.trim().isEmpty || message.trim().isEmpty) throw Exception('Add a subject and a message');
-    final created = asMap(await api.post('/v1/support', body: {'subject': subject.trim(), 'message': message.trim()}));
+  Future<SupportTicket> submitSupportTicket({
+    required String subject,
+    required String message,
+  }) async {
+    if (subject.trim().isEmpty || message.trim().isEmpty) {
+      throw Exception('Add a subject and a message');
+    }
+    final created = asMap(
+      await api.post(
+        '/v1/support',
+        body: {'subject': subject.trim(), 'message': message.trim()},
+      ),
+    );
     return SupportTicket(
       id: created['id'] as String? ?? '',
       subject: subject.trim(),

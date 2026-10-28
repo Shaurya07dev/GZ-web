@@ -6,18 +6,24 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release signing is opt-in and lives entirely outside the repo. Create
-// `android/key.properties` (gitignored) with storeFile / storePassword /
-// keyAlias / keyPassword pointing at your upload keystore, and release builds
-// pick it up. With no such file the release build still works and still signs
-// with the debug key — installable for testing, rejected by Play, which is the
-// correct failure: an unsigned-for-release build should be obviously unfit to
-// publish rather than quietly shipping.
+// Release credentials live outside the repository. A release task fails before
+// it can create an artifact unless all four values below are present and the
+// keystore exists. In particular, never fall back to the debug signing key: a
+// bundle named "release" must be safe to hand to Play without guesswork.
+val keyPropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties().apply {
-    val file = rootProject.file("key.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
+    if (keyPropertiesFile.exists()) keyPropertiesFile.inputStream().use { load(it) }
 }
-val hasReleaseKeystore = keystoreProperties.containsKey("storeFile")
+val releaseSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val hasReleaseSigningValues = releaseSigningKeys.all {
+    !keystoreProperties.getProperty(it).isNullOrBlank()
+}
+val releaseStoreFile = if (hasReleaseSigningValues) {
+    rootProject.file(keystoreProperties.getProperty("storeFile"))
+} else {
+    null
+}
+val hasReleaseKeystore = releaseStoreFile?.isFile == true
 
 android {
     namespace = "in.galleryzone.app"
@@ -46,7 +52,7 @@ android {
     signingConfigs {
         if (hasReleaseKeystore) {
             create("release") {
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storeFile = releaseStoreFile
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -56,11 +62,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (hasReleaseKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            if (hasReleaseKeystore) signingConfig = signingConfigs.getByName("release")
             // R8 on, with the Flutter-provided rules. Left off until now
             // because a debug-only project gains nothing from it; a release
             // bundle does, and the app pulls in fl_chart, image_picker and
@@ -70,6 +72,25 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
+            )
+        }
+    }
+}
+
+// Keep IDE sync and debug builds usable without local release secrets, but
+// fail every task that could produce or validate a release variant.
+tasks.configureEach {
+    if (!hasReleaseKeystore && name.contains("release", ignoreCase = true)) {
+        doFirst {
+            val reason = when {
+                !keyPropertiesFile.exists() -> "android/key.properties is missing"
+                !hasReleaseSigningValues ->
+                    "android/key.properties must define ${releaseSigningKeys.joinToString()}"
+                else -> "the configured storeFile does not exist: $releaseStoreFile"
+            }
+            throw GradleException(
+                "Refusing to build a GalleryZone release: $reason. " +
+                    "Copy android/key.properties.example, point it at the private Play upload keystore, and retry.",
             )
         }
     }

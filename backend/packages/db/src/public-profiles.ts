@@ -8,13 +8,68 @@ import { DbError } from "./errors.ts";
 
 export class ProfileError extends DbError {}
 
-export interface PublicArtistProfile {
-  id: string;
+export type PublicSocialPlatform = "website" | "youtube" | "tiktok" | "x";
+
+export interface PublicArtistFields {
   name: string;
   headline: string | null;
   bio: string | null;
   location: string | null;
   profileImageUrl: string | null;
+  verification: {
+    tier1SocialMedia: boolean;
+    /** Kept under the existing client field name; this tier is the signed artist agreement. */
+    tier2ActivePlan: boolean;
+    tier3FirstSale: boolean;
+  };
+  socialLinks: { platform: PublicSocialPlatform; url: string }[];
+}
+
+function safeHttpUrl(raw: string | null | undefined, addScheme = false): URL | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  try {
+    const candidate = addScheme && !/^https?:\/\//i.test(value) ? `https://${value}` : value;
+    const url = new URL(candidate);
+    return url.protocol === "https:" || url.protocol === "http:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function videoPlatform(url: URL): Exclude<PublicSocialPlatform, "website"> | null {
+  const host = url.hostname.toLowerCase();
+  if (host === "youtu.be" || host === "youtube.com" || host.endsWith(".youtube.com")) return "youtube";
+  if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return "tiktok";
+  if (host === "x.com" || host.endsWith(".x.com") || host === "twitter.com" || host.endsWith(".twitter.com")) return "x";
+  return null;
+}
+
+/** Convert the safe public projection into the one API shape both clients use. */
+export function publicArtistFields(profile: PublicProfileDoc): PublicArtistFields {
+  const socialLinks: PublicArtistFields["socialLinks"] = [];
+  const website = safeHttpUrl(profile.website, true);
+  if (website) socialLinks.push({ platform: "website", url: website.toString() });
+  const video = safeHttpUrl(profile.socialProofVideoUrl);
+  const platform = video ? videoPlatform(video) : null;
+  if (video && platform) socialLinks.push({ platform, url: video.toString() });
+  return {
+    name: profile.name,
+    headline: profile.headline,
+    bio: profile.bio,
+    location: profile.location,
+    profileImageUrl: profile.profileImageUrl,
+    verification: {
+      tier1SocialMedia: profile.tier1SocialMedia ?? false,
+      tier2ActivePlan: profile.tier2ArtistAgreement ?? false,
+      tier3FirstSale: profile.tier3FirstSale ?? false,
+    },
+    socialLinks,
+  };
+}
+
+export interface PublicArtistProfile extends PublicArtistFields {
+  id: string;
   artworkCount: number;
 }
 
@@ -46,7 +101,7 @@ export async function listPublicArtists(db: Firestore): Promise<PublicArtistCard
       if (!snap.exists) return [];
       const p = snap.data() as PublicProfileDoc;
       const stats = byArtist.get(ids[i]!)!;
-      return [{ id: ids[i]!, name: p.name, headline: p.headline, bio: p.bio, location: p.location, profileImageUrl: p.profileImageUrl, artworkCount: stats.count, coverImageUrl: stats.cover }];
+      return [{ id: ids[i]!, ...publicArtistFields(p), artworkCount: stats.count, coverImageUrl: stats.cover }];
     })
     .sort((a, b) => b.artworkCount - a.artworkCount || a.name.localeCompare(b.name));
 }
@@ -76,11 +131,7 @@ export async function getPublicArtistProfile(db: Firestore, artistId: string): P
 
   return {
     id: artistId,
-    name: profile.name,
-    headline: profile.headline,
-    bio: profile.bio,
-    location: profile.location,
-    profileImageUrl: profile.profileImageUrl,
+    ...publicArtistFields(profile),
     artworkCount: countSnap.data().count,
   };
 }

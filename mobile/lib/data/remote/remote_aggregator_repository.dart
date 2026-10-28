@@ -10,6 +10,8 @@ import '../models/artist_portal.dart';
 import '../models/customer.dart';
 import '../models/mou.dart';
 import '../repositories/aggregator_repository.dart';
+import '../repositories/artist_repository.dart'
+    show DigiLockerStart, GstinCheckResult;
 import '../storage/mock_db.dart';
 import 'mappers/commerce_mappers.dart';
 import 'mappers/portal_mappers.dart';
@@ -21,14 +23,14 @@ import 'mappers/portal_mappers.dart';
 /// transaction as the reservation, releases them on a sale or an unsold
 /// return, and ends a placement by itself after thirty days. This class only
 /// asks and shows — it computes no price, advance or commission of its own.
-class RemoteAggregatorRepository implements AggregatorRepository {
+class RemoteAggregatorRepository
+    implements AggregatorRepository, AggregatorProfileVerificationRepository {
   RemoteAggregatorRepository({required this.api, required this.gateway});
 
   final ApiClient api;
   final PaymentGateway gateway;
 
-  /// The wallet top-up bounds (₹1,000 to ₹5,00,000). The API enforces them;
-  /// checking here saves a round trip and words the refusal well.
+  /// Gateway bounds currently enforced by the payment API.
   static const topupMin = aggregatorTopupMin;
   static const topupMax = aggregatorTopupMax;
 
@@ -52,7 +54,8 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     return future;
   }
 
-  Future<List<AggregatorHoldingView>> _holdings() => _once('holdings', () async {
+  Future<List<AggregatorHoldingView>> _holdings() =>
+      _once('holdings', () async {
         final json = await api.getMap('/v1/aggregator/holdings');
         return asMapList(json['holdings']).map(holdingViewFromApi).toList();
       });
@@ -63,7 +66,9 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   @override
   Future<AggregatorHoldingView?> getHolding(String holdingId) async {
     try {
-      final json = await api.getMap('/v1/aggregator/holdings/${Uri.encodeComponent(holdingId)}');
+      final json = await api.getMap(
+        '/v1/aggregator/holdings/${Uri.encodeComponent(holdingId)}',
+      );
       return holdingViewFromApi(json);
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
@@ -73,20 +78,37 @@ class RemoteAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<AggregatorDashboardSummary> getDashboardSummary() async {
-    final results = await Future.wait([_holdings(), _sales(), _creditedCommissions()]);
+    final results = await Future.wait([
+      _holdings(),
+      _sales(),
+      _creditedCommissions(),
+    ]);
     final views = results[0] as List<AggregatorHoldingView>;
     final holdings = views.map((view) => view.holding).toList();
-    final active = holdings.where((h) => h.status == HoldingStatus.reserved).length;
-    final sold = holdings.where((h) => h.status == HoldingStatus.soldPendingSettlement).length;
-    final returned = holdings.where((h) => h.status == HoldingStatus.returned).length;
+    final active = holdings
+        .where((h) => h.status == HoldingStatus.reserved)
+        .length;
+    final sold = holdings
+        .where((h) => h.status == HoldingStatus.soldPendingSettlement)
+        .length;
+    final returned = holdings
+        .where((h) => h.status == HoldingStatus.returned)
+        .length;
     final finished = sold + returned;
     // The website's own tile is a fixed 0 ("the wallet shows the credited amount");
     // here it is that amount: what each recorded sale earned, by the ledger where
     // it still reaches and by the rule where it doesn't.
-    final commissions = _commissionsOf(results[1] as List<AggregatorSale>, views, results[2] as Map<String, double>);
+    final commissions = _commissionsOf(
+      results[1] as List<AggregatorSale>,
+      views,
+      results[2] as Map<String, double>,
+    );
     return AggregatorDashboardSummary(
       activeReservations: active,
-      commissionEarned: commissions.values.fold(0.0, (sum, amount) => sum + amount),
+      commissionEarned: commissions.values.fold(
+        0.0,
+        (sum, amount) => sum + amount,
+      ),
       pendingSettlements: sold,
       conversionRate: finished == 0 ? null : (sold / finished * 100).round(),
     );
@@ -109,15 +131,56 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   }) async {
     final json = await api.post(
       '/v1/aggregator/holdings',
-      body: {'artworkId': artworkId, 'sellingPricePaise': ?(sellingPrice == null ? null : rupeesToPaise(sellingPrice))},
+      body: {
+        'artworkId': artworkId,
+        'sellingPricePaise': ?(sellingPrice == null
+            ? null
+            : rupeesToPaise(sellingPrice)),
+      },
     );
     return holdingFromApi(asMap(json));
   }
 
   @override
-  Future<AggregatorHolding> requestExtension(String holdingId, String assurance) async {
+  Future<void> payReservation(double amount) async {
+    if (amount < topupMin || amount > topupMax) {
+      throw Exception(
+        'A reservation payment must be between ₹1,000 and ₹5,00,000.',
+      );
+    }
+    final session = asMap(
+      await api.post(
+        '/v1/aggregator/reservation-payments',
+        body: {'amountPaise': rupeesToPaise(amount)},
+      ),
+    );
+    final paymentId = session['paymentId'] as String? ?? '';
+    final base =
+        '/v1/aggregator/reservation-payments/${Uri.encodeComponent(paymentId)}';
+    if (session['mode'] == 'razorpay') {
+      final paid = await gateway.pay(GatewaySession.fromApi(session));
+      await api.post(
+        '$base/verify',
+        body: {
+          'razorpayOrderId': paid.orderId,
+          'razorpayPaymentId': paid.paymentId,
+          'signature': paid.signature,
+        },
+      );
+    } else {
+      await api.post('$base/simulate');
+    }
+  }
+
+  @override
+  Future<AggregatorHolding> requestExtension(
+    String holdingId,
+    String assurance,
+  ) async {
     final text = assurance.trim();
-    if (text.length < 10) throw Exception('Tell GalleryZone why this piece will sell');
+    if (text.length < 10) {
+      throw Exception('Tell GalleryZone why this piece will sell');
+    }
     final json = await api.post(
       '/v1/aggregator/holdings/${Uri.encodeComponent(holdingId)}/extension',
       body: {'assurance': text},
@@ -125,22 +188,60 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     return holdingFromApi(asMap(json));
   }
 
+  @override
+  Future<HoldingReport> reportHoldingIssue(
+    String holdingId, {
+    required HoldingReportIssueType issueType,
+    required String description,
+  }) async {
+    final text = description.trim();
+    if (text.length < 10) {
+      throw Exception('Describe the issue in at least a line or two');
+    }
+    if (text.length > 2000) {
+      throw Exception('Keep the report under 2,000 characters');
+    }
+    final code = switch (issueType) {
+      HoldingReportIssueType.damagedInTransit => 'damaged_in_transit',
+      HoldingReportIssueType.wrongPiece => 'wrong_piece',
+      HoldingReportIssueType.qualityIssue => 'quality_issue',
+      HoldingReportIssueType.coaNfcProblem => 'coa_nfc_problem',
+      HoldingReportIssueType.missingAccessories => 'missing_accessories',
+      HoldingReportIssueType.other => 'other',
+    };
+    return holdingReportFromApi(
+      asMap(
+        await api.post(
+          '/v1/aggregator/holdings/${Uri.encodeComponent(holdingId)}/reports',
+          body: {'issueType': code, 'description': text},
+        ),
+      ),
+    );
+  }
+
   /// The advance comes back; the delivery deposit does not — the money-flow
   /// sheet settles delivery only on a sale.
   @override
   Future<HoldingRelease> releaseHolding(String holdingId) async {
-    final json = await api.post('/v1/aggregator/holdings/${Uri.encodeComponent(holdingId)}/return');
+    final json = await api.post(
+      '/v1/aggregator/holdings/${Uri.encodeComponent(holdingId)}/return',
+    );
     final holding = holdingFromApi(asMap(json));
-    return HoldingRelease(refunded: holding.advanceAmount, deliveryLost: holding.deliveryDeposit);
+    return HoldingRelease(
+      refunded: holding.advanceAmount,
+      deliveryLost: holding.deliveryDeposit,
+    );
   }
 
   // --- Sales --------------------------------------------------------------------------
 
   Future<List<AggregatorSale>> _sales() => _once('sales', () async {
-        final sales = (await api.getList('/v1/aggregator/sales')).map(saleFromApi).toList();
-        sales.sort((a, b) => b.soldAt.compareTo(a.soldAt));
-        return sales;
-      });
+    final sales = (await api.getList('/v1/aggregator/sales'))
+        .map(saleFromApi)
+        .toList();
+    sales.sort((a, b) => b.soldAt.compareTo(a.soldAt));
+    return sales;
+  });
 
   @override
   Future<List<AggregatorSale>> listSales() => _sales();
@@ -153,9 +254,15 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   Future<AggregatorSale> recordSale(RecordSaleInput input) async {
     final live = (await _holdings())
         .map((view) => view.holding)
-        .where((h) => h.artworkId == input.artworkId && h.status == HoldingStatus.reserved)
+        .where(
+          (h) =>
+              h.artworkId == input.artworkId &&
+              h.status == HoldingStatus.reserved,
+        )
         .firstOrNull;
-    if (live == null) throw Exception('No active reservation found for this artwork');
+    if (live == null) {
+      throw Exception('No active reservation found for this artwork');
+    }
 
     await api.post(
       '/v1/aggregator/holdings/${Uri.encodeComponent(live.id)}/sale',
@@ -164,17 +271,26 @@ class RemoteAggregatorRepository implements AggregatorRepository {
         'soldPricePaise': rupeesToPaise(input.soldPrice),
         'buyerName': input.buyerName.trim(),
         'buyerEmail': input.buyerEmail.trim(),
-        if (input.buyerPhone.trim().isNotEmpty) 'buyerPhone': input.buyerPhone.trim(),
-        'deliveryMode': input.deliveryMode == DeliveryMode.selfPickup ? 'self_pickup' : 'courier',
+        if (input.buyerPhone.trim().isNotEmpty)
+          'buyerPhone': input.buyerPhone.trim(),
+        'deliveryMode': input.deliveryMode == DeliveryMode.selfPickup
+            ? 'self_pickup'
+            : 'courier',
         'paymentRoute': input.paymentRoute == PaymentRoute.cashAtPremises
             ? 'cash_at_premises'
             : 'direct_to_galleryzone',
         'deliveryAddress': ?joinDeliveryAddress(input.deliveryAddress),
       },
     );
-    final sale = (await _sales()).where((s) => s.holdingId == live.id).firstOrNull;
+    final sale = (await _sales())
+        .where((s) => s.holdingId == live.id)
+        .firstOrNull;
     if (sale == null) {
-      throw const ApiError(status: 0, code: 'bad_response', message: 'The sale was recorded but could not be read back.');
+      throw const ApiError(
+        status: 0,
+        code: 'bad_response',
+        message: 'The sale was recorded but could not be read back.',
+      );
     }
     return sale;
   }
@@ -192,14 +308,18 @@ class RemoteAggregatorRepository implements AggregatorRepository {
         totalSpend: (existing?.totalSpend ?? 0) + sale.soldPrice,
       );
     }
-    final customers = byEmail.values.toList()..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
+    final customers = byEmail.values.toList()
+      ..sort((a, b) => b.totalSpend.compareTo(a.totalSpend));
     return customers;
   }
 
   /// preparing → dispatched → delivered. The body is exactly `{to, courierRef?}`
   /// — the API's schema is strict and refuses anything else.
   @override
-  Future<AggregatorSale> advanceShipment(String saleId, {String? courierRef}) async {
+  Future<AggregatorSale> advanceShipment(
+    String saleId, {
+    String? courierRef,
+  }) async {
     final current = (await _sales()).where((s) => s.id == saleId).firstOrNull;
     if (current == null) throw Exception('Sale not found');
     final to = switch (current.shipmentStatus) {
@@ -220,7 +340,13 @@ class RemoteAggregatorRepository implements AggregatorRepository {
 
   Future<AggregatorSale> _saleById(String saleId) async {
     final sale = (await _sales()).where((s) => s.id == saleId).firstOrNull;
-    if (sale == null) throw const ApiError(status: 404, code: 'not_found', message: 'Sale not found');
+    if (sale == null) {
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'Sale not found',
+      );
+    }
     return sale;
   }
 
@@ -228,7 +354,9 @@ class RemoteAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<List<GallerySpace>> listGallerySpaces() async =>
-      (await api.getList('/v1/aggregator/gallery-spaces')).map(gallerySpaceFromApi).toList();
+      (await api.getList('/v1/aggregator/gallery-spaces'))
+          .map(gallerySpaceFromApi)
+          .toList();
 
   @override
   Future<GallerySpace> addGallerySpace(GallerySpace space) async {
@@ -242,7 +370,8 @@ class RemoteAggregatorRepository implements AggregatorRepository {
           'state': space.state.trim(),
           'pincode': space.pincode.trim(),
           if (space.capacity > 0) 'capacity': space.capacity,
-          if (space.coordinatorName.trim().isNotEmpty) 'coordinatorName': space.coordinatorName.trim(),
+          if (space.coordinatorName.trim().isNotEmpty)
+            'coordinatorName': space.coordinatorName.trim(),
         },
       ),
     );
@@ -259,17 +388,27 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     final json = await api.getMap('/v1/aggregator/wallet');
     final free = rupeesAt(json, 'balancePaise');
     final held = rupeesAt(json, 'heldPaise');
-    return WalletSummary(balance: free + held, pendingBalance: 0, lockedBalance: held);
+    return WalletSummary(
+      balance: free + held,
+      pendingBalance: 0,
+      lockedBalance: held,
+    );
   }
 
   @override
   Future<List<WalletTransaction>> listWalletTransactions() async {
-    final results = await Future.wait([api.getMap('/v1/aggregator/wallet/transactions'), _holdings()]);
+    final results = await Future.wait([
+      api.getMap('/v1/aggregator/wallet/transactions'),
+      _holdings(),
+    ]);
     final feed = results[0] as Map<String, dynamic>;
     final holdings = results[1] as List<AggregatorHoldingView>;
-    final titleOf = {for (final view in holdings) view.holding.id: view.artwork.title};
+    final titleOf = {
+      for (final view in holdings) view.holding.id: view.artwork.title,
+    };
     final transactions = [
-      for (final row in asMapList(feed['transactions'])) walletTransactionFromApi(row, titleOfHolding: titleOf),
+      for (final row in asMapList(feed['transactions']))
+        walletTransactionFromApi(row, titleOfHolding: titleOf),
     ]..sort((a, b) => b.date.compareTo(a.date));
     return transactions;
   }
@@ -284,7 +423,12 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     if (amount < topupMin || amount > topupMax) {
       throw Exception('Add between ₹1,000 and ₹5,00,000 at a time.');
     }
-    final session = asMap(await api.post('/v1/aggregator/wallet/topups', body: {'amountPaise': rupeesToPaise(amount)}));
+    final session = asMap(
+      await api.post(
+        '/v1/aggregator/wallet/topups',
+        body: {'amountPaise': rupeesToPaise(amount)},
+      ),
+    );
     final topupId = session['topupId'] as String? ?? '';
     final base = '/v1/aggregator/wallet/topups/${Uri.encodeComponent(topupId)}';
     if (session['mode'] == 'razorpay') {
@@ -313,10 +457,10 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   /// Aggregators are agents, not principals: no withdrawal route, by design.
   @override
   Future<WalletTransaction> requestWithdrawal(double amount) => Future.error(
-        Exception(
-          "Withdrawals from the wallet aren't open yet. Contact GalleryZone to have unused money returned to your bank account.",
-        ),
-      );
+    Exception(
+      "Withdrawals from the wallet aren't open yet. Contact GalleryZone to have unused money returned to your bank account.",
+    ),
+  );
 
   // --- Settlements ------------------------------------------------------------------------------
 
@@ -329,8 +473,11 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     final credited = <String, double>{};
     for (final row in asMapList(feed['transactions'])) {
       final holdingId = row['holdingId'];
-      if (row['reason'] != 'aggregator_commission' || holdingId is! String) continue;
-      credited[holdingId] = (credited[holdingId] ?? 0) + rupeesAt(row, 'amountPaise');
+      if (row['reason'] != 'aggregator_commission' || holdingId is! String) {
+        continue;
+      }
+      credited[holdingId] =
+          (credited[holdingId] ?? 0) + rupeesAt(row, 'amountPaise');
     }
     return credited;
   }
@@ -339,22 +486,31 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   /// The artist's price is worked back from the price the piece was listed at.
   double _commissionByRule(AggregatorHoldingView? view) => view == null
       ? 0
-      : aggregatorCommissionOf(view.holding.displayPrice, artistPriceFrom(view.artwork.customerPrice));
+      : aggregatorCommissionOf(
+          view.holding.displayPrice,
+          artistPriceFrom(view.artwork.customerPrice),
+        );
 
   Map<String, double> _commissionsOf(
     List<AggregatorSale> sales,
     List<AggregatorHoldingView> holdings,
     Map<String, double> credited,
-  ) =>
-      {
-        for (final sale in sales)
-          sale.id: credited[sale.holdingId] ??
-              _commissionByRule(holdings.where((h) => h.holding.id == sale.holdingId).firstOrNull),
-      };
+  ) => {
+    for (final sale in sales)
+      sale.id:
+          credited[sale.holdingId] ??
+          _commissionByRule(
+            holdings.where((h) => h.holding.id == sale.holdingId).firstOrNull,
+          ),
+  };
 
   @override
   Future<Map<String, double>> saleCommissions() async {
-    final results = await Future.wait([_sales(), _holdings(), _creditedCommissions()]);
+    final results = await Future.wait([
+      _sales(),
+      _holdings(),
+      _creditedCommissions(),
+    ]);
     return _commissionsOf(
       results[0] as List<AggregatorSale>,
       results[1] as List<AggregatorHoldingView>,
@@ -371,14 +527,24 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   /// the ledger credited.
   @override
   Future<List<Settlement>> listSettlements() async {
-    final results = await Future.wait([_sales(), _holdings(), _creditedCommissions()]);
+    final results = await Future.wait([
+      _sales(),
+      _holdings(),
+      _creditedCommissions(),
+    ]);
     final sales = results[0] as List<AggregatorSale>;
     final holdings = results[1] as List<AggregatorHoldingView>;
-    final commissions = _commissionsOf(sales, holdings, results[2] as Map<String, double>);
+    final commissions = _commissionsOf(
+      sales,
+      holdings,
+      results[2] as Map<String, double>,
+    );
     return [
       for (final sale in sales)
         () {
-          final view = holdings.where((h) => h.holding.id == sale.holdingId).firstOrNull;
+          final view = holdings
+              .where((h) => h.holding.id == sale.holdingId)
+              .firstOrNull;
           final direct = sale.paymentRoute == PaymentRoute.directToGalleryZone;
           final settled = sale.remittedAt != null || direct;
           return Settlement(
@@ -389,7 +555,9 @@ class RemoteAggregatorRepository implements AggregatorRepository {
             artistAmount: 0,
             aggregatorCommission: commissions[sale.id] ?? 0,
             platformRevenue: 0,
-            status: settled ? SettlementStatus.processed : SettlementStatus.pending,
+            status: settled
+                ? SettlementStatus.processed
+                : SettlementStatus.pending,
             createdAt: sale.soldAt,
             // Money that came straight to GalleryZone was settled the day of the
             // sale; cash is settled when it is paid in.
@@ -401,13 +569,18 @@ class RemoteAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<List<AggregatorSale>> listRemittancesDue() async =>
-      (await api.getList('/v1/aggregator/sales/remittances-due')).map(saleFromApi).toList();
+      (await api.getList('/v1/aggregator/sales/remittances-due'))
+          .map(saleFromApi)
+          .toList();
 
   /// Cash is GalleryZone's money, due in full within two days (client,
   /// 30 Sep 2026): `wallet` takes it from the free balance, `bank` is the
   /// aggregator saying they transferred it to GalleryZone's account.
   @override
-  Future<AggregatorSale> markRemitted(String saleId, {RemitVia via = RemitVia.wallet}) async {
+  Future<AggregatorSale> markRemitted(
+    String saleId, {
+    RemitVia via = RemitVia.wallet,
+  }) async {
     await api.post(
       '/v1/aggregator/sales/${Uri.encodeComponent(saleId)}/remit',
       body: {'via': via == RemitVia.bank ? 'bank' : 'wallet'},
@@ -416,8 +589,9 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   }
 
   @override
-  Future<Settlement> processSettlement(String saleId) =>
-      Future.error(Exception('Settlements are processed by GalleryZone after delivery.'));
+  Future<Settlement> processSettlement(String saleId) => Future.error(
+    Exception('Settlements are processed by GalleryZone after delivery.'),
+  );
 
   // --- Analytics ----------------------------------------------------------------------------------
 
@@ -434,9 +608,14 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     final markups = [
       for (final sale in sales)
         () {
-          final view = holdings.where((h) => h.holding.id == sale.holdingId).firstOrNull;
+          final view = holdings
+              .where((h) => h.holding.id == sale.holdingId)
+              .firstOrNull;
           if (view == null) return 0.0;
-          return math.max(0.0, view.holding.displayPrice - view.artwork.customerPrice);
+          return math.max(
+            0.0,
+            view.holding.displayPrice - view.artwork.customerPrice,
+          );
         }(),
     ];
     return AggregatorAnalyticsSummary(
@@ -445,9 +624,15 @@ class RemoteAggregatorRepository implements AggregatorRepository {
       commissionPending: 0,
       commissionAvailable: 0,
       customerCount: sales.map((s) => s.buyerEmail).toSet().length,
-      activeReservations: holdings.where((h) => h.holding.status == HoldingStatus.reserved).length,
-      averageSoldPrice: sales.isEmpty ? 0 : (revenue / sales.length).roundToDouble(),
-      averageDisplayMarkup: markups.isEmpty ? 0 : (markups.reduce((a, b) => a + b) / markups.length).roundToDouble(),
+      activeReservations: holdings
+          .where((h) => h.holding.status == HoldingStatus.reserved)
+          .length,
+      averageSoldPrice: sales.isEmpty
+          ? 0
+          : (revenue / sales.length).roundToDouble(),
+      averageDisplayMarkup: markups.isEmpty
+          ? 0
+          : (markups.reduce((a, b) => a + b) / markups.length).roundToDouble(),
     );
   }
 
@@ -459,14 +644,26 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     final byCategory = <String, ({double revenue, int orders})>{};
     for (final sale in sales) {
       final category =
-          holdings.where((h) => h.holding.id == sale.holdingId).firstOrNull?.artwork.category ?? 'other';
+          holdings
+              .where((h) => h.holding.id == sale.holdingId)
+              .firstOrNull
+              ?.artwork
+              .category ??
+          'other';
       final key = category.isEmpty ? 'other' : category;
       final previous = byCategory[key];
-      byCategory[key] = (revenue: (previous?.revenue ?? 0) + sale.soldPrice, orders: (previous?.orders ?? 0) + 1);
+      byCategory[key] = (
+        revenue: (previous?.revenue ?? 0) + sale.soldPrice,
+        orders: (previous?.orders ?? 0) + 1,
+      );
     }
     return [
       for (final entry in byCategory.entries)
-        CategoryPerformance(category: entry.key, revenue: entry.value.revenue, orders: entry.value.orders),
+        CategoryPerformance(
+          category: entry.key,
+          revenue: entry.value.revenue,
+          orders: entry.value.orders,
+        ),
     ]..sort((a, b) => b.revenue.compareTo(a.revenue));
   }
 
@@ -474,7 +671,10 @@ class RemoteAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<AggregatorProfile> getProfile() async {
-    final results = await Future.wait([api.getMap('/v1/me/profile'), getMouState()]);
+    final results = await Future.wait([
+      api.getMap('/v1/me/profile'),
+      getMouState(),
+    ]);
     return aggregatorProfileFromApi(
       results[0] as Map<String, dynamic>,
       mouAcceptance: (results[1] as MouState).acceptance,
@@ -494,7 +694,8 @@ class RemoteAggregatorRepository implements AggregatorRepository {
       patch[key] = value.isEmpty ? null : value;
     }
 
-    if (profile.contactPerson.trim() != current.contactPerson && profile.contactPerson.trim().length >= 2) {
+    if (profile.contactPerson.trim() != current.contactPerson &&
+        profile.contactPerson.trim().length >= 2) {
       patch['fullName'] = profile.contactPerson.trim();
     }
     text('companyName', profile.companyName, current.companyName);
@@ -503,8 +704,13 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     text('pickupLine1', profile.addressLine1, current.addressLine1);
     text('pickupCity', profile.addressCity, current.addressCity);
     text('pickupState', profile.addressState, current.addressState);
+    text('pickupCountry', profile.country, current.country, upper: true);
     text('pickupPincode', profile.addressPincode, current.addressPincode);
-    text('headline', profile.coordinatorDesignation, current.coordinatorDesignation);
+    text(
+      'headline',
+      profile.coordinatorDesignation,
+      current.coordinatorDesignation,
+    );
 
     if (patch.isEmpty) return current;
     await api.patch('/v1/me/profile', body: patch);
@@ -512,16 +718,46 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   }
 
   @override
-  Future<AggregatorProfile> updateBankDetails({required String accountNumber, required String ifsc}) async {
+  Future<GstinCheckResult> verifySavedGstin() async {
+    final json = asMap(await api.post('/v1/profile/gstin/verify'));
+    return GstinCheckResult(
+      valid: json['valid'] == true,
+      legalName: json['legalName'] as String?,
+      tradeName: json['tradeName'] as String?,
+      registrationStatus: json['registrationStatus'] as String?,
+      status: json['status'] as String? ?? 'not_verified',
+      message: json['message'] as String?,
+    );
+  }
+
+  @override
+  Future<DigiLockerStart> startAadhaarDigiLocker() async {
+    final json = asMap(await api.post('/v1/profile/aadhaar/digilocker'));
+    return DigiLockerStart(
+      consentUrl: json['consentUrl'] as String? ?? '',
+      verificationId: json['verificationId'] as String? ?? '',
+      expiresInSeconds: (json['expiresInSeconds'] as num?)?.toInt() ?? 600,
+    );
+  }
+
+  @override
+  Future<AggregatorProfile> updateBankDetails({
+    required String accountNumber,
+    required String ifsc,
+  }) async {
     await api.patch(
       '/v1/me/profile',
-      body: {'bankAccountNumber': accountNumber.trim(), 'ifsc': ifsc.trim().toUpperCase()},
+      body: {
+        'bankAccountNumber': accountNumber.trim(),
+        'ifsc': ifsc.trim().toUpperCase(),
+      },
     );
     return getProfile();
   }
 
   @override
-  Future<MouState> getMouState() async => mouStateFromApi(await api.getMap('/v1/aggregator/mou'));
+  Future<MouState> getMouState() async =>
+      mouStateFromApi(await api.getMap('/v1/aggregator/mou'));
 
   @override
   Future<AggregatorProfile> acceptMou({
@@ -531,7 +767,11 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   }) async {
     await api.post(
       '/v1/aggregator/mou/accept',
-      body: {'version': version, 'signatureName': signatureName.trim(), 'signatureDataUrl': signatureDataUrl},
+      body: {
+        'version': version,
+        'signatureName': signatureName.trim(),
+        'signatureDataUrl': signatureDataUrl,
+      },
     );
     return getProfile();
   }
@@ -544,18 +784,18 @@ class RemoteAggregatorRepository implements AggregatorRepository {
   /// are kept on the device, all on by default.
   @override
   Future<AggregatorSettings> getSettings() async => MockDb.getCollection(
-        _settingsKey,
-        () => [
-          const AggregatorSettings(
-            notifyNewAssignment: true,
-            notifySaleRecorded: true,
-            notifySettlementProcessed: true,
-            notifyExpiryReminder: true,
-          ),
-        ],
-        AggregatorSettings.fromJson,
-        (s) => s.toJson(),
-      ).first;
+    _settingsKey,
+    () => [
+      const AggregatorSettings(
+        notifyNewAssignment: true,
+        notifySaleRecorded: true,
+        notifySettlementProcessed: true,
+        notifyExpiryReminder: true,
+      ),
+    ],
+    AggregatorSettings.fromJson,
+    (s) => s.toJson(),
+  ).first;
 
   @override
   Future<AggregatorSettings> updateSettings(AggregatorSettings settings) async {
@@ -567,7 +807,9 @@ class RemoteAggregatorRepository implements AggregatorRepository {
 
   @override
   Future<List<MessageThread>> listMessages() async {
-    final messages = (await api.getList('/v1/messages')).map(messageThreadFromApi).toList();
+    final messages = (await api.getList('/v1/messages'))
+        .map(messageThreadFromApi)
+        .toList();
     messages.sort((a, b) => b.receivedAt.compareTo(a.receivedAt));
     return messages;
   }
@@ -577,22 +819,38 @@ class RemoteAggregatorRepository implements AggregatorRepository {
     await api.post('/v1/messages/${Uri.encodeComponent(id)}/read');
     final updated = (await listMessages()).where((m) => m.id == id).firstOrNull;
     if (updated == null) {
-      throw const ApiError(status: 404, code: 'not_found', message: 'That message could not be found.');
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'That message could not be found.',
+      );
     }
     return updated;
   }
 
   @override
   Future<List<SupportTicket>> listSupportTickets() async {
-    final tickets = (await api.getList('/v1/support')).map(supportTicketFromApi).toList();
+    final tickets = (await api.getList('/v1/support'))
+        .map(supportTicketFromApi)
+        .toList();
     tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return tickets;
   }
 
   @override
-  Future<SupportTicket> submitSupportTicket({required String subject, required String message}) async {
-    if (subject.trim().isEmpty || message.trim().isEmpty) throw Exception('Add a subject and a message');
-    final created = asMap(await api.post('/v1/support', body: {'subject': subject.trim(), 'message': message.trim()}));
+  Future<SupportTicket> submitSupportTicket({
+    required String subject,
+    required String message,
+  }) async {
+    if (subject.trim().isEmpty || message.trim().isEmpty) {
+      throw Exception('Add a subject and a message');
+    }
+    final created = asMap(
+      await api.post(
+        '/v1/support',
+        body: {'subject': subject.trim(), 'message': message.trim()},
+      ),
+    );
     return SupportTicket(
       id: created['id'] as String? ?? '',
       subject: subject.trim(),

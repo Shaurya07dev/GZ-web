@@ -16,7 +16,9 @@ int similarityScore(Artwork a, Artwork b) {
   var score = 0;
   if (a.category.isNotEmpty && a.category == b.category) score += 3;
   if (a.customerPrice > 0 && b.customerPrice > 0) {
-    final ratio = math.min(a.customerPrice, b.customerPrice) / math.max(a.customerPrice, b.customerPrice);
+    final ratio =
+        math.min(a.customerPrice, b.customerPrice) /
+        math.max(a.customerPrice, b.customerPrice);
     if (ratio >= _similarPriceRatio) score += 2;
   }
   if (a.sizeBand != null && a.sizeBand == b.sizeBand) score += 1;
@@ -43,9 +45,15 @@ List<T> similarTo<T>(
     for (final reference in references) {
       best = math.max(best, similarityScore(reference, artwork));
     }
-    if (best >= _minScore) scored.add((candidate: candidate, score: best, index: index++));
+    if (best >= _minScore) {
+      scored.add((candidate: candidate, score: best, index: index++));
+    }
   }
   // Dart's sort is not stable; the index puts equal scores back in list order.
-  scored.sort((a, b) => b.score != a.score ? b.score.compareTo(a.score) : a.index.compareTo(b.index));
+  scored.sort(
+    (a, b) => b.score != a.score
+        ? b.score.compareTo(a.score)
+        : a.index.compareTo(b.index),
+  );
   return [for (final entry in scored.take(limit)) entry.candidate];
 }

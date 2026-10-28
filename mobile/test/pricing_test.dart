@@ -12,18 +12,23 @@ const artistPrice = 100000.0;
 final cycleStart = DateTime.utc(2026, 1, 1);
 DateTime day(int n) => cycleStart.add(Duration(days: n));
 
-String ymd(DateTime value) =>
-    value.toUtc().toIso8601String().substring(0, 10);
+String ymd(DateTime value) => value.toUtc().toIso8601String().substring(0, 10);
 
 void main() {
   group('marketplace, exactly as the sheet works it', () {
     test('the price ladder', () {
       expect(basePriceOf(artistPrice), 130000, reason: '30% markup');
-      expect(displayPriceOf(artistPrice), 136500,
-          reason: 'GST inside the display price');
+      expect(
+        displayPriceOf(artistPrice),
+        136500,
+        reason: 'GST inside the display price',
+      );
       expect(gstIncludedIn(136500), 6500);
-      expect(exGst(136500), 130000,
-          reason: 'stripping GST returns the base price');
+      expect(
+        exGst(136500),
+        130000,
+        reason: 'stripping GST returns the base price',
+      );
     });
 
     test('the customer pays 1,39,000 and GST is never added on top', () {
@@ -44,8 +49,10 @@ void main() {
     });
 
     test('the artist keeps the full asking price', () {
-      final settlement =
-          artistSettlementOf(artistPrice, SaleChannel.marketplace);
+      final settlement = artistSettlementOf(
+        artistPrice,
+        SaleChannel.marketplace,
+      );
       expect(settlement.net, 100000);
       expect(settlement.deliveryDeduction, 0);
       expect(settlement.convenienceDeduction, 0);
@@ -53,8 +60,10 @@ void main() {
 
     test('GalleryZone keeps its 30% markup and nothing else', () {
       final marketplace = checkoutTotal(displayPriceOf(artistPrice));
-      final settlement =
-          artistSettlementOf(artistPrice, SaleChannel.marketplace);
+      final settlement = artistSettlementOf(
+        artistPrice,
+        SaleChannel.marketplace,
+      );
       // What the customer paid, less GST (goes to the government), less
       // delivery (goes to the carrier), less the artist.
       expect(
@@ -84,7 +93,11 @@ void main() {
         sellingPrice: 150000,
         artistPrice: artistPrice,
       );
-      expect(advance.advance, 7500, reason: "5% of the sheet's pre-tax figure, not of 1,57,500");
+      expect(
+        advance.advance,
+        7500,
+        reason: "5% of the sheet's pre-tax figure, not of 1,57,500",
+      );
     });
 
     test('commission is 20% of the markup over the artist price', () {
@@ -94,12 +107,18 @@ void main() {
         aggregatorCommissionOf(displayPriceOf(artistPrice), artistPrice),
         6000,
       );
-      expect(aggregatorCommissionOf(withGst(90000), artistPrice), 0,
-          reason: 'no negative commission');
+      expect(
+        aggregatorCommissionOf(withGst(90000), artistPrice),
+        0,
+        reason: 'no negative commission',
+      );
     });
 
     test('the artist receives 95,500', () {
-      final settlement = artistSettlementOf(artistPrice, SaleChannel.aggregator);
+      final settlement = artistSettlementOf(
+        artistPrice,
+        SaleChannel.aggregator,
+      );
       expect(settlement.deliveryDeduction, 2500);
       expect(settlement.convenienceDeduction, 2000, reason: '2% convenience');
       expect(settlement.net, 95500);
@@ -107,13 +126,17 @@ void main() {
 
     test('GalleryZone keeps 42,000 on an aggregator sale', () {
       final checkout = checkoutTotal(aggregatorDisplay);
-      final settlement = artistSettlementOf(artistPrice, SaleChannel.aggregator);
+      final settlement = artistSettlementOf(
+        artistPrice,
+        SaleChannel.aggregator,
+      );
       // Whole-flow balance: everything the customer and the aggregator put in
       // has to come back out as GST, delivery, and the three parties' shares.
       const aggregatorSettlement =
           7500 + deliveryCharge + 10000; // advance + delivery back + commission
       final moneyIn = checkout.total + 7500 + deliveryCharge;
-      final moneyOut = checkout.gstIncluded +
+      final moneyOut =
+          checkout.gstIncluded +
           checkout.deliveryCharge +
           settlement.deliveryDeduction +
           aggregatorSettlement +
@@ -122,9 +145,31 @@ void main() {
     });
   });
 
+  group('aggregator incentive tier from the previous calendar month', () {
+    test('uses the exact thresholds in Aggregator MOU 2026.3 clause 9.4', () {
+      expect(commissionRateForPreviousMonthSales(0), 0.20);
+      expect(commissionRateForPreviousMonthSales(1000000), 0.20);
+      expect(commissionRateForPreviousMonthSales(1000000.01), 0.35);
+      expect(commissionRateForPreviousMonthSales(5000000), 0.35);
+      expect(commissionRateForPreviousMonthSales(5000000.01), 0.50);
+    });
+
+    test('applies the selected tier to the markup pool', () {
+      final display = withGst(150000);
+      expect(
+        aggregatorCommissionOf(display, artistPrice, commissionRate: 0.35),
+        17500,
+      );
+    });
+  });
+
   test('the ladder works backwards', () {
     expect(artistPriceFrom(136500), 100000);
-    expect(artistPriceFrom(displayPriceOf(23400)), 23400, reason: 'round trips');
+    expect(
+      artistPriceFrom(displayPriceOf(23400)),
+      23400,
+      reason: 'round trips',
+    );
   });
 
   test('listing is free today', () {
@@ -143,10 +188,7 @@ void main() {
         isPayoutDue(delivered, now: DateTime.utc(2026, 8, 7, 23)),
         isFalse,
       );
-      expect(
-        isPayoutDue(delivered, now: DateTime.utc(2026, 8, 8, 1)),
-        isTrue,
-      );
+      expect(isPayoutDue(delivered, now: DateTime.utc(2026, 8, 8, 1)), isTrue);
     });
   });
 
@@ -182,7 +224,10 @@ void main() {
     });
 
     test("no GST anywhere in the artist's settlement", () {
-      final settlement = artistSettlementOf(artistPrice, SaleChannel.aggregator);
+      final settlement = artistSettlementOf(
+        artistPrice,
+        SaleChannel.aggregator,
+      );
       expect(
         settlement.net,
         artistPrice -
@@ -207,27 +252,37 @@ void main() {
 
     test("the reduction comes out of GalleryZone's margin", () {
       // Never the artist's price, and never what the marketplace shows.
-      expect(displayPriceOf(artistPrice), 136500,
-          reason: 'marketplace price does not move');
+      expect(
+        displayPriceOf(artistPrice),
+        136500,
+        reason: 'marketplace price does not move',
+      );
       expect(aggregatorOfferPriceOf(artistPrice, 5) - artistPrice, 22000);
     });
 
-    test("month 1 is 5% of the aggregator's price before GST, plus delivery", () {
-      final monthOne = aggregatorAdvanceForMonth(
-        month: 1,
-        sellingPrice: 150000,
-        artistPrice: artistPrice,
-      );
-      expect(monthOne.advance, 7500);
-      expect(monthOne.basis, AdvanceBasis.sellingPrice);
-      expect(monthOne.payable, 7500 + deliveryCharge);
+    test(
+      "month 1 is 5% of the aggregator's price before GST, plus delivery",
+      () {
+        final monthOne = aggregatorAdvanceForMonth(
+          month: 1,
+          sellingPrice: 150000,
+          artistPrice: artistPrice,
+        );
+        expect(monthOne.advance, 7500);
+        expect(monthOne.basis, AdvanceBasis.sellingPrice);
+        expect(monthOne.payable, 7500 + deliveryCharge);
 
-      // Keeping GalleryZone's own 1,30,000 is the cheaper reservation.
-      expect(
-        aggregatorAdvanceForMonth(month: 1, sellingPrice: 130000, artistPrice: artistPrice).advance,
-        6500,
-      );
-    });
+        // Keeping GalleryZone's own 1,30,000 is the cheaper reservation.
+        expect(
+          aggregatorAdvanceForMonth(
+            month: 1,
+            sellingPrice: 130000,
+            artistPrice: artistPrice,
+          ).advance,
+          6500,
+        );
+      },
+    );
 
     test('month 2 is 5% of the artist price, whoever held it before', () {
       final monthTwo = aggregatorAdvanceForMonth(
@@ -257,7 +312,12 @@ void main() {
     test('a month-1 price above the offer puts the next aggregator back at full price', () {
       // Appreciated: the drops start a month later (client, 30 Sep 2026).
       expect(
-        [2, 3, 4, 5].map((m) => aggregatorOfferPriceOf(artistPrice, m, appreciated: true)),
+        [
+          2,
+          3,
+          4,
+          5,
+        ].map((m) => aggregatorOfferPriceOf(artistPrice, m, appreciated: true)),
         [130000, 128000, 126000, 124000],
       );
       expect(aggregatorOfferPriceOf(artistPrice, 1, appreciated: true), 130000);
@@ -266,7 +326,10 @@ void main() {
     });
 
     test('the aggregator splits a price it set the same way as one GalleryZone set', () {
-      final terms = aggregatorTermsAt(sellingPrice: 150000, artistPrice: artistPrice);
+      final terms = aggregatorTermsAt(
+        sellingPrice: 150000,
+        artistPrice: artistPrice,
+      );
       expect(terms.displayPrice, 157500);
       expect(terms.gst, 7500);
       expect(terms.markup, 50000);
@@ -285,8 +348,10 @@ void main() {
     });
 
     test('a placement with room ends after its own thirty days', () {
-      final early =
-          placementWindow(cycleStartedAt: cycleStart, assignedAt: day(0));
+      final early = placementWindow(
+        cycleStartedAt: cycleStart,
+        assignedAt: day(0),
+      );
       expect(ymd(early.expiresAt), '2026-01-31');
       expect(early.extended, isFalse);
     });
@@ -295,15 +360,19 @@ void main() {
       // A placement beginning on day 130 would naturally end on day 160,
       // leaving 20 days — too short for anyone else, so this aggregator keeps
       // the piece all the way to day 180 instead.
-      final last =
-          placementWindow(cycleStartedAt: cycleStart, assignedAt: day(130));
+      final last = placementWindow(
+        cycleStartedAt: cycleStart,
+        assignedAt: day(130),
+      );
       expect(ymd(last.expiresAt), ymd(listingEndsAt(cycleStart)));
       expect(last.extended, isTrue);
     });
 
     test('exactly thirty days left is a real placement, not a stub', () {
-      final exact =
-          placementWindow(cycleStartedAt: cycleStart, assignedAt: day(120));
+      final exact = placementWindow(
+        cycleStartedAt: cycleStart,
+        assignedAt: day(120),
+      );
       expect(exact.extended, isFalse);
     });
 
@@ -340,10 +409,7 @@ void main() {
 
     test('a piece nobody has taken yet has not started its clock', () {
       expect(
-        canPlaceWithAnotherAggregator(
-          cycleStartedAt: null,
-          placementsSoFar: 0,
-        ),
+        canPlaceWithAnotherAggregator(cycleStartedAt: null, placementsSoFar: 0),
         isTrue,
       );
     });
@@ -357,8 +423,11 @@ void main() {
   test('only the first aggregator prices the piece - when reserving it', () {
     expect(canSetDisplayPrice(1), isTrue);
     for (final month in [2, 3, 4, 5, 6]) {
-      expect(canSetDisplayPrice(month), isFalse,
-          reason: "month $month takes GalleryZone's calculated price");
+      expect(
+        canSetDisplayPrice(month),
+        isFalse,
+        reason: "month $month takes GalleryZone's calculated price",
+      );
     }
   });
 
@@ -367,7 +436,11 @@ void main() {
       // A 4kg framed canvas in a 100x70x12cm box.
       expect(
         billableWeightKg(
-            actualKg: 4, lengthCm: 100, breadthCm: 70, heightCm: 12),
+          actualKg: 4,
+          lengthCm: 100,
+          breadthCm: 70,
+          heightCm: 12,
+        ),
         16.8,
       );
     });
@@ -375,7 +448,11 @@ void main() {
     test('a dense, small piece bills on its real weight', () {
       expect(
         billableWeightKg(
-            actualKg: 16.5, lengthCm: 45, breadthCm: 30, heightCm: 25),
+          actualKg: 16.5,
+          lengthCm: 45,
+          breadthCm: 30,
+          heightCm: 25,
+        ),
         16.5,
       );
     });
@@ -394,23 +471,41 @@ void main() {
 
     test('distance matters as much as weight', () {
       final nearby = estimateDelivery(
-          billableKg: 16.8, fromPincode: '560001', toPincode: '560078');
+        billableKg: 16.8,
+        fromPincode: '560001',
+        toPincode: '560078',
+      );
       final faraway = estimateDelivery(
-          billableKg: 16.8, fromPincode: '560001', toPincode: '110001');
+        billableKg: 16.8,
+        fromPincode: '560001',
+        toPincode: '110001',
+      );
       expect(nearby.zone, DeliveryZone.local);
-      expect(faraway.charge > nearby.charge, isTrue,
-          reason: 'the same parcel costs more further away');
+      expect(
+        faraway.charge > nearby.charge,
+        isTrue,
+        reason: 'the same parcel costs more further away',
+      );
       expect(nearby.estimated && faraway.estimated, isTrue);
 
       final heavier = estimateDelivery(
-          billableKg: 34.6, fromPincode: '560001', toPincode: '110001');
-      expect(heavier.charge > faraway.charge, isTrue,
-          reason: 'a bigger box costs more over the same distance');
+        billableKg: 34.6,
+        fromPincode: '560001',
+        toPincode: '110001',
+      );
+      expect(
+        heavier.charge > faraway.charge,
+        isTrue,
+        reason: 'a bigger box costs more over the same distance',
+      );
     });
 
     test('not enough to go on falls back to the flat charge and says so', () {
       final unknown = estimateDelivery(
-          billableKg: 16.8, fromPincode: '560001', toPincode: null);
+        billableKg: 16.8,
+        fromPincode: '560001',
+        toPincode: null,
+      );
       expect(unknown.charge, deliveryCharge);
       expect(unknown.estimated, isFalse);
     });

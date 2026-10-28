@@ -29,9 +29,13 @@ class RemoteCustomerRepository implements CustomerRepository {
   Future<CustomerProfile> updateProfile(CustomerProfile profile) async {
     final current = await getProfile();
     final patch = <String, dynamic>{};
-    if (profile.name.trim() != current.name) patch['fullName'] = profile.name.trim();
+    if (profile.name.trim() != current.name) {
+      patch['fullName'] = profile.name.trim();
+    }
     if (profile.phone.trim() != current.phone) {
-      patch['phone'] = profile.phone.trim().isEmpty ? null : profile.phone.trim();
+      patch['phone'] = profile.phone.trim().isEmpty
+          ? null
+          : profile.phone.trim();
     }
     if ((profile.gstin ?? '').trim().toUpperCase() != (current.gstin ?? '')) {
       final gstin = (profile.gstin ?? '').trim().toUpperCase();
@@ -46,7 +50,9 @@ class RemoteCustomerRepository implements CustomerRepository {
       patch['ifsc'] = ifsc.isEmpty ? null : ifsc;
     }
     if (patch.isEmpty) return current;
-    return customerProfileFromApi(asMap(await api.patch('/v1/me/profile', body: patch)));
+    return customerProfileFromApi(
+      asMap(await api.patch('/v1/me/profile', body: patch)),
+    );
   }
 
   // --- Address book --------------------------------------------------------------
@@ -57,16 +63,27 @@ class RemoteCustomerRepository implements CustomerRepository {
 
   @override
   Future<Address> addAddress(Address address) async {
-    final created = asMap(await api.post('/v1/account/addresses', body: addressToApi(address)));
+    final created = asMap(
+      await api.post('/v1/account/addresses', body: addressToApi(address)),
+    );
     return address.copyWith(id: created['id'] as String? ?? address.id);
   }
 
   @override
   Future<Address> updateAddress(Address address) async {
-    await api.patch('/v1/account/addresses/${Uri.encodeComponent(address.id)}', body: addressToApi(address));
-    final updated = (await listAddresses()).where((a) => a.id == address.id).firstOrNull;
+    await api.patch(
+      '/v1/account/addresses/${Uri.encodeComponent(address.id)}',
+      body: addressToApi(address),
+    );
+    final updated = (await listAddresses())
+        .where((a) => a.id == address.id)
+        .firstOrNull;
     if (updated == null) {
-      throw const ApiError(status: 404, code: 'not_found', message: 'That address no longer exists.');
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'That address no longer exists.',
+      );
     }
     return updated;
   }
@@ -81,7 +98,11 @@ class RemoteCustomerRepository implements CustomerRepository {
   @override
   Future<WalletSummary> getWallet() async {
     final json = await api.getMap('/v1/customer/wallet');
-    return WalletSummary(balance: rupeesAt(json, 'balancePaise'), pendingBalance: 0, lockedBalance: 0);
+    return WalletSummary(
+      balance: rupeesAt(json, 'balancePaise'),
+      pendingBalance: 0,
+      lockedBalance: 0,
+    );
   }
 
   /// The collector's wallet has no transaction feed on the API yet — an
@@ -92,8 +113,9 @@ class RemoteCustomerRepository implements CustomerRepository {
   /// Collector withdrawals aren't a server operation yet (only artists can
   /// request one). Refused plainly rather than faked.
   @override
-  Future<WalletTransaction> requestWithdrawal(double amount) =>
-      Future.error(Exception('Bank withdrawals for collectors are coming soon.'));
+  Future<WalletTransaction> requestWithdrawal(double amount) => Future.error(
+    Exception('Bank withdrawals for collectors are coming soon.'),
+  );
 
   // --- Collection -------------------------------------------------------------------
 
@@ -130,14 +152,21 @@ class RemoteCustomerRepository implements CustomerRepository {
   /// the collection screen is open.
   @override
   Future<List<PhysicalCoaRequest>> listPhysicalCoaRequests() async {
-    final owned = (await listCollection()).map((item) => item.artwork.id).toSet().toList();
+    final owned = (await listCollection())
+        .map((item) => item.artwork.id)
+        .toSet()
+        .toList();
     final all = <PhysicalCoaRequest>[];
     for (var start = 0; start < owned.length; start += 4) {
       final batch = await Future.wait(
-        owned.skip(start).take(4).map(
-              (id) async => (await api.getList('/v1/coa/requests', query: {'artworkId': id}))
-                  .map(coaRequestFromApi)
-                  .toList(),
+        owned
+            .skip(start)
+            .take(4)
+            .map(
+              (id) async => (await api.getList(
+                '/v1/coa/requests',
+                query: {'artworkId': id},
+              )).map(coaRequestFromApi).toList(),
             ),
       );
       for (final requests in batch) {
@@ -151,7 +180,9 @@ class RemoteCustomerRepository implements CustomerRepository {
   // --- Resale ----------------------------------------------------------------------------
 
   Future<List<ResaleListing>> _listings() async =>
-      (await api.getList('/v1/account/resale')).map(resaleListingFromApi).toList();
+      (await api.getList('/v1/account/resale'))
+          .map(resaleListingFromApi)
+          .toList();
 
   @override
   Future<List<ResaleListing>> listResaleListings() async {
@@ -169,7 +200,10 @@ class RemoteCustomerRepository implements CustomerRepository {
     final created = asMap(
       await api.post(
         '/v1/account/resale',
-        body: {'artworkId': artworkId, 'listedPricePaise': rupeesToPaise(listedPrice)},
+        body: {
+          'artworkId': artworkId,
+          'listedPricePaise': rupeesToPaise(listedPrice),
+        },
       ),
     );
     return _find(created['id'] as String? ?? '');
@@ -184,7 +218,11 @@ class RemoteCustomerRepository implements CustomerRepository {
   Future<ResaleListing> _find(String id) async {
     final found = (await _listings()).where((l) => l.id == id).firstOrNull;
     if (found == null) {
-      throw const ApiError(status: 404, code: 'not_found', message: 'That listing could not be found.');
+      throw const ApiError(
+        status: 404,
+        code: 'not_found',
+        message: 'That listing could not be found.',
+      );
     }
     return found;
   }
@@ -193,18 +231,26 @@ class RemoteCustomerRepository implements CustomerRepository {
 
   @override
   Future<List<SupportTicket>> listSupportTickets() async {
-    final tickets = (await api.getList('/v1/support')).map(supportTicketFromApi).toList();
+    final tickets = (await api.getList('/v1/support'))
+        .map(supportTicketFromApi)
+        .toList();
     tickets.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return tickets;
   }
 
   @override
-  Future<SupportTicket> submitSupportTicket({required String subject, required String message}) async {
+  Future<SupportTicket> submitSupportTicket({
+    required String subject,
+    required String message,
+  }) async {
     if (subject.trim().isEmpty || message.trim().isEmpty) {
       throw Exception('Add a subject and a message');
     }
     final created = asMap(
-      await api.post('/v1/support', body: {'subject': subject.trim(), 'message': message.trim()}),
+      await api.post(
+        '/v1/support',
+        body: {'subject': subject.trim(), 'message': message.trim()},
+      ),
     );
     return SupportTicket(
       id: created['id'] as String? ?? '',

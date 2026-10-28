@@ -24,7 +24,7 @@ class ArtistsDirectoryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Artists')),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistsProvider);
           try {
@@ -44,13 +44,18 @@ class ArtistsDirectoryScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Our Artists',
-                      style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Independent artists building their practice on GalleryZone: every listing backed by full '
                       'price privacy and a signed certificate of authenticity.',
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5, color: theme.textTheme.bodySmall?.color),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
                     ),
                   ],
                 ),
@@ -99,8 +104,7 @@ class ArtistsDirectoryScreen extends ConsumerWidget {
                         child: EmptyState(
                           icon: LucideIcons.users,
                           title: 'No artists listed yet',
-                          description:
-                              'Artists appear here as soon as their first piece is approved for the marketplace.',
+                          description: 'Artists appear here as soon as their first piece is approved for the marketplace.',
                         ),
                       ),
                     ]
@@ -108,14 +112,16 @@ class ArtistsDirectoryScreen extends ConsumerWidget {
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
                         sliver: SliverGrid(
-                          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 240,
-                            mainAxisExtent: 240 * textScale,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 16,
-                          ),
+                          gridDelegate:
+                              SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 240,
+                                mainAxisExtent: 240 * textScale,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                              ),
                           delegate: SliverChildBuilderDelegate(
-                            (context, index) => ArtistCardTile(artist: list[index]),
+                            (context, index) =>
+                                ArtistCardTile(artist: list[index]),
                             childCount: list.length,
                           ),
                         ),
@@ -139,8 +145,13 @@ class ArtistCardTile extends StatelessWidget {
   /// Bios are stored as simple `<p>` markup; a card only ever needs a plain
   /// excerpt, so the tags are stripped rather than rendered.
   static String bioExcerpt(String bio, {int maxLength = 120}) {
-    final text = bio.replaceAll(RegExp(r'<[^>]+>'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
-    return text.length <= maxLength ? text : '${text.substring(0, maxLength).trimRight()}…';
+    final text = bio
+        .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return text.length <= maxLength
+        ? text
+        : '${text.substring(0, maxLength).trimRight()}…';
   }
 
   @override
@@ -148,7 +159,9 @@ class ArtistCardTile extends StatelessWidget {
     final theme = Theme.of(context);
     // Bios usually open with the artist's own name, so a two-line excerpt just
     // repeated the heading; the headline is the profile's one-liner.
-    final blurb = artist.headline.isNotEmpty ? artist.headline : bioExcerpt(artist.bio);
+    final blurb = artist.headline.isNotEmpty
+        ? artist.headline
+        : bioExcerpt(artist.bio);
     return Material(
       color: theme.cardTheme.color,
       shape: RoundedRectangleBorder(
@@ -156,7 +169,9 @@ class ArtistCardTile extends StatelessWidget {
         side: BorderSide(color: theme.colorScheme.outline),
       ),
       child: InkWell(
-        customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        customBorder: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
         onTap: () => context.push('/artists/${artist.id}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -169,7 +184,9 @@ class ArtistCardTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 4),
               VerifiedBadge(verification: artist.verification, small: true),

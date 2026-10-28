@@ -14,6 +14,314 @@ part of 'aggregator.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$HoldingReport {
+
+ String get id; String get holdingId; String get artworkId; String get artworkTitle; String get aggregatorId; String get aggregatorName; String get aggregatorEmail; String get artistId; String get artistName; HoldingReportIssueType get issueType; String get description; HoldingReportStatus get status; String get reportedAt; String? get resolvedAt; String? get resolvedBy; String? get resolutionNote;
+/// Create a copy of HoldingReport
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$HoldingReportCopyWith<HoldingReport> get copyWith => _$HoldingReportCopyWithImpl<HoldingReport>(this as HoldingReport, _$identity);
+
+  /// Serializes this HoldingReport to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HoldingReport&&(identical(other.id, id) || other.id == id)&&(identical(other.holdingId, holdingId) || other.holdingId == holdingId)&&(identical(other.artworkId, artworkId) || other.artworkId == artworkId)&&(identical(other.artworkTitle, artworkTitle) || other.artworkTitle == artworkTitle)&&(identical(other.aggregatorId, aggregatorId) || other.aggregatorId == aggregatorId)&&(identical(other.aggregatorName, aggregatorName) || other.aggregatorName == aggregatorName)&&(identical(other.aggregatorEmail, aggregatorEmail) || other.aggregatorEmail == aggregatorEmail)&&(identical(other.artistId, artistId) || other.artistId == artistId)&&(identical(other.artistName, artistName) || other.artistName == artistName)&&(identical(other.issueType, issueType) || other.issueType == issueType)&&(identical(other.description, description) || other.description == description)&&(identical(other.status, status) || other.status == status)&&(identical(other.reportedAt, reportedAt) || other.reportedAt == reportedAt)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolvedBy, resolvedBy) || other.resolvedBy == resolvedBy)&&(identical(other.resolutionNote, resolutionNote) || other.resolutionNote == resolutionNote));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,holdingId,artworkId,artworkTitle,aggregatorId,aggregatorName,aggregatorEmail,artistId,artistName,issueType,description,status,reportedAt,resolvedAt,resolvedBy,resolutionNote);
+
+@override
+String toString() {
+  return 'HoldingReport(id: $id, holdingId: $holdingId, artworkId: $artworkId, artworkTitle: $artworkTitle, aggregatorId: $aggregatorId, aggregatorName: $aggregatorName, aggregatorEmail: $aggregatorEmail, artistId: $artistId, artistName: $artistName, issueType: $issueType, description: $description, status: $status, reportedAt: $reportedAt, resolvedAt: $resolvedAt, resolvedBy: $resolvedBy, resolutionNote: $resolutionNote)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $HoldingReportCopyWith<$Res>  {
+  factory $HoldingReportCopyWith(HoldingReport value, $Res Function(HoldingReport) _then) = _$HoldingReportCopyWithImpl;
+@useResult
+$Res call({
+ String id, String holdingId, String artworkId, String artworkTitle, String aggregatorId, String aggregatorName, String aggregatorEmail, String artistId, String artistName, HoldingReportIssueType issueType, String description, HoldingReportStatus status, String reportedAt, String? resolvedAt, String? resolvedBy, String? resolutionNote
+});
+
+
+
+
+}
+/// @nodoc
+class _$HoldingReportCopyWithImpl<$Res>
+    implements $HoldingReportCopyWith<$Res> {
+  _$HoldingReportCopyWithImpl(this._self, this._then);
+
+  final HoldingReport _self;
+  final $Res Function(HoldingReport) _then;
+
+/// Create a copy of HoldingReport
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? holdingId = null,Object? artworkId = null,Object? artworkTitle = null,Object? aggregatorId = null,Object? aggregatorName = null,Object? aggregatorEmail = null,Object? artistId = null,Object? artistName = null,Object? issueType = null,Object? description = null,Object? status = null,Object? reportedAt = null,Object? resolvedAt = freezed,Object? resolvedBy = freezed,Object? resolutionNote = freezed,}) {
+  return _then(HoldingReport(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,holdingId: null == holdingId ? _self.holdingId : holdingId // ignore: cast_nullable_to_non_nullable
+as String,artworkId: null == artworkId ? _self.artworkId : artworkId // ignore: cast_nullable_to_non_nullable
+as String,artworkTitle: null == artworkTitle ? _self.artworkTitle : artworkTitle // ignore: cast_nullable_to_non_nullable
+as String,aggregatorId: null == aggregatorId ? _self.aggregatorId : aggregatorId // ignore: cast_nullable_to_non_nullable
+as String,aggregatorName: null == aggregatorName ? _self.aggregatorName : aggregatorName // ignore: cast_nullable_to_non_nullable
+as String,aggregatorEmail: null == aggregatorEmail ? _self.aggregatorEmail : aggregatorEmail // ignore: cast_nullable_to_non_nullable
+as String,artistId: null == artistId ? _self.artistId : artistId // ignore: cast_nullable_to_non_nullable
+as String,artistName: null == artistName ? _self.artistName : artistName // ignore: cast_nullable_to_non_nullable
+as String,issueType: null == issueType ? _self.issueType : issueType // ignore: cast_nullable_to_non_nullable
+as HoldingReportIssueType,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as HoldingReportStatus,reportedAt: null == reportedAt ? _self.reportedAt : reportedAt // ignore: cast_nullable_to_non_nullable
+as String,resolvedAt: freezed == resolvedAt ? _self.resolvedAt : resolvedAt // ignore: cast_nullable_to_non_nullable
+as String?,resolvedBy: freezed == resolvedBy ? _self.resolvedBy : resolvedBy // ignore: cast_nullable_to_non_nullable
+as String?,resolutionNote: freezed == resolutionNote ? _self.resolutionNote : resolutionNote // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [HoldingReport].
+extension HoldingReportPatterns on HoldingReport {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _HoldingReport value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _HoldingReport() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _HoldingReport value)  $default,){
+final _that = this;
+switch (_that) {
+case _HoldingReport():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _HoldingReport value)?  $default,){
+final _that = this;
+switch (_that) {
+case _HoldingReport() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String holdingId,  String artworkId,  String artworkTitle,  String aggregatorId,  String aggregatorName,  String aggregatorEmail,  String artistId,  String artistName,  HoldingReportIssueType issueType,  String description,  HoldingReportStatus status,  String reportedAt,  String? resolvedAt,  String? resolvedBy,  String? resolutionNote)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _HoldingReport() when $default != null:
+return $default(_that.id,_that.holdingId,_that.artworkId,_that.artworkTitle,_that.aggregatorId,_that.aggregatorName,_that.aggregatorEmail,_that.artistId,_that.artistName,_that.issueType,_that.description,_that.status,_that.reportedAt,_that.resolvedAt,_that.resolvedBy,_that.resolutionNote);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String holdingId,  String artworkId,  String artworkTitle,  String aggregatorId,  String aggregatorName,  String aggregatorEmail,  String artistId,  String artistName,  HoldingReportIssueType issueType,  String description,  HoldingReportStatus status,  String reportedAt,  String? resolvedAt,  String? resolvedBy,  String? resolutionNote)  $default,) {final _that = this;
+switch (_that) {
+case _HoldingReport():
+return $default(_that.id,_that.holdingId,_that.artworkId,_that.artworkTitle,_that.aggregatorId,_that.aggregatorName,_that.aggregatorEmail,_that.artistId,_that.artistName,_that.issueType,_that.description,_that.status,_that.reportedAt,_that.resolvedAt,_that.resolvedBy,_that.resolutionNote);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String holdingId,  String artworkId,  String artworkTitle,  String aggregatorId,  String aggregatorName,  String aggregatorEmail,  String artistId,  String artistName,  HoldingReportIssueType issueType,  String description,  HoldingReportStatus status,  String reportedAt,  String? resolvedAt,  String? resolvedBy,  String? resolutionNote)?  $default,) {final _that = this;
+switch (_that) {
+case _HoldingReport() when $default != null:
+return $default(_that.id,_that.holdingId,_that.artworkId,_that.artworkTitle,_that.aggregatorId,_that.aggregatorName,_that.aggregatorEmail,_that.artistId,_that.artistName,_that.issueType,_that.description,_that.status,_that.reportedAt,_that.resolvedAt,_that.resolvedBy,_that.resolutionNote);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _HoldingReport implements HoldingReport {
+  const _HoldingReport({required this.id, required this.holdingId, required this.artworkId, required this.artworkTitle, required this.aggregatorId, required this.aggregatorName, required this.aggregatorEmail, required this.artistId, required this.artistName, required this.issueType, required this.description, required this.status, required this.reportedAt, this.resolvedAt, this.resolvedBy, this.resolutionNote});
+  factory _HoldingReport.fromJson(Map<String, dynamic> json) => _$HoldingReportFromJson(json);
+
+@override final  String id;
+@override final  String holdingId;
+@override final  String artworkId;
+@override final  String artworkTitle;
+@override final  String aggregatorId;
+@override final  String aggregatorName;
+@override final  String aggregatorEmail;
+@override final  String artistId;
+@override final  String artistName;
+@override final  HoldingReportIssueType issueType;
+@override final  String description;
+@override final  HoldingReportStatus status;
+@override final  String reportedAt;
+@override final  String? resolvedAt;
+@override final  String? resolvedBy;
+@override final  String? resolutionNote;
+
+/// Create a copy of HoldingReport
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$HoldingReportCopyWith<_HoldingReport> get copyWith => __$HoldingReportCopyWithImpl<_HoldingReport>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$HoldingReportToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HoldingReport&&(identical(other.id, id) || other.id == id)&&(identical(other.holdingId, holdingId) || other.holdingId == holdingId)&&(identical(other.artworkId, artworkId) || other.artworkId == artworkId)&&(identical(other.artworkTitle, artworkTitle) || other.artworkTitle == artworkTitle)&&(identical(other.aggregatorId, aggregatorId) || other.aggregatorId == aggregatorId)&&(identical(other.aggregatorName, aggregatorName) || other.aggregatorName == aggregatorName)&&(identical(other.aggregatorEmail, aggregatorEmail) || other.aggregatorEmail == aggregatorEmail)&&(identical(other.artistId, artistId) || other.artistId == artistId)&&(identical(other.artistName, artistName) || other.artistName == artistName)&&(identical(other.issueType, issueType) || other.issueType == issueType)&&(identical(other.description, description) || other.description == description)&&(identical(other.status, status) || other.status == status)&&(identical(other.reportedAt, reportedAt) || other.reportedAt == reportedAt)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolvedBy, resolvedBy) || other.resolvedBy == resolvedBy)&&(identical(other.resolutionNote, resolutionNote) || other.resolutionNote == resolutionNote));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,holdingId,artworkId,artworkTitle,aggregatorId,aggregatorName,aggregatorEmail,artistId,artistName,issueType,description,status,reportedAt,resolvedAt,resolvedBy,resolutionNote);
+
+@override
+String toString() {
+  return 'HoldingReport(id: $id, holdingId: $holdingId, artworkId: $artworkId, artworkTitle: $artworkTitle, aggregatorId: $aggregatorId, aggregatorName: $aggregatorName, aggregatorEmail: $aggregatorEmail, artistId: $artistId, artistName: $artistName, issueType: $issueType, description: $description, status: $status, reportedAt: $reportedAt, resolvedAt: $resolvedAt, resolvedBy: $resolvedBy, resolutionNote: $resolutionNote)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$HoldingReportCopyWith<$Res> implements $HoldingReportCopyWith<$Res> {
+  factory _$HoldingReportCopyWith(_HoldingReport value, $Res Function(_HoldingReport) _then) = __$HoldingReportCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String holdingId, String artworkId, String artworkTitle, String aggregatorId, String aggregatorName, String aggregatorEmail, String artistId, String artistName, HoldingReportIssueType issueType, String description, HoldingReportStatus status, String reportedAt, String? resolvedAt, String? resolvedBy, String? resolutionNote
+});
+
+
+
+
+}
+/// @nodoc
+class __$HoldingReportCopyWithImpl<$Res>
+    implements _$HoldingReportCopyWith<$Res> {
+  __$HoldingReportCopyWithImpl(this._self, this._then);
+
+  final _HoldingReport _self;
+  final $Res Function(_HoldingReport) _then;
+
+/// Create a copy of HoldingReport
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? holdingId = null,Object? artworkId = null,Object? artworkTitle = null,Object? aggregatorId = null,Object? aggregatorName = null,Object? aggregatorEmail = null,Object? artistId = null,Object? artistName = null,Object? issueType = null,Object? description = null,Object? status = null,Object? reportedAt = null,Object? resolvedAt = freezed,Object? resolvedBy = freezed,Object? resolutionNote = freezed,}) {
+  return _then(_HoldingReport(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,holdingId: null == holdingId ? _self.holdingId : holdingId // ignore: cast_nullable_to_non_nullable
+as String,artworkId: null == artworkId ? _self.artworkId : artworkId // ignore: cast_nullable_to_non_nullable
+as String,artworkTitle: null == artworkTitle ? _self.artworkTitle : artworkTitle // ignore: cast_nullable_to_non_nullable
+as String,aggregatorId: null == aggregatorId ? _self.aggregatorId : aggregatorId // ignore: cast_nullable_to_non_nullable
+as String,aggregatorName: null == aggregatorName ? _self.aggregatorName : aggregatorName // ignore: cast_nullable_to_non_nullable
+as String,aggregatorEmail: null == aggregatorEmail ? _self.aggregatorEmail : aggregatorEmail // ignore: cast_nullable_to_non_nullable
+as String,artistId: null == artistId ? _self.artistId : artistId // ignore: cast_nullable_to_non_nullable
+as String,artistName: null == artistName ? _self.artistName : artistName // ignore: cast_nullable_to_non_nullable
+as String,issueType: null == issueType ? _self.issueType : issueType // ignore: cast_nullable_to_non_nullable
+as HoldingReportIssueType,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as HoldingReportStatus,reportedAt: null == reportedAt ? _self.reportedAt : reportedAt // ignore: cast_nullable_to_non_nullable
+as String,resolvedAt: freezed == resolvedAt ? _self.resolvedAt : resolvedAt // ignore: cast_nullable_to_non_nullable
+as String?,resolvedBy: freezed == resolvedBy ? _self.resolvedBy : resolvedBy // ignore: cast_nullable_to_non_nullable
+as String?,resolutionNote: freezed == resolutionNote ? _self.resolutionNote : resolutionNote // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$DeliveryAddress {
 
  String get line1; String get city; String get state; String get pincode;
@@ -299,7 +607,8 @@ mixin _$AggregatorSale {
  String? get courierRef;/// The piece's NFC tag is locked, or GalleryZone let it ship without one,
 /// so dispatching won't be refused (NFC_IMPLEMENTATION.md §5.2b). True when
 /// the API says nothing: don't warn about what can't be known.
- bool get nfcReady;
+ bool get nfcReady;/// Live ShipRocket tracking for the aggregator-to-buyer leg.
+ ShiprocketStage? get shiprocketStage; String? get trackingId; String? get carrier;
 /// Create a copy of AggregatorSale
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -312,16 +621,16 @@ $AggregatorSaleCopyWith<AggregatorSale> get copyWith => _$AggregatorSaleCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AggregatorSale&&(identical(other.id, id) || other.id == id)&&(identical(other.holdingId, holdingId) || other.holdingId == holdingId)&&(identical(other.artworkId, artworkId) || other.artworkId == artworkId)&&(identical(other.soldPrice, soldPrice) || other.soldPrice == soldPrice)&&(identical(other.buyerName, buyerName) || other.buyerName == buyerName)&&(identical(other.buyerEmail, buyerEmail) || other.buyerEmail == buyerEmail)&&(identical(other.buyerPhone, buyerPhone) || other.buyerPhone == buyerPhone)&&(identical(other.deliveryAddress, deliveryAddress) || other.deliveryAddress == deliveryAddress)&&(identical(other.deliveryMode, deliveryMode) || other.deliveryMode == deliveryMode)&&(identical(other.soldAt, soldAt) || other.soldAt == soldAt)&&(identical(other.shipmentStatus, shipmentStatus) || other.shipmentStatus == shipmentStatus)&&(identical(other.dispatchedAt, dispatchedAt) || other.dispatchedAt == dispatchedAt)&&(identical(other.deliveredAt, deliveredAt) || other.deliveredAt == deliveredAt)&&(identical(other.paymentRoute, paymentRoute) || other.paymentRoute == paymentRoute)&&(identical(other.remittedAt, remittedAt) || other.remittedAt == remittedAt)&&(identical(other.remitDueAt, remitDueAt) || other.remitDueAt == remitDueAt)&&(identical(other.remittedVia, remittedVia) || other.remittedVia == remittedVia)&&(identical(other.courierRef, courierRef) || other.courierRef == courierRef)&&(identical(other.nfcReady, nfcReady) || other.nfcReady == nfcReady));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AggregatorSale&&(identical(other.id, id) || other.id == id)&&(identical(other.holdingId, holdingId) || other.holdingId == holdingId)&&(identical(other.artworkId, artworkId) || other.artworkId == artworkId)&&(identical(other.soldPrice, soldPrice) || other.soldPrice == soldPrice)&&(identical(other.buyerName, buyerName) || other.buyerName == buyerName)&&(identical(other.buyerEmail, buyerEmail) || other.buyerEmail == buyerEmail)&&(identical(other.buyerPhone, buyerPhone) || other.buyerPhone == buyerPhone)&&(identical(other.deliveryAddress, deliveryAddress) || other.deliveryAddress == deliveryAddress)&&(identical(other.deliveryMode, deliveryMode) || other.deliveryMode == deliveryMode)&&(identical(other.soldAt, soldAt) || other.soldAt == soldAt)&&(identical(other.shipmentStatus, shipmentStatus) || other.shipmentStatus == shipmentStatus)&&(identical(other.dispatchedAt, dispatchedAt) || other.dispatchedAt == dispatchedAt)&&(identical(other.deliveredAt, deliveredAt) || other.deliveredAt == deliveredAt)&&(identical(other.paymentRoute, paymentRoute) || other.paymentRoute == paymentRoute)&&(identical(other.remittedAt, remittedAt) || other.remittedAt == remittedAt)&&(identical(other.remitDueAt, remitDueAt) || other.remitDueAt == remitDueAt)&&(identical(other.remittedVia, remittedVia) || other.remittedVia == remittedVia)&&(identical(other.courierRef, courierRef) || other.courierRef == courierRef)&&(identical(other.nfcReady, nfcReady) || other.nfcReady == nfcReady)&&(identical(other.shiprocketStage, shiprocketStage) || other.shiprocketStage == shiprocketStage)&&(identical(other.trackingId, trackingId) || other.trackingId == trackingId)&&(identical(other.carrier, carrier) || other.carrier == carrier));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,holdingId,artworkId,soldPrice,buyerName,buyerEmail,buyerPhone,deliveryAddress,deliveryMode,soldAt,shipmentStatus,dispatchedAt,deliveredAt,paymentRoute,remittedAt,remitDueAt,remittedVia,courierRef,nfcReady]);
+int get hashCode => Object.hashAll([runtimeType,id,holdingId,artworkId,soldPrice,buyerName,buyerEmail,buyerPhone,deliveryAddress,deliveryMode,soldAt,shipmentStatus,dispatchedAt,deliveredAt,paymentRoute,remittedAt,remitDueAt,remittedVia,courierRef,nfcReady,shiprocketStage,trackingId,carrier]);
 
 @override
 String toString() {
-  return 'AggregatorSale(id: $id, holdingId: $holdingId, artworkId: $artworkId, soldPrice: $soldPrice, buyerName: $buyerName, buyerEmail: $buyerEmail, buyerPhone: $buyerPhone, deliveryAddress: $deliveryAddress, deliveryMode: $deliveryMode, soldAt: $soldAt, shipmentStatus: $shipmentStatus, dispatchedAt: $dispatchedAt, deliveredAt: $deliveredAt, paymentRoute: $paymentRoute, remittedAt: $remittedAt, remitDueAt: $remitDueAt, remittedVia: $remittedVia, courierRef: $courierRef, nfcReady: $nfcReady)';
+  return 'AggregatorSale(id: $id, holdingId: $holdingId, artworkId: $artworkId, soldPrice: $soldPrice, buyerName: $buyerName, buyerEmail: $buyerEmail, buyerPhone: $buyerPhone, deliveryAddress: $deliveryAddress, deliveryMode: $deliveryMode, soldAt: $soldAt, shipmentStatus: $shipmentStatus, dispatchedAt: $dispatchedAt, deliveredAt: $deliveredAt, paymentRoute: $paymentRoute, remittedAt: $remittedAt, remitDueAt: $remitDueAt, remittedVia: $remittedVia, courierRef: $courierRef, nfcReady: $nfcReady, shiprocketStage: $shiprocketStage, trackingId: $trackingId, carrier: $carrier)';
 }
 
 
@@ -332,7 +641,7 @@ abstract mixin class $AggregatorSaleCopyWith<$Res>  {
   factory $AggregatorSaleCopyWith(AggregatorSale value, $Res Function(AggregatorSale) _then) = _$AggregatorSaleCopyWithImpl;
 @useResult
 $Res call({
- String id, String holdingId, String artworkId, double soldPrice, String buyerName, String buyerEmail, String buyerPhone, DeliveryAddress deliveryAddress, DeliveryMode deliveryMode, String soldAt, ShipmentStatus shipmentStatus, String? dispatchedAt, String? deliveredAt, PaymentRoute paymentRoute, String? remittedAt, String? remitDueAt, RemitVia? remittedVia, String? courierRef, bool nfcReady
+ String id, String holdingId, String artworkId, double soldPrice, String buyerName, String buyerEmail, String buyerPhone, DeliveryAddress deliveryAddress, DeliveryMode deliveryMode, String soldAt, ShipmentStatus shipmentStatus, String? dispatchedAt, String? deliveredAt, PaymentRoute paymentRoute, String? remittedAt, String? remitDueAt, RemitVia? remittedVia, String? courierRef, bool nfcReady, ShiprocketStage? shiprocketStage, String? trackingId, String? carrier
 });
 
 
@@ -349,7 +658,7 @@ class _$AggregatorSaleCopyWithImpl<$Res>
 
 /// Create a copy of AggregatorSale
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? holdingId = null,Object? artworkId = null,Object? soldPrice = null,Object? buyerName = null,Object? buyerEmail = null,Object? buyerPhone = null,Object? deliveryAddress = null,Object? deliveryMode = null,Object? soldAt = null,Object? shipmentStatus = null,Object? dispatchedAt = freezed,Object? deliveredAt = freezed,Object? paymentRoute = null,Object? remittedAt = freezed,Object? remitDueAt = freezed,Object? remittedVia = freezed,Object? courierRef = freezed,Object? nfcReady = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? holdingId = null,Object? artworkId = null,Object? soldPrice = null,Object? buyerName = null,Object? buyerEmail = null,Object? buyerPhone = null,Object? deliveryAddress = null,Object? deliveryMode = null,Object? soldAt = null,Object? shipmentStatus = null,Object? dispatchedAt = freezed,Object? deliveredAt = freezed,Object? paymentRoute = null,Object? remittedAt = freezed,Object? remitDueAt = freezed,Object? remittedVia = freezed,Object? courierRef = freezed,Object? nfcReady = null,Object? shiprocketStage = freezed,Object? trackingId = freezed,Object? carrier = freezed,}) {
   return _then(AggregatorSale(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,holdingId: null == holdingId ? _self.holdingId : holdingId // ignore: cast_nullable_to_non_nullable
@@ -370,7 +679,10 @@ as String?,remitDueAt: freezed == remitDueAt ? _self.remitDueAt : remitDueAt // 
 as String?,remittedVia: freezed == remittedVia ? _self.remittedVia : remittedVia // ignore: cast_nullable_to_non_nullable
 as RemitVia?,courierRef: freezed == courierRef ? _self.courierRef : courierRef // ignore: cast_nullable_to_non_nullable
 as String?,nfcReady: null == nfcReady ? _self.nfcReady : nfcReady // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,shiprocketStage: freezed == shiprocketStage ? _self.shiprocketStage : shiprocketStage // ignore: cast_nullable_to_non_nullable
+as ShiprocketStage?,trackingId: freezed == trackingId ? _self.trackingId : trackingId // ignore: cast_nullable_to_non_nullable
+as String?,carrier: freezed == carrier ? _self.carrier : carrier // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 /// Create a copy of AggregatorSale
@@ -464,10 +776,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String holdingId,  String artworkId,  double soldPrice,  String buyerName,  String buyerEmail,  String buyerPhone,  DeliveryAddress deliveryAddress,  DeliveryMode deliveryMode,  String soldAt,  ShipmentStatus shipmentStatus,  String? dispatchedAt,  String? deliveredAt,  PaymentRoute paymentRoute,  String? remittedAt,  String? remitDueAt,  RemitVia? remittedVia,  String? courierRef,  bool nfcReady)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String holdingId,  String artworkId,  double soldPrice,  String buyerName,  String buyerEmail,  String buyerPhone,  DeliveryAddress deliveryAddress,  DeliveryMode deliveryMode,  String soldAt,  ShipmentStatus shipmentStatus,  String? dispatchedAt,  String? deliveredAt,  PaymentRoute paymentRoute,  String? remittedAt,  String? remitDueAt,  RemitVia? remittedVia,  String? courierRef,  bool nfcReady,  ShiprocketStage? shiprocketStage,  String? trackingId,  String? carrier)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AggregatorSale() when $default != null:
-return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.buyerName,_that.buyerEmail,_that.buyerPhone,_that.deliveryAddress,_that.deliveryMode,_that.soldAt,_that.shipmentStatus,_that.dispatchedAt,_that.deliveredAt,_that.paymentRoute,_that.remittedAt,_that.remitDueAt,_that.remittedVia,_that.courierRef,_that.nfcReady);case _:
+return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.buyerName,_that.buyerEmail,_that.buyerPhone,_that.deliveryAddress,_that.deliveryMode,_that.soldAt,_that.shipmentStatus,_that.dispatchedAt,_that.deliveredAt,_that.paymentRoute,_that.remittedAt,_that.remitDueAt,_that.remittedVia,_that.courierRef,_that.nfcReady,_that.shiprocketStage,_that.trackingId,_that.carrier);case _:
   return orElse();
 
 }
@@ -485,10 +797,10 @@ return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.b
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String holdingId,  String artworkId,  double soldPrice,  String buyerName,  String buyerEmail,  String buyerPhone,  DeliveryAddress deliveryAddress,  DeliveryMode deliveryMode,  String soldAt,  ShipmentStatus shipmentStatus,  String? dispatchedAt,  String? deliveredAt,  PaymentRoute paymentRoute,  String? remittedAt,  String? remitDueAt,  RemitVia? remittedVia,  String? courierRef,  bool nfcReady)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String holdingId,  String artworkId,  double soldPrice,  String buyerName,  String buyerEmail,  String buyerPhone,  DeliveryAddress deliveryAddress,  DeliveryMode deliveryMode,  String soldAt,  ShipmentStatus shipmentStatus,  String? dispatchedAt,  String? deliveredAt,  PaymentRoute paymentRoute,  String? remittedAt,  String? remitDueAt,  RemitVia? remittedVia,  String? courierRef,  bool nfcReady,  ShiprocketStage? shiprocketStage,  String? trackingId,  String? carrier)  $default,) {final _that = this;
 switch (_that) {
 case _AggregatorSale():
-return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.buyerName,_that.buyerEmail,_that.buyerPhone,_that.deliveryAddress,_that.deliveryMode,_that.soldAt,_that.shipmentStatus,_that.dispatchedAt,_that.deliveredAt,_that.paymentRoute,_that.remittedAt,_that.remitDueAt,_that.remittedVia,_that.courierRef,_that.nfcReady);case _:
+return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.buyerName,_that.buyerEmail,_that.buyerPhone,_that.deliveryAddress,_that.deliveryMode,_that.soldAt,_that.shipmentStatus,_that.dispatchedAt,_that.deliveredAt,_that.paymentRoute,_that.remittedAt,_that.remitDueAt,_that.remittedVia,_that.courierRef,_that.nfcReady,_that.shiprocketStage,_that.trackingId,_that.carrier);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -505,10 +817,10 @@ return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.b
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String holdingId,  String artworkId,  double soldPrice,  String buyerName,  String buyerEmail,  String buyerPhone,  DeliveryAddress deliveryAddress,  DeliveryMode deliveryMode,  String soldAt,  ShipmentStatus shipmentStatus,  String? dispatchedAt,  String? deliveredAt,  PaymentRoute paymentRoute,  String? remittedAt,  String? remitDueAt,  RemitVia? remittedVia,  String? courierRef,  bool nfcReady)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String holdingId,  String artworkId,  double soldPrice,  String buyerName,  String buyerEmail,  String buyerPhone,  DeliveryAddress deliveryAddress,  DeliveryMode deliveryMode,  String soldAt,  ShipmentStatus shipmentStatus,  String? dispatchedAt,  String? deliveredAt,  PaymentRoute paymentRoute,  String? remittedAt,  String? remitDueAt,  RemitVia? remittedVia,  String? courierRef,  bool nfcReady,  ShiprocketStage? shiprocketStage,  String? trackingId,  String? carrier)?  $default,) {final _that = this;
 switch (_that) {
 case _AggregatorSale() when $default != null:
-return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.buyerName,_that.buyerEmail,_that.buyerPhone,_that.deliveryAddress,_that.deliveryMode,_that.soldAt,_that.shipmentStatus,_that.dispatchedAt,_that.deliveredAt,_that.paymentRoute,_that.remittedAt,_that.remitDueAt,_that.remittedVia,_that.courierRef,_that.nfcReady);case _:
+return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.buyerName,_that.buyerEmail,_that.buyerPhone,_that.deliveryAddress,_that.deliveryMode,_that.soldAt,_that.shipmentStatus,_that.dispatchedAt,_that.deliveredAt,_that.paymentRoute,_that.remittedAt,_that.remitDueAt,_that.remittedVia,_that.courierRef,_that.nfcReady,_that.shiprocketStage,_that.trackingId,_that.carrier);case _:
   return null;
 
 }
@@ -520,7 +832,7 @@ return $default(_that.id,_that.holdingId,_that.artworkId,_that.soldPrice,_that.b
 @JsonSerializable()
 
 class _AggregatorSale implements AggregatorSale {
-  const _AggregatorSale({required this.id, required this.holdingId, required this.artworkId, required this.soldPrice, required this.buyerName, required this.buyerEmail, required this.buyerPhone, required this.deliveryAddress, required this.deliveryMode, required this.soldAt, required this.shipmentStatus, this.dispatchedAt, this.deliveredAt, this.paymentRoute = PaymentRoute.directToGalleryZone, this.remittedAt, this.remitDueAt, this.remittedVia, this.courierRef, this.nfcReady = true});
+  const _AggregatorSale({required this.id, required this.holdingId, required this.artworkId, required this.soldPrice, required this.buyerName, required this.buyerEmail, required this.buyerPhone, required this.deliveryAddress, required this.deliveryMode, required this.soldAt, required this.shipmentStatus, this.dispatchedAt, this.deliveredAt, this.paymentRoute = PaymentRoute.directToGalleryZone, this.remittedAt, this.remitDueAt, this.remittedVia, this.courierRef, this.nfcReady = true, this.shiprocketStage, this.trackingId, this.carrier});
   factory _AggregatorSale.fromJson(Map<String, dynamic> json) => _$AggregatorSaleFromJson(json);
 
 @override final  String id;
@@ -553,6 +865,10 @@ class _AggregatorSale implements AggregatorSale {
 /// so dispatching won't be refused (NFC_IMPLEMENTATION.md §5.2b). True when
 /// the API says nothing: don't warn about what can't be known.
 @override@JsonKey() final  bool nfcReady;
+/// Live ShipRocket tracking for the aggregator-to-buyer leg.
+@override final  ShiprocketStage? shiprocketStage;
+@override final  String? trackingId;
+@override final  String? carrier;
 
 /// Create a copy of AggregatorSale
 /// with the given fields replaced by the non-null parameter values.
@@ -567,16 +883,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AggregatorSale&&(identical(other.id, id) || other.id == id)&&(identical(other.holdingId, holdingId) || other.holdingId == holdingId)&&(identical(other.artworkId, artworkId) || other.artworkId == artworkId)&&(identical(other.soldPrice, soldPrice) || other.soldPrice == soldPrice)&&(identical(other.buyerName, buyerName) || other.buyerName == buyerName)&&(identical(other.buyerEmail, buyerEmail) || other.buyerEmail == buyerEmail)&&(identical(other.buyerPhone, buyerPhone) || other.buyerPhone == buyerPhone)&&(identical(other.deliveryAddress, deliveryAddress) || other.deliveryAddress == deliveryAddress)&&(identical(other.deliveryMode, deliveryMode) || other.deliveryMode == deliveryMode)&&(identical(other.soldAt, soldAt) || other.soldAt == soldAt)&&(identical(other.shipmentStatus, shipmentStatus) || other.shipmentStatus == shipmentStatus)&&(identical(other.dispatchedAt, dispatchedAt) || other.dispatchedAt == dispatchedAt)&&(identical(other.deliveredAt, deliveredAt) || other.deliveredAt == deliveredAt)&&(identical(other.paymentRoute, paymentRoute) || other.paymentRoute == paymentRoute)&&(identical(other.remittedAt, remittedAt) || other.remittedAt == remittedAt)&&(identical(other.remitDueAt, remitDueAt) || other.remitDueAt == remitDueAt)&&(identical(other.remittedVia, remittedVia) || other.remittedVia == remittedVia)&&(identical(other.courierRef, courierRef) || other.courierRef == courierRef)&&(identical(other.nfcReady, nfcReady) || other.nfcReady == nfcReady));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AggregatorSale&&(identical(other.id, id) || other.id == id)&&(identical(other.holdingId, holdingId) || other.holdingId == holdingId)&&(identical(other.artworkId, artworkId) || other.artworkId == artworkId)&&(identical(other.soldPrice, soldPrice) || other.soldPrice == soldPrice)&&(identical(other.buyerName, buyerName) || other.buyerName == buyerName)&&(identical(other.buyerEmail, buyerEmail) || other.buyerEmail == buyerEmail)&&(identical(other.buyerPhone, buyerPhone) || other.buyerPhone == buyerPhone)&&(identical(other.deliveryAddress, deliveryAddress) || other.deliveryAddress == deliveryAddress)&&(identical(other.deliveryMode, deliveryMode) || other.deliveryMode == deliveryMode)&&(identical(other.soldAt, soldAt) || other.soldAt == soldAt)&&(identical(other.shipmentStatus, shipmentStatus) || other.shipmentStatus == shipmentStatus)&&(identical(other.dispatchedAt, dispatchedAt) || other.dispatchedAt == dispatchedAt)&&(identical(other.deliveredAt, deliveredAt) || other.deliveredAt == deliveredAt)&&(identical(other.paymentRoute, paymentRoute) || other.paymentRoute == paymentRoute)&&(identical(other.remittedAt, remittedAt) || other.remittedAt == remittedAt)&&(identical(other.remitDueAt, remitDueAt) || other.remitDueAt == remitDueAt)&&(identical(other.remittedVia, remittedVia) || other.remittedVia == remittedVia)&&(identical(other.courierRef, courierRef) || other.courierRef == courierRef)&&(identical(other.nfcReady, nfcReady) || other.nfcReady == nfcReady)&&(identical(other.shiprocketStage, shiprocketStage) || other.shiprocketStage == shiprocketStage)&&(identical(other.trackingId, trackingId) || other.trackingId == trackingId)&&(identical(other.carrier, carrier) || other.carrier == carrier));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,holdingId,artworkId,soldPrice,buyerName,buyerEmail,buyerPhone,deliveryAddress,deliveryMode,soldAt,shipmentStatus,dispatchedAt,deliveredAt,paymentRoute,remittedAt,remitDueAt,remittedVia,courierRef,nfcReady]);
+int get hashCode => Object.hashAll([runtimeType,id,holdingId,artworkId,soldPrice,buyerName,buyerEmail,buyerPhone,deliveryAddress,deliveryMode,soldAt,shipmentStatus,dispatchedAt,deliveredAt,paymentRoute,remittedAt,remitDueAt,remittedVia,courierRef,nfcReady,shiprocketStage,trackingId,carrier]);
 
 @override
 String toString() {
-  return 'AggregatorSale(id: $id, holdingId: $holdingId, artworkId: $artworkId, soldPrice: $soldPrice, buyerName: $buyerName, buyerEmail: $buyerEmail, buyerPhone: $buyerPhone, deliveryAddress: $deliveryAddress, deliveryMode: $deliveryMode, soldAt: $soldAt, shipmentStatus: $shipmentStatus, dispatchedAt: $dispatchedAt, deliveredAt: $deliveredAt, paymentRoute: $paymentRoute, remittedAt: $remittedAt, remitDueAt: $remitDueAt, remittedVia: $remittedVia, courierRef: $courierRef, nfcReady: $nfcReady)';
+  return 'AggregatorSale(id: $id, holdingId: $holdingId, artworkId: $artworkId, soldPrice: $soldPrice, buyerName: $buyerName, buyerEmail: $buyerEmail, buyerPhone: $buyerPhone, deliveryAddress: $deliveryAddress, deliveryMode: $deliveryMode, soldAt: $soldAt, shipmentStatus: $shipmentStatus, dispatchedAt: $dispatchedAt, deliveredAt: $deliveredAt, paymentRoute: $paymentRoute, remittedAt: $remittedAt, remitDueAt: $remitDueAt, remittedVia: $remittedVia, courierRef: $courierRef, nfcReady: $nfcReady, shiprocketStage: $shiprocketStage, trackingId: $trackingId, carrier: $carrier)';
 }
 
 
@@ -587,7 +903,7 @@ abstract mixin class _$AggregatorSaleCopyWith<$Res> implements $AggregatorSaleCo
   factory _$AggregatorSaleCopyWith(_AggregatorSale value, $Res Function(_AggregatorSale) _then) = __$AggregatorSaleCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String holdingId, String artworkId, double soldPrice, String buyerName, String buyerEmail, String buyerPhone, DeliveryAddress deliveryAddress, DeliveryMode deliveryMode, String soldAt, ShipmentStatus shipmentStatus, String? dispatchedAt, String? deliveredAt, PaymentRoute paymentRoute, String? remittedAt, String? remitDueAt, RemitVia? remittedVia, String? courierRef, bool nfcReady
+ String id, String holdingId, String artworkId, double soldPrice, String buyerName, String buyerEmail, String buyerPhone, DeliveryAddress deliveryAddress, DeliveryMode deliveryMode, String soldAt, ShipmentStatus shipmentStatus, String? dispatchedAt, String? deliveredAt, PaymentRoute paymentRoute, String? remittedAt, String? remitDueAt, RemitVia? remittedVia, String? courierRef, bool nfcReady, ShiprocketStage? shiprocketStage, String? trackingId, String? carrier
 });
 
 
@@ -604,7 +920,7 @@ class __$AggregatorSaleCopyWithImpl<$Res>
 
 /// Create a copy of AggregatorSale
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? holdingId = null,Object? artworkId = null,Object? soldPrice = null,Object? buyerName = null,Object? buyerEmail = null,Object? buyerPhone = null,Object? deliveryAddress = null,Object? deliveryMode = null,Object? soldAt = null,Object? shipmentStatus = null,Object? dispatchedAt = freezed,Object? deliveredAt = freezed,Object? paymentRoute = null,Object? remittedAt = freezed,Object? remitDueAt = freezed,Object? remittedVia = freezed,Object? courierRef = freezed,Object? nfcReady = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? holdingId = null,Object? artworkId = null,Object? soldPrice = null,Object? buyerName = null,Object? buyerEmail = null,Object? buyerPhone = null,Object? deliveryAddress = null,Object? deliveryMode = null,Object? soldAt = null,Object? shipmentStatus = null,Object? dispatchedAt = freezed,Object? deliveredAt = freezed,Object? paymentRoute = null,Object? remittedAt = freezed,Object? remitDueAt = freezed,Object? remittedVia = freezed,Object? courierRef = freezed,Object? nfcReady = null,Object? shiprocketStage = freezed,Object? trackingId = freezed,Object? carrier = freezed,}) {
   return _then(_AggregatorSale(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,holdingId: null == holdingId ? _self.holdingId : holdingId // ignore: cast_nullable_to_non_nullable
@@ -625,7 +941,10 @@ as String?,remitDueAt: freezed == remitDueAt ? _self.remitDueAt : remitDueAt // 
 as String?,remittedVia: freezed == remittedVia ? _self.remittedVia : remittedVia // ignore: cast_nullable_to_non_nullable
 as RemitVia?,courierRef: freezed == courierRef ? _self.courierRef : courierRef // ignore: cast_nullable_to_non_nullable
 as String?,nfcReady: null == nfcReady ? _self.nfcReady : nfcReady // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,shiprocketStage: freezed == shiprocketStage ? _self.shiprocketStage : shiprocketStage // ignore: cast_nullable_to_non_nullable
+as ShiprocketStage?,trackingId: freezed == trackingId ? _self.trackingId : trackingId // ignore: cast_nullable_to_non_nullable
+as String?,carrier: freezed == carrier ? _self.carrier : carrier // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

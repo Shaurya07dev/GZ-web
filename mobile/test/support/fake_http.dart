@@ -28,7 +28,8 @@ class FakeHttp implements HttpClientAdapter {
   Dio dio() => Dio()..httpClientAdapter = this;
 }
 
-ResponseBody jsonBody(Object? body, {int status = 200}) => ResponseBody.fromString(
+ResponseBody jsonBody(Object? body, {int status = 200}) =>
+    ResponseBody.fromString(
       jsonEncode(body),
       status,
       headers: {
@@ -38,6 +39,6 @@ ResponseBody jsonBody(Object? body, {int status = 200}) => ResponseBody.fromStri
 
 /// What a request that never reached the server looks like.
 Never offline(RequestOptions options) => throw DioException(
-      requestOptions: options,
-      type: DioExceptionType.connectionError,
-    );
+  requestOptions: options,
+  type: DioExceptionType.connectionError,
+);

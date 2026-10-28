@@ -21,13 +21,13 @@ const FAQ = [
     icon: RotateCcw,
     question: "Can I return or cancel an order?",
     answer:
-      "Orders can be cancelled before dispatch. Refunds credit to your GalleryZone wallet as store credit and apply automatically at your next checkout.",
+      "Orders can be cancelled before dispatch. Approved refunds are returned to the original payment method in line with the order terms and payment-provider timelines.",
   },
   {
     icon: Repeat2,
     question: "How does reselling my artwork work?",
     answer:
-      "Any artwork in your collection can be listed for resale from the Resale page. This demo covers listing and withdrawing — buyer matching isn't wired to a live marketplace yet.",
+      "Any artwork in your collection can be listed for resale from the Resale page. You can also withdraw your listing. Buyer matching, checkout and seller payout are not live yet.",
   },
 ];
 

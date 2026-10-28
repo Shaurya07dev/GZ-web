@@ -9,8 +9,14 @@ import '../models/auth.dart';
 abstract class AuthRepository {
   Future<AuthAck> login(LoginInput input, {bool simulateError = false});
   Future<AuthAck> register(RegisterInput input, {bool simulateError = false});
-  Future<AuthAck> forgotPassword(ForgotPasswordInput input, {bool simulateError = false});
-  Future<AuthResult> resetPassword(ResetPasswordInput input, {bool simulateError = false});
+  Future<AuthAck> forgotPassword(
+    ForgotPasswordInput input, {
+    bool simulateError = false,
+  });
+  Future<AuthResult> resetPassword(
+    ResetPasswordInput input, {
+    bool simulateError = false,
+  });
   Future<AuthResult> verifyEmail({String? token, bool simulateError = false});
 
   /// Ends the session: the real backend forgets the tokens. The offline mock

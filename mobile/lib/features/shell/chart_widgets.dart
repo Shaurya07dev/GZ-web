@@ -43,7 +43,12 @@ class StatCard extends StatelessWidget {
 
 /// The frame every chart sits in: a title, one line on what is plotted, and the plot.
 class ChartCard extends StatelessWidget {
-  const ChartCard({super.key, required this.title, required this.description, required this.child});
+  const ChartCard({
+    super.key,
+    required this.title,
+    required this.description,
+    required this.child,
+  });
 
   final String title;
   final String description;
@@ -93,7 +98,9 @@ class BarList extends StatelessWidget {
     final theme = Theme.of(context);
     final top = rows.fold<double>(0, (max, r) => r.value > max ? r.value : max);
     // A chart with nothing in any bar has nothing to show.
-    if (rows.isEmpty || top == 0) return ChartEmpty(title: emptyTitle, description: emptyDescription);
+    if (rows.isEmpty || top == 0) {
+      return ChartEmpty(title: emptyTitle, description: emptyDescription);
+    }
 
     return Semantics(
       label: rows.map((r) => '${r.label} ${r.text}').join(', '),
@@ -106,12 +113,18 @@ class BarList extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: 104,
-                    child: Text(rows[i].label, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelMedium),
+                    child: Text(
+                      rows[i].label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium,
+                    ),
                   ),
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final width = constraints.maxWidth * (rows[i].value / top);
+                        final width =
+                            constraints.maxWidth * (rows[i].value / top);
                         return Align(
                           alignment: Alignment.centerLeft,
                           child: Container(
@@ -119,9 +132,13 @@ class BarList extends StatelessWidget {
                             height: 18,
                             decoration: BoxDecoration(
                               color: theme.colorScheme.tertiary.withValues(
-                                alpha: fade ? (1 - i * 0.2).clamp(0.3, 1.0) : 0.9,
+                                alpha: fade
+                                    ? (1 - i * 0.2).clamp(0.3, 1.0)
+                                    : 0.9,
                               ),
-                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(AppRadius.sm)),
+                              borderRadius: const BorderRadius.horizontal(
+                                right: Radius.circular(AppRadius.sm),
+                              ),
                             ),
                           ),
                         );
@@ -131,7 +148,11 @@ class BarList extends StatelessWidget {
                   const SizedBox(width: 8),
                   SizedBox(
                     width: 52,
-                    child: Text(rows[i].text, textAlign: TextAlign.right, style: theme.textTheme.labelSmall),
+                    child: Text(
+                      rows[i].text,
+                      textAlign: TextAlign.right,
+                      style: theme.textTheme.labelSmall,
+                    ),
                   ),
                 ],
               ),
@@ -156,11 +177,19 @@ class ChartEmpty extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          Icon(LucideIcons.chartNoAxesColumn, size: 24, color: theme.colorScheme.outline),
+          Icon(
+            LucideIcons.chartNoAxesColumn,
+            size: 24,
+            color: theme.colorScheme.outline,
+          ),
           const SizedBox(height: 8),
           Text(title, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 2),
-          Text(description, textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+          Text(
+            description,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall,
+          ),
         ],
       ),
     );

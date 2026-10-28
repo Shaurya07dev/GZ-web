@@ -214,6 +214,12 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
     if (profileUpdate.headline !== undefined) pub.headline = profileUpdate.headline;
     if (profileUpdate.bio !== undefined) pub.bio = profileUpdate.bio;
     if (profileUpdate.location !== undefined) pub.location = profileUpdate.location;
+    if (profileUpdate.website !== undefined) pub.website = profileUpdate.website;
+    if (profileUpdate.socialProofVideoUrl !== undefined) pub.socialProofVideoUrl = profileUpdate.socialProofVideoUrl;
+    if (profileUpdate.instagram !== undefined || profileUpdate.website !== undefined) {
+      const projected = { ...current, ...profileUpdate };
+      pub.tier1SocialMedia = Boolean(projected.instagram || projected.website);
+    }
     if (Object.keys(pub).length) batch.set(publicRef, pub, { merge: true });
   }
   await batch.commit();

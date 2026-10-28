@@ -21,7 +21,12 @@ class RemoteOwnershipRepository implements OwnershipRepository {
   @override
   Future<Passport?> getPassport(String artworkId) async {
     try {
-      return passportFromApi(await api.getMap('/v1/verify/${Uri.encodeComponent(artworkId)}', auth: false));
+      return passportFromApi(
+        await api.getMap(
+          '/v1/verify/${Uri.encodeComponent(artworkId)}',
+          auth: false,
+        ),
+      );
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
       rethrow;
@@ -29,7 +34,8 @@ class RemoteOwnershipRepository implements OwnershipRepository {
   }
 
   @override
-  Future<MyPassports> myPassports() async => myPassportsFromApi(await api.getMap('/v1/passport/mine'));
+  Future<MyPassports> myPassports() async =>
+      myPassportsFromApi(await api.getMap('/v1/passport/mine'));
 
   /// The public passport already carries the whole chain (names only), so the
   /// history needs no sign-in — a scanned tag shows it to anyone.
@@ -39,7 +45,10 @@ class RemoteOwnershipRepository implements OwnershipRepository {
     if (passport == null) return const [];
     final transfers = [
       for (final event in passport.events)
-        event.toTransfer(artworkId: passport.artworkId, artworkTitle: passport.title),
+        event.toTransfer(
+          artworkId: passport.artworkId,
+          artworkTitle: passport.title,
+        ),
     ]..sort((a, b) => b.initiatedAt.compareTo(a.initiatedAt));
     return transfers;
   }
@@ -49,7 +58,9 @@ class RemoteOwnershipRepository implements OwnershipRepository {
   @override
   Future<OwnershipTransfer?> get(String transferId) async {
     try {
-      return transferFromApi(await api.getMap('/v1/transfers/${Uri.encodeComponent(transferId)}'));
+      return transferFromApi(
+        await api.getMap('/v1/transfers/${Uri.encodeComponent(transferId)}'),
+      );
     } on ApiError catch (error) {
       if (error.isNotFound) return null;
       rethrow;
@@ -65,10 +76,20 @@ class RemoteOwnershipRepository implements OwnershipRepository {
     required String toName,
     required String toEmail,
     TransferKind kind = TransferKind.ownership,
+    String? displayStartsAt,
     String? displayEndsAt,
   }) async {
-    if (kind == TransferKind.display && (displayEndsAt == null || displayEndsAt.isEmpty)) {
-      throw Exception('Pick the date the display runs to');
+    if (kind == TransferKind.display &&
+        (displayStartsAt == null ||
+            displayStartsAt.isEmpty ||
+            displayEndsAt == null ||
+            displayEndsAt.isEmpty)) {
+      throw Exception('Pick the dates the display runs from and to');
+    }
+    if (kind == TransferKind.display &&
+        !DateTime.parse(displayEndsAt!)
+            .isAfter(DateTime.parse(displayStartsAt!))) {
+      throw Exception('The display end date must be after its start date');
     }
     final json = await api.post(
       '/v1/artworks/${Uri.encodeComponent(artworkId)}/transfers',
@@ -76,6 +97,8 @@ class RemoteOwnershipRepository implements OwnershipRepository {
         'kind': kind.name,
         'toName': toName.trim(),
         'toEmail': toEmail.trim(),
+        if (kind == TransferKind.display && displayStartsAt != null)
+          'displayStartsAt': _midnightUtcOf(displayStartsAt),
         if (kind == TransferKind.display && displayEndsAt != null)
           'displayEndsAt': _midnightUtcOf(displayEndsAt),
       },
@@ -92,14 +115,23 @@ class RemoteOwnershipRepository implements OwnershipRepository {
   }
 
   @override
-  Future<OwnershipTransfer> accept(String transferId) async => _act(transferId, 'accept');
+  Future<OwnershipTransfer> accept(String transferId) async =>
+      _act(transferId, 'accept');
 
   @override
-  Future<OwnershipTransfer> endDisplay(String transferId) async => _act(transferId, 'end-display');
+  Future<OwnershipTransfer> endDisplay(String transferId) async =>
+      _act(transferId, 'end-display');
 
   @override
-  Future<OwnershipTransfer> cancel(String transferId) async => _act(transferId, 'cancel');
+  Future<OwnershipTransfer> cancel(String transferId) async =>
+      _act(transferId, 'cancel');
 
   Future<OwnershipTransfer> _act(String transferId, String action) async =>
-      transferFromApi(asMap(await api.post('/v1/transfers/${Uri.encodeComponent(transferId)}/$action')));
+      transferFromApi(
+        asMap(
+          await api.post(
+            '/v1/transfers/${Uri.encodeComponent(transferId)}/$action',
+          ),
+        ),
+      );
 }
