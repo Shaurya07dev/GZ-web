@@ -15,6 +15,7 @@ import { ArtistWalletController, AggregatorWalletController } from "./wallets.co
 import { AdminController } from "./admin.controller.ts";
 import { PublicArtistsController, PublicStatsController } from "./public-profiles.controller.ts";
 import { AdminArtworksController } from "./admin-artworks.controller.ts";
+import { AdminExportController } from "./admin-export.controller.ts";
 import { AddressesController } from "./addresses.controller.ts";
 import { AdminSettlementsController } from "./admin-settlements.controller.ts";
 import { AggregatorSalesController } from "./aggregator-sales.controller.ts";
@@ -83,6 +84,7 @@ import { DbModule } from "./db.module.ts";
     PublicArtistsController,
     PublicStatsController,
     AdminArtworksController,
+    AdminExportController,
     AddressesController,
     AdminSettlementsController,
     AggregatorSalesController,
