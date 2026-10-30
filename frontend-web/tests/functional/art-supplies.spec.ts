@@ -70,7 +70,7 @@ test('search matches title, brand and category, every word, and recovers from no
 
 test('every Amazon link is the affiliate link, opens in a new tab, and is marked sponsored', async ({ page }) => {
   await openShelf(page);
-  const links = page.getByRole('link', { name: 'View on Amazon' });
+  const links = page.getByRole('link', { name: 'Buy now' });
   await expect(links).toHaveCount(4);
   for (const [i, p] of SHELF.entries()) {
     const link = links.nth(i);
@@ -79,7 +79,6 @@ test('every Amazon link is the affiliate link, opens in a new tab, and is marked
     await expect(link).toHaveAttribute('rel', /sponsored/);
     await expect(link).toHaveAttribute('rel', /noopener/);
   }
-  await expect(page.getByText(/As an Amazon Associate, GalleryZone earns from qualifying purchases/).first()).toBeVisible();
 });
 
 test('quick view shows the photos, switches between them, and buys on Amazon', async ({ page }) => {
@@ -95,7 +94,7 @@ test('quick view shows the photos, switches between them, and buys on Amazon', a
   await expect(dialog.getByRole('button', { name: 'Photo 2 of 2' })).toHaveAttribute('aria-pressed', 'true');
   await expect(main).toHaveAttribute('src', /p1i2\._AC_SL800_\.jpg/);
 
-  const buy = dialog.getByRole('link', { name: /Buy on Amazon/ });
+  const buy = dialog.getByRole('link', { name: /Buy now/ });
   await expect(buy).toHaveAttribute('href', SHELF[0]!.url);
   await expect(buy).toHaveAttribute('rel', /sponsored/);
 

@@ -75,9 +75,6 @@ export function SuppliesShelf() {
               )}
             </label>
 
-            <p className="mt-4 text-xs text-muted-foreground">
-              As an Amazon Associate, GalleryZone earns from qualifying purchases. It costs you nothing extra.
-            </p>
           </div>
         </div>
       </section>
