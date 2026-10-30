@@ -9,6 +9,7 @@ import {
   useCustomerSupport,
   useSubmitCustomerTicketMutation,
 } from "@/hooks/useCustomerSupport";
+import { ReplayTourCard } from "@/features/onboarding/replay-tour-card";
 
 const FAQ = [
   {
@@ -55,6 +56,7 @@ export function CollectorSupportView() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
       <div className="flex flex-col gap-6">
+        <ReplayTourCard role="customer" />
         <div className="rounded-lg border border-gold/30 bg-gold/5 p-5">
           <h2 className="font-display text-base font-semibold text-foreground">
             Contact GalleryZone

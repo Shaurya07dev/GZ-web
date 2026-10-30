@@ -14,6 +14,7 @@ export interface AggregatorProfileView {
   gstNumber: string;
   /** An aggregator needs an approved GST number before they can reserve anything. */
   gstStatus: "not_submitted" | "submitted" | "approved" | "rejected";
+  gstReviewNote: string | null;
   phone: string;
   email: string;
   country: string;
@@ -42,6 +43,7 @@ function toView(p: OwnProfileDto, mou: MouState): AggregatorProfileView {
     avatar: p.profileImageUrl,
     gstNumber: p.gstin ?? "",
     gstStatus: p.gstStatus,
+    gstReviewNote: p.gstReviewNote ?? null,
     phone: p.phone ?? "",
     email: p.email,
     country: "IN",

@@ -22,6 +22,7 @@ import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-p
 import { getPublicArtwork, type PublicArtworkView } from "./public-artworks.ts";
 import { holdingSubStatusOf, type HoldingSubStatus } from "./nfc.ts";
 import { DbError } from "./errors.ts";
+import { claimHoldingExit } from "./holding-claim.ts";
 
 export class AggregatorReadError extends DbError {}
 
@@ -266,6 +267,7 @@ export async function returnHolding(db: Firestore, aggregatorId: string, holding
   const h = (await ref.get()).data() as AggregatorHoldingDoc | undefined;
   if (!h || h.aggregatorId !== aggregatorId) throw new AggregatorReadError(`No holding ${holdingId}`);
   holdingStateMachine.assertTransition(h.status, "returned");
+  await claimHoldingExit(db, holdingId, "return");
   try {
     await postLedgerEntries(db, {
       postings: aggregatorReturnPostings({ aggregatorId, advancePaise: h.advanceAmountPaise, deliveryPaise: h.deliveryDepositPaise ?? 0 }),

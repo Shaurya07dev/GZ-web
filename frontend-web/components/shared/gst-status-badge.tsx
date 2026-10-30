@@ -43,3 +43,9 @@ export function GstStatusBadge({
     </span>
   );
 }
+
+// The reviewer's reason, under a rejected badge, so the applicant knows what to fix.
+export function ReviewNote({ status, note }: { status: GstStatus; note?: string | null }) {
+  if (status !== "rejected" || !note) return null;
+  return <p className="text-xs text-destructive">Reviewer&rsquo;s note: {note}</p>;
+}

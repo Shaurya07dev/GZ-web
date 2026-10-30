@@ -159,6 +159,11 @@ export async function createReservationIntent(db: Firestore, input: CreateReserv
   if (!artwork.listing || artwork.listing.status !== "marketplace") {
     throw new ReservationIntentError("This artwork is no longer available to reserve");
   }
+  // The artist chose where the piece may be sold; the inventory list hides marketplace-only
+  // pieces, but the id is public, so the write path must refuse them too.
+  if (artwork.listingType === "marketplace_only") {
+    throw new ReservationIntentError("The artist has not offered this artwork to galleries");
+  }
 
   const now = Date.now();
   const expiresAt = Timestamp.fromMillis(now + INTENT_TTL_MS);
@@ -266,6 +271,9 @@ export async function finalizeReservationIntent(db: Firestore, input: FinalizeRe
     }
     if (!artwork.listing || artwork.listing.status !== "marketplace") {
       return refundAndReturn(tx, intentRef, intent, input.providerPaymentId, "Artwork is no longer on the marketplace");
+    }
+    if (artwork.listingType === "marketplace_only") {
+      return refundAndReturn(tx, intentRef, intent, input.providerPaymentId, "The artist has not offered this artwork to galleries");
     }
     const priorHoldings = holdingsSnap.docs
       .map((d) => d.data() as AggregatorHoldingDoc)

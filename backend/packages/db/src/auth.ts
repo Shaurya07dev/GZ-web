@@ -40,6 +40,7 @@ export async function userRecordByEmail(email: string): Promise<{ uid: string; d
 export interface VerifiedUser {
   uid: string;
   email: string | null;
+  emailVerified: boolean;
   /** Provider-supplied display name (Google etc.) — a default for the profile, never authoritative. */
   name: string | null;
 }
@@ -48,7 +49,7 @@ export interface VerifiedUser {
 export async function verifyIdToken(idToken: string): Promise<VerifiedUser> {
   try {
     const decoded = await authService().verifyIdToken(idToken);
-    return { uid: decoded.uid, email: decoded.email ?? null, name: typeof decoded.name === "string" ? decoded.name : null };
+    return { uid: decoded.uid, email: decoded.email ?? null, emailVerified: decoded.email_verified === true, name: typeof decoded.name === "string" ? decoded.name : null };
   } catch (error) {
     throw new AuthError(`Invalid or expired ID token: ${error instanceof Error ? error.message : String(error)}`);
   }

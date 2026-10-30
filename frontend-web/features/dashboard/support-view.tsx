@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useSupportTickets, useSubmitTicketMutation } from "@/hooks/useSupport";
 import { SupportFaqPanel } from "@/features/faq/support-faq-panel";
+import { ReplayTourCard } from "@/features/onboarding/replay-tour-card";
 
 // Ticket submission isn't wired to a live support inbox in this demo — same
 // honest-mock pattern as GoogleAuthButton. Real issues go to the contact
@@ -28,6 +29,7 @@ export function SupportView() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
       <div className="flex flex-col gap-6">
+        <ReplayTourCard role="artist" />
         <div className="rounded-lg border border-gold/30 bg-gold/5 p-5">
           <h2 className="font-display text-base font-semibold text-foreground">
             Contact GalleryZone

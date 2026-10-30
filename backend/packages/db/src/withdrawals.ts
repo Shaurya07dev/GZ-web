@@ -10,10 +10,17 @@ import { meetsMinWithdrawal, withdrawalPayoutPostings, withdrawalStateMachine, t
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { Collections, type LedgerAccountDoc, type LedgerEntryDoc, type WithdrawalRequestDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
+import { hasApprovedKyc } from "./profiles.ts";
 
 export class WithdrawalError extends DbError {}
 
 export type WithdrawableAccountType = Extract<LedgerAccountDoc["type"], "artist_payable" | "aggregator_payable" | "customer_wallet">;
+
+async function assertKycForPayout(db: Firestore, accountType: WithdrawableAccountType, userId: string): Promise<void> {
+  if (accountType !== "customer_wallet" && !(await hasApprovedKyc(db, userId))) {
+    throw new WithdrawalError("Withdrawals open once your KYC is approved. Complete it from your profile.");
+  }
+}
 
 // Postings' sign convention (see packages/domain/settlement.ts) records a
 // LIABILITY recognition as a NEGATIVE amount on the owner's own account —
@@ -64,6 +71,7 @@ export async function requestWithdrawal({
   if (!meetsMinWithdrawal(amountPaise, rates)) {
     throw new WithdrawalError(`Amount is below the minimum withdrawal (₹${rates.minWithdrawalPaise / 100})`);
   }
+  await assertKycForPayout(db, accountType, userId);
   const available = await availableToWithdraw(db, accountType, userId);
   if (amountPaise > available) {
     throw new WithdrawalError(`Requested amount (${amountPaise}) exceeds available balance (${available})`);
@@ -106,6 +114,8 @@ export async function approveWithdrawal(db: Firestore, withdrawalId: string, acc
   if (!snap.exists) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
   const request = snap.data() as WithdrawalRequestDoc;
   withdrawalStateMachine.assertTransition(request.status, "completed");
+  // Again here: this is where money leaves, and KYC can have been rejected since the request.
+  await assertKycForPayout(db, accountType, request.userId);
 
   // Re-check at approval, not just at request time: the balance can have
   // moved since (a reversal, an external-sale fee, another approval), and

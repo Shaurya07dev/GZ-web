@@ -7,6 +7,7 @@ import { useCallback } from "react";
 // moved options like showProgress/skipBeacon into an `options` object.
 import { Joyride, STATUS, type EventData, type Props } from "react-joyride";
 import {
+  ADMIN_TOUR_STEPS,
   ARTIST_TOUR_STEPS,
   AGGREGATOR_TOUR_STEPS,
   CUSTOMER_TOUR_STEPS,
@@ -17,6 +18,7 @@ const STEPS: Record<TourRole, typeof CUSTOMER_TOUR_STEPS> = {
   customer: CUSTOMER_TOUR_STEPS,
   artist: ARTIST_TOUR_STEPS,
   aggregator: AGGREGATOR_TOUR_STEPS,
+  admin: ADMIN_TOUR_STEPS,
 };
 
 // Default options merged into every step. In v3 these live on the `options`

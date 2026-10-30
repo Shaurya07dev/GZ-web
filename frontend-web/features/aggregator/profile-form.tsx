@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GSTIN_PATTERN } from "@/components/shared/gst-number-card";
-import { GstStatusBadge } from "@/components/shared/gst-status-badge";
+import { GstStatusBadge, ReviewNote } from "@/components/shared/gst-status-badge";
 import { UniSwapDialog, type Country } from "@/components/shared/uniswap-dialog";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import {
@@ -293,9 +293,8 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
   });
 
   function onBankSubmit(values: BankFormValues) {
-    const last4 = values.bankAccountNumber.slice(-4);
     updateBankMutation.mutate(
-      { bankAccountMasked: `•••• •••• •••• ${last4}`, ifsc: values.ifsc },
+      { bankAccountNumber: values.bankAccountNumber, ifsc: values.ifsc },
       {
         onSuccess: () => {
           toast.success("Bank details updated");
@@ -416,6 +415,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
                   </FieldLabel>
                   <GstStatusBadge status={profile.gstStatus} />
                 </div>
+                <ReviewNote status={profile.gstStatus} note={profile.gstReviewNote} />
                 <Input
                   id="gstNumber"
                   maxLength={15}

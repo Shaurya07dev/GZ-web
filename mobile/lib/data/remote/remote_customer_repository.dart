@@ -95,15 +95,11 @@ class RemoteCustomerRepository implements CustomerRepository {
 
   // --- Wallet ----------------------------------------------------------------------
 
+  /// The API has no collector wallet route (there is no `/v1/customer/wallet`),
+  /// and no screen shows one. Failing plainly beats a call that can only 404.
   @override
-  Future<WalletSummary> getWallet() async {
-    final json = await api.getMap('/v1/customer/wallet');
-    return WalletSummary(
-      balance: rupeesAt(json, 'balancePaise'),
-      pendingBalance: 0,
-      lockedBalance: 0,
-    );
-  }
+  Future<WalletSummary> getWallet() async =>
+      throw UnsupportedError('The API has no collector wallet yet');
 
   /// The collector's wallet has no transaction feed on the API yet — an
   /// honest empty list, not a made-up one.

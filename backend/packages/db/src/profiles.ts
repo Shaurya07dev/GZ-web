@@ -18,6 +18,7 @@ import {
   type FinancialDoc,
   type ProfileDoc,
   type PublicProfileDoc,
+  type TourId,
   type UserDoc,
 } from "./collections.ts";
 import { DbError } from "./errors.ts";
@@ -106,6 +107,7 @@ export interface ProfilePatch {
   pickupState?: string | null | undefined;
   pickupPincode?: string | null | undefined;
   pickupCountry?: string | null | undefined;
+  tourCompleted?: { tour: TourId; version: number } | undefined;
 }
 
 const clean = (v: string | null | undefined): string | null => {
@@ -147,6 +149,7 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
   if (patch.instagram !== undefined) set("instagram", clean(patch.instagram)?.replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/$/, "") ?? null);
   if (patch.website !== undefined) set("website", clean(patch.website)?.replace(/^https?:\/\//, "").replace(/\/$/, "") ?? null);
   if (patch.socialProofVideoUrl !== undefined) set("socialProofVideoUrl", clean(patch.socialProofVideoUrl));
+  if (patch.tourCompleted) set("toursCompleted", { ...current.toursCompleted, [patch.tourCompleted.tour]: patch.tourCompleted.version });
   if (patch.companyName !== undefined) set("companyName", clean(patch.companyName)?.slice(0, 120) ?? null);
   if (patch.pan !== undefined) {
     const pan = clean(patch.pan)?.toUpperCase() ?? null;
@@ -240,4 +243,11 @@ export async function hasApprovedGst(db: Firestore, uid: string): Promise<boolea
   if (!uid) return false;
   const snap = await db.collection(userProfileCol(uid)).doc("data").get();
   return (snap.data() as Partial<ProfileDoc> | undefined)?.gstStatus === "approved";
+}
+
+/** Payouts to artists and aggregators need admin-approved KYC (the approval email promises exactly that). */
+export async function hasApprovedKyc(db: Firestore, uid: string): Promise<boolean> {
+  if (!uid) return false;
+  const snap = await db.collection(userProfileCol(uid)).doc("data").get();
+  return (snap.data() as Partial<ProfileDoc> | undefined)?.aadhaarStatus === "approved";
 }

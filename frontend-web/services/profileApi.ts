@@ -23,6 +23,11 @@ export interface OwnProfileDto {
   gstin: string | null;
   gstStatus: "not_submitted" | "submitted" | "approved" | "rejected";
   aadhaarStatus: "not_submitted" | "submitted" | "approved" | "rejected";
+  /** The reviewer's reason for the latest rejection; null once approved. */
+  gstReviewNote?: string | null;
+  aadhaarReviewNote?: string | null;
+  /** Onboarding tours finished: tour → the version seen. */
+  toursCompleted?: Partial<Record<"customer" | "artist" | "aggregator" | "admin", number>>;
   aadhaarMasked: string | null;
   bankAccountMasked: string | null;
   ifsc: string | null;
@@ -74,6 +79,7 @@ export type OwnProfilePatch = Partial<{
   pickupState: string | null;
   pickupPincode: string | null;
   pickupCountry: string | null;
+  tourCompleted: { tour: "customer" | "artist" | "aggregator" | "admin"; version: number };
 }>;
 
 export const profileApi = {

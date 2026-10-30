@@ -39,6 +39,10 @@ const patchSchema = z
     // "PO Box 12345" style; the per-country regex lives in profiles.ts.
     pickupPincode: nullableText(12),
     pickupCountry: nullableText(2),
+    tourCompleted: z
+      .object({ tour: z.enum(["customer", "artist", "aggregator", "admin"]), version: z.number().int().min(1).max(1000) })
+      .strict()
+      .optional(),
   })
   .strict();
 type PatchBody = z.infer<typeof patchSchema>;

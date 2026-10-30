@@ -11,10 +11,16 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      # check:client-routes reads the web and mobile API calls too.
+      - "frontend-web/**"
+      - "mobile/lib/**"
       - ".github/workflows/backend-checks.yml"
   pull_request:
     paths:
       - "backend/**"
+      # check:client-routes reads the web and mobile API calls too.
+      - "frontend-web/**"
+      - "mobile/lib/**"
       - ".github/workflows/backend-checks.yml"
 
 jobs:

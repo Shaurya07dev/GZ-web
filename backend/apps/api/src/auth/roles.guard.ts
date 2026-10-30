@@ -24,7 +24,7 @@ import { PUBLIC_KEY, ROLES_KEY } from "./roles.decorator.ts";
 import { DB } from "../db.module.ts";
 
 export interface AuthenticatedRequest extends Request {
-  authUser: { uid: string; role: UserRole; grants: string[] };
+  authUser: { uid: string; role: UserRole; grants: string[]; emailVerified: boolean };
 }
 
 function problem(status: number, title: string, code: string, detail?: string): HttpException {
@@ -70,7 +70,7 @@ export class RolesGuard implements CanActivate {
       throw problem(HttpStatus.FORBIDDEN, `This route requires one of [${roles.join(", ")}]`, "forbidden");
     }
 
-    req.authUser = { uid: verified.uid, role: user.role, grants: user.roleGrants ?? [] };
+    req.authUser = { uid: verified.uid, role: user.role, grants: user.roleGrants ?? [], emailVerified: verified.emailVerified };
     return true;
   }
 }

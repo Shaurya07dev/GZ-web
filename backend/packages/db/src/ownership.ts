@@ -19,6 +19,7 @@ import { FieldValue, Timestamp, type Firestore, type Transaction } from "firebas
 import { transferStateMachine, type TransferStatus } from "@galleryzone/domain";
 import { Collections, artworkOwnershipEventsCol, type ArtworkDoc, type OwnershipEventDoc, type UserDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
+import { latestStatusOf } from "./listing-projection.ts";
 
 export class OwnershipError extends DbError {}
 export class OwnershipNotFoundError extends OwnershipError {}
@@ -107,10 +108,18 @@ export interface InitiateTransferInput {
   displayEndsAt?: Date | undefined;
 }
 
+const ON_SALE = new Set(["marketplace", "reserved", "with_aggregator"]);
+
 /** Only the current owner may hand a piece over; one open transfer per artwork at a time. */
 export async function initiateTransfer(db: Firestore, input: InitiateTransferInput): Promise<OwnershipEvent> {
   const owner = await getCurrentOwner(db, input.artworkId);
   if (owner.userId !== input.byUserId) throw new OwnershipNotFoundError(`No artwork ${input.artworkId}`);
+
+  // A piece that is for sale or with a gallery can't change hands privately: the sale that follows
+  // would take title from the new owner while paying the old one.
+  if (input.kind === "ownership" && ON_SALE.has(await latestStatusOf(db, input.artworkId))) {
+    throw new OwnershipConflictError("Take the artwork off sale (and back from any gallery) before transferring ownership");
+  }
 
   const events = await listOwnershipEvents(db, input.artworkId);
   if (events.some((e) => e.status === "pending")) throw new OwnershipConflictError("A transfer is already pending for this artwork");

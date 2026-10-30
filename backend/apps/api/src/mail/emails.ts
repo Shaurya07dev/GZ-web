@@ -8,7 +8,7 @@
 // here.
 
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { Collections, type Db, type UserDoc } from "@galleryzone/db";
+import { Collections, plainText, recordNotifications, type Db, type UserDoc } from "@galleryzone/db";
 import type { OrderStatus } from "@galleryzone/domain";
 import type { AppEnv } from "@galleryzone/config";
 import { DB, ENV } from "../db.module.ts";
@@ -88,6 +88,12 @@ export class Emails {
     return doc ? { uid, ...doc } : null;
   }
 
+  /** A CTA on our own site, as a path; anything else (or a one-time action link) isn't kept in the inbox. */
+  private inAppPath(url: string | undefined): string | null {
+    if (!url || !url.startsWith(this.site) || url.includes("oobCode")) return null;
+    return url.slice(this.site.length) || "/";
+  }
+
   private async admins(): Promise<string[]> {
     const snap = await this.db.collection(Collections.users).where("role", "==", "admin").get();
     return snap.docs.map((d) => (d.data() as UserDoc).email).filter(Boolean);
@@ -96,6 +102,18 @@ export class Emails {
   private async deliver(key: string, to: string | string[], subject: string, layout: Layout, replyTo?: string) {
     const recipients = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean);
     if (!recipients.length) return;
+    // Every transactional email also lands in the recipient's in-app inbox — written FIRST, so a
+    // mail-provider outage can't lose it. Password resets stay out: they go to whoever typed the
+    // address, and the link is single-use.
+    if (!key.startsWith("password-reset/")) {
+      await recordNotifications(this.db, {
+        key,
+        emails: recipients,
+        title: subject,
+        body: plainText(layout.paragraphs[0] ?? ""),
+        url: this.inAppPath(layout.cta?.url),
+      }).catch((error: unknown) => this.logger.warn(`in-app notification ${key} failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
     const { html, text } = render(this.site, layout);
     await this.mailer.send({ to: recipients, subject, html, text, idempotencyKey: key, replyTo });
   }
@@ -275,7 +293,7 @@ export class Emails {
    * (client, 30 Sep 2026). TDS does not depend on GST: it follows the artist's
    * financial-year sales. Deciding these silently left people guessing.
    */
-  async complianceDecided(input: { userId: string; kind: "gst" | "kyc"; approved: boolean; reason?: string | undefined }) {
+  async complianceDecided(input: { userId: string; kind: "gst" | "kyc"; decisionId: string; approved: boolean; reason?: string | undefined }) {
     const user = await this.user(input.userId);
     if (!user) return;
     const aggregator = user.role === "aggregator";
@@ -290,7 +308,8 @@ export class Emails {
       input.kind === "gst"
         ? `We couldn't verify your GSTIN. Correct the details in your profile and resubmit${aggregator ? ". You can't reserve artwork until it is approved." : " — selling and settlements carry on in the meantime."}`
         : "We couldn't verify your KYC documents. Withdrawals stay on hold until this is resolved. Re-upload from your profile and we'll review again.";
-    await this.deliver(`${input.kind}-${input.approved ? "approved" : "rejected"}/${input.userId}`, user.email, input.approved ? `${label} verified` : `${label} needs another look`, {
+    // Keyed per decision: a second rejection after a resubmission is a new email, not a duplicate.
+    await this.deliver(`${input.kind}-${input.approved ? "approved" : "rejected"}/${input.userId}/${input.decisionId}`, user.email, input.approved ? `${label} verified` : `${label} needs another look`, {
       heading: input.approved ? `Your ${label} is verified` : `We couldn't verify your ${label}`,
       paragraphs: [input.approved ? approvedBody : rejectedBody],
       ...(input.reason ? { footnote: `Reviewer's note: ${esc(input.reason)}` } : {}),

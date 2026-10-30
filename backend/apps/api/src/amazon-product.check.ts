@@ -5,7 +5,7 @@
 // real byline link, and the gallery is a JSON string inside A.$.parseJSON('...').
 
 import assert from "node:assert/strict";
-import { isAmazonUrl, parseAmazonProductPage } from "./amazon-product.ts";
+import { fetchAmazonPage, isAmazonUrl, parseAmazonProductPage } from "./amazon-product.ts";
 
 const page = `
 <div data-csa-c-content-id="bylineInfo"
@@ -60,6 +60,31 @@ for (const ok of ["https://link.amazon/B011xih2K", "https://www.amazon.in/dp/B0C
 }
 for (const bad of ["http://www.amazon.in/dp/X", "https://amazon.in.evil.com/", "https://evilamazon.in/", "https://169.254.169.254/", "not a url"]) {
   assert.ok(!isAmazonUrl(bad), bad);
+}
+
+// Redirects: every hop is checked before it is fetched, so a redirect to an internal host is never requested.
+{
+  const hit: string[] = [];
+  const fake = (routes: Record<string, [number, string]>) =>
+    (async (u: string | URL | Request) => {
+      const key = String(u);
+      hit.push(key);
+      const [status, body] = routes[key] ?? [404, ""];
+      return new Response(status >= 300 && status < 400 ? null : body, { status, headers: status >= 300 && status < 400 ? { location: body } : {} });
+    }) as typeof fetch;
+
+  const ok = await fetchAmazonPage("https://amzn.in/d/x", fake({ "https://amzn.in/d/x": [301, "https://www.amazon.in/dp/B000000001"], "https://www.amazon.in/dp/B000000001": [200, "<html>ok</html>"] }));
+  assert.deepEqual(ok, { html: "<html>ok</html>", url: "https://www.amazon.in/dp/B000000001" });
+
+  hit.length = 0;
+  const evil = await fetchAmazonPage("https://www.amazon.in/gp/r", fake({ "https://www.amazon.in/gp/r": [302, "http://169.254.169.254/latest/meta-data/"] }));
+  assert.equal(evil, null);
+  assert.deepEqual(hit, ["https://www.amazon.in/gp/r"], "the internal redirect target is never fetched");
+
+  hit.length = 0;
+  const loop = await fetchAmazonPage("https://www.amazon.in/a", fake({ "https://www.amazon.in/a": [302, "/a"] }));
+  assert.equal(loop, null);
+  assert.equal(hit.length, 6, "a redirect loop stops after 5 hops");
 }
 
 console.log("apps/api/amazon-product: parser and host allow-list hold");

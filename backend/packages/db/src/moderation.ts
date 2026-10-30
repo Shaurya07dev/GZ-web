@@ -20,7 +20,7 @@ interface DecisionInput {
 }
 
 function requireReasonIfRejected(decision: "approved" | "rejected", reason: string | undefined): void {
-  if (decision === "rejected" && !reason) {
+  if (decision === "rejected" && !reason?.trim()) {
     throw new ModerationError("A rejection requires a reason");
   }
 }
@@ -37,9 +37,11 @@ function auditDoc(adminId: string, action: string, entityType: string, entityId:
   };
 }
 
-export async function decideGst(input: DecisionInput & { userId: string }): Promise<void> {
+// Returns the audit entry's id: one per decision, so each decision can be told apart (e.g. one email each).
+export async function decideGst(input: DecisionInput & { userId: string }): Promise<{ decisionId: string }> {
   requireReasonIfRejected(input.decision, input.reason);
   const profileRef = input.db.collection(userProfileCol(input.userId)).doc("data");
+  const auditRef = input.db.collection(Collections.auditLog).doc();
 
   await input.db.runTransaction(async (tx) => {
     const snap = await tx.get(profileRef);
@@ -48,17 +50,17 @@ export async function decideGst(input: DecisionInput & { userId: string }): Prom
     const current: ReviewStatus = profile.gstStatus ?? "not_submitted";
     gstStateMachine.assertTransition(current, input.decision);
 
-    tx.update(profileRef, { gstStatus: input.decision });
-    tx.set(
-      input.db.collection(Collections.auditLog).doc(),
-      auditDoc(input.adminId, input.decision === "approved" ? "gst.approved" : "gst.rejected", "user", input.userId, input.reason),
-    );
+    tx.update(profileRef, { gstStatus: input.decision, gstReviewNote: input.decision === "rejected" ? (input.reason?.trim() ?? null) : null });
+    tx.set(auditRef, auditDoc(input.adminId, input.decision === "approved" ? "gst.approved" : "gst.rejected", "user", input.userId, input.reason));
   });
+  return { decisionId: auditRef.id };
 }
 
-export async function decideKyc(input: DecisionInput & { userId: string }): Promise<void> {
+// Returns the audit entry's id: one per decision, so each decision can be told apart (e.g. one email each).
+export async function decideKyc(input: DecisionInput & { userId: string }): Promise<{ decisionId: string }> {
   requireReasonIfRejected(input.decision, input.reason);
   const profileRef = input.db.collection(userProfileCol(input.userId)).doc("data");
+  const auditRef = input.db.collection(Collections.auditLog).doc();
 
   await input.db.runTransaction(async (tx) => {
     const snap = await tx.get(profileRef);
@@ -67,12 +69,10 @@ export async function decideKyc(input: DecisionInput & { userId: string }): Prom
     const current: ReviewStatus = profile.aadhaarStatus ?? "not_submitted";
     kycStateMachine.assertTransition(current, input.decision);
 
-    tx.update(profileRef, { aadhaarStatus: input.decision });
-    tx.set(
-      input.db.collection(Collections.auditLog).doc(),
-      auditDoc(input.adminId, input.decision === "approved" ? "kyc.approved" : "kyc.rejected", "user", input.userId, input.reason),
-    );
+    tx.update(profileRef, { aadhaarStatus: input.decision, aadhaarReviewNote: input.decision === "rejected" ? (input.reason?.trim() ?? null) : null });
+    tx.set(auditRef, auditDoc(input.adminId, input.decision === "approved" ? "kyc.approved" : "kyc.rejected", "user", input.userId, input.reason));
   });
+  return { decisionId: auditRef.id };
 }
 
 export async function decideInsurance(input: DecisionInput & { artworkId: string }): Promise<void> {

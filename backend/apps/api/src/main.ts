@@ -5,6 +5,7 @@ import { NestFactory } from "@nestjs/core";
 import { loadEnv } from "@galleryzone/config";
 import { AppModule } from "./app.module.ts";
 import { HttpExceptionFilter } from "./http-exception.filter.ts";
+import { RouteParamPipe } from "./route-param.pipe.ts";
 
 // Real NestJS bootstrap. Wired in: RolesGuard (global, fail-closed — real
 // Firebase ID-token verification, see auth/roles.guard.ts), the RFC 7807
@@ -20,7 +21,18 @@ async function bootstrap() {
   // Image bytes for the fallback upload route arrive as the raw body.
   app.use(express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: "16mb" }));
   app.getHttpAdapter().getInstance().set("trust proxy", 1);
+  // JSON API + images: never framed, never sniffed, HTTPS only. Images are loaded
+  // cross-origin by the website, hence cross-origin CORP.
+  app.use((_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  });
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalPipes(new RouteParamPipe());
   // Bearer tokens, not cookies, so no credentials — keeps the allowlist the only CORS decision.
   app.enableCors({ origin: env.corsOrigins, credentials: false, methods: ["GET", "POST", "PUT", "PATCH", "DELETE"] });
   await app.listen(env.port);

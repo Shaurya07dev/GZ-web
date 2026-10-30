@@ -123,6 +123,9 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/external-fees/:id/decide", authRole: "admin", summary: "Approve or waive a penalty", replaces: "adminService.decideExternalSaleFee" },
   { method: "POST", path: "/v1/admin/moderation/gst/:userId/approve", authRole: "admin", summary: "Approve GST", replaces: "adminService.approveGst" },
   { method: "POST", path: "/v1/admin/moderation/gst/:userId/reject", authRole: "admin", summary: "Reject GST, reason required", replaces: "adminService.rejectGst" },
+  { method: "GET", path: "/v1/notifications", authRole: "customer", summary: "Own in-app notifications, newest first, with the unread count", replaces: "none (new)" },
+  { method: "POST", path: "/v1/notifications/:id/read", authRole: "customer", summary: "Mark one own notification read", replaces: "none (new)" },
+  { method: "POST", path: "/v1/notifications/read-all", authRole: "customer", summary: "Mark all own notifications read", replaces: "none (new)" },
   { method: "POST", path: "/v1/admin/artworks/:id/insurance/approve", authRole: "admin", summary: "Verify insurance number", replaces: "adminService.setArtworkInsuranceStatus" },
   { method: "POST", path: "/v1/admin/artworks/:id/insurance/reject", authRole: "admin", summary: "Reject insurance number", replaces: "adminService.setArtworkInsuranceStatus" },
 
