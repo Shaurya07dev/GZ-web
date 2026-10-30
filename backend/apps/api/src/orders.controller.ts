@@ -51,15 +51,16 @@ export class OrdersController {
   // (platform_admin). While PAYMENTS_MODE=simulated the order's OWN
   // customer may call it too, so the web checkout works end to end before
   // the gateway lands; flipping the env to "razorpay" closes that door
-  // without a code change.
+  // without a code change — for operators too: under razorpay only the
+  // gateway may mark an order paid, or an operator could mint free sales.
   @Roles("customer", "platform_admin")
   @Post(":id/simulate-payment")
   async simulatePayment(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    if (this.env.paymentsMode !== "simulated") {
+      throw new ForbiddenException({ type: "about:blank", title: "Simulated payment is disabled", status: 403, code: "payments_not_simulated" });
+    }
     const isOperator = req.authUser.grants.includes("platform_admin");
     if (!isOperator) {
-      if (this.env.paymentsMode !== "simulated") {
-        throw new ForbiddenException({ type: "about:blank", title: "Simulated payment is disabled", status: 403, code: "payments_not_simulated" });
-      }
       const order = await getOrder(this.db, id);
       if (!order || order.customerId !== req.authUser.uid) {
         // 404, not 403: don't confirm to a stranger that the order id exists.

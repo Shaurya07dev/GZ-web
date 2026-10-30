@@ -174,3 +174,53 @@ export const AGGREGATOR_TOUR_STEPS: Step[] = [
     ...BASE_PLACEMENT,
   },
 ];
+
+export const ADMIN_TOUR_STEPS: Step[] = [
+  {
+    target: "body",
+    placement: "center",
+    content:
+      "Welcome to the GalleryZone admin console. A short walk through the queues you'll work every day. Skippable anytime.",
+    skipBeacon: true,
+  },
+  {
+    target: '[data-tour="admin-overview"]',
+    content: "Platform-wide numbers at a glance, and the counts of everything waiting on you.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-moderation-artworks"]',
+    content: "New and edited artworks wait here for approval before they can be sold. A rejection needs a reason the artist will see.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-moderation-kyc"]',
+    content: "KYC reviews. Artists and aggregators can't withdraw money until their KYC is approved here.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-moderation-gst"]',
+    content: "GSTIN reviews, with Cashfree's registry check alongside. Aggregators can't reserve artwork until GST is approved.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-moderation-withdrawals"]',
+    content: "Payout requests. Approving one is the moment real money leaves; the balance and KYC are re-checked then.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-orders"]',
+    content: "Every order and its fulfilment. Orders are marked paid only by the payment itself, never by hand.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-settlements"]',
+    content: "Artist and aggregator settlements, with retries for any that failed.",
+    ...BASE_PLACEMENT,
+  },
+  {
+    target: '[data-tour="admin-audit-logs"]',
+    content: "Every admin decision is recorded here: who, what, when and why.",
+    ...BASE_PLACEMENT,
+  },
+];

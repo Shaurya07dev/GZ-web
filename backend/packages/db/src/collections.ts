@@ -153,7 +153,11 @@ export interface VerificationEvidence {
   verifiedName: string | null;
   detail: Record<string, unknown> | null;
   checkedAt: FirebaseFirestore.Timestamp;
+  /** When the provider says the event happened (its signed webhook timestamp), so a replayed or late older event can't overwrite a newer outcome. */
+  eventAtMs?: number | null;
 }
+
+export type TourId = "customer" | "artist" | "aggregator" | "admin";
 
 export interface ProfileDoc {
   bio: string | null;
@@ -166,6 +170,11 @@ export interface ProfileDoc {
   gstin: string | null;
   gstStatus: ReviewStatus | null;
   aadhaarStatus: ReviewStatus | null;
+  /** The reviewer's reason for the latest rejection, shown to the applicant; null once approved. */
+  gstReviewNote?: string | null;
+  aadhaarReviewNote?: string | null;
+  /** Onboarding tours finished, by tour → the step-set version seen, so a revised tour shows again. */
+  toursCompleted?: Partial<Record<TourId, number>>;
   aadhaarMasked: string | null;
   /**
    * What Cashfree Secure ID said, if it was ever asked. Evidence for the admin
@@ -428,6 +437,10 @@ export interface OrderDoc {
   totalPaise: number;
   status: OrderStatus;
   rateConfigVersionId: string;
+  /** The artist and their price when the buyer's total was fixed. The sale settles on these, never
+   *  on the live price, which the artist may still edit. Absent on orders created before 2026-10-30. */
+  artistId?: string;
+  artistPricePaise?: number;
   createdAt: FirebaseFirestore.Timestamp;
 }
 
@@ -516,6 +529,8 @@ export interface WithdrawalRequestDoc {
 }
 
 export interface AggregatorHoldingDoc {
+  /** Set once a sale or a return has started (holding-claim.ts); the other is then refused. */
+  closingAs?: "sale" | "return";
   artworkId: string;
   aggregatorId: string;
   cycleMonth: number;

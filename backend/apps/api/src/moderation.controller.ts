@@ -25,15 +25,15 @@ export class ModerationController {
   // Every decision below gates something the user cares about, so each one
   // mails the person it affects. Fire-and-forget: a mail failure must never
   // roll back a moderation decision that already committed.
-  private mailCompliance(userId: string, kind: "gst" | "kyc", approved: boolean, reason?: string) {
-    void this.emails.complianceDecided({ userId, kind, approved, reason }).catch(this.emails.swallow(`${kind} decision mail`));
+  private mailCompliance(userId: string, kind: "gst" | "kyc", decisionId: string, approved: boolean, reason?: string) {
+    void this.emails.complianceDecided({ userId, kind, decisionId, approved, reason }).catch(this.emails.swallow(`${kind} decision mail`));
   }
 
   @Roles("admin")
   @Post("moderation/gst/:userId/approve")
   async approveGst(@Req() req: AuthenticatedRequest, @Param("userId") userId: string) {
     const result = await decideGst({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
-    this.mailCompliance(userId, "gst", true);
+    this.mailCompliance(userId, "gst", result.decisionId, true);
     return result;
   }
 
@@ -41,7 +41,7 @@ export class ModerationController {
   @Post("moderation/gst/:userId/reject")
   async rejectGst(@Req() req: AuthenticatedRequest, @Param("userId") userId: string, @Body(new ZodValidationPipe(decisionBodySchema)) body: DecisionBody) {
     const result = await decideGst({ db: this.db, adminId: req.authUser.uid, userId, decision: "rejected", reason: body.reason });
-    this.mailCompliance(userId, "gst", false, body.reason);
+    this.mailCompliance(userId, "gst", result.decisionId, false, body.reason);
     return result;
   }
 
@@ -49,7 +49,7 @@ export class ModerationController {
   @Post("moderation/kyc/:userId/approve")
   async approveKyc(@Req() req: AuthenticatedRequest, @Param("userId") userId: string) {
     const result = await decideKyc({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
-    this.mailCompliance(userId, "kyc", true);
+    this.mailCompliance(userId, "kyc", result.decisionId, true);
     return result;
   }
 
@@ -57,7 +57,7 @@ export class ModerationController {
   @Post("moderation/kyc/:userId/reject")
   async rejectKyc(@Req() req: AuthenticatedRequest, @Param("userId") userId: string, @Body(new ZodValidationPipe(decisionBodySchema)) body: DecisionBody) {
     const result = await decideKyc({ db: this.db, adminId: req.authUser.uid, userId, decision: "rejected", reason: body.reason });
-    this.mailCompliance(userId, "kyc", false, body.reason);
+    this.mailCompliance(userId, "kyc", result.decisionId, false, body.reason);
     return result;
   }
 

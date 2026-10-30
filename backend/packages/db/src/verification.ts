@@ -71,9 +71,12 @@ export async function recordGstinCheck(
 export async function recordDigiLockerOutcome(
   db: Firestore,
   uid: string,
-  result: { success: boolean; referenceId: string | null; verifiedName: string | null; aadhaarMasked: string | null; detail: Record<string, unknown> | null },
-): Promise<void> {
+  result: { success: boolean; referenceId: string | null; verifiedName: string | null; aadhaarMasked: string | null; detail: Record<string, unknown> | null; eventAtMs?: number | null },
+): Promise<"recorded" | "stale"> {
   const profile = await currentProfile(db, uid);
+  // Webhooks can arrive late, twice, or be replayed: an event older than the one already recorded is ignored.
+  const recordedAt = profile.aadhaarVerification?.eventAtMs;
+  if (result.eventAtMs != null && recordedAt != null && result.eventAtMs < recordedAt) return "stale";
   const evidence: Omit<VerificationEvidence, "checkedAt"> & { checkedAt: FieldValue } = {
     provider: "cashfree_digilocker",
     outcome: result.success ? "valid" : "failed",
@@ -81,6 +84,7 @@ export async function recordDigiLockerOutcome(
     verifiedName: result.verifiedName,
     detail: result.detail,
     checkedAt: FieldValue.serverTimestamp(),
+    eventAtMs: result.eventAtMs ?? null,
   };
   const patch: Record<string, unknown> = { aadhaarVerification: evidence };
   if (result.success) {
@@ -88,6 +92,14 @@ export async function recordDigiLockerOutcome(
     if ((profile.aadhaarStatus ?? "not_submitted") === "not_submitted") patch.aadhaarStatus = "submitted";
   }
   await profileRef(db, uid).set(patch, { merge: true });
+  return "recorded";
+}
+
+/** A webhook timestamp header as epoch ms; providers send seconds or milliseconds. */
+export function webhookTimestampMs(header: string | undefined): number | null {
+  const n = Number(header);
+  if (!header || !Number.isFinite(n) || n <= 0) return null;
+  return n < 1e12 ? n * 1000 : n;
 }
 
 /**

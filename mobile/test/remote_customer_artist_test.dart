@@ -359,15 +359,13 @@ void main() {
     );
 
     test(
-      'collector withdrawal is refused, and the wallet feed is honestly empty',
+      'collector wallet: no API route, so it fails plainly; withdrawal is refused',
       () async {
-        final api = FakeApi()
-          ..json('GET /v1/customer/wallet', {
-            'accountType': 'customer_wallet',
-            'balancePaise': 250000,
-          });
+        // There is no /v1/customer/wallet on the API, so nothing is stubbed:
+        // the repository must not call it at all.
+        final api = FakeApi();
         final repo = RemoteCustomerRepository(api.client());
-        expect((await repo.getWallet()).balance, 2500);
+        await expectLater(repo.getWallet(), throwsA(isA<UnsupportedError>()));
         expect(await repo.listWalletTransactions(), isEmpty);
         await expectLater(
           repo.requestWithdrawal(1000),

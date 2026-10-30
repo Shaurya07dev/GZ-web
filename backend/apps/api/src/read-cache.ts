@@ -34,6 +34,7 @@ export class ReadCache {
 
     const promise = fill()
       .then((value) => {
+        this.makeRoom();
         this.entries.set(key, { value, expiresAt: Date.now() + ttlMs });
         return value;
       })
@@ -41,6 +42,20 @@ export class ReadCache {
     this.inflight.set(key, promise);
     return promise;
   }
+
+  // Public :id routes cache misses too, so without a bound random ids grow the heap until the
+  // instance dies. Expired entries go first, then the oldest (a Map iterates in insertion order).
+  private makeRoom(): void {
+    if (this.entries.size < ReadCache.MAX_ENTRIES) return;
+    const now = Date.now();
+    for (const [key, entry] of this.entries) if (entry.expiresAt <= now) this.entries.delete(key);
+    for (const key of this.entries.keys()) {
+      if (this.entries.size < ReadCache.MAX_ENTRIES) break;
+      this.entries.delete(key);
+    }
+  }
+
+  static readonly MAX_ENTRIES = 5_000;
 
   /** Drop one key, or every key under a prefix. */
   invalidate(keyOrPrefix: string): void {

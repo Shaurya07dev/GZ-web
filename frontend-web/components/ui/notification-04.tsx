@@ -19,6 +19,8 @@ export interface NotificationEvent {
   subtitle: string;
   timestamp: string;
   unread?: boolean;
+  /** Makes the row a button: open what it's about. */
+  onSelect?: () => void;
 }
 
 export interface NotificationGroup {
@@ -32,11 +34,10 @@ export interface Notification4Props {
   countLabel?: string;
   groups?: NotificationGroup[];
   onDismiss?: () => void;
+  onMarkAllRead?: () => void;
   className?: string;
 }
 
-// No notification feed exists on the API yet: the bell opens to an honest
-// empty state rather than a fixture feed.
 const defaultGroups: NotificationGroup[] = [];
 
 export default function Notification4({
@@ -44,6 +45,7 @@ export default function Notification4({
   countLabel,
   groups = defaultGroups,
   onDismiss,
+  onMarkAllRead,
   className,
 }: Notification4Props) {
   const unreadCount = groups.reduce(
@@ -74,6 +76,11 @@ export default function Notification4({
             )}
           </div>
 
+          {onMarkAllRead && (
+            <Button variant="ghost" size="sm" className="ml-auto rounded-full text-xs text-muted-foreground" onClick={onMarkAllRead}>
+              Mark all read
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -121,8 +128,12 @@ function NotificationGroupCard({ group }: { group: NotificationGroup }) {
 }
 
 function NotificationEventRow({ event }: { event: NotificationEvent }) {
+  const Row = event.onSelect ? "button" : "article";
   return (
-    <article className="group flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-muted/50 sm:gap-3">
+    <Row
+      {...(event.onSelect ? { type: "button" as const, onClick: event.onSelect } : {})}
+      className="group flex w-full items-center gap-2 rounded-md px-1 py-1 text-left transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none sm:gap-3"
+    >
       <Avatar className="h-10 w-10 shrink-0 border-none ring-0">
         <AvatarImage
           src={event.source.avatar}
@@ -146,6 +157,6 @@ function NotificationEventRow({ event }: { event: NotificationEvent }) {
       <div className="flex shrink-0 items-center">
         <span className="text-xs text-muted-foreground">{event.timestamp}</span>
       </div>
-    </article>
+    </Row>
   );
 }

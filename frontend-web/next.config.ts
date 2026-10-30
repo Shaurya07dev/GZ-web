@@ -35,6 +35,22 @@ const nextConfig: NextConfig = {
   // Requires a dev server restart to take effect (next.config.ts is not
   // hot-reloaded).
   allowedDevOrigins: ["127.0.0.1"],
+  // No other site may frame these pages (clickjacking an admin approval or a
+  // checkout). 'self', not 'none': the help guides are same-origin iframes.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+        ],
+      },
+    ];
+  },
 };
 
 // Source maps upload only when SENTRY_AUTH_TOKEN is present (Vercel env);

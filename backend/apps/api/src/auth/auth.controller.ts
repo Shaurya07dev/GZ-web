@@ -96,6 +96,8 @@ export class AuthController {
   }
 
   @Public()
+  // Each sign-up mails an address the caller chose: unthrottled, it is a spam relay from our domain.
+  @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 20, ttl: 3_600_000 } })
   @Post("register")
   @HttpCode(201)
   async register(@Body(new ZodValidationPipe(registerSchema)) body: RegisterBody): Promise<{ uid: string }> {

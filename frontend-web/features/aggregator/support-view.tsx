@@ -10,6 +10,7 @@ import {
   useSubmitAggregatorTicketMutation,
 } from "@/hooks/useAggregatorSupport";
 import { SupportFaqPanel } from "@/features/faq/support-faq-panel";
+import { ReplayTourCard } from "@/features/onboarding/replay-tour-card";
 
 // Ticket submission isn't wired to a live support inbox in this demo — same
 // honest-mock pattern as the Artist Dashboard's equivalent. Real issues go
@@ -36,6 +37,7 @@ export function AggregatorSupportView() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
       <div className="flex flex-col gap-6">
+        <ReplayTourCard role="aggregator" />
         <div className="rounded-lg border border-gold/30 bg-gold/5 p-5">
           <h2 className="font-display text-base font-semibold text-foreground">
             Contact GalleryZone

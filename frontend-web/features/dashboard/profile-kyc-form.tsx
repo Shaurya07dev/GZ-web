@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { FileUploader } from "@/components/ui/file-uploader";
-import { GstStatusBadge } from "@/components/shared/gst-status-badge";
+import { GstStatusBadge, ReviewNote } from "@/components/shared/gst-status-badge";
 import { GuideLauncher } from "@/components/shared/guide-launcher";
 import { formatINR } from "@/lib/utils";
 import { GUIDES } from "@/lib/guides";
@@ -479,6 +479,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
               </Label>
               <GstStatusBadge status={gstStatus} />
             </div>
+            <ReviewNote status={gstStatus} note={profile.gstReviewNote} />
             <div className="relative sm:max-w-xs">
               <Receipt className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -583,6 +584,7 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             </h2>
             <GstStatusBadge status={profile.aadhaarStatus} />
           </div>
+          <ReviewNote status={profile.aadhaarStatus} note={profile.aadhaarReviewNote} />
           {profile.aadhaarMasked ? (
             <p className="mt-3 flex items-center gap-2 font-mono text-sm text-foreground">
               <Lock className="size-3.5 text-muted-foreground" />

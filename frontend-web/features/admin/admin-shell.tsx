@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Compass,
   LayoutGrid,
   ChartNoAxesCombined,
   Images,
@@ -34,6 +35,8 @@ import { SidebarHeader } from "@/components/shared/sidebar-brand";
 import { cn } from "@/lib/utils";
 import { SwitchMode } from "@/components/switch-mode";
 import { NotificationsPopover } from "@/components/notifications-popover";
+import dynamic from "next/dynamic";
+import { replayTour } from "@/features/onboarding/use-onboarding-tour";
 import { AccountMenu } from "@/components/shared/account-menu";
 import { useAdminKpis } from "@/hooks/useAdminDashboard";
 
@@ -65,6 +68,8 @@ interface AdminNavItem {
   href: string;
   icon: typeof LayoutGrid;
   badge?: BadgeKey;
+  /** Anchor for the onboarding tour (ADMIN_TOUR_STEPS). */
+  tourId?: string;
 }
 
 interface AdminNavGroup {
@@ -78,7 +83,7 @@ const NAV_GROUPS: AdminNavGroup[] = [
   {
     heading: null,
     items: [
-      { label: "Overview", href: "/admin", icon: LayoutGrid },
+      { label: "Overview", href: "/admin", icon: LayoutGrid, tourId: "admin-overview" },
       {
         label: "Analytics",
         href: "/admin/analytics",
@@ -92,24 +97,28 @@ const NAV_GROUPS: AdminNavGroup[] = [
       {
         label: "Artwork Queue",
         href: "/admin/moderation/artworks",
+        tourId: "admin-moderation-artworks",
         icon: Images,
         badge: "artworks",
       },
       {
         label: "KYC",
         href: "/admin/moderation/kyc",
+        tourId: "admin-moderation-kyc",
         icon: IdCard,
         badge: "kyc",
       },
       {
         label: "GST",
         href: "/admin/moderation/gst",
+        tourId: "admin-moderation-gst",
         icon: FileCheck2,
         badge: "gst",
       },
       {
         label: "Payouts",
         href: "/admin/moderation/withdrawals",
+        tourId: "admin-moderation-withdrawals",
         icon: Banknote,
         badge: "withdrawals",
       },
@@ -162,14 +171,14 @@ const NAV_GROUPS: AdminNavGroup[] = [
   {
     heading: "Commerce",
     items: [
-      { label: "Orders", href: "/admin/orders", icon: Receipt },
-      { label: "Settlements", href: "/admin/settlements", icon: Scale },
+      { label: "Orders", href: "/admin/orders", icon: Receipt, tourId: "admin-orders" },
+      { label: "Settlements", href: "/admin/settlements", icon: Scale, tourId: "admin-settlements" },
     ],
   },
   {
     heading: "System",
     items: [
-      { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText },
+      { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText, tourId: "admin-audit-logs" },
       { label: "Reports", href: "/admin/reports", icon: FileChartColumn },
       { label: "Settings", href: "/admin/settings", icon: SlidersHorizontal },
     ],
@@ -199,9 +208,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      <OnboardingTour role="admin" />
     </div>
   );
 }
+
+// react-joyride touches `window` at import time — client-only, like the other shells.
+const OnboardingTour = dynamic(
+  () => import("@/features/onboarding/onboarding-tour").then((m) => m.OnboardingTour),
+  { ssr: false },
+);
 
 function Sidebar({
   mobileOpen,
@@ -322,6 +339,7 @@ function Sidebar({
                           href={item.href}
                           onClick={onClose}
                           aria-current={active ? "page" : undefined}
+                          data-tour={item.tourId}
                           title={collapsed ? item.label : undefined}
                           className={cn(
                             "relative flex items-center gap-3 rounded-md px-3 py-2 text-[13px] transition-colors",
@@ -405,6 +423,15 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </h1>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="Replay the tour"
+          title="Replay the tour"
+          onClick={() => replayTour("admin")}
+          className="rounded-md p-1.5 text-foreground/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:outline-none"
+        >
+          <Compass className="size-5" strokeWidth={1.75} />
+        </button>
         <NotificationsPopover />
         <SwitchMode />
         <AccountMenu role="Admin" />

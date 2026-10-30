@@ -29,10 +29,11 @@ import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postArtistSale } from "./artist-sales.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { getWalletBalance } from "./wallets.ts";
-import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkPricingDoc } from "./collections.ts";
+import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type ArtworkPricingDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 import { artworkStateMachine } from "@galleryzone/domain";
 import { DbError } from "./errors.ts";
+import { claimHoldingExit } from "./holding-claim.ts";
 
 export class AggregatorFlowError extends DbError {}
 
@@ -79,6 +80,8 @@ export async function reserveHolding({
   // Only a live piece can leave for a gallery; someone else's hold wins.
   const artworkStatus = await latestStatusOf(db, artworkId);
   if (artworkStatus !== "marketplace") throw new AggregatorFlowError("This artwork is no longer available to reserve");
+  const artwork = (await db.collection(Collections.artworks).doc(artworkId).get()).data() as ArtworkDoc | undefined;
+  if (artwork?.listingType === "marketplace_only") throw new AggregatorFlowError("The artist has not offered this artwork to galleries");
   const activeSnap = await db.collection(Collections.aggregatorHoldings).where("artworkId", "==", artworkId).where("status", "==", "reserved").limit(1).get();
   if (!activeSnap.empty) throw new AggregatorFlowError("Another gallery has already reserved this artwork");
 
@@ -229,6 +232,8 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
       ...(holding.deliveryDepositPaise === null ? {} : { deliveryChargePaise: holding.deliveryDepositPaise }),
     });
 
+  // Last step before money moves: a return racing this sale is refused from here on.
+  await claimHoldingExit(db, holdingId, "sale");
   const saleRef = db.collection(Collections.aggregatorSales).doc();
   const saleDoc: AggregatorSaleDoc = {
     holdingId,

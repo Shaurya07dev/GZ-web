@@ -32,14 +32,33 @@ export async function lookupAmazonProduct(url: string): Promise<AmazonProduct | 
   // instead of the product; asking again usually gets the real one.
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt) await new Promise((r) => setTimeout(r, 1_000 * attempt));
-    const res = await fetch(url, {
+    const page = await fetchAmazonPage(url);
+    if (!page) return null;
+    const product = parseAmazonProductPage(page.html, page.url);
+    if (product) return product;
+  }
+  return null;
+}
+
+/**
+ * Follows redirects by hand so every hop is checked against the allowlist BEFORE it is fetched;
+ * redirect: "follow" only let us check the final URL, after any internal address was already hit.
+ */
+export async function fetchAmazonPage(url: string, fetchImpl: typeof fetch = fetch): Promise<{ html: string; url: string } | null> {
+  let current = url;
+  for (let hop = 0; hop <= 5; hop++) {
+    if (!isAmazonUrl(current)) return null;
+    const res = await fetchImpl(current, {
       headers: { "User-Agent": UA, "Accept-Language": "en-IN,en;q=0.9", Accept: "text/html" },
-      redirect: "follow",
+      redirect: "manual",
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok || !isAmazonUrl(res.url)) return null;
-    const product = parseAmazonProductPage(await res.text(), res.url);
-    if (product) return product;
+    const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+    if (location) {
+      current = new URL(location, current).toString();
+      continue;
+    }
+    return res.ok ? { html: await res.text(), url: current } : null;
   }
   return null;
 }

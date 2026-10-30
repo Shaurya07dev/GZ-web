@@ -17,6 +17,7 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { physicalCoaStateMachine } from "@galleryzone/domain";
 import { Collections, type ArtworkDoc, type PhysicalCoaRequestDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
+import { getCurrentOwner } from "./ownership.ts";
 
 export class CoaError extends DbError {}
 /** Thrown when the caller may not act on this artwork/request (controller maps to 404, never 403, to avoid confirming ids). */
@@ -69,11 +70,19 @@ export interface CreatePhysicalCoaRequestInput {
   delivery: { line1: string; city: string; state: string; pincode: string };
 }
 
-/** Anyone signed in may request one for an artwork that has a certificate; one open request per artwork at a time. */
+/**
+ * Only the artwork's current owner may request one, for an artwork that has a certificate; one open
+ * request per artwork at a time. Anyone else could have a signed certificate posted to their own
+ * address (a forgery kit) and, by holding the one open slot, block the real owner.
+ */
 export async function createPhysicalCoaRequest(db: Firestore, input: CreatePhysicalCoaRequestInput): Promise<PhysicalCoaRequest> {
   const artworkSnap = await db.collection(Collections.artworks).doc(input.artworkId).get();
   if (!artworkSnap.exists) throw new CoaNotFoundError(`No artwork ${input.artworkId}`);
   const artwork = artworkSnap.data() as ArtworkDoc;
+  // 404, not 403: a stranger learns nothing about which artworks exist.
+  if ((await getCurrentOwner(db, input.artworkId)).userId !== input.requestedByUserId) {
+    throw new CoaNotFoundError(`No artwork ${input.artworkId}`);
+  }
   if (!artwork.coaCertificateNumber) {
     throw new CoaConflictError("This artwork has no certificate yet — one is issued when it is approved for listing");
   }

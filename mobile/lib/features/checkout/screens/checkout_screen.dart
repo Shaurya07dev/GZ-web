@@ -15,7 +15,6 @@ import '../../auth/providers/auth_providers.dart';
 import '../../account/providers/account_providers.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
-import '../../shell/payee_details.dart';
 import '../../shell/price_breakdown.dart';
 import '../providers/checkout_providers.dart';
 import '../../account/widgets/customer_shell.dart';
@@ -1063,15 +1062,6 @@ class _ConfirmStep extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 20),
-        // Payment always reaches GalleryZone, including when the buyer is
-        // standing in a partner gallery - the aggregator collects on our behalf
-        // and never for themselves.
-        PayeeDetails(
-          amount: total ?? artwork.customerPrice,
-          note:
-              'GZ ${artwork.title.length > 24 ? artwork.title.substring(0, 24) : artwork.title}',
-        ),
       ],
     );
   }
@@ -1153,11 +1143,6 @@ class _DemoPaymentStepState extends ConsumerState<_DemoPaymentStep> {
             Text('Amount due ', style: theme.textTheme.bodySmall),
             PriceTag(amount: total, style: theme.textTheme.titleMedium),
           ],
-        ),
-        const SizedBox(height: 16),
-        PayeeDetails(
-          amount: total,
-          note: '${widget.artwork.title} — ${widget.artwork.id}',
         ),
         const SizedBox(height: 16),
         RadioGroup<PaymentMethod>(

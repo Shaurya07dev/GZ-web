@@ -3,7 +3,7 @@
 // when an order is paid. Only the two parties to a transfer can read it;
 // everyone else gets a 404 (never a 403 that confirms the id exists).
 
-import { Body, ConflictException, Controller, Get, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
+import { Body, ConflictException, Controller, ForbiddenException, Get, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import {
   acceptTransfer,
@@ -104,6 +104,11 @@ export class OwnershipController {
   @Roles("customer", "artist", "aggregator")
   @Post("transfers/:id/accept")
   async accept(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    // The invite is matched on email, so the email must be proven: otherwise anyone who registers
+    // the invited address before its owner does (the transfer id is public on /verify) takes the title.
+    if (!req.authUser.emailVerified) {
+      throw new ForbiddenException(problem(403, "Verify your email address to accept this transfer", "email_not_verified"));
+    }
     try {
       const event = await acceptTransfer(this.db, { transferId: id, byUserId: req.authUser.uid });
       this.cache.invalidate(CacheKeys.verify(event.artworkId));

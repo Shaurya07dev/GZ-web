@@ -20,12 +20,13 @@
 //      webhook cannot attach a "verified" identity to an arbitrary account.
 
 import { Controller, Headers, HttpCode, Inject, Post, Req } from "@nestjs/common";
-import { SkipThrottle } from "@nestjs/throttler";
+import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { randomUUID } from "node:crypto";
 import {
   openDigiLockerSession,
   recordDigiLockerOutcome,
+  webhookTimestampMs,
   recordGstinCheck,
   savedGstin,
   userForVerification,
@@ -61,6 +62,8 @@ export class VerificationController {
    * but the approval still belongs to an admin.
    */
   @Roles("artist", "aggregator")
+  // Every call is a billed Cashfree lookup: a person retries a few times, a script would run up the bill.
+  @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 10, ttl: 3_600_000 } })
   @Post("profile/gstin/verify")
   async verifyGstin(@Req() req: AuthenticatedRequest) {
     const { gstin, companyName } = await savedGstin(this.db, req.authUser.uid);
@@ -91,6 +94,8 @@ export class VerificationController {
    * DigiLocker, so no Aadhaar number ever reaches this backend.
    */
   @Roles("artist", "aggregator")
+  // Every call is a billed Cashfree lookup: a person retries a few times, a script would run up the bill.
+  @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 10, ttl: 3_600_000 } })
   @Post("profile/aadhaar/digilocker")
   async startDigiLocker(@Req() req: AuthenticatedRequest) {
     const verificationId = `gz-dl-${randomUUID()}`;
@@ -142,6 +147,8 @@ export class VerificationController {
       aadhaarMasked: aadhaar?.masked_aadhaar_number ?? null,
       // The event name is kept; the payload is not, so nothing from DigiLocker is stored wholesale.
       detail: { event: type },
+      // Signed with the body, so it can be trusted to order events.
+      eventAtMs: webhookTimestampMs(timestamp),
     });
     return { received: true, matched: true };
   }

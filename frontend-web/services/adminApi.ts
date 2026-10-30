@@ -238,11 +238,11 @@ export const adminApi = {
   },
 
   async decideKyc(userId: string, decision: "approve" | "reject", reason?: string): Promise<void> {
-    await http.post(`/v1/moderation/kyc/${encodeURIComponent(userId)}/${decision}`, reason ? { reason } : {});
+    await http.post(`/v1/admin/moderation/kyc/${encodeURIComponent(userId)}/${decision}`, reason ? { reason } : {});
   },
 
   async decideGst(userId: string, decision: "approve" | "reject", reason?: string): Promise<void> {
-    await http.post(`/v1/moderation/gst/${encodeURIComponent(userId)}/${decision}`, reason ? { reason } : {});
+    await http.post(`/v1/admin/moderation/gst/${encodeURIComponent(userId)}/${decision}`, reason ? { reason } : {});
   },
 
   async listWithdrawals(): Promise<WithdrawalRequest[]> {

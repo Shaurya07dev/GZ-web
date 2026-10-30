@@ -8,7 +8,6 @@ import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
 import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import { useCheckoutQuote } from "@/hooks/useCheckoutQuote";
-import { PayeeDetails } from "@/components/shared/payee-details";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
 import type { Order } from "@/types/order";
@@ -144,15 +143,6 @@ export function CheckoutConfirmStep({
               : "Working out your total…"}
         </Button>
       </div>
-
-      {/* Payment always reaches GalleryZone, including when the buyer is
-          standing in a partner gallery — the aggregator collects on our behalf
-          and never for themselves. */}
-      <PayeeDetails
-        amount={total}
-        note={`GZ ${artwork.title.slice(0, 24)}`}
-      />
-
     </div>
   );
 }

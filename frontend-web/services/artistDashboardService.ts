@@ -37,6 +37,8 @@ export interface ArtistProfileView {
   gstin: string;
   pan: string | null;
   gstStatus: "not_submitted" | "submitted" | "approved" | "rejected";
+  gstReviewNote: string | null;
+  aadhaarReviewNote: string | null;
   socialProofVideoUrl: string | null;
   pickupLine1: string;
   pickupLine2: string;
@@ -69,6 +71,8 @@ function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
     gstin: p.gstin ?? "",
     pan: p.pan,
     gstStatus: p.gstStatus,
+    gstReviewNote: p.gstReviewNote ?? null,
+    aadhaarReviewNote: p.aadhaarReviewNote ?? null,
     socialProofVideoUrl: p.socialProofVideoUrl,
     pickupLine1: p.pickupLine1 ?? "",
     pickupLine2: p.pickupLine2 ?? "",

@@ -19,6 +19,12 @@ import 'features/auth/role_options.dart';
 import 'features/splash/splash_screen.dart';
 
 Future<void> main() async {
+  // The offline mock accepts any password and fakes payments. A store build
+  // must never carry it, so a release build made with GZ_MOCK refuses to start
+  // rather than ship a demo that looks real.
+  if (kReleaseMode && AppConfig.useMockBackend) {
+    throw StateError('GZ_MOCK is set on a release build — rebuild without it');
+  }
   WidgetsFlutterBinding.ensureInitialized();
   // Draw behind the status and gesture bars, which the theme makes
   // transparent — the page runs to the glass instead of stopping at a strip.

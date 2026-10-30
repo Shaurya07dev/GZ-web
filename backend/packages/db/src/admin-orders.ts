@@ -50,6 +50,9 @@ export async function advanceOrderStatus(db: Firestore, orderId: string, to: Ord
   const snap = await ref.get();
   if (!snap.exists) throw new AdminOrderError(`No order ${orderId}`);
   const order = snap.data() as OrderDoc;
+  // Only a verified payment (markOrderPaid) may set "paid": it posts the ledger and moves title.
+  // Setting it here would mark an unpaid order paid and leave the artist never credited.
+  if (to === "paid") throw new AdminOrderError("An order is marked paid only by its payment, never by hand");
   orderStateMachine.assertTransition(order.status, to);
   // Transit is the point of no return: once the courier has the piece nobody can lock the
   // chip any more, whereas packing still happens at the artist's (NFC_IMPLEMENTATION.md §5.1).

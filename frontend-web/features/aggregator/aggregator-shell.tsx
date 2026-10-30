@@ -358,7 +358,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           <span className="font-display text-xs font-bold uppercase tracking-widest text-gold-bright leading-none">GZ GalleryZone</span>
           <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Aggregator Portal</span>
         </div>
-        <NotificationsPopover groups={[]} />
+        <NotificationsPopover />
         <AccountMenu
           role="Aggregator"
           profileHref="/aggregator/profile"
@@ -373,7 +373,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         </h1>
       </div>
       <div className="hidden lg:flex lg:items-center lg:gap-2">
-        <NotificationsPopover groups={[]} />
+        <NotificationsPopover />
         <SwitchMode />
         <AccountMenu
           role="Aggregator"

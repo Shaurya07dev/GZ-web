@@ -53,6 +53,12 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   if (artworkStatus !== "marketplace") {
     throw new CheckoutError("This artwork is not available to buy");
   }
+  // An aggregator-only piece is sold through galleries; the artist chose that, and the public
+  // marketplace already hides it. The id is still guessable, so refuse it here as well.
+  const artworkDoc = (await db.collection(Collections.artworks).doc(artworkId).get()).data() as { listingType?: string } | undefined;
+  if (artworkDoc?.listingType === "aggregator_only") {
+    throw new CheckoutError("This artwork is not available to buy");
+  }
 
   // An addressId belonging to somebody else would ship the piece to a
   // stranger and leak their address onto this order.
@@ -87,6 +93,8 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     totalPaise: checkout.total,
     status: "pending",
     rateConfigVersionId: activeVersion.id,
+    artistId: pricing.artistId,
+    artistPricePaise: pricing.artistPricePaise,
     createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
   };
   await orderRef.set(orderDoc);
@@ -174,6 +182,16 @@ export async function markPaymentFailed(db: Firestore, orderId: string, detail: 
  * webhook) returns the same confirmation without posting anything twice —
  * the ledger's idempotencyPrefix and the state machine both guard it.
  */
+/**
+ * What the sale settles on: the price snapshotted when the buyer's total was fixed. Reading the
+ * live price instead let an artist raise it between order and payment and be paid the new figure
+ * for money the buyer never sent. Legacy orders (no snapshot) fall back to the live doc.
+ */
+export function settlementPricingOf(order: Pick<OrderDoc, "artistId" | "artistPricePaise">, live: ArtworkPricingDoc): ArtworkPricingDoc {
+  if (order.artistPricePaise === undefined || order.artistId === undefined) return live;
+  return { ...live, artistId: order.artistId, artistPricePaise: order.artistPricePaise };
+}
+
 export async function markOrderPaid(db: Firestore, orderId: string, capture: PaymentCapture): Promise<PaymentConfirmation> {
   const orderRef = db.collection(Collections.orders).doc(orderId);
   const orderSnap = await orderRef.get();
@@ -188,7 +206,7 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
 
   const pricingSnap = await db.collection(artworkPricingCol(order.artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new CheckoutError(`No artwork ${order.artworkId}`);
-  const pricing = pricingSnap.data() as ArtworkPricingDoc;
+  const pricing = settlementPricingOf(order, pricingSnap.data() as ArtworkPricingDoc);
 
   const rateStore = new FirestoreRateConfigStore(db);
   const version = await rateStore.getActiveVersion(order.createdAt.toDate());
@@ -254,7 +272,8 @@ async function confirmationFor(db: Firestore, orderId: string, order: OrderDoc, 
     db.collection(Collections.artworks).doc(order.artworkId).get(),
     db.collection(artworkPricingCol(order.artworkId)).doc("data").get(),
   ]);
-  const pricing = pricingSnap.data() as ArtworkPricingDoc | undefined;
+  const live = pricingSnap.data() as ArtworkPricingDoc | undefined;
+  const pricing = live && settlementPricingOf(order, live);
   const rateStore = new FirestoreRateConfigStore(db);
   const version = await rateStore.getActiveVersion(order.createdAt.toDate());
   const artworkTitle = (artworkSnap.data() as { title?: string } | undefined)?.title ?? "your artwork";
