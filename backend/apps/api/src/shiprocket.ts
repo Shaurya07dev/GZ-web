@@ -112,6 +112,108 @@ async function getToken(): Promise<string> {
   return data.token;
 }
 
+// --- Rate quote (serviceability) --------------------------------------------
+// Audit #3: the backend used to charge a flat `rates.deliveryChargePaise`
+// (prod: 2500 paise = ₹25) for every order regardless of actual courier
+// cost. This endpoint asks ShipRocket what the cheapest serviceable courier
+// is for a specific pickup→drop + weight + value, and returns a quote in
+// paise so checkout can use it.
+
+export interface ShippingRateInput {
+  pickupPincode: string;
+  dropPincode: string;
+  weightKg: number;
+  /** Declared value in rupees — insurance / COD limits depend on this. */
+  valueInr: number;
+  codEnabled?: boolean;
+}
+
+export interface ShippingRateQuote {
+  /** Courier company name, e.g. "Delhivery", "Bluedart". */
+  carrier: string;
+  /** The chargeable amount in paise, INCLUDING any ShipRocket mark-up but
+   *  excluding GST (ShipRocket's rate API returns the pre-tax rate). */
+  ratePaise: number;
+  /** The courier's own id in ShipRocket, so booking can request this
+   *  specific courier instead of auto-selecting. */
+  courierCompanyId: number;
+  /** ETA in days per ShipRocket. Null when the courier doesn't commit one. */
+  estimatedDeliveryDays: number | null;
+}
+
+interface ShiprocketCourierOption {
+  courier_company_id: number;
+  courier_name: string;
+  // ShipRocket returns the rate in rupees as a number (or sometimes string).
+  rate: number | string;
+  estimated_delivery_days?: string | number;
+  // Only couriers with `is_surface_max_weight: false` (or similar flags) are
+  // marked serviceable; the API filters these for us.
+}
+
+/**
+ * Asks ShipRocket which couriers can deliver this parcel and at what rate.
+ * Returns the cheapest option, or null when nothing is serviceable
+ * (unreachable pincode, parcel too heavy, etc.). Callers should fall back to
+ * the configured flat rate with a visible "estimated" marker, NOT silently.
+ *
+ * The returned amount is in PAISE even though ShipRocket's own API uses
+ * rupees — paise is what the rest of our pricing code uses, and converting
+ * at the boundary keeps the rest of checkout.ts unaware of the gateway.
+ */
+export async function getShippingRate(input: ShippingRateInput): Promise<ShippingRateQuote | null> {
+  if (!isShiprocketConfigured()) return null;
+  const token = await getToken();
+
+  const params = new URLSearchParams({
+    pickup_postcode: input.pickupPincode,
+    delivery_postcode: input.dropPincode,
+    weight: Math.max(0.5, input.weightKg).toFixed(2),
+    cod: input.codEnabled ? "1" : "0",
+    declared_value: input.valueInr.toFixed(0),
+  });
+
+  const res = await fetch(`${CONFIG!.baseUrl}/courier/serviceability?${params.toString()}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    // Log once; caller falls back.
+    console.error(JSON.stringify({ event: "shiprocket.rate.failed", status: res.status, pickupPincode: input.pickupPincode, dropPincode: input.dropPincode }));
+    return null;
+  }
+  const body = (await res.json().catch(() => ({}))) as {
+    data?: {
+      available_courier_companies?: ShiprocketCourierOption[];
+      // ShipRocket also returns a `recommended_courier_company_id` field; we
+      // deliberately pick cheapest instead of theirs (their recommendation
+      // factors in a per-plan preference that may not align with ours).
+    };
+  };
+
+  const options = body.data?.available_courier_companies ?? [];
+  if (options.length === 0) return null;
+
+  // Normalise rate to a number (ShipRocket is inconsistent about string vs number).
+  const normalised = options
+    .map((o) => ({ ...o, rateNum: typeof o.rate === "string" ? Number(o.rate) : o.rate }))
+    .filter((o) => Number.isFinite(o.rateNum) && o.rateNum > 0);
+  if (normalised.length === 0) return null;
+
+  normalised.sort((a, b) => a.rateNum - b.rateNum);
+  const cheapest = normalised[0]!;
+  return {
+    carrier: cheapest.courier_name,
+    ratePaise: Math.round(cheapest.rateNum * 100),
+    courierCompanyId: cheapest.courier_company_id,
+    estimatedDeliveryDays:
+      cheapest.estimated_delivery_days != null && cheapest.estimated_delivery_days !== ""
+        ? Number(cheapest.estimated_delivery_days)
+        : null,
+  };
+}
+
 export async function bookShipment(input: ShipmentBookingInput): Promise<BookedShipment> {
   if (!isShiprocketConfigured()) {
     throw new Error("ShipRocket is not configured; no shipment was booked");

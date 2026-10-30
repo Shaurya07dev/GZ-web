@@ -429,6 +429,19 @@ export interface PhysicalCoaRequestDoc {
   courierRef: string | null;
 }
 
+/**
+ * Snapshot of the live ShipRocket serviceability quote at order-creation time.
+ * Null when ShipRocket was unavailable / no serviceable courier / dev-mode;
+ * the UI uses `null` to render an "estimated — final at dispatch" badge next
+ * to the delivery line. Added 2026-10-30; older orders carry no field at all.
+ */
+export interface OrderShippingQuote {
+  carrier: string;
+  ratePaise: number;
+  courierCompanyId: number;
+  estimatedDeliveryDays: number | null;
+}
+
 export interface OrderDoc {
   artworkId: string;
   customerId: string;
@@ -442,6 +455,8 @@ export interface OrderDoc {
   totalPaise: number;
   status: OrderStatus;
   rateConfigVersionId: string;
+  /** Live ShipRocket quote this delivery charge was based on, or null if the flat fallback was used. */
+  shippingQuote?: OrderShippingQuote | null;
   /** The artist and their price when the buyer's total was fixed. The sale settles on these, never
    *  on the live price, which the artist may still edit. Absent on orders created before 2026-10-30. */
   artistId?: string;

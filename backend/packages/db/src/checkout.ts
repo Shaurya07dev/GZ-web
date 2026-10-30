@@ -31,6 +31,23 @@ export interface CreateOrderInput {
   artworkId: string;
   addressId: string;
   idempotencyKey: string;
+  /**
+   * Live ShipRocket serviceability quote for this specific pickup→drop + weight,
+   * resolved by the caller BEFORE invoking createOrder (controller does the HTTP).
+   * When present, `ratePaise` overrides `rates.deliveryChargePaise`. When absent
+   * (ShipRocket unavailable / no serviceable courier / dev mode without creds),
+   * createOrder falls back to the flat rate and records `shippingQuote: null`
+   * on the order so the UI can render an "estimated" badge.
+   */
+  deliveryQuote?: ShippingQuoteSnapshot | undefined;
+}
+
+/** Snapshotted on the order so re-visits never show a different number. */
+export interface ShippingQuoteSnapshot {
+  carrier: string;
+  ratePaise: number;
+  courierCompanyId: number;
+  estimatedDeliveryDays: number | null;
 }
 
 export interface CreateOrderResult {
@@ -38,7 +55,7 @@ export interface CreateOrderResult {
   totalPaise: number;
 }
 
-export async function createOrder({ db, customerId, artworkId, addressId, idempotencyKey }: CreateOrderInput): Promise<CreateOrderResult> {
+export async function createOrder({ db, customerId, artworkId, addressId, idempotencyKey, deliveryQuote }: CreateOrderInput): Promise<CreateOrderResult> {
   const pricingSnap = await db.collection(artworkPricingCol(artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new CheckoutError(`No artwork ${artworkId}`);
   const pricing = pricingSnap.data() as ArtworkPricingDoc;
@@ -77,7 +94,12 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   const rates: PricingRates = activeVersion.rates;
 
   const displayPrice = displayPriceOf(pricing.artistPricePaise, rates);
-  const checkout = checkoutTotal(displayPrice, rates);
+  // When the caller supplied a live ShipRocket quote, override the flat
+  // rates.deliveryChargePaise with that courier's actual rate for this
+  // pickup→drop + weight. When absent, the fallback kicks in (checkoutTotal's
+  // own default) and the order records `shippingQuote: null` so the UI can
+  // show "estimated — final at dispatch".
+  const checkout = checkoutTotal(displayPrice, rates, deliveryQuote?.ratePaise);
   const gstPaise = gstIncludedIn(displayPrice, rates);
 
   const orderRef = db.collection(Collections.orders).doc();
@@ -95,6 +117,10 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     rateConfigVersionId: activeVersion.id,
     artistId: pricing.artistId,
     artistPricePaise: pricing.artistPricePaise,
+    // Freeze the ShipRocket quote (if any) onto the order so re-reads always
+    // show the same courier + rate. Null = checkout used the flat fallback,
+    // UI can render an "estimated" badge.
+    shippingQuote: deliveryQuote ?? null,
     createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
   };
   await orderRef.set(orderDoc);
