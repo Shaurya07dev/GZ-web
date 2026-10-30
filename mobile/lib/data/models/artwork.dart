@@ -62,9 +62,9 @@ bool isAggregatorListed(ListingType type) =>
     type != ListingType.marketplaceOnly;
 
 /// GalleryZone's rank for a piece — Rare / Unique / Original / Standard —
-/// shown as a badge over the artwork. It is GalleryZone's call, never the
-/// artist's: an admin sets it when approving a piece, it can be changed
-/// later but never cleared, so every listed piece carries one.
+/// shown as a badge over the artwork. Admin usually sets R/U/O/S when
+/// approving; anything unranked reads as [ArtworkRarity.general] on
+/// buyer-facing surfaces so cards never render without a stamp.
 ///
 /// "Standard" (S) was "Normal" (N) until 30 Sep 2026. Saved data and old API
 /// rows may still say `N`; [ArtworkRarityConverter] reads it as Standard.
@@ -77,6 +77,8 @@ enum ArtworkRarity {
   original,
   @JsonValue('S')
   standard,
+  @JsonValue('G')
+  general,
 }
 
 const artworkRarityCode = {
@@ -84,6 +86,7 @@ const artworkRarityCode = {
   ArtworkRarity.unique: 'U',
   ArtworkRarity.original: 'O',
   ArtworkRarity.standard: 'S',
+  ArtworkRarity.general: 'G',
 };
 
 const artworkRarityLabel = {
@@ -91,6 +94,7 @@ const artworkRarityLabel = {
   ArtworkRarity.unique: 'Unique',
   ArtworkRarity.original: 'Original',
   ArtworkRarity.standard: 'Standard',
+  ArtworkRarity.general: 'General',
 };
 
 const artworkRarityDescription = {
@@ -98,15 +102,17 @@ const artworkRarityDescription = {
   ArtworkRarity.unique: 'Singular piece — the only one in existence.',
   ArtworkRarity.original: 'Hand-made original by the artist.',
   ArtworkRarity.standard: 'Open edition or standard listing.',
+  ArtworkRarity.general: 'Default when no rank has been assigned yet.',
 };
 
-/// Reads a rank from the API or from saved data: `S`, or the retired `N`.
-/// Anything unrecognised is "unranked" (null) rather than a crash.
+/// Reads a rank from the API or from saved data: `R`/`U`/`O`/`S`/`G`, or the
+/// retired `N`. Anything unrecognised is "unranked" (null) rather than a crash.
 ArtworkRarity? artworkRarityFromCode(String? code) => switch (code) {
   'R' => ArtworkRarity.rare,
   'U' => ArtworkRarity.unique,
   'O' => ArtworkRarity.original,
   'S' || 'N' => ArtworkRarity.standard,
+  'G' => ArtworkRarity.general,
   _ => null,
 };
 

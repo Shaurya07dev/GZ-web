@@ -476,7 +476,7 @@ function RanksSlide({
         <h2 className={HEADING}>Every painting has a rank</h2>
         <p className="mt-4 max-w-md text-[0.95rem] leading-relaxed text-foreground/80">
           Artists do not pick it. GalleryZone reviews each work and gives it
-          one of four ranks before it goes live. Choose one to see its works.
+          one of five ranks before it goes live. Choose one to see its works.
         </p>
       </div>
 
@@ -495,13 +495,14 @@ function RanksSlide({
 }
 
 // Each rank's own colour: its tile, the card's tint and its edge. The same
-// four hues the marketplace cards stamp on a piece, a little brighter so they
+// five hues the marketplace cards stamp on a piece, a little brighter so they
 // hold up on the dark card.
 const RANK_COLOR: Record<ArtworkRarity, string> = {
   R: "#e5484d",
   U: "#12b886",
   O: "#e0a63e",
   S: "#9aa4b2",
+  G: "#64748b",
 };
 
 const RANK_CARD =

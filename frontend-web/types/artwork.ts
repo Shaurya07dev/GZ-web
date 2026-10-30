@@ -333,15 +333,16 @@ export const WITHDRAWABLE_STATUSES = new Set<ArtworkStatus>([
 // its name behind, so an artist cannot self-declare their work Rare — the
 // admin sets it from /admin/artworks/<id>.
 //
-// Every piece carries one — it is compulsory, chosen by an admin when the piece
-// is approved and changeable afterwards, never cleared. "S" (Standard) was "N"
+// Every piece ends up with one on buyer-facing surfaces. Admin usually sets
+// R/U/O/S when approving; anything left unranked defaults to "G" (General)
+// so cards never render without a rarity stamp. "S" (Standard) was "N"
 // (Normal) before the rename.
-export type ArtworkRarity = "R" | "U" | "O" | "S";
+export type ArtworkRarity = "R" | "U" | "O" | "S" | "G";
 
 /** Reads a rank from the API, mapping the retired "N" onto "S". */
 export function normalizeRarity(value: string | null | undefined): ArtworkRarity | null {
   if (value === "N") return "S";
-  return value === "R" || value === "U" || value === "O" || value === "S" ? value : null;
+  return value === "R" || value === "U" || value === "O" || value === "S" || value === "G" ? value : null;
 }
 
 export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {
@@ -349,6 +350,7 @@ export const ARTWORK_RARITY_LABEL: Record<ArtworkRarity, string> = {
   U: "Unique",
   O: "Original",
   S: "Standard",
+  G: "General",
 };
 
 export const ARTWORK_RARITY_OPTIONS: {
@@ -375,6 +377,11 @@ export const ARTWORK_RARITY_OPTIONS: {
     value: "S",
     label: "Standard",
     description: "Open edition or standard listing.",
+  },
+  {
+    value: "G",
+    label: "General",
+    description: "Default when no rank has been assigned yet.",
   },
 ];
 

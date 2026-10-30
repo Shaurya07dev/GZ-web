@@ -55,12 +55,13 @@ assert.deepEqual(ids(queryMarketplace(all, { rarity: "R" })), ["b"]);
 // Standard was "N" (Normal) before the rename: old documents read as "S", junk reads as unranked.
 assert.equal(normalizeRarity("N"), "S");
 assert.equal(normalizeRarity("S"), "S");
+assert.equal(normalizeRarity("G"), "G");
 assert.equal(normalizeRarity("X"), null);
 assert.equal(normalizeRarity(null), null);
-// A buyer never sees an unranked painting: it reads as Standard until an admin ranks it.
-assert.equal(publicRank(null), "S");
-assert.equal(publicRank(undefined), "S");
-assert.equal(publicRank("X"), "S");
+// A buyer never sees an unranked painting: it reads as General until an admin ranks it.
+assert.equal(publicRank(null), "G");
+assert.equal(publicRank(undefined), "G");
+assert.equal(publicRank("X"), "G");
 assert.equal(publicRank("N"), "S");
 assert.equal(publicRank("U"), "U");
 assert.deepEqual(ids(queryMarketplace(all, { minPricePaise: 150_00, maxPricePaise: 250_00 })), ["c"]);

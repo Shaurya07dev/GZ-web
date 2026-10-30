@@ -3,12 +3,15 @@ import { cn } from "@/lib/utils";
 
 // Solid, per-rank colors for the "stamp" variant — a rank has to read at a
 // glance over a busy photo, which a shared translucent gold pill (the "pill"
-// variant, used everywhere else) can't do across four different ranks.
+// variant, used everywhere else) can't do across five different ranks.
 export const STAMP_TONE: Record<ArtworkRarity, string> = {
   R: "bg-destructive text-white",
   U: "bg-emerald-600 text-white",
   O: "bg-gold-deep text-white",
   S: "bg-muted-foreground text-background",
+  // "General" is the default when no rank has been assigned — slightly cooler
+  // and softer than Standard so it reads as "unranked baseline" at a glance.
+  G: "bg-slate-600 text-slate-100",
 };
 
 // The rarity mark that sits over an artwork image. It spells the word rather
@@ -21,7 +24,7 @@ export function RarityBadge({
 }: {
   rarity: ArtworkRarity | null | undefined;
   /** "pill": translucent gold outline, used everywhere. "stamp": solid,
-   * per-rank color for the marketplace card corner, where four ranks need to
+   * per-rank color for the marketplace card corner, where five ranks need to
    * be tellable apart at a glance. */
   variant?: "pill" | "stamp";
   className?: string;
