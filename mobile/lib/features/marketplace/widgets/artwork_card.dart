@@ -716,7 +716,7 @@ class EmptyState extends StatelessWidget {
 ///
 /// Two looks, as on the website. The pill (default) is the translucent gold
 /// outline used wherever a rank is named; the [stamp] is a solid, per-rank
-/// colour for the marketplace card corner, where four ranks have to be told
+/// colour for the marketplace card corner, where five ranks have to be told
 /// apart at a glance over a busy photo.
 class RarityBadge extends StatelessWidget {
   const RarityBadge({super.key, required this.rarity, this.stamp = false});
@@ -725,8 +725,8 @@ class RarityBadge extends StatelessWidget {
   final bool stamp;
 
   /// The stamp's solid colour for each rank, with the text colour that reads
-  /// on it. Red, green, gold, grey — distinct for colour-blind viewers too,
-  /// since the letter is always printed on it.
+  /// on it. Red, green, gold, grey, slate — distinct for colour-blind viewers
+  /// too, since the letter is always printed on it.
   static (Color, Color) stampTone(BuildContext context, ArtworkRarity rank) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return switch (rank) {
@@ -740,6 +740,9 @@ class RarityBadge extends StatelessWidget {
         dark ? AppColors.darkMutedForeground : AppColors.lightMutedForeground,
         dark ? AppColors.darkBackground : AppColors.lightBackground,
       ),
+      // "General" is the default when no rank has been assigned — slightly
+      // cooler and softer than Standard so it reads as "unranked baseline".
+      ArtworkRarity.general => (const Color(0xFF475569), const Color(0xFFE2E8F0)),
     };
   }
 

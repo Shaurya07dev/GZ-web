@@ -882,16 +882,17 @@ class _ToolbarButton extends StatelessWidget {
 }
 
 /// Each rank's own colour: the tile, the card's tint and its edge. The same
-/// four hues the cards stamp on a piece, a little brighter so they hold up on
+/// hues the cards stamp on a piece, a little brighter so they hold up on
 /// a tinted card.
 const _rankColor = {
   ArtworkRarity.rare: Color(0xFFE5484D),
   ArtworkRarity.unique: Color(0xFF12B886),
   ArtworkRarity.original: Color(0xFFE0A63E),
   ArtworkRarity.standard: Color(0xFF9AA4B2),
+  ArtworkRarity.general: Color(0xFF64748B),
 };
 
-/// "Every painting has a rank" — what the four ranks mean and how many works
+/// "Every painting has a rank" — what the five ranks mean and how many works
 /// each holds; a rank with works is a shortcut to them.
 class _RankGuide extends StatelessWidget {
   const _RankGuide({required this.counts, required this.onPick});
@@ -931,7 +932,7 @@ class _RankGuide extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Artists do not pick it. GalleryZone reviews each work and gives it one of four ranks before it '
+              'Artists do not pick it. GalleryZone reviews each work and gives it one of five ranks before it '
               'goes live. Choose one to see its works.',
               style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
             ),

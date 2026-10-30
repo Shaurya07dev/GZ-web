@@ -44,22 +44,27 @@ export type UserStatus = (typeof userStatusValues)[number];
 
 export type RoleGrant = "platform_admin" | "finance_admin" | "moderation_admin";
 export type ListingType = "marketplace_only" | "aggregator_only" | "marketplace_and_aggregator";
-export const artworkRarityValues = ["R", "U", "O", "S"] as const;
+export const artworkRarityValues = ["R", "U", "O", "S", "G"] as const;
 export type ArtworkRarity = (typeof artworkRarityValues)[number];
 
-/** Standard used to be "N" (Normal); documents ranked before the rename still carry it. */
+/**
+ * Standard used to be "N" (Normal); documents ranked before the rename still
+ * carry it. Returns null for anything else — publicRank() applies the General
+ * fallback for buyer-facing display, admin screens show it as unranked.
+ */
 export function normalizeRarity(value: string | null | undefined): ArtworkRarity | null {
   if (value === "N") return "S";
   return (artworkRarityValues as readonly string[]).includes(value ?? "") ? (value as ArtworkRarity) : null;
 }
 
 /**
- * The rank a buyer sees. Every painting has one: approval refuses to go live
- * without it, and a piece approved before that rule reads as Standard until an
- * admin ranks it. Admin screens use normalizeRarity, so they still show it as unranked.
+ * The rank a buyer sees. Every piece shows one: approval encourages setting
+ * R/U/O/S, but anything unranked (or ranked before this field existed) reads
+ * as "General" (G) on buyer-facing surfaces so cards never render without a
+ * stamp. Admin screens use normalizeRarity, so they still show it as unranked.
  */
 export function publicRank(value: string | null | undefined): ArtworkRarity {
-  return normalizeRarity(value) ?? "S";
+  return normalizeRarity(value) ?? "G";
 }
 
 // --- Collection name constants -------------------------------------------------
