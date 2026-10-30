@@ -24,7 +24,6 @@ import {
   useProcessSettlementMutation,
   useRemittancesDue,
 } from "@/hooks/useAggregatorSettlements";
-import { PayeeDetails } from "@/components/shared/payee-details";
 import { formatINR } from "@/lib/utils";
 import type { Settlement, SettlementStatus } from "@/types/admin";
 
@@ -245,10 +244,22 @@ function RemittancesDueCard() {
         })}
       </ul>
 
-      <PayeeDetails
-        amount={total}
-        note={`GZ remittance ${due.length} sale${due.length > 1 ? "s" : ""}`}
-      />
+      {/* Audit §5: GalleryZone's bank/QR was displayed here for aggregator
+          cash-sale remittance (PayeeDetails). Owner directive 30 Oct 2026:
+          remove bank/QR from aggregator view; cash remittance moves to a
+          Razorpay payment link. Placeholder shown until the backend
+          endpoint lands (feat/aggregator-razorpay-remittance). */}
+      <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
+        <p className="font-medium text-foreground">
+          Remit ₹{(total / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })} to GalleryZone
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Pay through Razorpay — the link is being added. For now, contact
+          finance@galleryzone.art with these sale IDs:
+          {" "}
+          {due.map((s) => s.id.slice(0, 8)).join(", ")}
+        </p>
+      </div>
     </div>
   );
 }

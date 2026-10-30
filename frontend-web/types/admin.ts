@@ -52,6 +52,15 @@ export interface WithdrawalRequest {
 
 export type SettlementStatus = "pending" | "processed" | "failed";
 
+/** Audit §5: payout destination shown inline on the admin settlement so admin
+ *  doesn't have to click into the artist profile to find bank details. */
+export interface PayoutMethod {
+  recipientName: string;
+  bankAccountMasked: string | null;
+  ifsc: string | null;
+  upiHandle: string | null;
+}
+
 export interface Settlement {
   id: string;
   orderId: string;
@@ -63,6 +72,8 @@ export interface Settlement {
   status: SettlementStatus;
   createdAt: string;
   processedAt: string | null;
+  /** Where the admin should send the money. Optional for backward-compat with older cached rows. */
+  payoutMethod?: PayoutMethod;
   // The money-flow sheets pay the artist 7 days after DELIVERY, not after the
   // sale. This is stamped when the piece is delivered; null means nothing has
   // been delivered yet, so no clock is running. Optional because the fixture
