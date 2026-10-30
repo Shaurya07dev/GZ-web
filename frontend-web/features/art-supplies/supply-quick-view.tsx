@@ -94,12 +94,9 @@ function QuickViewBody({ product }: { product: AffiliateProduct }) {
             rel={AFFILIATE_REL}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground text-sm font-semibold text-background transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-gold-bright dark:text-[#171310]"
           >
-            Buy on Amazon
+            Buy now
             <ArrowUpRight className="size-4" strokeWidth={2} />
           </a>
-          <p className="mt-3 text-center text-[11px] text-muted-foreground">
-            As an Amazon Associate, GalleryZone earns from qualifying purchases.
-          </p>
         </div>
       </div>
     </div>

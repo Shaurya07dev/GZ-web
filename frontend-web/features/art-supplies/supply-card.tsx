@@ -70,7 +70,7 @@ export function SupplyCard({ product, onQuickView }: { product: AffiliateProduct
               FOCUS,
             )}
           >
-            View on Amazon
+            Buy now
             <ArrowUpRight className="size-3.5" strokeWidth={2} />
           </a>
         </div>
