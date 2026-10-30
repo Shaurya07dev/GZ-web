@@ -11,6 +11,7 @@ import { PriceTag } from "@/components/shared/price-tag";
 import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import { OrderStatusTimeline } from "@/features/account/order-status-timeline";
 import { OrderPriceBreakdown } from "@/features/account/order-price-breakdown";
+import { DownloadInvoiceButton } from "@/components/shared/download-invoice-button";
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-IN", {
@@ -147,6 +148,27 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             convenienceFee={order.convenienceFee}
             convenienceGst={order.convenienceGst}
           />
+
+          {/* Audit §9: tax invoice is only valid once the order is paid. */}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                Tax invoice
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {order.status === "pending" || order.status === "cancelled"
+                  ? "An invoice is issued once your payment is confirmed."
+                  : "GST-compliant tax invoice for this order."}
+              </p>
+            </div>
+            <DownloadInvoiceButton
+              orderId={order.id}
+              disabled={
+                order.status === "pending" || order.status === "cancelled"
+              }
+              disabledReason="Invoice available once your payment is confirmed"
+            />
+          </div>
         </div>
       </div>
     </div>

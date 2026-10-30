@@ -7,6 +7,7 @@ import { AuthController } from "./auth/auth.controller.ts";
 import { PublicPricingRulesController, RateConfigController } from "./rate-config.controller.ts";
 import { ArtworksController } from "./artworks.controller.ts";
 import { OrdersController } from "./orders.controller.ts";
+import { InvoicesController } from "./invoices.controller.ts";
 import { AggregatorController } from "./aggregator.controller.ts";
 import { ModerationController } from "./moderation.controller.ts";
 import { ArtistArtworksController } from "./artist-artworks.controller.ts";
@@ -73,6 +74,7 @@ import { DbModule } from "./db.module.ts";
     PublicPricingRulesController,
     ArtworksController,
     OrdersController,
+    InvoicesController,
     AggregatorController,
     ModerationController,
     ArtistArtworksController,

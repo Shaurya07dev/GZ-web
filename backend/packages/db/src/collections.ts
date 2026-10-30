@@ -108,6 +108,8 @@ export const Collections = {
   blogs: "blogs",
   holdingReports: "holdingReports",
   reservationIntents: "reservationIntents",
+  /** Monotonic invoice-number counters, one doc per fiscal year (`FY2026-27`). */
+  invoiceCounters: "invoiceCounters",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -462,6 +464,48 @@ export interface OrderDoc {
   artistId?: string;
   artistPricePaise?: number;
   createdAt: FirebaseFirestore.Timestamp;
+  /** Tax-invoice snapshot — stamped on first PDF request and never rewritten,
+   *  so the invoice number and tax split stay stable regardless of later rate
+   *  changes or buyer-address edits. Audit §9. */
+  invoice?: InvoiceSnapshot | null;
+}
+
+/** Lives on the order doc so the invoice number can't drift across reads. */
+export interface InvoiceSnapshot {
+  /** Human-readable invoice number, e.g. "GZ/26-27/000001". Globally unique. */
+  number: string;
+  /** Fiscal year the counter was drawn from, e.g. "FY2026-27". */
+  fiscalYear: string;
+  /** Seller legal identity frozen at the moment the invoice was stamped. */
+  seller: {
+    legalName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    gstin: string | null;
+    stateCode: string;
+  };
+  /** Buyer identity + place of supply frozen at stamp time. */
+  buyer: {
+    name: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  /** How the GST was split. Intra-state → cgst+sgst; inter-state → igst. */
+  taxBreakdown:
+    | { kind: "intra_state"; cgstPaise: number; sgstPaise: number }
+    | { kind: "inter_state"; igstPaise: number };
+  issuedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface InvoiceCounterDoc {
+  fiscalYear: string;
+  nextSeq: number;
 }
 
 export interface OrderStatusEventDoc {
