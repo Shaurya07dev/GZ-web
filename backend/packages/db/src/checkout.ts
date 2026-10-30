@@ -123,6 +123,15 @@ export interface PaymentCapture {
   method: string;
   providerPaymentId: string | null;
   rawWebhookPayload?: unknown;
+  /**
+   * Razorpay's ACTUAL fee for this payment (paise). From the webhook's
+   * `payload.payment.entity.fee`. Null on simulated payments or when the
+   * caller is `verify` (which doesn't have the webhook payload yet — the
+   * fee lands later when the webhook fires).
+   */
+  gatewayFeeActualPaise?: number | null;
+  /** The GST on that fee (same payload: `.tax`). */
+  gatewayFeeGstActualPaise?: number | null;
 }
 
 export interface PaymentConfirmation {
@@ -256,11 +265,24 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   // pending capture and could mark it failed.
   const paymentSnap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
   if (!paymentSnap.empty) {
+    // `markOrderPaid` is called from both the browser-driven /verify path AND
+    // the Razorpay webhook. The actual fee and tax are only present on the
+    // webhook payload — `/verify` passes undefined. Writing undefined would
+    // nuke a previously-captured value, so skip the field unless the caller
+    // supplied it. The webhook that arrives seconds later fills it in.
+    const feeUpdate: Record<string, unknown> = {};
+    if (capture.gatewayFeeActualPaise !== undefined && capture.gatewayFeeActualPaise !== null) {
+      feeUpdate.gatewayFeeActualPaise = capture.gatewayFeeActualPaise;
+    }
+    if (capture.gatewayFeeGstActualPaise !== undefined && capture.gatewayFeeGstActualPaise !== null) {
+      feeUpdate.gatewayFeeGstActualPaise = capture.gatewayFeeGstActualPaise;
+    }
     await paymentSnap.docs[0]!.ref.update({
       status: "captured",
       method: capture.method,
       providerPaymentId: capture.providerPaymentId,
       rawWebhookPayload: capture.rawWebhookPayload ?? null,
+      ...feeUpdate,
     });
   }
 

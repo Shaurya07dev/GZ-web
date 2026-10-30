@@ -46,6 +46,7 @@ import type { Request } from "express";
 import { z } from "zod";
 import {
   CheckoutError,
+  type PaymentCapture,
   WalletTopupError,
   attachProviderOrder,
   attachTopupProviderOrder,
@@ -118,7 +119,19 @@ const badSignature = () => new BadRequestException({ type: "about:blank", title:
 interface WebhookEvent {
   event: string;
   payload?: {
-    payment?: { entity?: { id?: string; order_id?: string; method?: string; amount?: number; notes?: Record<string, string> } };
+    payment?: {
+      entity?: {
+        id?: string;
+        order_id?: string;
+        method?: string;
+        amount?: number;
+        notes?: Record<string, string>;
+        /** Razorpay's actual gateway fee for this payment, in paise. Varies by instrument + plan. */
+        fee?: number;
+        /** GST on that fee, in paise. */
+        tax?: number;
+      };
+    };
     order?: { entity?: { id?: string; receipt?: string; amount?: number; notes?: Record<string, string> } };
   };
 }
@@ -140,7 +153,7 @@ export class PaymentsController {
     return order;
   }
 
-  private async settle(orderId: string, capture: { method: string; providerPaymentId: string | null; rawWebhookPayload?: unknown }) {
+  private async settle(orderId: string, capture: PaymentCapture) {
     const result = await markOrderPaid(this.db, orderId, capture);
     this.cache.clear();
     void this.emails
@@ -462,6 +475,12 @@ export class PaymentsController {
             method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
             providerPaymentId: payment?.id ?? null,
             rawWebhookPayload: event,
+            // Razorpay reports the actual fee + GST on the payment entity
+            // (paise). This is the only place these numbers reach us —
+            // /verify runs before the fee is finalized. See
+            // `docs/audit/audit-report-30oct2026.md` item #4.
+            gatewayFeeActualPaise: typeof payment?.fee === "number" ? payment.fee : null,
+            gatewayFeeGstActualPaise: typeof payment?.tax === "number" ? payment.tax : null,
           });
         } catch (error) {
           // A cancelled order that later gets a capture is an operator problem, not a retry loop.

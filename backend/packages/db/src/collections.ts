@@ -465,6 +465,17 @@ export interface PaymentDoc {
   idempotencyKey: string;
   status: string;
   rawWebhookPayload: unknown;
+  /**
+   * Razorpay's ACTUAL gateway fee for this specific payment, straight from the
+   * `payment.captured` webhook (`payload.payment.entity.fee`). Varies by
+   * instrument: UPI 0, debit <₹2k 0.4%, credit 2%, international 3%, etc. We
+   * previously estimated a flat 2% + 18% GST at checkout — these fields let
+   * the invoice (and admin reconciliation) show the true number.
+   * Null on simulated / pre-capture / older payment docs that pre-date this field.
+   */
+  gatewayFeeActualPaise?: number | null;
+  /** The GST Razorpay charged on the fee (same payload: `payload.payment.entity.tax`). */
+  gatewayFeeGstActualPaise?: number | null;
   createdAt: FirebaseFirestore.Timestamp;
 }
 
