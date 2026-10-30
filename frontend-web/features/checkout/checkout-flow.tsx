@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { readSessionRole, subscribeToSession } from "@/lib/session";
 import { useMounted } from "@/hooks/useMounted";
+import { useCartStore } from "@/store/useCartStore";
 import { CheckoutAddressStep } from "./checkout-address-step";
 import { CheckoutReviewStep } from "./checkout-review-step";
 import { CheckoutConfirmStep } from "./checkout-confirm-step";
@@ -40,6 +41,21 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
   const isFirstRender = useRef(true);
   const mounted = useMounted();
   const sessionRole = useSyncExternalStore(subscribeToSession, readSessionRole, () => null);
+
+  // Audit §6 ("unfinished-buy auto-add"): if the buyer opens checkout and
+  // leaves without placing the order, drop the piece into their cart so they
+  // can resume later rather than having to re-find it. Ref-tracked so the
+  // "placed" state is read at unmount, not frozen at mount.
+  const placedRef = useRef(placedOrder);
+  placedRef.current = placedOrder;
+  useEffect(() => {
+    const artworkId = artwork.id;
+    return () => {
+      if (placedRef.current) return;
+      const { has, add } = useCartStore.getState();
+      if (!has(artworkId)) add(artworkId);
+    };
+  }, [artwork.id]);
 
   // Each step is shorter than the one before it, so moving forward leaves the
   // window scrolled past the new step — you land looking at the footer. Pull
