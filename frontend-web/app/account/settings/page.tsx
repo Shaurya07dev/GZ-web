@@ -19,6 +19,11 @@ import {
   useCustomerProfile,
   useUpdateProfileMutation,
 } from "@/hooks/useCustomerProfile";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferencesMutation,
+  type NotificationPreferences,
+} from "@/hooks/useNotificationPreferences";
 import type { CustomerProfile } from "@/types/customer";
 
 // Deliberately small, per the spec (§4): name/email/phone only. No password
@@ -160,6 +165,93 @@ export default function AccountSettingsPage() {
               </Button>
             </div>
           </form>
+        )}
+      </div>
+
+      <NotificationPreferencesCard />
+    </div>
+  );
+}
+
+function NotificationPreferencesCard() {
+  const { data: prefs, isPending } = useNotificationPreferences();
+  const update = useUpdateNotificationPreferencesMutation();
+
+  function toggle(key: keyof NotificationPreferences, next: boolean) {
+    update.mutate(
+      { [key]: next },
+      {
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  }
+
+  const items: {
+    key: keyof NotificationPreferences;
+    title: string;
+    description: string;
+  }[] = [
+    {
+      key: "abandonedCart",
+      title: "Abandoned cart reminders",
+      description: "Email us if you added a piece to your cart but didn't check out.",
+    },
+    {
+      key: "marketing",
+      title: "News and announcements",
+      description: "Platform updates, new artist drops, feature releases.",
+    },
+    {
+      key: "weeklyDigest",
+      title: "Weekly digest",
+      description: "A once-a-week roundup of marketplace activity.",
+    },
+    {
+      key: "pushEnabled",
+      title: "Push notifications",
+      description: "Allow pushes on devices you've signed in to.",
+    },
+  ];
+
+  return (
+    <div className="max-w-lg">
+      <h2 className="font-display text-xl font-semibold text-foreground">
+        Notifications
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Transactional emails like order confirmations, invoices, and password
+        resets are always sent — these controls only cover reminders and
+        news.
+      </p>
+
+      <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+        {isPending || !prefs ? (
+          <Skeleton className="h-20 w-full rounded-md" />
+        ) : (
+          items.map((item) => (
+            <label
+              key={item.key}
+              htmlFor={`notif-${item.key}`}
+              className="flex items-start justify-between gap-4 border-b border-border/60 pb-3 last:border-b-0 last:pb-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">
+                  {item.title}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {item.description}
+                </p>
+              </div>
+              <input
+                id={`notif-${item.key}`}
+                type="checkbox"
+                checked={prefs[item.key]}
+                disabled={update.isPending}
+                onChange={(e) => toggle(item.key, e.target.checked)}
+                className="mt-1 size-4 accent-gold-bright"
+              />
+            </label>
+          ))
         )}
       </div>
     </div>

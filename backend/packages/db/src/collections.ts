@@ -210,7 +210,42 @@ export interface ProfileDoc {
    * input; never shown to buyers. Null until an admin has rated them.
    */
   galleryzoneRating?: number | null;
+  /** Per-channel notification opt-outs. Absent = everything opted in, which
+   *  is the safe default for a transactional-only sender. Audit §8. */
+  notificationPreferences?: NotificationPreferences;
 }
+
+/**
+ * What the user has opted out of. Transactional emails (order paid, password
+ * reset, settlement failed) ignore these — they're legally/operationally
+ * required. Only marketing-adjacent categories (abandoned cart, promotions)
+ * check them.
+ */
+export interface NotificationPreferences {
+  /** Reminder when the buyer has pieces sitting in their cart for 24h+. */
+  abandonedCart?: boolean;
+  /** Platform-wide announcements, new-artist drops, feature releases. */
+  marketing?: boolean;
+  /** Weekly digest of marketplace activity (artist/aggregator only). */
+  weeklyDigest?: boolean;
+  /** Push notifications on registered devices for any category. */
+  pushEnabled?: boolean;
+}
+
+/**
+ * Live device tokens for FCM. One doc per device, under
+ * users/{uid}/fcmTokens/{token}. We keep the token itself as the doc id so
+ * registering the same token twice is a no-op. Audit §8.
+ */
+export interface FcmTokenDoc {
+  token: string;
+  platform: "ios" | "android" | "web";
+  deviceLabel: string | null;
+  createdAt: FirebaseFirestore.Timestamp;
+  lastSeenAt: FirebaseFirestore.Timestamp;
+}
+
+export const userFcmTokensCol = (userId: string) => `users/${userId}/fcmTokens`;
 
 export interface FinancialDoc {
   bankAccountEncrypted: string | null;

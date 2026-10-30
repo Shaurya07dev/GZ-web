@@ -47,5 +47,6 @@ export * from "./blogs.ts";
 export * from "./holding-reports.ts";
 export * from "./reservation-intents.ts";
 export * from "./notifications.ts";
+export * from "./notification-preferences.ts";
 export * from "./holding-claim.ts";
 export * from "./invoices.ts";
