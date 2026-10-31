@@ -245,6 +245,40 @@ export async function hasApprovedGst(db: Firestore, uid: string): Promise<boolea
   return (snap.data() as Partial<ProfileDoc> | undefined)?.gstStatus === "approved";
 }
 
+/**
+ * Set (or clear) the signed-in account's profile photo. Mirrors the
+ * profileImageUrl onto publicProfiles for artists/aggregators so the public
+ * card shows it without a second query.
+ *
+ * The URL is the API's own /v1/images/profiles/{uid}/{file} path, which
+ * carries an immutable cache header — each upload gets a fresh key so
+ * replacing the photo invalidates the browser cache automatically.
+ */
+export async function setProfilePhotoUrl(
+  db: Firestore,
+  uid: string,
+  photoUrl: string | null,
+): Promise<void> {
+  const userRef = db.collection(Collections.users).doc(uid);
+  const profileRef = db.collection(userProfileCol(uid)).doc("data");
+  const publicRef = db.collection(Collections.publicProfiles).doc(uid);
+  const userSnap = await userRef.get();
+  const user = userSnap.data() as UserDoc | undefined;
+  if (!user) throw new ProfileUpdateError(`No user ${uid}`);
+  const batch = db.batch();
+  batch.set(profileRef, { profileImageUrl: photoUrl }, { merge: true });
+  if (user.role === "artist" || user.role === "aggregator") {
+    batch.set(publicRef, { profileImageUrl: photoUrl }, { merge: true });
+  }
+  await batch.commit();
+}
+
+/** The uid that currently owns a profile-photo object key, or null. */
+export async function getProfilePhotoUrl(db: Firestore, uid: string): Promise<string | null> {
+  const snap = await db.collection(userProfileCol(uid)).doc("data").get();
+  return (snap.data() as Partial<ProfileDoc> | undefined)?.profileImageUrl ?? null;
+}
+
 /** Payouts to artists and aggregators need admin-approved KYC (the approval email promises exactly that). */
 export async function hasApprovedKyc(db: Firestore, uid: string): Promise<boolean> {
   if (!uid) return false;

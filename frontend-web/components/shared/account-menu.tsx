@@ -39,7 +39,7 @@ export function AccountMenu({
         aria-label="Account menu"
         className="flex items-center rounded-full p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <UserAvatar name={me?.name} className="size-8" />
+        <UserAvatar name={me?.name} photoUrl={me?.photoUrl} className="size-8" />
       </PopoverTrigger>
       <PopoverContent side="bottom" align="end" className="w-60 gap-0 p-1.5">
         <div className="px-2.5 py-2">

@@ -5,7 +5,6 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { useState, type FormEvent } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -51,7 +50,9 @@ import {
 import { InstagramGlyph } from "@/components/social-icons";
 import {
   useArtistAccountProfile,
+  useRemoveProfilePhotoMutation,
   useSaveArtistProfileMutation,
+  useUploadProfilePhotoMutation,
 } from "@/hooks/useArtistAccount";
 import {
   useStartAadhaarVerificationMutation,
@@ -301,24 +302,10 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           Public profile
         </h2>
 
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Profile photo</p>
-            <p className="text-xs text-muted-foreground">
-              Shown on your public artist page.
-            </p>
-          </div>
-          <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-gold/40">
-            <UserAvatar name={me?.name} className="size-full text-base" />
-            <button
-              type="button"
-              aria-label="Change photo"
-              className="absolute inset-0 flex items-center justify-center bg-background/0 text-transparent transition-colors hover:bg-background/60 hover:text-foreground"
-            >
-              <Camera className="size-4" />
-            </button>
-          </div>
-        </div>
+        <ProfilePhotoField
+          name={me?.name ?? profile.fullName}
+          photoUrl={profile.profileImageUrl}
+        />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
@@ -950,6 +937,76 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           <MouAgreement />
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The profile photo picker. Three operations — upload (replaces any existing
+ * photo and auto-deletes the old key), remove, and the hover-to-change
+ * affordance that fires the file picker. Validation happens in profileApi:
+ *   - MIME type one of JPEG / PNG / WebP
+ *   - size ≤ 5 MB
+ * These are checked AGAIN on the server (controller + stored object HEAD),
+ * so a user with devtools can't bypass them.
+ */
+function ProfilePhotoField({
+  name,
+  photoUrl,
+}: {
+  name: string | null;
+  photoUrl: string | null;
+}) {
+  const upload = useUploadProfilePhotoMutation();
+  const remove = useRemoveProfilePhotoMutation();
+  const busy = upload.isPending || remove.isPending;
+
+  function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset the input so the same filename can be re-picked after a reject.
+    e.target.value = "";
+    if (!file) return;
+    upload.mutate(file);
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">Profile photo</p>
+        <p className="text-xs text-muted-foreground">
+          Shown on your public artist page. JPEG, PNG or WebP, up to 5&nbsp;MB.
+        </p>
+        {photoUrl && (
+          <button
+            type="button"
+            onClick={() => remove.mutate()}
+            disabled={busy}
+            className="mt-2 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:pointer-events-none disabled:opacity-50"
+          >
+            Remove photo
+          </button>
+        )}
+      </div>
+      <label
+        className="relative size-16 shrink-0 cursor-pointer overflow-hidden rounded-full border border-gold/40"
+        aria-label={photoUrl ? "Change photo" : "Upload photo"}
+      >
+        <UserAvatar
+          name={name}
+          photoUrl={photoUrl}
+          className="size-full text-base"
+        />
+        <span className="absolute inset-0 flex items-center justify-center bg-background/0 text-transparent transition-colors hover:bg-background/60 hover:text-foreground">
+          <Camera className="size-4" />
+        </span>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          disabled={busy}
+          onChange={onPick}
+        />
+      </label>
     </div>
   );
 }

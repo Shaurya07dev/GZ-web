@@ -10,7 +10,7 @@
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { getApps } from "firebase-admin/app";
-import { Collections, type PublicProfileDoc, type UserDoc, type UserRole } from "./collections.ts";
+import { Collections, userProfileCol, type PublicProfileDoc, type UserDoc, type UserRole } from "./collections.ts";
 import { DbError } from "./errors.ts";
 
 export class AuthError extends DbError {}
@@ -148,15 +148,23 @@ export interface CurrentUser {
   email: string;
   phone: string | null;
   roleGrants: string[];
+  /** The caller's uploaded profile photo, served from the API's bucket
+   *  proxy. Null until they upload one. Lives on users/{uid}/profile/data
+   *  rather than the user doc itself. */
+  photoUrl: string | null;
 }
 
 /** Reads the caller's own profile and stamps lastLoginAt. Null if no users/{uid} doc (OAuth user who hasn't bootstrapped yet). */
 export async function getCurrentUser(db: Firestore, uid: string, { touchLogin = true } = {}): Promise<CurrentUser | null> {
   const userRef = db.collection(Collections.users).doc(uid);
-  const snap = await userRef.get();
-  if (!snap.exists) return null;
-  const user = snap.data() as UserDoc;
+  const [userSnap, profileSnap] = await Promise.all([
+    userRef.get(),
+    db.doc(userProfileCol(uid) + "/data").get(),
+  ]);
+  if (!userSnap.exists) return null;
+  const user = userSnap.data() as UserDoc;
   if (touchLogin) await userRef.update({ lastLoginAt: FieldValue.serverTimestamp() });
+  const profile = profileSnap.data() as { profileImageUrl?: string | null } | undefined;
   return {
     uid,
     role: user.role,
@@ -165,6 +173,7 @@ export async function getCurrentUser(db: Firestore, uid: string, { touchLogin = 
     email: user.email,
     phone: user.phone ?? null,
     roleGrants: user.roleGrants ?? [],
+    photoUrl: profile?.profileImageUrl ?? null,
   };
 }
 
