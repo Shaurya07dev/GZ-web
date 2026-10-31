@@ -3,7 +3,9 @@ import '../../core/api/api_error.dart';
 import '../../core/api/json_utils.dart';
 import '../models/aggregator.dart' show DeliveryAddress;
 import '../models/artwork.dart' show PhysicalCoaRequest;
+import '../models/cart.dart';
 import '../models/customer.dart';
+import '../models/notification_prefs.dart';
 import '../models/order.dart';
 import '../repositories/customer_repository.dart';
 import 'mappers/commerce_mappers.dart';
@@ -254,6 +256,97 @@ class RemoteCustomerRepository implements CustomerRepository {
       message: message.trim(),
       status: SupportTicketStatus.open,
       createdAt: DateTime.now().toUtc().toIso8601String(),
+    );
+  }
+
+  // --- Cart ------------------------------------------------------------------
+  @override
+  Future<Cart> getCart() async =>
+      Cart.fromJson(await api.getMap('/v1/me/cart'));
+
+  @override
+  Future<Cart> addToCart(String artworkId) async => Cart.fromJson(
+    asMap(
+      await api.post('/v1/me/cart/items', body: {'artworkId': artworkId}),
+    ),
+  );
+
+  @override
+  Future<Cart> removeFromCart(String artworkId) async => Cart.fromJson(
+    asMap(
+      await api.delete(
+        '/v1/me/cart/items/${Uri.encodeComponent(artworkId)}',
+      ),
+    ),
+  );
+
+  @override
+  Future<Cart> clearCart() async =>
+      Cart.fromJson(asMap(await api.delete('/v1/me/cart')));
+
+  // --- Notification preferences --------------------------------------------
+  @override
+  Future<NotificationPreferences> getNotificationPreferences() async =>
+      NotificationPreferences.fromJson(
+        await api.getMap('/v1/account/notifications/preferences'),
+      );
+
+  @override
+  Future<NotificationPreferences> updateNotificationPreferences(
+    Map<String, bool> patch,
+  ) async => NotificationPreferences.fromJson(
+    asMap(
+      await api.patch(
+        '/v1/account/notifications/preferences',
+        body: patch,
+      ),
+    ),
+  );
+
+  @override
+  Future<void> registerFcmToken({
+    required String token,
+    required String platform,
+    String? deviceLabel,
+  }) async {
+    await api.post(
+      '/v1/account/notifications/devices',
+      body: _deviceBody(token, platform, deviceLabel),
+    );
+  }
+
+  static Map<String, dynamic> _deviceBody(
+    String token,
+    String platform,
+    String? deviceLabel,
+  ) {
+    final body = <String, dynamic>{'token': token, 'platform': platform};
+    if (deviceLabel != null) body['deviceLabel'] = deviceLabel;
+    return body;
+  }
+
+  @override
+  Future<void> revokeFcmToken(String token) async {
+    await api.delete(
+      '/v1/account/notifications/devices/${Uri.encodeComponent(token)}',
+    );
+  }
+
+  @override
+  Future<({List<int> bytes, String filename})> downloadInvoice(
+    String orderId,
+  ) async {
+    final res = await api.getBytes(
+      '/v1/orders/${Uri.encodeComponent(orderId)}/invoice.pdf',
+    );
+    // Short-eights of the order id when the server didn't name the file —
+    // enough to recognise but not the whole opaque id.
+    final shortId = orderId.length > 8
+        ? orderId.substring(orderId.length - 8)
+        : orderId;
+    return (
+      bytes: res.bytes,
+      filename: res.filename ?? 'gz-invoice-$shortId.pdf',
     );
   }
 }

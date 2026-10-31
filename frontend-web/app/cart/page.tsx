@@ -11,13 +11,14 @@ import { ArtworkCardSkeleton } from "@/components/shared/artwork-card-skeleton";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useMounted } from "@/hooks/useMounted";
-import { useCartStore } from "@/store/useCartStore";
+import { useCart } from "@/store/useCartStore";
 import { formatINR } from "@/lib/utils";
 
 export default function CartPage() {
   const mounted = useMounted();
-  const entries = useCartStore((state) => state.entries);
-  const remove = useCartStore((state) => state.remove);
+  const cart = useCart();
+  const entries = cart.entries;
+  const remove = (artworkId: string) => void cart.remove(artworkId);
 
   // Each item is read fresh so a sold or delisted piece drops out of the list
   // the same way the wishlist handles it.

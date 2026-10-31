@@ -41,6 +41,7 @@ import { Mailer } from "./mail/mailer.ts";
 import { Emails } from "./mail/emails.ts";
 import { PushSender } from "./mail/push.ts";
 import { NotificationPreferencesController } from "./notification-preferences.controller.ts";
+import { CartController } from "./cart.controller.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
@@ -116,6 +117,7 @@ import { DbModule } from "./db.module.ts";
     HoldingReportsController,
     AggregatorReservationIntentsController,
     NotificationPreferencesController,
+    CartController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -20,6 +20,8 @@ import '../../features/account/screens/coa_nfc_screen.dart';
 import '../../features/account/screens/orders_screen.dart';
 import '../../features/account/screens/resale_screen.dart';
 import '../../features/account/screens/support_screen.dart';
+import '../../features/account/screens/cart_screen.dart';
+import '../../features/account/screens/notification_settings_screen.dart';
 import '../../features/account/screens/wishlist_screen.dart';
 import '../../features/account/widgets/customer_shell.dart';
 import '../../features/aggregator/screens/aggregator_account_screens.dart';
@@ -373,6 +375,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: WishlistScreen.path,
                 builder: (context, state) => const WishlistScreen(),
+              ),
+              GoRoute(
+                path: CartScreen.path,
+                builder: (context, state) => const CartScreen(),
+              ),
+              GoRoute(
+                path: NotificationSettingsScreen.path,
+                builder: (context, state) =>
+                    const NotificationSettingsScreen(),
               ),
             ],
           ),

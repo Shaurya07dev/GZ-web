@@ -111,6 +111,8 @@ export const Collections = {
   /** Monotonic invoice-number counters, one doc per fiscal year (`FY2026-27`). */
   invoiceCounters: "invoiceCounters",
   aggregatorRemittances: "aggregatorRemittances",
+  /** Per-user shopping cart doc (one per uid). */
+  carts: "carts",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -779,6 +781,28 @@ export interface AggregatorRemittanceDoc {
   method: string | null;
   createdAt: FirebaseFirestore.Timestamp;
   paidAt: FirebaseFirestore.Timestamp | null;
+}
+
+/**
+ * Shopping cart for the signed-in user, one doc per uid (doc id == uid).
+ * The entries are a tiny shape — just artworkId + addedAt — so the browser
+ * joins to the live artwork at render time; a sold or delisted piece falls
+ * out naturally, and nothing goes stale in the cart.
+ *
+ * Moved from browser localStorage to Firestore on 31 Oct 2026 so the cart
+ * syncs across devices (web + mobile parity). Max cap enforced server-side
+ * so a tampered client can't fill the doc without bound.
+ */
+export interface CartEntry {
+  artworkId: string;
+  /** When the user ticked "add to cart". Drives the abandoned-cart sweep. */
+  addedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface CartDoc {
+  userId: string; // == the Firestore doc ID (users/{uid}/cart would also work; one doc per uid keeps the write path simple)
+  entries: CartEntry[];
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 export interface GallerySpaceDoc {

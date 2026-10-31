@@ -9,6 +9,7 @@ import 'core/auth/token_manager.dart';
 import 'core/backend.dart';
 import 'core/config.dart';
 import 'core/payments/razorpay_gateway.dart';
+import 'core/push/push_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/storage/secure_session.dart';
 import 'core/theme/app_theme.dart';
@@ -90,9 +91,24 @@ class GalleryZoneApp extends ConsumerWidget {
     // truth: once the server has said who this account is, make the app agree
     // — and let go of a session the server no longer recognises, an account
     // that has been closed, or an admin (who has no portal here).
-    ref.listen<AsyncValue<CurrentUser?>>(accountProvider, (_, next) {
+    ref.listen<AsyncValue<CurrentUser?>>(accountProvider, (prev, next) {
       if (!ref.read(remoteBackendProvider)) return;
       next.whenData(ref.read(sessionProvider.notifier).reconcile);
+      // FCM registration follows sign-in state. A fresh sign-in registers
+      // the device's token with the backend; a sign-out revokes it so
+      // pushes stop landing on this device. Initialize is idempotent and
+      // safe to call on every emission.
+      final fcm = ref.read(fcmServiceProvider);
+      next.whenData((user) async {
+        await fcm.initialize();
+        if (user != null) {
+          await fcm.registerForCurrentUser();
+        } else if (prev?.value != null) {
+          // User just signed out — revoke the token so the next
+          // sign-in on this device starts clean.
+          await fcm.unregisterCurrentDevice();
+        }
+      });
     });
 
     return MaterialApp.router(

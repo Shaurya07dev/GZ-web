@@ -9,7 +9,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCartStore, CART_MAX_ITEMS } from "@/store/useCartStore";
+import { useCart, CART_MAX_ITEMS } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
@@ -54,23 +54,30 @@ export function ArtworkInfoPanel({
 }: ArtworkInfoPanelProps) {
   const isWishlisted = useWishlistStore((state) => state.has(artwork.id));
   const toggleWishlist = useWishlistStore((state) => state.toggle);
-  const isInCart = useCartStore((state) => state.has(artwork.id));
-  const addToCart = useCartStore((state) => state.add);
-  const removeFromCart = useCartStore((state) => state.remove);
+  const cart = useCart();
+  const isInCart = cart.has(artwork.id);
 
-  function handleCartClick() {
-    if (isInCart) {
-      removeFromCart(artwork.id);
-      toast.success("Removed from cart");
-      return;
-    }
-    const added = addToCart(artwork.id);
-    if (added) {
+  async function handleCartClick() {
+    try {
+      if (isInCart) {
+        await cart.remove(artwork.id);
+        toast.success("Removed from cart");
+        return;
+      }
+      await cart.add(artwork.id);
       toast.success("Added to cart", {
         description: "View it in your cart whenever you're ready.",
       });
-    } else {
-      toast.error(`Cart is full (max ${CART_MAX_ITEMS} items).`);
+    } catch (error) {
+      // Server-side cap or auth problem — show the API's message. The server
+      // enforces the max so a full cart surfaces here even if the UI thought
+      // there was room.
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.toLowerCase().includes("cart")) {
+        toast.error(message || `Cart is full (max ${CART_MAX_ITEMS} items).`);
+      } else {
+        toast.error("Couldn't update your cart. Try again in a moment.");
+      }
     }
   }
 

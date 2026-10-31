@@ -868,6 +868,19 @@ class MockAggregatorRepository
   }
 
   @override
+  Future<void> payRemittanceViaRazorpay(List<String> saleIds) async {
+    if (saleIds.isEmpty) {
+      throw Exception('Pick at least one sale to remit');
+    }
+    // The mock has no gateway. Stamp each sale as remitted via the legacy
+    // bank path so the demo flow produces the same visible result (sale
+    // leaves the "owed to GalleryZone" list and shows a bank reference).
+    for (final id in saleIds) {
+      await markRemitted(id, via: RemitVia.bank);
+    }
+  }
+
+  @override
   Future<WalletTransaction> requestWithdrawal(double amount) {
     final wallet = _readWallet();
     final free = wallet.balance - wallet.lockedBalance;

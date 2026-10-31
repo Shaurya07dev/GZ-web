@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:printing/printing.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
@@ -284,6 +287,13 @@ class OrderDetailScreen extends ConsumerWidget {
                       style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                     ),
 
+                    // Tax invoice is only valid once the order is paid (web
+                    // parity, audit §9). Fetches the server-rendered PDF and
+                    // hands it to the OS share sheet so the user can save,
+                    // print or email it from their own apps.
+                    const SizedBox(height: 28),
+                    _TaxInvoiceCard(order: data),
+
                     // A paid order can be refunded; a pending or cancelled
                     // one either hasn't been charged or has already been
                     // auto-refunded by the gateway. The dialog creates a
@@ -450,6 +460,113 @@ class _RequestRefundDialogState extends ConsumerState<_RequestRefundDialog> {
               : const Text('Send request'),
         ),
       ],
+    );
+  }
+}
+
+/// Tax-invoice download card — matches the web DownloadInvoiceButton. The
+/// server stamps the invoice number on first fetch and keeps it on the
+/// order, so re-downloading always returns the same document.
+///
+/// A pending or cancelled order has no invoice to issue, so the button is
+/// disabled with the same reason the web shows.
+class _TaxInvoiceCard extends ConsumerStatefulWidget {
+  const _TaxInvoiceCard({required this.order});
+
+  final Order order;
+
+  @override
+  ConsumerState<_TaxInvoiceCard> createState() => _TaxInvoiceCardState();
+}
+
+class _TaxInvoiceCardState extends ConsumerState<_TaxInvoiceCard> {
+  bool _busy = false;
+
+  bool get _available =>
+      widget.order.status != OrderStatus.pending &&
+      widget.order.status != OrderStatus.cancelled;
+
+  Future<void> _download() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final result = await ref
+          .read(customerRepositoryProvider)
+          .downloadInvoice(widget.order.id);
+      // Hand the PDF to the OS share sheet: user can save, print, mail or
+      // open it in any PDF viewer. No app-side storage of PII.
+      await Printing.sharePdf(
+        bytes: Uint8List.fromList(result.bytes),
+        filename: result.filename,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                LucideIcons.receipt,
+                size: 16,
+                color: theme.colorScheme.tertiary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Tax invoice',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _available
+                ? 'GST-compliant tax invoice for this order.'
+                : 'An invoice is issued once your payment is confirmed.',
+            style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          Tooltip(
+            message: _available
+                ? ''
+                : 'Invoice available once your payment is confirmed',
+            child: OutlinedButton.icon(
+              onPressed: _available && !_busy ? _download : null,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(LucideIcons.download, size: 14),
+              label: Text(_busy ? 'Fetching invoice…' : 'Download invoice'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

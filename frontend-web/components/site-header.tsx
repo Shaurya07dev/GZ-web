@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   ShoppingCart,
 } from "lucide-react";
-import { useCartStore } from "@/store/useCartStore";
+import { useCart } from "@/store/useCartStore";
 import { SwitchMode } from "./switch-mode";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { SignOutDialog } from "@/components/shared/sign-out-dialog";
@@ -107,15 +107,11 @@ export function SiteHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Zustand's persist middleware hydrates on the client only, so during SSR
-  // we read 0 for the badge count. Using useSyncExternalStore keeps SSR output
-  // deterministic (no hydration mismatch) while still live-updating as items
-  // are added or removed.
-  const cartCount = useSyncExternalStore(
-    useCartStore.subscribe,
-    () => useCartStore.getState().entries.length,
-    () => 0,
-  );
+  // The cart is API-backed now (TanStack Query), so the count comes from
+  // whatever is in the query cache. 0 while the query is pending so SSR
+  // stays deterministic.
+  const cart = useCart();
+  const cartCount = cart.count();
 
   function handleSearchSubmit(query: string) {
     const trimmed = query.trim();
