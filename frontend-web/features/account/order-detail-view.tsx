@@ -12,6 +12,8 @@ import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import { OrderStatusTimeline } from "@/features/account/order-status-timeline";
 import { OrderPriceBreakdown } from "@/features/account/order-price-breakdown";
 import { DownloadInvoiceButton } from "@/components/shared/download-invoice-button";
+import { RequestRefundDialog } from "@/features/account/request-refund-dialog";
+import { formatINR } from "@/lib/utils";
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-IN", {
@@ -169,6 +171,32 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               disabledReason="Invoice available once your payment is confirmed"
             />
           </div>
+
+          {order.status !== "pending" && order.status !== "cancelled" && (
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
+              <h3 className="font-display text-sm font-semibold text-foreground">
+                Something wrong?
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Request a refund and support will take a look. Keep the
+                artwork for now — don&rsquo;t return anything until support
+                replies.
+              </p>
+              <div className="mt-1">
+                <RequestRefundDialog
+                  orderId={order.id}
+                  artworkTitle={artwork?.title ?? "Artwork"}
+                  totalLabel={formatINR(
+                    order.amount +
+                      order.gstAmount +
+                      order.deliveryCharge +
+                      order.convenienceFee +
+                      order.convenienceGst,
+                  )}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
