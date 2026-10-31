@@ -178,6 +178,18 @@ abstract class ArtistRepository {
   Future<ArtistProfileDetails> getProfile();
   Future<ArtistProfileDetails> updateProfile(ArtistProfileDetails profile);
 
+  /// Picks an image file off disk, uploads it to the storage bucket via the
+  /// API's presigned-PUT dance, and points the account at the new object.
+  /// Returns the served URL for the new photo. Validates MIME + size on
+  /// the client; the API checks the HEAD again before accepting.
+  Future<String> uploadProfilePhoto({
+    required String path,
+    required int sizeBytes,
+  });
+
+  /// Removes the profile photo. The storage object is deleted too.
+  Future<void> removeProfilePhoto();
+
   /// Checks the GSTIN stored on the server. No GSTIN is accepted in the body,
   /// so this cannot be used as an arbitrary registry lookup.
   Future<GstinCheckResult> verifySavedGstin();

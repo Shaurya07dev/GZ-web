@@ -230,6 +230,62 @@ function SettlementDetailDrawer({
                 </div>
               </dl>
 
+              {settlement.payoutMethod ? (
+                <section className="mt-4 rounded-md border border-gold/40 bg-gold/5 p-3.5">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-gold-bright">
+                    Payout destination
+                  </h3>
+                  <dl className="mt-2 space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-xs text-muted-foreground">
+                        Recipient
+                      </dt>
+                      <dd className="truncate text-sm text-foreground">
+                        {settlement.payoutMethod.recipientName}
+                      </dd>
+                    </div>
+                    {settlement.payoutMethod.bankAccountMasked ? (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-xs text-muted-foreground">
+                          Account
+                        </dt>
+                        <dd className="truncate font-mono text-sm tabular-nums text-foreground">
+                          {settlement.payoutMethod.bankAccountMasked}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {settlement.payoutMethod.ifsc ? (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-xs text-muted-foreground">IFSC</dt>
+                        <dd className="truncate font-mono text-sm tabular-nums text-foreground">
+                          {settlement.payoutMethod.ifsc}
+                        </dd>
+                      </div>
+                    ) : null}
+                    {settlement.payoutMethod.upiHandle ? (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-xs text-muted-foreground">UPI</dt>
+                        <dd className="truncate font-mono text-sm tabular-nums text-foreground">
+                          {settlement.payoutMethod.upiHandle}
+                        </dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                  {!settlement.payoutMethod.bankAccountMasked &&
+                  !settlement.payoutMethod.upiHandle ? (
+                    <p className="mt-2 text-xs text-destructive">
+                      No payout method on file — ask the recipient to update
+                      their profile before you transfer.
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Transfer {formatINR(settlement.artistAmount)} via your
+                      banking app, then mark this settlement processed.
+                    </p>
+                  )}
+                </section>
+              ) : null}
+
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4">
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">Order</dt>

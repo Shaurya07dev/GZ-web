@@ -403,6 +403,59 @@ class RemoteArtistRepository implements ArtistRepository {
     );
   }
 
+  // --- Profile photo ---------------------------------------------------------
+  // Mirrors the artwork image flow: presign → PUT to bucket → confirm.
+  // The API also checks MIME + size via a HEAD on the uploaded object, so
+  // the client-side checks here are the first line of defence, not the only
+  // one.
+  static const _profilePhotoMaxBytes = 5 * 1024 * 1024;
+
+  @override
+  Future<String> uploadProfilePhoto({
+    required String path,
+    required int sizeBytes,
+  }) async {
+    final name = path.split(Platform.pathSeparator).last;
+    final extension = name.contains('.') ? name.split('.').last.toLowerCase() : '';
+    final contentType = imageTypes[extension];
+    if (contentType == null) {
+      throw Exception('Choose a JPEG, PNG or WebP image.');
+    }
+    if (sizeBytes > _profilePhotoMaxBytes) {
+      throw Exception(
+        'Profile photos must be 5 MB or smaller. Please resize and try again.',
+      );
+    }
+    final bytes = await _readFile(path);
+    final slot = asMap(
+      await api.post(
+        '/v1/me/profile/photo/upload-url',
+        body: {'contentType': contentType, 'contentLength': bytes.length},
+      ),
+    );
+    final headers = <String, String>{
+      for (final entry in asMap(slot['headers']).entries)
+        entry.key: '${entry.value}',
+    };
+    await api.putToSignedUrl(
+      slot['uploadUrl'] as String,
+      bytes,
+      headers: headers,
+    );
+    final confirmed = asMap(
+      await api.post(
+        '/v1/me/profile/photo/confirm',
+        body: {'key': slot['key']},
+      ),
+    );
+    return confirmed['photoUrl'] as String;
+  }
+
+  @override
+  Future<void> removeProfilePhoto() async {
+    await api.delete('/v1/me/profile/photo');
+  }
+
   @override
   Future<GstinCheckResult> verifySavedGstin() async {
     final json = asMap(await api.post('/v1/profile/gstin/verify'));

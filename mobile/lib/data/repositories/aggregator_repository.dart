@@ -294,6 +294,15 @@ abstract class AggregatorRepository {
     RemitVia via = RemitVia.wallet,
   });
 
+  /// Pay in 1..N cash sales to GalleryZone through Razorpay in a single
+  /// checkout (web parity, audit §5 — 31 Oct 2026). The server derives the
+  /// amount from the sales, so the client only sends their ids; a successful
+  /// gateway payment stamps every sale as remitted atomically.
+  ///
+  /// Throws [PaymentDismissedException] when the sheet is closed without
+  /// paying, [PaymentFailedException] on gateway refusal.
+  Future<void> payRemittanceViaRazorpay(List<String> saleIds);
+
   /// Manual "simulate settlement": moves this sale's pending commission into
   /// the available balance and writes a settlement row. No background timer
   /// — nothing in this app should move money without someone pressing it.

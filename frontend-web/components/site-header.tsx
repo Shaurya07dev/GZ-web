@@ -11,7 +11,9 @@ import {
   Palette,
   Search,
   ShieldCheck,
+  ShoppingCart,
 } from "lucide-react";
+import { useCart } from "@/store/useCartStore";
 import { SwitchMode } from "./switch-mode";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { SignOutDialog } from "@/components/shared/sign-out-dialog";
@@ -104,6 +106,12 @@ export function SiteHeader() {
   const [mobileQuery, setMobileQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // The cart is API-backed now (TanStack Query), so the count comes from
+  // whatever is in the query cache. 0 while the query is pending so SSR
+  // stays deterministic.
+  const cart = useCart();
+  const cartCount = cart.count();
 
   function handleSearchSubmit(query: string) {
     const trimmed = query.trim();
@@ -248,6 +256,33 @@ export function SiteHeader() {
                 >
                   <Heart className="size-4" strokeWidth={1.75} />
                 </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative hidden size-10 sm:inline-flex"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href="/cart"
+                      aria-label={
+                        cartCount > 0
+                          ? `Cart, ${cartCount} item${cartCount > 1 ? "s" : ""}`
+                          : "Cart"
+                      }
+                    />
+                  }
+                >
+                  <ShoppingCart className="size-4" strokeWidth={1.75} />
+                  {cartCount > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -right-0.5 -top-0.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold-bright px-1 text-[10px] font-semibold leading-none text-background"
+                    >
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  ) : null}
+                </Button>
               </>
             )}
 
@@ -340,9 +375,25 @@ export function SiteHeader() {
               )}
             </div>
 
-            {/* Quick links: Wishlist */}
+            {/* Quick links: Cart + Wishlist */}
             {!isLandingPage && (
               <div className="mt-4 flex items-center gap-2 border-t border-border/60 pt-4">
+                <Link
+                  href="/cart"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground/90 transition-colors hover:bg-muted"
+                >
+                  <ShoppingCart
+                    className="size-4 text-gold-bright"
+                    strokeWidth={1.75}
+                  />
+                  Cart
+                  {cartCount > 0 ? (
+                    <span className="ml-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-gold-bright px-1 text-[10px] font-semibold leading-none text-background">
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  ) : null}
+                </Link>
                 <Link
                   href="/wishlist"
                   onClick={() => setMobileOpen(false)}

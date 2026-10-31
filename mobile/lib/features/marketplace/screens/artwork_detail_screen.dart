@@ -13,6 +13,8 @@ import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist.dart';
 import '../../../data/models/artwork.dart';
+import '../../account/providers/account_providers.dart'
+    show cartProvider, customerRepositoryProvider;
 import '../../auth/providers/auth_providers.dart' show authErrorMessage;
 import '../providers/marketplace_providers.dart';
 import '../widgets/artwork_card.dart';
@@ -416,6 +418,8 @@ class _BuyBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isWishlisted = ref.watch(wishlistProvider).contains(artwork.id);
+    final cartAsync = ref.watch(cartProvider);
+    final isInCart = cartAsync.value?.contains(artwork.id) ?? false;
     final isAvailable = artwork.status == ArtworkStatus.marketplace;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -432,36 +436,86 @@ class _BuyBar extends ConsumerWidget {
             constraints: const BoxConstraints(maxWidth: 728),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 52,
-                      child: FilledButton(
-                        onPressed: isAvailable
-                            ? () {
-                                HapticFeedback.lightImpact();
-                                context.push(
-                                  '/checkout?artworkId=${artwork.id}',
-                                );
-                              }
-                            : null,
-                        child: Text(_buyLabel(artwork.status)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: FilledButton(
+                            onPressed: isAvailable
+                                ? () {
+                                    HapticFeedback.lightImpact();
+                                    context.push(
+                                      '/checkout?artworkId=${artwork.id}',
+                                    );
+                                  }
+                                : null,
+                            child: Text(_buyLabel(artwork.status)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            ref
+                                .read(wishlistProvider.notifier)
+                                .toggle(artwork.id);
+                          },
+                          icon: WishlistHeart(saved: isWishlisted),
+                          label: Text(isWishlisted ? 'Wishlisted' : 'Wishlist'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isAvailable || isInCart) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          HapticFeedback.selectionClick();
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            if (isInCart) {
+                              await ref
+                                  .read(customerRepositoryProvider)
+                                  .removeFromCart(artwork.id);
+                              ref.invalidate(cartProvider);
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('Removed from cart')),
+                              );
+                            } else {
+                              await ref
+                                  .read(customerRepositoryProvider)
+                                  .addToCart(artwork.id);
+                              ref.invalidate(cartProvider);
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('Added to cart')),
+                              );
+                            }
+                          } catch (error) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(error.toString())),
+                            );
+                          }
+                        },
+                        icon: Icon(
+                          isInCart
+                              ? LucideIcons.check
+                              : LucideIcons.shoppingCart,
+                          size: 16,
+                        ),
+                        label: Text(isInCart ? 'In cart' : 'Add to cart'),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        ref.read(wishlistProvider.notifier).toggle(artwork.id);
-                      },
-                      icon: WishlistHeart(saved: isWishlisted),
-                      label: Text(isWishlisted ? 'Wishlisted' : 'Wishlist'),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),

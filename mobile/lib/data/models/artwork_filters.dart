@@ -14,7 +14,7 @@ class ArtworkFilters {
   const ArtworkFilters({
     this.categories = const [],
     this.mediums = const [],
-    this.rarity,
+    this.rarities = const [],
     this.artistId,
     this.location,
     this.size,
@@ -28,7 +28,10 @@ class ArtworkFilters {
 
   final List<String> categories;
   final List<String> mediums;
-  final ArtworkRarity? rarity;
+
+  /// Multi-select rank filter — a piece matches if its rank is *any* of
+  /// these. Owner directive 31 Oct 2026 (web parity).
+  final List<ArtworkRarity> rarities;
   final String? artistId;
 
   /// The artist's location — an artwork has none of its own.
@@ -54,7 +57,7 @@ class ArtworkFilters {
   int get activeCount =>
       categories.length +
       mediums.length +
-      (rarity != null ? 1 : 0) +
+      rarities.length +
       (artistId != null ? 1 : 0) +
       (location != null ? 1 : 0) +
       (size != null ? 1 : 0) +
@@ -66,7 +69,7 @@ class ArtworkFilters {
   ArtworkFilters copyWith({
     List<String>? categories,
     List<String>? mediums,
-    Object? rarity = _unset,
+    List<ArtworkRarity>? rarities,
     Object? artistId = _unset,
     Object? location = _unset,
     Object? size = _unset,
@@ -80,7 +83,7 @@ class ArtworkFilters {
     return ArtworkFilters(
       categories: categories ?? this.categories,
       mediums: mediums ?? this.mediums,
-      rarity: rarity == _unset ? this.rarity : rarity as ArtworkRarity?,
+      rarities: rarities ?? this.rarities,
       artistId: artistId == _unset ? this.artistId : artistId as String?,
       location: location == _unset ? this.location : location as String?,
       size: size == _unset ? this.size : size as ArtworkSizeBand?,
@@ -101,7 +104,7 @@ class ArtworkFilters {
       other is ArtworkFilters &&
       listEquals(other.categories, categories) &&
       listEquals(other.mediums, mediums) &&
-      other.rarity == rarity &&
+      listEquals(other.rarities, rarities) &&
       other.artistId == artistId &&
       other.location == location &&
       other.size == size &&
@@ -116,7 +119,7 @@ class ArtworkFilters {
   int get hashCode => Object.hash(
     Object.hashAll(categories),
     Object.hashAll(mediums),
-    rarity,
+    Object.hashAll(rarities),
     artistId,
     location,
     size,

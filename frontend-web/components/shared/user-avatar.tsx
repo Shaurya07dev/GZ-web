@@ -1,9 +1,41 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { initialsOf } from "@/hooks/useCurrentUser";
 
-// Initials avatar for the signed-in account. Accounts don't carry a photo
-// yet; when profile images land, this is the one place to swap in <Image>.
-export function UserAvatar({ name, className }: { name: string | null | undefined; className?: string }) {
+/**
+ * Avatar for the signed-in account. Renders the uploaded profile photo when
+ * one is present, otherwise initials from the account name. The photo URL
+ * is the API's own served path with immutable caching, so Next's optimiser
+ * handles the responsive variants.
+ */
+export function UserAvatar({
+  name,
+  photoUrl,
+  className,
+}: {
+  name: string | null | undefined;
+  photoUrl?: string | null;
+  className?: string;
+}) {
+  if (photoUrl) {
+    return (
+      <span
+        aria-hidden
+        className={cn(
+          "relative flex shrink-0 overflow-hidden rounded-full border border-gold/40",
+          className,
+        )}
+      >
+        <Image
+          src={photoUrl}
+          alt=""
+          fill
+          sizes="80px"
+          className="object-cover"
+        />
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden

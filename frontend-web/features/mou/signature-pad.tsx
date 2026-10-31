@@ -95,7 +95,10 @@ export function SignaturePad({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
-          className="h-36 w-full touch-none bg-white"
+          /* Doubled from h-36 (31 Oct 2026 owner report): the smaller box
+             was fine for a mouse but cramped on a touchpad or stylus; a
+             genuine signature needs room to breathe. */
+          className="h-64 w-full touch-none bg-white sm:h-72"
           style={{ cursor: disabled ? "default" : "crosshair" }}
         />
         {isEmpty && (

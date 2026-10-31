@@ -85,6 +85,44 @@ class ApiClient {
     Duration timeout = const Duration(seconds: 120),
   }) => _send('POST', path, body: bytes, headers: headers, timeout: timeout);
 
+  /// GETs a binary payload (PDFs, images) carrying the signed-in credential.
+  /// The server decides the response's Content-Type; the caller gets the
+  /// bytes and whatever filename the API suggested in Content-Disposition.
+  Future<({List<int> bytes, String? filename, String? contentType})> getBytes(
+    String path, {
+    bool auth = true,
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    final token = auth ? await _idToken() : null;
+    try {
+      final response = await _dio.request<List<int>>(
+        path,
+        options: Options(
+          method: 'GET',
+          responseType: ResponseType.bytes,
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+          receiveTimeout: timeout,
+        ),
+      );
+      final disposition = response.headers.value('content-disposition');
+      String? filename;
+      if (disposition != null) {
+        final match = RegExp(r'filename\*?=(?:UTF-8'')?"?([^";]+)"?')
+            .firstMatch(disposition);
+        if (match != null) filename = Uri.decodeComponent(match.group(1)!);
+      }
+      return (
+        bytes: response.data ?? const <int>[],
+        filename: filename,
+        contentType: response.headers.value('content-type'),
+      );
+    } on DioException catch (error) {
+      final failure = _toApiError(error);
+      if (token != null && failure.isUnauthorized) onSessionExpired?.call();
+      throw failure;
+    }
+  }
+
   /// PUTs [bytes] to an absolute, pre-signed URL (the artwork image bucket).
   /// No credential is sent: the signature in the URL is the credential, and
   /// our bearer token must never leave for another host.

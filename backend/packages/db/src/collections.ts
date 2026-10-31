@@ -108,6 +108,11 @@ export const Collections = {
   blogs: "blogs",
   holdingReports: "holdingReports",
   reservationIntents: "reservationIntents",
+  /** Monotonic invoice-number counters, one doc per fiscal year (`FY2026-27`). */
+  invoiceCounters: "invoiceCounters",
+  aggregatorRemittances: "aggregatorRemittances",
+  /** Per-user shopping cart doc (one per uid). */
+  carts: "carts",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -208,7 +213,42 @@ export interface ProfileDoc {
    * input; never shown to buyers. Null until an admin has rated them.
    */
   galleryzoneRating?: number | null;
+  /** Per-channel notification opt-outs. Absent = everything opted in, which
+   *  is the safe default for a transactional-only sender. Audit §8. */
+  notificationPreferences?: NotificationPreferences;
 }
+
+/**
+ * What the user has opted out of. Transactional emails (order paid, password
+ * reset, settlement failed) ignore these — they're legally/operationally
+ * required. Only marketing-adjacent categories (abandoned cart, promotions)
+ * check them.
+ */
+export interface NotificationPreferences {
+  /** Reminder when the buyer has pieces sitting in their cart for 24h+. */
+  abandonedCart?: boolean;
+  /** Platform-wide announcements, new-artist drops, feature releases. */
+  marketing?: boolean;
+  /** Weekly digest of marketplace activity (artist/aggregator only). */
+  weeklyDigest?: boolean;
+  /** Push notifications on registered devices for any category. */
+  pushEnabled?: boolean;
+}
+
+/**
+ * Live device tokens for FCM. One doc per device, under
+ * users/{uid}/fcmTokens/{token}. We keep the token itself as the doc id so
+ * registering the same token twice is a no-op. Audit §8.
+ */
+export interface FcmTokenDoc {
+  token: string;
+  platform: "ios" | "android" | "web";
+  deviceLabel: string | null;
+  createdAt: FirebaseFirestore.Timestamp;
+  lastSeenAt: FirebaseFirestore.Timestamp;
+}
+
+export const userFcmTokensCol = (userId: string) => `users/${userId}/fcmTokens`;
 
 export interface FinancialDoc {
   bankAccountEncrypted: string | null;
@@ -429,6 +469,19 @@ export interface PhysicalCoaRequestDoc {
   courierRef: string | null;
 }
 
+/**
+ * Snapshot of the live ShipRocket serviceability quote at order-creation time.
+ * Null when ShipRocket was unavailable / no serviceable courier / dev-mode;
+ * the UI uses `null` to render an "estimated — final at dispatch" badge next
+ * to the delivery line. Added 2026-10-30; older orders carry no field at all.
+ */
+export interface OrderShippingQuote {
+  carrier: string;
+  ratePaise: number;
+  courierCompanyId: number;
+  estimatedDeliveryDays: number | null;
+}
+
 export interface OrderDoc {
   artworkId: string;
   customerId: string;
@@ -442,11 +495,55 @@ export interface OrderDoc {
   totalPaise: number;
   status: OrderStatus;
   rateConfigVersionId: string;
+  /** Live ShipRocket quote this delivery charge was based on, or null if the flat fallback was used. */
+  shippingQuote?: OrderShippingQuote | null;
   /** The artist and their price when the buyer's total was fixed. The sale settles on these, never
    *  on the live price, which the artist may still edit. Absent on orders created before 2026-10-30. */
   artistId?: string;
   artistPricePaise?: number;
   createdAt: FirebaseFirestore.Timestamp;
+  /** Tax-invoice snapshot — stamped on first PDF request and never rewritten,
+   *  so the invoice number and tax split stay stable regardless of later rate
+   *  changes or buyer-address edits. Audit §9. */
+  invoice?: InvoiceSnapshot | null;
+}
+
+/** Lives on the order doc so the invoice number can't drift across reads. */
+export interface InvoiceSnapshot {
+  /** Human-readable invoice number, e.g. "GZ/26-27/000001". Globally unique. */
+  number: string;
+  /** Fiscal year the counter was drawn from, e.g. "FY2026-27". */
+  fiscalYear: string;
+  /** Seller legal identity frozen at the moment the invoice was stamped. */
+  seller: {
+    legalName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    gstin: string | null;
+    stateCode: string;
+  };
+  /** Buyer identity + place of supply frozen at stamp time. */
+  buyer: {
+    name: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  /** How the GST was split. Intra-state → cgst+sgst; inter-state → igst. */
+  taxBreakdown:
+    | { kind: "intra_state"; cgstPaise: number; sgstPaise: number }
+    | { kind: "inter_state"; igstPaise: number };
+  issuedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface InvoiceCounterDoc {
+  fiscalYear: string;
+  nextSeq: number;
 }
 
 export interface OrderStatusEventDoc {
@@ -465,6 +562,17 @@ export interface PaymentDoc {
   idempotencyKey: string;
   status: string;
   rawWebhookPayload: unknown;
+  /**
+   * Razorpay's ACTUAL gateway fee for this specific payment, straight from the
+   * `payment.captured` webhook (`payload.payment.entity.fee`). Varies by
+   * instrument: UPI 0, debit <₹2k 0.4%, credit 2%, international 3%, etc. We
+   * previously estimated a flat 2% + 18% GST at checkout — these fields let
+   * the invoice (and admin reconciliation) show the true number.
+   * Null on simulated / pre-capture / older payment docs that pre-date this field.
+   */
+  gatewayFeeActualPaise?: number | null;
+  /** The GST Razorpay charged on the fee (same payload: `payload.payment.entity.tax`). */
+  gatewayFeeGstActualPaise?: number | null;
   createdAt: FirebaseFirestore.Timestamp;
 }
 
@@ -621,8 +729,10 @@ export interface AggregatorSaleDoc {
   remittedAt: FirebaseFirestore.Timestamp | null;
   /** Cash sales: when the full price is due at GalleryZone. Absent on sales recorded before there was a deadline. */
   remitDueAt?: FirebaseFirestore.Timestamp | null;
-  /** How the price was paid in: from the aggregator's wallet here, or by transfer to GalleryZone's bank. */
-  remittedVia?: "wallet" | "bank" | null;
+  /** How the price was paid in: from the aggregator's wallet, by transfer to GalleryZone's bank, or through Razorpay. */
+  remittedVia?: "wallet" | "bank" | "razorpay" | null;
+  /** Set when the sale was paid in through a Razorpay remittance; points at the parent remittance doc. */
+  remittanceId?: string | null;
   shipmentStatus: ShipmentStatus;
   dispatchedAt: FirebaseFirestore.Timestamp | null;
   deliveredAt: FirebaseFirestore.Timestamp | null;
@@ -652,6 +762,47 @@ export interface AggregatorSaleDoc {
    *  rewrites what was billed. Absent on sales recorded before the slab
    *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
   commissionRate?: number;
+}
+
+/**
+ * One Razorpay-backed cash-remittance order, covering 1..N `cash_at_premises`
+ * sales. The aggregator paid in GalleryZone's cash through Razorpay; the
+ * webhook+verify path is the same hardened re-read pattern as orders and
+ * top-ups. Marked `paid` is what stamps every sale listed under `saleIds` as
+ * remitted — the whole batch settles atomically.
+ */
+export interface AggregatorRemittanceDoc {
+  aggregatorId: string;
+  saleIds: string[];
+  amountPaise: number;
+  status: "pending" | "paid" | "failed";
+  providerOrderId: string | null;
+  providerPaymentId: string | null;
+  method: string | null;
+  createdAt: FirebaseFirestore.Timestamp;
+  paidAt: FirebaseFirestore.Timestamp | null;
+}
+
+/**
+ * Shopping cart for the signed-in user, one doc per uid (doc id == uid).
+ * The entries are a tiny shape — just artworkId + addedAt — so the browser
+ * joins to the live artwork at render time; a sold or delisted piece falls
+ * out naturally, and nothing goes stale in the cart.
+ *
+ * Moved from browser localStorage to Firestore on 31 Oct 2026 so the cart
+ * syncs across devices (web + mobile parity). Max cap enforced server-side
+ * so a tampered client can't fill the doc without bound.
+ */
+export interface CartEntry {
+  artworkId: string;
+  /** When the user ticked "add to cart". Drives the abandoned-cart sweep. */
+  addedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface CartDoc {
+  userId: string; // == the Firestore doc ID (users/{uid}/cart would also work; one doc per uid keeps the write path simple)
+  entries: CartEntry[];
+  updatedAt: FirebaseFirestore.Timestamp;
 }
 
 export interface GallerySpaceDoc {

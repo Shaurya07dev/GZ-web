@@ -129,7 +129,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
 
   /// A rank in the guide filters the catalogue to it and brings it into view.
   void _pickRank(ArtworkRarity rank) {
-    _apply(_filters.copyWith(rarity: rank));
+    _apply(_filters.copyWith(rarities: [rank]));
     _showCatalog();
   }
 
@@ -219,11 +219,15 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           f.location!,
           () => _apply(f.copyWith(location: null)),
         ),
-      if (f.rarity != null)
+      for (final rank in f.rarities)
         _ActiveChip(
-          'rarity',
-          rankLabel(f.rarity!),
-          () => _apply(f.copyWith(rarity: null)),
+          'rarity-${rank.name}',
+          rankLabel(rank),
+          () => _apply(
+            f.copyWith(
+              rarities: f.rarities.where((r) => r != rank).toList(),
+            ),
+          ),
         ),
       if (f.query != null)
         _ActiveChip(

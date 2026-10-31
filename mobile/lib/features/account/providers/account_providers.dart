@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/mock/mock_customer_repository.dart';
 import '../../../data/models/artwork.dart';
+import '../../../data/models/cart.dart';
 import '../../../data/models/customer.dart';
+import '../../../data/models/notification_prefs.dart';
 import '../../../data/models/order.dart';
 import '../../../data/repositories/customer_repository.dart';
 import '../../checkout/providers/checkout_providers.dart';
@@ -83,3 +85,15 @@ String initials(String name) => name
     .take(2)
     .map((part) => part[0].toUpperCase())
     .join();
+
+/// The signed-in user's cart — refreshed on write by the mutator below.
+final cartProvider = FutureProvider.autoDispose<Cart>((ref) {
+  return ref.watch(customerRepositoryProvider).getCart();
+});
+
+/// Opt-in notification categories (abandonedCart, marketing, weeklyDigest,
+/// pushEnabled). Transactional emails bypass this.
+final notificationPreferencesProvider =
+    FutureProvider.autoDispose<NotificationPreferences>((ref) {
+  return ref.watch(customerRepositoryProvider).getNotificationPreferences();
+});

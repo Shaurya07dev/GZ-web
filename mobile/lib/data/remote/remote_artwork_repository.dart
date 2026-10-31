@@ -25,8 +25,10 @@ class RemoteArtworkRepository implements ArtworkRepository {
       query['category'] = filters.categories.join(',');
     }
     if (filters.mediums.isNotEmpty) query['medium'] = filters.mediums.join(',');
-    if (filters.rarity != null) {
-      query['rarity'] = artworkRarityCode[filters.rarity]!;
+    if (filters.rarities.isNotEmpty) {
+      query['rarity'] = filters.rarities
+          .map((r) => artworkRarityCode[r]!)
+          .join(',');
     }
     if (filters.artistId != null) query['artistId'] = filters.artistId;
     if (filters.location != null) query['location'] = filters.location;

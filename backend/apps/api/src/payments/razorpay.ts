@@ -88,6 +88,11 @@ export class Razorpay {
     return this.post({ receipt: input.intentId, amountPaise: input.amountPaise, notes: { gzIntentId: input.intentId, gzAggregatorId: input.aggregatorId } });
   }
 
+  /** The same, for an aggregator paying GalleryZone's share of a cash sale. The notes carry the remittance id for the webhook. */
+  createRemittanceOrder(input: { remittanceId: string; amountPaise: number; aggregatorId: string }): Promise<RazorpayOrder> {
+    return this.post({ receipt: input.remittanceId, amountPaise: input.amountPaise, notes: { gzRemittanceId: input.remittanceId, gzAggregatorId: input.aggregatorId } });
+  }
+
   /**
    * POST /v1/payments/{id}/refund — refund the captured amount back to the
    * original payment source. Called when a reservation payment captures but

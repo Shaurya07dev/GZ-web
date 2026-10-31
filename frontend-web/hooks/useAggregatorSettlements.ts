@@ -15,19 +15,15 @@ export function useRemittancesDue() {
   });
 }
 
-export function useMarkRemittedMutation() {
+export function useRazorpayRemittanceMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ saleId, via }: { saleId: string; via: "wallet" | "bank" }) =>
-      aggregatorSalesService.markRemitted(saleId, via),
-    // Paying from the wallet moves the balance, so the wallet reads refresh too.
+    mutationFn: (saleIds: string[]) =>
+      aggregatorSalesService.payRemittanceViaRazorpay(saleIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["aggregator-remittances"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-settlements"] });
-      queryClient.invalidateQueries({ queryKey: ["aggregator-wallet"] });
-      queryClient.invalidateQueries({
-        queryKey: ["aggregator-wallet-transactions"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["aggregator-sales"] });
     },
   });
 }

@@ -68,6 +68,24 @@ export interface AppEnv {
   s3: { bucket: string; accessKeyId: string; secretAccessKey: string; endpoint: string; region: string } | null;
   /** Who signs the MOUs for Galleryzone. Unset leaves the company's name/designation blanks empty on every MOU. */
   mouSignatory: { name: string | null; designation: string | null };
+  /**
+   * Legal identity printed on tax invoices. All fields fall back to safe
+   * placeholders so a dev PDF still renders without env plumbing; production
+   * MUST set these (an invoice without a GSTIN is not a valid tax invoice).
+   */
+  invoiceSeller: {
+    legalName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    gstin: string | null;
+    /** 2-letter state code (e.g. "KA"). Used to decide CGST+SGST vs IGST. */
+    stateCode: string;
+    cin: string | null;
+    supportEmail: string;
+  };
 }
 
 function required(name: string, value: string | undefined): string {
@@ -189,6 +207,27 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
             region: source.S3_REGION || "auto",
           }
         : null,
-    mouSignatory: { name: optional(source.MOU_SIGNATORY_NAME?.trim()), designation: optional(source.MOU_SIGNATORY_DESIGNATION?.trim()) },
+    // The MOU's company signatory block (name, designation, signature, date)
+    // used to stay blank when these envs weren't set, which left the artist
+    // staring at four empty lines above "FOR GALLERYZONE PRIVATE LIMITED".
+    // Owner directive (31 Oct 2026): fall back to a generic authorised
+    // signatory so the block always renders; prod sets the envs with the
+    // actual registered signatory.
+    mouSignatory: {
+      name: optional(source.MOU_SIGNATORY_NAME?.trim()) ?? "GalleryZone Private Limited",
+      designation: optional(source.MOU_SIGNATORY_DESIGNATION?.trim()) ?? "Authorised Signatory",
+    },
+    invoiceSeller: {
+      legalName: source.INVOICE_SELLER_LEGAL_NAME?.trim() || "GalleryZone",
+      addressLine1: source.INVOICE_SELLER_ADDRESS_LINE1?.trim() || "GalleryZone Office",
+      addressLine2: optional(source.INVOICE_SELLER_ADDRESS_LINE2?.trim()),
+      city: source.INVOICE_SELLER_CITY?.trim() || "Bengaluru",
+      state: source.INVOICE_SELLER_STATE?.trim() || "Karnataka",
+      pincode: source.INVOICE_SELLER_PINCODE?.trim() || "560001",
+      gstin: optional(source.INVOICE_SELLER_GSTIN?.trim()),
+      stateCode: source.INVOICE_SELLER_STATE_CODE?.trim().toUpperCase() || "KA",
+      cin: optional(source.INVOICE_SELLER_CIN?.trim()),
+      supportEmail: source.INVOICE_SELLER_SUPPORT_EMAIL?.trim() || "support@galleryzone.art",
+    },
   };
 }

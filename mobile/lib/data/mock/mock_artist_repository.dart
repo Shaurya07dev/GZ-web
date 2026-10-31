@@ -783,6 +783,43 @@ class MockArtistRepository implements ArtistRepository {
       });
 
   @override
+  Future<String> uploadProfilePhoto({
+    required String path,
+    required int sizeBytes,
+  }) => mockDelay(() {
+    // The mock doesn't actually upload; it points the profile at a mock
+    // URL and hands it back so the UI can render immediately.
+    final current = _readSingle(
+      _profileKey,
+      seedArtistProfile,
+      ArtistProfileDetails.fromJson,
+      (p) => p.toJson(),
+    );
+    final url = 'mock://profile-photo/${DateTime.now().millisecondsSinceEpoch}';
+    _writeSingle(
+      _profileKey,
+      current.copyWith(profileImageUrl: url),
+      (p) => p.toJson(),
+    );
+    return url;
+  });
+
+  @override
+  Future<void> removeProfilePhoto() => mockDelay(() {
+    final current = _readSingle(
+      _profileKey,
+      seedArtistProfile,
+      ArtistProfileDetails.fromJson,
+      (p) => p.toJson(),
+    );
+    _writeSingle(
+      _profileKey,
+      current.copyWith(profileImageUrl: null),
+      (p) => p.toJson(),
+    );
+  });
+
+  @override
   Future<GstinCheckResult> verifySavedGstin() => mockDelay(() {
     final current = _readSingle(
       _profileKey,

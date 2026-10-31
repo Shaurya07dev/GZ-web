@@ -191,8 +191,10 @@ class MockArtworkRepository implements ArtworkRepository {
           .where((a) => filters.mediums.contains(a.medium))
           .toList();
     }
-    if (filters.rarity != null) {
-      results = results.where((a) => a.rarityType == filters.rarity).toList();
+    if (filters.rarities.isNotEmpty) {
+      results = results
+          .where((a) => filters.rarities.contains(a.rarityType))
+          .toList();
     }
     if (filters.artistId != null) {
       results = results.where((a) => a.artistId == filters.artistId).toList();
