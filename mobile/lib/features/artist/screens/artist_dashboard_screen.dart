@@ -240,7 +240,12 @@ class ArtistDashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 14),
                         if (activity.isEmpty)
-                          Text('Nothing yet.', style: theme.textTheme.bodySmall)
+                          Text(
+                            'Nothing yet — submissions, approvals, settlements and withdrawals will show up here as they happen.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              height: 1.4,
+                            ),
+                          )
                         else
                           for (final entry in activity.take(5))
                             Padding(

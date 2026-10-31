@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artist_portal.dart';
@@ -132,15 +133,50 @@ class ShipmentTracker extends StatelessWidget {
           ),
           if (reference.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(
-              reference,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            // AWB links out to Shiprocket's own public tracker when available,
+            // which handles whichever courier they booked. Matches the web
+            // ShipmentTracker (31 Oct 2026).
+            if (cleanTrackingId.isNotEmpty)
+              InkWell(
+                onTap: () => _openShiprocketTracking(cleanTrackingId),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        reference,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      LucideIcons.externalLink,
+                      size: 11,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              )
+            else
+              Text(
+                reference,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
           ],
         ],
       ),
     );
+  }
+
+  Future<void> _openShiprocketTracking(String awb) async {
+    final uri = Uri.parse(
+      'https://www.shiprocket.in/shipment-tracking/${Uri.encodeComponent(awb)}',
+    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
@@ -732,6 +733,8 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
       icon: LucideIcons.user,
       title: 'Public profile',
       children: [
+        _ProfilePhotoRow(photoUrl: widget.profile.profileImageUrl),
+        const SizedBox(height: 14),
         TextField(
           controller: _fullName,
           onChanged: (_) => _edited(),
@@ -1161,7 +1164,10 @@ class _CommissionsCard extends StatelessWidget {
                   spacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('Commissions', style: theme.textTheme.titleMedium),
+                    Text(
+                      'Custom artwork requests',
+                      style: theme.textTheme.titleMedium,
+                    ),
                     StatusPill(
                       label: 'Coming soon',
                       color: theme.colorScheme.tertiary,
@@ -1170,7 +1176,7 @@ class _CommissionsCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Let collectors commission a custom piece directly from you, start to finish, through '
+                  'Let collectors request a custom piece directly from you, start to finish, through '
                   'GalleryZone.',
                   style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
                 ),
@@ -1551,4 +1557,137 @@ class _NoPasteFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) => newValue.text.length - oldValue.text.length > 1 ? oldValue : newValue;
+}
+
+/// Profile photo picker — mirrors the web `ProfilePhotoField`.
+/// Picks an image via `image_picker`, pushes it through the artist repo's
+/// presigned-PUT dance, and shows the result inline. Validation runs on
+/// the client and again on the server (HEAD check against declared type +
+/// size).
+class _ProfilePhotoRow extends ConsumerStatefulWidget {
+  const _ProfilePhotoRow({required this.photoUrl});
+
+  final String? photoUrl;
+
+  @override
+  ConsumerState<_ProfilePhotoRow> createState() => _ProfilePhotoRowState();
+}
+
+class _ProfilePhotoRowState extends ConsumerState<_ProfilePhotoRow> {
+  bool _busy = false;
+
+  Future<void> _pick() async {
+    if (_busy) return;
+    final picker = ImagePicker();
+    final XFile? file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+    if (file == null) return;
+    final size = await file.length();
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(artistRepositoryProvider)
+          .uploadProfilePhoto(path: file.path, sizeBytes: size);
+      ref.invalidate(artistProfileDetailsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo updated')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _remove() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(artistRepositoryProvider).removeProfilePhoto();
+      ref.invalidate(artistProfileDetailsProvider);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final photoUrl = widget.photoUrl;
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Profile photo', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 2),
+              Text(
+                'Shown on your public artist page. JPEG, PNG or WebP, up to 5 MB.',
+                style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+              ),
+              if (photoUrl != null) ...[
+                const SizedBox(height: 6),
+                InkWell(
+                  onTap: _busy ? null : _remove,
+                  child: Text(
+                    'Remove photo',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.error,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        InkWell(
+          onTap: _busy ? null : _pick,
+          borderRadius: BorderRadius.circular(32),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircleAvatar(
+                radius: 32,
+                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Icon(
+                        LucideIcons.camera,
+                        size: 20,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      )
+                    : null,
+              ),
+              if (_busy)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

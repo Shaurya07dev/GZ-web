@@ -283,6 +283,37 @@ class OrderDetailScreen extends ConsumerWidget {
                           : 'This address is no longer on file.',
                       style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                     ),
+
+                    // A paid order can be refunded; a pending or cancelled
+                    // one either hasn't been charged or has already been
+                    // auto-refunded by the gateway. The dialog creates a
+                    // support ticket with the order context pre-filled, so
+                    // the customer only writes the reason. Mirrors the web
+                    // RequestRefundDialog (31 Oct 2026).
+                    if (data.status != OrderStatus.pending &&
+                        data.status != OrderStatus.cancelled) ...[
+                      const SizedBox(height: 28),
+                      Text(
+                        'Something wrong?',
+                        style: theme.textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Request a refund and support will take a look. Keep the artwork for now — don't return anything until support replies.",
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () => _openRefundDialog(context, ref, data),
+                        icon: const Icon(
+                          LucideIcons.undo2,
+                          size: 14,
+                        ),
+                        label: const Text('Request a refund'),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -290,6 +321,135 @@ class OrderDetailScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _openRefundDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Order order,
+  ) async {
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _RequestRefundDialog(order: order),
+    );
+    if (submitted == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Request sent — support replies by email, usually within a working day.',
+          ),
+        ),
+      );
+    }
+  }
+}
+
+/// Dialog mirror of the web `RequestRefundDialog`. Submits a support ticket
+/// with the order id, artwork and amount pre-filled; the customer only
+/// writes the reason. Validation matches the web: at least 5 trimmed chars.
+class _RequestRefundDialog extends ConsumerStatefulWidget {
+  const _RequestRefundDialog({required this.order});
+
+  final Order order;
+
+  @override
+  ConsumerState<_RequestRefundDialog> createState() =>
+      _RequestRefundDialogState();
+}
+
+class _RequestRefundDialogState extends ConsumerState<_RequestRefundDialog> {
+  final _reason = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final trimmed = _reason.text.trim();
+    if (trimmed.length < 5) {
+      setState(() => _error = 'Add a few lines about the problem');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final subject =
+          'Refund request — Order ${widget.order.id.length > 8 ? widget.order.id.substring(widget.order.id.length - 8) : widget.order.id}';
+      final message = [
+        'Order: ${widget.order.id}',
+        'Artwork: ${widget.order.artwork?.title ?? "Artwork"}',
+        'Total paid: ${formatInr(widget.order.total)}',
+        '',
+        'Reason:',
+        trimmed,
+      ].join('\n');
+      await ref
+          .read(customerRepositoryProvider)
+          .submitSupportTicket(subject: subject, message: message);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      setState(() {
+        _error = error.toString();
+        _busy = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Request a refund'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Tell support what's wrong with this order. They'll reply by email, usually within a working day.",
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _reason,
+              maxLines: 5,
+              maxLength: 2000,
+              enabled: !_busy,
+              decoration: InputDecoration(
+                labelText: 'Reason',
+                hintText: "What's wrong? The more detail the better.",
+                errorText: _error,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "We'll include the order id, the artwork, and the amount in your request so you don't have to.",
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Send request'),
+        ),
+      ],
     );
   }
 }

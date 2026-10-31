@@ -25,8 +25,11 @@ ArtistProfileDetails _profile({String? pan}) => ArtistProfileDetails(
   website: '',
   bankAccountMasked: '',
   ifsc: '',
-  aadhaarStatus: ReviewStatus.notSubmitted,
-  aadhaarMasked: '',
+  // 31 Oct 2026: new listings require BOTH PAN and approved Aadhaar.
+  // Default test fixture is a KYC-complete artist so the baseline test
+  // flow isn't blocked; the "KYC incomplete" test overrides pan/aadhaar.
+  aadhaarStatus: ReviewStatus.approved,
+  aadhaarMasked: 'XXXX XXXX 1234',
   pan: pan,
 );
 
@@ -176,10 +179,13 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _choose(WidgetTester tester, String label, String option) async {
-  await _tap(
-    tester,
-    find.widgetWithText(DropdownButtonFormField<String>, label),
-  );
+  final dropdown = find.widgetWithText(DropdownButtonFormField<String>, label);
+  // Scroll into view before tapping — otherwise a dropdown pushed out of
+  // the viewport by other form content lands an offset that doesn't hit.
+  await tester.ensureVisible(dropdown);
+  await tester.pumpAndSettle();
+  await tester.tap(dropdown);
+  await tester.pumpAndSettle();
   await tester.tap(find.text(option).last);
   await tester.pumpAndSettle();
 }
@@ -197,8 +203,8 @@ Future<void> _type(WidgetTester tester, String label, String text) async {
 Future<void> _fillBasics(WidgetTester tester) async {
   await _tap(tester, find.text('Marketplace'));
   await _type(tester, 'Title', 'Monsoon Over Madurai');
-  await _choose(tester, 'Category', 'Sculpture');
-  await _choose(tester, 'Medium', 'Bronze');
+  await _choose(tester, 'Category', 'Textile Art');
+  await _choose(tester, 'Medium', 'Ceramic & Mixed Media');
   await _type(tester, 'Your rate (₹)', '18000');
 }
 
@@ -315,7 +321,7 @@ void main() {
         'Cave art',
       );
       expect(paintingStyleToStore('painting', '', ''), isNull);
-      expect(paintingStyleToStore('sculpture', 'Warli Painting', ''), isNull);
+      expect(paintingStyleToStore('textile', 'Warli Painting', ''), isNull);
     });
 
     test('the ladder rounds like the website does', () {
@@ -393,12 +399,12 @@ void main() {
 
   group('a new listing', () {
     testWidgets(
-      'asks for a PAN before it can go for review, but a draft is never blocked',
+      'asks for KYC before it can go for review, but a draft is never blocked',
       (tester) async {
         await _open(tester, _Artist(pan: null));
 
         expect(
-          find.text('PAN required before this can go live'),
+          find.text('Finish KYC before this can go live'),
           findsOneWidget,
         );
         expect(_enabled(tester, 'Submit for review'), isFalse);
@@ -407,11 +413,11 @@ void main() {
     );
 
     testWidgets(
-      'with a PAN, the aggregator channel must be completed first; the marketplace alone need not',
+      'with KYC complete, the aggregator channel must be completed first; the marketplace alone need not',
       (tester) async {
         await _open(tester, _Artist());
 
-        expect(find.text('PAN required before this can go live'), findsNothing);
+        expect(find.text('Finish KYC before this can go live'), findsNothing);
         expect(
           find.text('Aggregator requirements'),
           findsOneWidget,
@@ -489,7 +495,7 @@ void main() {
           find.textContaining('97 world painting traditions'),
           findsOneWidget,
         );
-        await _choose(tester, 'Category', 'Sculpture');
+        await _choose(tester, 'Category', 'Textile Art');
         expect(find.text('Painting style'), findsNothing);
       },
     );
@@ -578,16 +584,16 @@ void main() {
         final repository = _Artist();
         await _open(tester, repository);
         await _tap(tester, find.text('Marketplace'));
-        await _choose(tester, 'Category', 'Sculpture');
-        await _choose(tester, 'Medium', 'Bronze');
+        await _choose(tester, 'Category', 'Textile Art');
+        await _choose(tester, 'Medium', 'Ceramic & Mixed Media');
         await _type(tester, 'Your rate (₹)', '18000');
         await _tap(tester, find.text('Save as draft'));
 
         final sent = repository.submissions.single;
         expect(sent.title, 'Untitled artwork');
         expect(sent.asDraft, isTrue);
-        expect(sent.category, 'sculpture');
-        expect(sent.medium, 'bronze');
+        expect(sent.category, 'textile');
+        expect(sent.medium, 'ceramic-mixed-media');
         expect(sent.artistPrice, 18000);
         expect(sent.listingType, ListingType.marketplaceOnly);
         expect(
@@ -630,8 +636,8 @@ void main() {
       final repository = _Artist();
       await _open(tester, repository);
       await _tap(tester, find.text('Marketplace'));
-      await _choose(tester, 'Category', 'Sculpture');
-      await _choose(tester, 'Medium', 'Bronze');
+      await _choose(tester, 'Category', 'Textile Art');
+      await _choose(tester, 'Medium', 'Ceramic & Mixed Media');
       await _type(tester, 'Your rate (₹)', '18000');
 
       await _tap(tester, find.text('Submit for review'));
@@ -732,7 +738,10 @@ void main() {
         picker: _Picker(camera: _photo('shot.jpg')),
       );
       await _fillBasics(tester);
-      await _tap(tester, find.text('Mark as exclusive to GalleryZone'));
+      await _tap(
+        tester,
+        find.text('List this piece exclusively on GalleryZone'),
+      );
       await _tap(tester, find.text('Camera'));
       await _tap(tester, find.text('Submit for review'));
       expect(repository.submissions.single.exclusive, isTrue);
@@ -745,8 +754,8 @@ void main() {
         ..failWith = Exception('Your session has expired');
       await _open(tester, repository);
       await _tap(tester, find.text('Marketplace'));
-      await _choose(tester, 'Category', 'Sculpture');
-      await _choose(tester, 'Medium', 'Bronze');
+      await _choose(tester, 'Category', 'Textile Art');
+      await _choose(tester, 'Medium', 'Ceramic & Mixed Media');
       await _type(tester, 'Your rate (₹)', '18000');
       await _tap(tester, find.text('Save as draft'));
 
@@ -987,7 +996,10 @@ void main() {
       );
       await _open(tester, _Artist(existing: exclusive), artworkId: 'aw-9');
 
-      expect(find.text('Exclusive to GalleryZone'), findsOneWidget);
+      expect(
+        find.text('Listed exclusively on GalleryZone'),
+        findsOneWidget,
+      );
       expect(
         tester.widget<Checkbox>(find.byType(Checkbox).last).onChanged,
         isNull,
