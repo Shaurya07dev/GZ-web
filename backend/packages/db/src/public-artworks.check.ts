@@ -51,7 +51,8 @@ assert.deepEqual(ids(queryMarketplace(all, { category: ["Sculpture"] })), ["b"])
 assert.deepEqual(ids(queryMarketplace(all, { medium: ["Oil"], artistId: "art2" })), ["c"]);
 assert.deepEqual(ids(queryMarketplace(all, { category: ["Sculpture", "nonexistent"] })), ["b"], "multiple categories OR together");
 assert.deepEqual(ids(queryMarketplace(all, { category: [] })), ["a", "c", "b"], "empty category list is no filter, not zero matches");
-assert.deepEqual(ids(queryMarketplace(all, { rarity: "R" })), ["b"]);
+assert.deepEqual(ids(queryMarketplace(all, { rarity: ["R"] })), ["b"]);
+assert.deepEqual(ids(queryMarketplace(all, { rarity: ["R", "U"] })), ["b"], "multiple ranks OR together");
 // Standard was "N" (Normal) before the rename: old documents read as "S", junk reads as unranked.
 assert.equal(normalizeRarity("N"), "S");
 assert.equal(normalizeRarity("S"), "S");

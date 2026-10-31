@@ -300,9 +300,13 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   const [openStyleCombo, setOpenStyleCombo] = useState(false);
 
   const { data: profile } = useArtistAccountProfile();
-  // PAN, not GST, is what gates going live as of 9 Sep 2026 — GST is optional
-  // (see profile-kyc-form.tsx).
+  // PAN *and* an approved Aadhaar are what let a listing go live as of
+  // 31 Oct 2026 — GST stays optional (see profile-kyc-form.tsx). The
+  // Aadhaar gate was added after an owner-reported bug where artists
+  // could submit without any identity check at all.
   const panProvided = Boolean(profile?.pan?.trim());
+  const aadhaarApproved = profile?.aadhaarStatus === "approved";
+  const kycComplete = panProvided && aadhaarApproved;
 
   const { data: penalties } = useArtistPenalties();
   // Two different things, and conflating them is what made the old banner lie:
@@ -393,9 +397,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
     e.preventDefault();
     // Drafts can be incomplete; a submission on the aggregator channel cannot.
     if (mode === "review" && !aggregatorReady) return;
-    // GST must be admin-approved before a new listing can go live. Drafts,
-    // and edits to an artwork that's already listed, are unaffected.
-    if (mode === "review" && !isEdit && !panProvided) return;
+    // PAN + verified Aadhaar must be on file before a new listing can go live.
+    // Drafts and edits to an artwork that's already listed are unaffected.
+    if (mode === "review" && !isEdit && !kycComplete) return;
 
     const composedDimensions = composeDimensions(form);
     const artworkType =
@@ -531,7 +535,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       className="grid grid-cols-1 gap-6 lg:grid-cols-[1.6fr_1fr] lg:items-start"
     >
       <div className="flex flex-col gap-6">
-        {!isEdit && !panProvided && (
+        {!isEdit && !kycComplete && (
           <div className="flex items-start gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
             <TriangleAlert
               className="mt-0.5 size-4 shrink-0 text-gold-bright"
@@ -539,11 +543,16 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             />
             <div>
               <p className="text-sm font-medium text-foreground">
-                PAN required before this can go live
+                Finish KYC before this can go live
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Add your PAN on your Profile page — you can still save this as
-                a draft. GST is optional and won&rsquo;t block this listing.{" "}
+                {!panProvided && !aadhaarApproved
+                  ? "Add your PAN and verify your Aadhaar through DigiLocker on your Profile page."
+                  : !panProvided
+                    ? "Add your PAN on your Profile page."
+                    : "Verify your Aadhaar through DigiLocker on your Profile page."}
+                {" "}You can still save this as a draft. GST is optional and
+                won&rsquo;t block this listing.{" "}
                 <Link
                   href="/dashboard/profile"
                   className="text-gold-bright hover:underline"
@@ -1076,12 +1085,14 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             />
             <span className="flex min-w-0 flex-col gap-1 text-xs leading-relaxed">
               <span className="text-sm font-medium text-foreground">
-                Mark as exclusive to GalleryZone
+                List this piece exclusively on GalleryZone
               </span>
               <span className="text-muted-foreground">
-                This piece is a one-of-a-kind original and you agree not to
-                sell it on any other platform. This cannot be undone later.
-                Contact GalleryZone if the status needs to change.
+                By ticking this you confirm the artwork is a one-of-a-kind
+                original and will only be sold through GalleryZone. Exclusive
+                pieces are prioritised in curation and may qualify for a
+                higher rarity tier. The choice is permanent once the piece is
+                approved — write to support if you need it reviewed.
               </span>
             </span>
           </label>
@@ -1222,7 +1233,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               submitMutation.isPending ||
               updateMutation.isPending ||
               !aggregatorReady ||
-              (!isEdit && !panProvided)
+              (!isEdit && !kycComplete)
             }
             className="group inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
           >

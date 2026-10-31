@@ -13,7 +13,13 @@ export interface OwnerArtworkDto extends ArtworkDto {
   artistPricePaise: number;
   artistNet: { marketplace: number; aggregatorEstimate: number };
   images: (ArtworkDto["images"][number] & { id: string; storagePath: string })[];
-  statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
+  statusHistory: {
+    status: ArtworkStatus;
+    changedAt: string;
+    reason: string | null;
+    changedBy?: string | null;
+    changedByName?: string | null;
+  }[];
   exclusive: boolean;
   /** The chip's own ID: for the owning artist and admins only, never public. */
   nfcTagUid: string | null;
@@ -46,7 +52,15 @@ export function toOwnerArtwork(dto: OwnerArtworkDto): OwnerArtwork {
     artworkType: dto.artworkType,
     paintingStyle: dto.paintingStyle,
     physical: dto.physical,
-    statusHistory: dto.statusHistory.length ? dto.statusHistory.map((e) => ({ status: e.status, changedAt: e.changedAt, reason: e.reason ?? undefined })) : base.statusHistory,
+    statusHistory: dto.statusHistory.length
+      ? dto.statusHistory.map((e) => ({
+          status: e.status,
+          changedAt: e.changedAt,
+          reason: e.reason ?? undefined,
+          changedBy: e.changedBy ?? null,
+          changedByName: e.changedByName ?? null,
+        }))
+      : base.statusHistory,
     editableUntil: dto.editableUntil,
     imageIds: [...dto.images].sort((a, b) => a.sortOrder - b.sortOrder).map((i) => i.id),
   };

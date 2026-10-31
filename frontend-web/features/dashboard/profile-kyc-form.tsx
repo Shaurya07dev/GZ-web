@@ -661,15 +661,15 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-display text-base font-semibold text-foreground">
-                Commissions
+                Custom artwork requests
               </h2>
               <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-medium text-gold-bright">
                 Coming soon
               </span>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Let collectors commission a custom piece directly from you, start
-              to finish, through GalleryZone.
+              Let collectors request a custom piece directly from you, start to
+              finish, through GalleryZone.
             </p>
           </div>
         </div>

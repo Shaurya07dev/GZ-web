@@ -251,3 +251,17 @@ export async function hasApprovedKyc(db: Firestore, uid: string): Promise<boolea
   const snap = await db.collection(userProfileCol(uid)).doc("data").get();
   return (snap.data() as Partial<ProfileDoc> | undefined)?.aadhaarStatus === "approved";
 }
+
+/**
+ * An artist cannot send a new listing to review until BOTH identity signals
+ * are on file: PAN (tax identifier for the payout) and an admin-approved
+ * Aadhaar (identity verification). Owner-reported 31 Oct 2026: artists were
+ * able to submit without any identity check at all. Drafts and edits to an
+ * already-listed piece are unaffected.
+ */
+export async function hasKycForListing(db: Firestore, uid: string): Promise<boolean> {
+  if (!uid) return false;
+  const snap = await db.collection(userProfileCol(uid)).doc("data").get();
+  const profile = snap.data() as Partial<ProfileDoc> | undefined;
+  return Boolean(profile?.pan?.trim()) && profile?.aadhaarStatus === "approved";
+}

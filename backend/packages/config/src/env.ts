@@ -207,7 +207,16 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
             region: source.S3_REGION || "auto",
           }
         : null,
-    mouSignatory: { name: optional(source.MOU_SIGNATORY_NAME?.trim()), designation: optional(source.MOU_SIGNATORY_DESIGNATION?.trim()) },
+    // The MOU's company signatory block (name, designation, signature, date)
+    // used to stay blank when these envs weren't set, which left the artist
+    // staring at four empty lines above "FOR GALLERYZONE PRIVATE LIMITED".
+    // Owner directive (31 Oct 2026): fall back to a generic authorised
+    // signatory so the block always renders; prod sets the envs with the
+    // actual registered signatory.
+    mouSignatory: {
+      name: optional(source.MOU_SIGNATORY_NAME?.trim()) ?? "GalleryZone Private Limited",
+      designation: optional(source.MOU_SIGNATORY_DESIGNATION?.trim()) ?? "Authorised Signatory",
+    },
     invoiceSeller: {
       legalName: source.INVOICE_SELLER_LEGAL_NAME?.trim() || "GalleryZone",
       addressLine1: source.INVOICE_SELLER_ADDRESS_LINE1?.trim() || "GalleryZone Office",
