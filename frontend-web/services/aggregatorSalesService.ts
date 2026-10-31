@@ -67,7 +67,7 @@ interface SaleDto {
   paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
   remittedAt: Ts;
   remitDueAt?: Ts;
-  remittedVia?: "wallet" | "bank" | null;
+  remittedVia?: "wallet" | "bank" | "razorpay" | null;
   shipmentStatus: "preparing" | "dispatched" | "delivered";
   dispatchedAt: Ts;
   deliveredAt: Ts;
@@ -251,14 +251,27 @@ export const aggregatorSalesService = {
     return rows.map(toSale);
   },
 
-  // Cash is GalleryZone's money, due in full within 2 days (client, 30 Sep 2026):
-  // "wallet" takes it from the free balance here, "bank" is the aggregator saying
-  // they transferred it to GalleryZone's account.
-  markRemitted: async (saleId: string, via: "wallet" | "bank"): Promise<AggregatorSale> => {
-    await http.post(`/v1/aggregator/sales/${encodeURIComponent(saleId)}/remit`, { via });
-    const updated = (await sales()).find((s) => s.id === saleId);
-    if (!updated) throw new Error("Sale not found");
-    return updated;
+  // Cash remittance (audit §5): opens a Razorpay checkout for
+  // the full amount of 1..N cash sales at once. The API creates the gateway
+  // order and only credits the sales when it has re-read it as paid; the
+  // webhook mirrors that path idempotently.
+  payRemittanceViaRazorpay: async (saleIds: string[]): Promise<void> => {
+    if (saleIds.length === 0) return;
+    const session = await http.post<
+      | { mode: "simulated"; remittanceId: string; amountPaise: number }
+      | ({ mode: "razorpay"; remittanceId: string } & RazorpaySession)
+    >("/v1/aggregator/sales/remittance-payments", { saleIds });
+    const base = `/v1/aggregator/sales/remittance-payments/${encodeURIComponent(session.remittanceId)}`;
+    if (session.mode === "razorpay") {
+      const outcome = await openRazorpayCheckout(session);
+      const confirmed = await http.post<{ status: string }>(`${base}/verify`, outcome.success ?? undefined);
+      if (confirmed.status !== "paid") {
+        if (outcome.dismissed) throw new PaymentDismissedError();
+        throw new Error(outcome.failureMessage ?? "The remittance payment did not go through.");
+      }
+    } else {
+      await http.post(`${base}/simulate`);
+    }
   },
 
   // Settlements are run by GalleryZone (admin console); this view derives

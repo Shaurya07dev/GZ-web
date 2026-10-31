@@ -14,6 +14,7 @@ import {
   checkNfcTag,
   artworkRarityValues,
   getArtistArtwork,
+  hasKycForListing,
   linkNfcTag,
   listArtistOrders,
   listArtistPenalties,
@@ -174,6 +175,12 @@ export class ArtistArtworksController {
   @Roles("artist")
   @Post("artist/artworks")
   async submit(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(submitArtworkSchema)) body: SubmitArtworkBody) {
+    // Review-mode submissions need KYC on file; drafts don't. Backend check
+    // mirrors the UI gate (owner-reported 31 Oct 2026: the frontend-only
+    // guard could be bypassed by hitting the API directly).
+    if (body.mode !== "draft" && !(await hasKycForListing(this.db, req.authUser.uid))) {
+      throw new BadRequestException({ type: "about:blank", title: "Finish KYC before submitting for review", status: 400, code: "kyc_incomplete" });
+    }
     const rates = await this.rates();
     const result = await submitArtwork({ db: this.db, artistId: req.authUser.uid, ...body, rates });
     this.bust(result.artworkId, req.authUser.uid);
@@ -185,6 +192,10 @@ export class ArtistArtworksController {
   @Roles("artist")
   @Patch("artist/artworks/:id")
   async update(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(updateArtworkSchema)) body: UpdateArtworkBody) {
+    // Promoting a draft to review follows the same KYC rule as submit.
+    if (body.mode === "review" && !(await hasKycForListing(this.db, req.authUser.uid))) {
+      throw new BadRequestException({ type: "about:blank", title: "Finish KYC before submitting for review", status: 400, code: "kyc_incomplete" });
+    }
     const rates = await this.rates();
     try {
       await updateArtwork(this.db, { artistId: req.authUser.uid, artworkId: id, patch: body, rates });
@@ -269,7 +280,7 @@ export class ArtistArtworksController {
     if (before.listing?.status === "marketplace") return { status: "marketplace" };
     try {
       await setArtworkRarity(this.db, id, body.rarity, req.authUser.uid);
-      await approveArtwork(this.db, id);
+      await approveArtwork(this.db, id, req.authUser.uid);
     } catch (error) {
       if (error instanceof ArtistArtworkError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "rank_required" });
       if (error instanceof IllegalTransitionError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
@@ -283,12 +294,12 @@ export class ArtistArtworksController {
 
   @Roles("admin")
   @Post("admin/artworks/:id/reject")
-  async reject(@Param("id") id: string, @Body(new ZodValidationPipe(rejectSchema)) body: RejectBody) {
+  async reject(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(rejectSchema)) body: RejectBody) {
     const before = await this.artworkOf(id);
     if (!before) throw notFound();
     if (before.listing?.status === "returned") return { status: "returned" };
     try {
-      await rejectArtwork(this.db, id, body.reason);
+      await rejectArtwork(this.db, id, body.reason, req.authUser.uid);
     } catch (error) {
       if (error instanceof IllegalTransitionError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "illegal_transition" });
       if (error instanceof ArtistArtworkError) throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "bad_request" });

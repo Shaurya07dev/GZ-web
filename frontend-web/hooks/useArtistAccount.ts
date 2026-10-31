@@ -1,6 +1,7 @@
 import { notify } from "@/lib/notify";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { artistDashboardService } from "@/services/artistDashboardService";
+import { profileApi } from "@/services/profileApi";
 import { mouDateTime } from "@/features/mou/mou-document";
 
 // Named "Account" rather than "Profile" to avoid colliding with
@@ -11,6 +12,34 @@ export function useArtistAccountProfile() {
   return useQuery({
     queryKey: ["artist-account-profile"],
     queryFn: () => artistDashboardService.getProfile(),
+  });
+}
+
+export function useUploadProfilePhotoMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => profileApi.uploadPhoto(file),
+    onError: notify.error("Photo not uploaded"),
+    onSuccess: () => {
+      notify.success("Photo updated");
+      queryClient.invalidateQueries({ queryKey: ["artist-account-profile"] });
+      // The signed-in avatar in topbar/account menu reads from the same
+      // profile elsewhere; refresh any downstream caches that may hold it.
+      queryClient.invalidateQueries({ queryKey: ["customer-profile"] });
+    },
+  });
+}
+
+export function useRemoveProfilePhotoMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => profileApi.removePhoto(),
+    onError: notify.error("Could not remove photo"),
+    onSuccess: () => {
+      notify.success("Photo removed");
+      queryClient.invalidateQueries({ queryKey: ["artist-account-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["customer-profile"] });
+    },
   });
 }
 

@@ -3,10 +3,25 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { settlementStateMachine } from "@galleryzone/domain";
-import { Collections, type SettlementDoc } from "./collections.ts";
+import { Collections, type ProfileDoc, type SettlementDoc, type UserDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
 
 export class SettlementError extends DbError {}
+
+/**
+ * Audit §5: admin needs to see artist/aggregator payout details inline on the
+ * settlement so they can initiate the manual bank transfer without clicking
+ * into another page. Everything comes from `users/{id}/profile` — the same
+ * fields the recipient already filled in on their profile page.
+ */
+export interface PayoutMethodView {
+  recipientName: string;
+  /** Last 4 digits (full number never leaves the server). */
+  bankAccountMasked: string | null;
+  ifsc: string | null;
+  /** Future field — artists haven't been asked for UPI yet. Null for now. */
+  upiHandle: string | null;
+}
 
 export interface SettlementView {
   id: string;
@@ -22,6 +37,8 @@ export interface SettlementView {
   releaseAfter: string;
   createdAt: string;
   processedAt: string | null;
+  /** Payout destination — admin reads this to send the manual bank transfer. */
+  payoutMethod: PayoutMethodView;
 }
 
 /** Every settlement, newest first, with the artist and artwork names joined. */
@@ -30,18 +47,21 @@ export async function listSettlements(db: Firestore): Promise<SettlementView[]> 
   const rows = await Promise.all(
     snap.docs.map(async (d) => {
       const s = d.data() as SettlementDoc;
-      const [artist, order] = await Promise.all([
+      const [artist, order, profile] = await Promise.all([
         db.collection(Collections.users).doc(s.artistId).get(),
         s.orderId ? db.collection(Collections.orders).doc(s.orderId).get() : null,
+        db.collection(`users/${s.artistId}/profile`).doc("data").get(),
       ]);
       const artworkId = (order?.data() as { artworkId?: string } | undefined)?.artworkId;
       const artwork = artworkId ? ((await db.collection(Collections.artworks).doc(artworkId).get()).data() as { title?: string } | undefined) : undefined;
+      const artistData = artist.data() as UserDoc | undefined;
+      const profileData = profile.data() as ProfileDoc | undefined;
       return {
         id: d.id,
         orderId: s.orderId,
         holdingId: s.holdingId,
         artistId: s.artistId,
-        artistName: (artist.data() as { name?: string } | undefined)?.name ?? s.artistId,
+        artistName: artistData?.name ?? s.artistId,
         artworkTitle: artwork?.title ?? "",
         artistAmountPaise: s.artistAmountPaise,
         aggregatorCommissionPaise: s.aggregatorCommissionPaise,
@@ -50,6 +70,12 @@ export async function listSettlements(db: Firestore): Promise<SettlementView[]> 
         releaseAfter: s.releaseAfter?.toDate().toISOString() ?? new Date(0).toISOString(),
         createdAt: s.createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
         processedAt: s.processedAt?.toDate().toISOString() ?? null,
+        payoutMethod: {
+          recipientName: profileData?.companyName?.trim() || artistData?.name || "Unknown",
+          bankAccountMasked: profileData?.bankAccountMasked ?? null,
+          ifsc: profileData?.ifsc ?? null,
+          upiHandle: null,
+        },
       };
     }),
   );

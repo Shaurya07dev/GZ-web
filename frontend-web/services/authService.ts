@@ -37,6 +37,8 @@ export interface CurrentUser {
   email: string;
   phone: string | null;
   roleGrants: string[];
+  /** The signed-in account's profile photo; null until they upload one. */
+  photoUrl: string | null;
 }
 
 export interface AuthAck {

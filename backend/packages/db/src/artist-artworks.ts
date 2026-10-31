@@ -211,7 +211,7 @@ export interface OwnerArtworkView extends PublicArtworkView, NfcOwnerFields {
     breakdown: { marketplace: ArtistSettlement; aggregator: ArtistSettlement };
   };
   images: ArtworkImage[];
-  statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null }[];
+  statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null; changedBy: string | null; changedByName: string | null }[];
   insuranceOpted: boolean;
   exclusive: boolean;
   insuranceNumber: string | null;
@@ -258,10 +258,7 @@ async function toOwnerView(db: Firestore, artworkId: string, artwork: ArtworkDoc
       tdsApplies,
       breakdown: { marketplace: marketplaceSettlement, aggregator: aggregatorSettlement },
     },
-    statusHistory: eventsSnap.docs.map((d) => {
-      const e = d.data() as ArtworkStatusEventDoc;
-      return { status: e.status, changedAt: e.changedAt?.toDate().toISOString() ?? new Date(0).toISOString(), reason: e.reason };
-    }),
+    statusHistory: await resolveStatusHistory(db, eventsSnap.docs),
     insuranceOpted: artwork.insuranceOpted ?? false,
     exclusive: artwork.exclusive ?? false,
     insuranceNumber: artwork.insuranceNumber,
@@ -300,23 +297,54 @@ export async function listArtistArtworksOwned(db: Firestore, artistId: string, r
 
 const createdMillis = (doc: ArtworkDoc): number => doc.createdAt?.toMillis?.() ?? 0;
 
-export async function approveArtwork(db: Firestore, artworkId: string): Promise<void> {
+/**
+ * Join every status event to the display name of whoever triggered it, so
+ * admin UIs can show "Approved by Priya Sharma" rather than a bare uid.
+ * One getAll() per unique uid, so a long history with repeat reviewers
+ * doesn't fan out.
+ */
+async function resolveStatusHistory(
+  db: Firestore,
+  docs: FirebaseFirestore.QueryDocumentSnapshot[],
+): Promise<{ status: ArtworkStatus; changedAt: string; reason: string | null; changedBy: string | null; changedByName: string | null }[]> {
+  const events = docs.map((d) => d.data() as ArtworkStatusEventDoc);
+  const uids = [...new Set(events.map((e) => e.changedBy).filter((v): v is string => Boolean(v)))];
+  const nameByUid = new Map<string, string>();
+  if (uids.length > 0) {
+    const snaps = await db.getAll(...uids.map((uid) => db.collection(Collections.users).doc(uid)));
+    for (const snap of snaps) {
+      const data = snap.data() as { name?: string } | undefined;
+      if (data?.name) nameByUid.set(snap.id, data.name);
+    }
+  }
+  return events.map((e) => ({
+    status: e.status,
+    changedAt: e.changedAt?.toDate().toISOString() ?? new Date(0).toISOString(),
+    reason: e.reason,
+    changedBy: e.changedBy ?? null,
+    changedByName: e.changedBy ? (nameByUid.get(e.changedBy) ?? null) : null,
+  }));
+}
+
+export async function approveArtwork(db: Firestore, artworkId: string, adminId: string): Promise<void> {
   const current = await latestStatusOf(db, artworkId);
   artworkStateMachine.assertTransition(current, "marketplace");
   // The rank is the platform's call and is compulsory: nothing goes live without one.
   const doc = (await db.collection(Collections.artworks).doc(artworkId).get()).data() as ArtworkDoc | undefined;
   if (!normalizeRarity(doc?.rarityType)) throw new ArtistArtworkError("Rank the artwork (Rare, Unique, Original or Standard) before approving it");
-  await appendArtworkStatus(db, artworkId, { status: "marketplace", changedBy: null, reason: null });
+  // changedBy carries the reviewer's uid so the admin moderation history can
+  // say "approved by X" (owner-reported 31 Oct 2026).
+  await appendArtworkStatus(db, artworkId, { status: "marketplace", changedBy: adminId, reason: null });
   // A listed artwork always has a certificate number (artist MOU §11) —
   // idempotent, so re-approval after a return keeps the original number.
   await issueCertificate(db, artworkId);
 }
 
-export async function rejectArtwork(db: Firestore, artworkId: string, reason: string): Promise<void> {
+export async function rejectArtwork(db: Firestore, artworkId: string, reason: string, adminId: string): Promise<void> {
   if (!reason) throw new ArtistArtworkError("A rejection requires a reason");
   const current = await latestStatusOf(db, artworkId);
   artworkStateMachine.assertTransition(current, "returned");
-  await appendArtworkStatus(db, artworkId, { status: "returned", changedBy: null, reason });
+  await appendArtworkStatus(db, artworkId, { status: "returned", changedBy: adminId, reason });
 }
 
 /**
