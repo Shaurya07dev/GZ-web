@@ -110,6 +110,7 @@ export const Collections = {
   reservationIntents: "reservationIntents",
   /** Monotonic invoice-number counters, one doc per fiscal year (`FY2026-27`). */
   invoiceCounters: "invoiceCounters",
+  aggregatorRemittances: "aggregatorRemittances",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -726,8 +727,10 @@ export interface AggregatorSaleDoc {
   remittedAt: FirebaseFirestore.Timestamp | null;
   /** Cash sales: when the full price is due at GalleryZone. Absent on sales recorded before there was a deadline. */
   remitDueAt?: FirebaseFirestore.Timestamp | null;
-  /** How the price was paid in: from the aggregator's wallet here, or by transfer to GalleryZone's bank. */
-  remittedVia?: "wallet" | "bank" | null;
+  /** How the price was paid in: from the aggregator's wallet, by transfer to GalleryZone's bank, or through Razorpay. */
+  remittedVia?: "wallet" | "bank" | "razorpay" | null;
+  /** Set when the sale was paid in through a Razorpay remittance; points at the parent remittance doc. */
+  remittanceId?: string | null;
   shipmentStatus: ShipmentStatus;
   dispatchedAt: FirebaseFirestore.Timestamp | null;
   deliveredAt: FirebaseFirestore.Timestamp | null;
@@ -757,6 +760,25 @@ export interface AggregatorSaleDoc {
    *  rewrites what was billed. Absent on sales recorded before the slab
    *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
   commissionRate?: number;
+}
+
+/**
+ * One Razorpay-backed cash-remittance order, covering 1..N `cash_at_premises`
+ * sales. The aggregator paid in GalleryZone's cash through Razorpay; the
+ * webhook+verify path is the same hardened re-read pattern as orders and
+ * top-ups. Marked `paid` is what stamps every sale listed under `saleIds` as
+ * remitted — the whole batch settles atomically.
+ */
+export interface AggregatorRemittanceDoc {
+  aggregatorId: string;
+  saleIds: string[];
+  amountPaise: number;
+  status: "pending" | "paid" | "failed";
+  providerOrderId: string | null;
+  providerPaymentId: string | null;
+  method: string | null;
+  createdAt: FirebaseFirestore.Timestamp;
+  paidAt: FirebaseFirestore.Timestamp | null;
 }
 
 export interface GallerySpaceDoc {

@@ -26,6 +26,7 @@ export * from "./admin-artworks.ts";
 export * from "./addresses.ts";
 export * from "./admin-settlements.ts";
 export * from "./aggregator-sales.ts";
+export * from "./aggregator-remittances.ts";
 export * from "./deactivation.ts";
 export * from "./order-listings.ts";
 export * from "./admin-orders.ts";
