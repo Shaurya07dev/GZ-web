@@ -49,7 +49,11 @@
     "grant:role": "node --experimental-strip-types scripts/grant-role.ts",
     "seed:affiliate": "node --experimental-strip-types scripts/seed-affiliate-products.ts",
     "check:affiliate-db": "npx firebase-tools emulators:exec --only firestore --project demo-gz \"node --experimental-strip-types packages/db/src/affiliate-products.check.ts\"",
-    "e2e:affiliate": "npx firebase-tools emulators:exec --only firestore,auth --project demo-gz \"bash scripts/affiliate-e2e.sh\""
+    "e2e:affiliate": "npx firebase-tools emulators:exec --only firestore,auth --project demo-gz \"bash scripts/affiliate-e2e.sh\"",
+    "demo:emulators": "node scripts/demo-emulators.mjs",
+    "demo:seed": "node --experimental-strip-types scripts/seed-demo.ts seed",
+    "demo:reseed": "node --experimental-strip-types scripts/seed-demo.ts reseed",
+    "demo:clear": "node --experimental-strip-types scripts/seed-demo.ts clear"
   },
   "engines": {
     "node": ">=22.6"

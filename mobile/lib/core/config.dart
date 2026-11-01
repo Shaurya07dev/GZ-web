@@ -34,6 +34,10 @@ class AppConfig {
     defaultValue: 'https://www.galleryzone.art',
   );
 
+  /// Local demo stack: host:port of the Firebase Auth emulator as the phone sees it
+  /// (Android emulator: 10.0.2.2:9099). Empty in every real build.
+  static const authEmulatorHost = String.fromEnvironment('GZ_AUTH_EMULATOR');
+
   /// Offline mock backend instead of the real API.
   static const useMockBackend = bool.fromEnvironment('GZ_MOCK');
 }
