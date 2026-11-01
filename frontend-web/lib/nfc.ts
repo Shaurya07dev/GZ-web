@@ -29,6 +29,11 @@ export const NFC_STAGE_LABEL: Record<NfcStage, string> = {
   linked_locked: "Tag locked",
 };
 
+/** A chip's UID the way NFC reader apps print its serial number ("04:A1:B2:C3:D4:E5:80"), so the two can be compared. */
+export function formatTagUid(uid: string): string {
+  return (uid.replace(/[^0-9a-f]/gi, "").toUpperCase().match(/../g) ?? []).join(":");
+}
+
 /** Where the mobile app is installed from. Unset until the app is on a store: the dialog then just says "open the app". */
 export const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL ?? "";
 

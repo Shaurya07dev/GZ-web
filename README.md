@@ -38,8 +38,12 @@ Playwright.
 
 - **Website**: Vercel, *Import from GitHub* with **Root Directory = `frontend-web`**.
   Set the `NEXT_PUBLIC_*` variables in the project's
-  Environment Variables (`NEXT_PUBLIC_SITE_URL` = the production domain — it is
-  baked into QR codes; `NEXT_PUBLIC_API_URL` = where the API is hosted).
+  Environment Variables (`NEXT_PUBLIC_API_URL` = where the API is hosted).
+  QR codes and NFC tags carry `https://www.galleryzone.art/verify/<id>` for good,
+  so that domain must serve this project: in Vercel, add `www.galleryzone.art`
+  to this project's Domains (production branch), with `galleryzone.art`
+  redirecting to it. `NEXT_PUBLIC_SITE_URL` is optional (it defaults to that
+  address); a production build refuses anything but a public https address.
 - **API**: any Node 22+ host (Railway, Render, Cloud Run). Set the backend
   variables, provide the service-account JSON as a file,
   and put the Vercel domain in `CORS_ORIGINS`. Build with `npm run build`, run

@@ -54,7 +54,8 @@ test('marketplace cards and the slideshow show no COA, even if the API sends one
 test('the public passport still shows the certificate, read from the passport', async ({ page }) => {
   await stub(page);
   await page.goto('/verify/a1');
-  await expect(page.getByText('GZ-COA-2026-0001')).toBeVisible();
-  await expect(page.getByText('COA issued 1 February 2026')).toBeVisible();
+  // The number is on the label and again on the certificate itself.
+  await expect(page.getByText('GZ-COA-2026-0001').first()).toBeVisible();
+  await expect(page.getByText('Certificate issued 1 February 2026')).toBeVisible();
   await expect(page.getByText('Pending issuance')).toHaveCount(0);
 });
