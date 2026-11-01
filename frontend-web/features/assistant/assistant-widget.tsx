@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import { MessageCircleQuestion, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { readSessionRole, subscribeToSession } from "@/lib/session";
@@ -25,34 +26,11 @@ export function AssistantWidget() {
     readSessionRole,
     () => null,
   );
-  const [currentPath, setCurrentPath] = useState<string>("");
-
-  // Track the pathname via the browser's own History API. Using next/navigation's
-  // usePathname would require being inside a Suspense boundary + App Router
-  // client context, and we want this to work from the root layout without
-  // additional provider wiring.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setCurrentPath(window.location.pathname);
-    const handler = () => setCurrentPath(window.location.pathname);
-    window.addEventListener("popstate", handler);
-    // next/link clicks trigger pushState without firing popstate. Patch
-    // pushState to emit a synthetic event we listen for, so our visibility
-    // check stays in sync on client-side navigation.
-    const originalPushState = window.history.pushState;
-    window.history.pushState = function (...args) {
-      const result = originalPushState.apply(this, args as Parameters<typeof originalPushState>);
-      window.dispatchEvent(new Event("gz:assistant-pathchange"));
-      return result;
-    };
-    const pathHandler = () => setCurrentPath(window.location.pathname);
-    window.addEventListener("gz:assistant-pathchange", pathHandler);
-    return () => {
-      window.removeEventListener("popstate", handler);
-      window.removeEventListener("gz:assistant-pathchange", pathHandler);
-      window.history.pushState = originalPushState;
-    };
-  }, []);
+  // The router's own pathname. This used to patch history.pushState and dispatch an event
+  // from it, but Next calls pushState inside a useInsertionEffect, where React forbids
+  // setState ("useInsertionEffect must not schedule updates"). The patch also missed
+  // replaceState, so a redirect left the path stale. usePathname needs no Suspense.
+  const currentPath = usePathname() ?? "";
 
   if (!sessionRole) return null;
   if (HIDDEN_PATH_PREFIXES.some((p) => currentPath.startsWith(p))) return null;
