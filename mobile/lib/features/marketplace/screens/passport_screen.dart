@@ -8,7 +8,7 @@ import '../../../core/format.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/passport.dart';
-import '../../coa/coa_pdf.dart';
+import '../../coa/coa_inputs.dart';
 import '../../coa/download_coa_button.dart';
 import '../../ownership/providers/ownership_providers.dart';
 import '../providers/marketplace_providers.dart';
@@ -213,20 +213,9 @@ class PassportBody extends ConsumerWidget {
           const SizedBox(height: 16),
           Center(
             child: DownloadCoaButton(
-              certificate: CoaPdfInput(
-                artworkId: artwork.id,
-                productCode: passport?.productCode,
-                title: artwork.title,
-                artistName: artwork.artistName,
-                category: humanize(artwork.category),
-                artworkType: artwork.artworkType,
-                exclusive: artwork.exclusive,
-                artistSignatureDataUrl: passport?.artistSignatureDataUrl,
-                medium: humanize(artwork.medium),
-                dimensions: dimensionsLabel(artwork.dimensions),
-                yearCreated: artwork.yearCreated,
-                coaCertificateNumber: coaNumber,
-                coaIssueDate: coaIssued,
+              certificate: coaInputFor(
+                artwork,
+                passport,
                 ownerName: ownerName,
               ),
             ),

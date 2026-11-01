@@ -13,6 +13,7 @@ import '../../../core/verify_url.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/nfc.dart';
 import '../../auth/providers/auth_providers.dart';
+import '../../coa/paper_view.dart';
 import '../../marketplace/screens/passport_screen.dart' show PassportBody;
 import '../../marketplace/widgets/artwork_card.dart';
 import '../../nfc/providers/nfc_providers.dart';
@@ -379,6 +380,24 @@ class _CertificateRow extends ConsumerWidget {
                 ),
                 label: const Text('Preview certificate'),
               ),
+              OutlinedButton.icon(
+                key: Key('display-card-${artwork.id}'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    fullscreenDialog: true,
+                    builder: (_) => CertificatePreviewScreen(
+                      artwork: artwork,
+                      initialTab: PaperTab.card,
+                    ),
+                  ),
+                ),
+                icon: Icon(
+                  LucideIcons.tag,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
+                label: const Text('Display card'),
+              ),
               // History answers a different question from the certificate -
               // where the piece has been, not whether it is genuine - so it
               // gets its own way in.
@@ -512,13 +531,21 @@ class _MustLock extends StatelessWidget {
   }
 }
 
-/// The passport as a collector sees it, with the artist's one extra control:
-/// the first hand-over of the piece, from artist to buyer. The buyer can pass
-/// it on again later from their own collection.
+/// The artist's certificate and display card for one piece, together: the
+/// Certificate of Authenticity as it is printed, the "FOR SALE" card that
+/// travels with the piece, and the artist's one extra control: the first
+/// hand-over of the piece, from artist to buyer. The buyer can pass it on again
+/// later from their own collection. The full passport, as a collector sees it,
+/// is one tap away.
 class CertificatePreviewScreen extends ConsumerWidget {
-  const CertificatePreviewScreen({super.key, required this.artwork});
+  const CertificatePreviewScreen({
+    super.key,
+    required this.artwork,
+    this.initialTab = PaperTab.certificate,
+  });
 
   final Artwork artwork;
+  final PaperTab initialTab;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -526,7 +553,7 @@ class CertificatePreviewScreen extends ConsumerWidget {
     final me = ref.watch(accountProvider).value;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Certificate of Authenticity')),
+      appBar: AppBar(title: const Text('Certificate & display card')),
       body: passport.when(
         loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
@@ -538,7 +565,35 @@ class CertificatePreviewScreen extends ConsumerWidget {
             child: const Text('Try again'),
           ),
         ),
-        data: (data) => PassportBody(artwork: artwork, passport: data),
+        data: (data) => ContentWidth(
+          maxWidth: 620,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              ArtworkPaper(
+                artwork: artwork,
+                passport: data,
+                ownerName: data?.ownerName ?? '',
+                initialTab: initialTab,
+              ),
+              const SizedBox(height: 28),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        appBar: AppBar(title: const Text('Artwork passport')),
+                        body: PassportBody(artwork: artwork, passport: data),
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.scrollText, size: 14),
+                  label: const Text('View full passport'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(

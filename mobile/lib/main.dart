@@ -75,6 +75,7 @@ Stream<LicenseEntry> _fontLicenses() async* {
   for (final (family, file) in const [
     ('Inter', 'OFL-Inter.txt'),
     ('Playfair Display', 'OFL-PlayfairDisplay.txt'),
+    ('Tinos', 'OFL-Tinos.txt'),
   ]) {
     yield LicenseEntryWithLineBreaks([
       family,

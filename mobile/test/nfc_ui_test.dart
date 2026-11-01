@@ -168,6 +168,10 @@ void main() {
           findsOneWidget,
         );
 
+        // Every piece has its display card beside its certificate.
+        expect(find.text('Display card'), findsNWidgets(3));
+        expect(find.byKey(const Key('display-card-a1')), findsOneWidget);
+
         expect(find.byKey(const Key('link-nfc-a1')), findsOneWidget);
         expect(find.text('Link tag'), findsOneWidget);
         expect(

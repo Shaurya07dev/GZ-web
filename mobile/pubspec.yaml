@@ -107,6 +107,10 @@ flutter:
     # twice at launch: by the native splash before Flutter boots, and by
     # SplashScreen after, in the same place, so the handoff is invisible.
     - assets/icon/splash_android12.png
+    # The Certificate of Authenticity's designed artwork, the same file the
+    # website prints on (frontend-web/public/coa-template.png). Values are drawn
+    # over it at measured positions, on screen and in the PDF.
+    - assets/coa/coa-template.png
     - assets/images/artworks/
     - assets/images/early-program/
     - assets/images/ecosystem/
@@ -116,6 +120,7 @@ flutter:
     # Registered with the LicenseRegistry in main.dart.
     - assets/fonts/OFL-Inter.txt
     - assets/fonts/OFL-PlayfairDisplay.txt
+    - assets/fonts/OFL-Tinos.txt
 
   # Inter and Playfair Display, bundled rather than fetched at runtime: no
   # fallback-font flash on first launch or offline, and every weight sits
@@ -148,6 +153,12 @@ flutter:
           style: italic
         - asset: assets/fonts/PlayfairDisplay-Bold.ttf
           weight: 700
+    # Metric-compatible with Times, the face the printed certificate's values
+    # use, so the certificate on screen breaks and fits its lines exactly as the
+    # PDF does, on every phone (Android has no Times of its own).
+    - family: Tinos
+      fonts:
+        - asset: assets/fonts/Tinos-Regular.ttf
 
 # ---------------------------------------------------------------------------
 # Store presence (Phase 8). Both blocks are build-time generator config, not

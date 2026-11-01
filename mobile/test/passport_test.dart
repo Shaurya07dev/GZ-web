@@ -9,10 +9,13 @@ import 'package:gallery_zone/core/verify_url.dart';
 import 'package:gallery_zone/data/models/artwork.dart';
 import 'package:gallery_zone/data/models/passport.dart';
 import 'package:gallery_zone/data/storage/mock_db.dart';
+import 'package:gallery_zone/features/artist/screens/coa_nfc_screen.dart';
 import 'package:gallery_zone/features/artist/widgets/artwork_history.dart';
 import 'package:gallery_zone/features/auth/providers/auth_providers.dart';
+import 'package:gallery_zone/features/coa/coa_certificate.dart';
 import 'package:gallery_zone/features/coa/coa_pdf.dart';
 import 'package:gallery_zone/features/coa/download_coa_button.dart';
+import 'package:gallery_zone/features/coa/paper_view.dart';
 import 'package:gallery_zone/features/marketplace/providers/marketplace_providers.dart';
 import 'package:gallery_zone/features/marketplace/screens/passport_screen.dart';
 import 'package:gallery_zone/features/marketplace/widgets/artwork_qr.dart';
@@ -21,6 +24,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/catalog_fixtures.dart';
+import 'support/app_fonts.dart';
 import 'support/fake_repositories.dart';
 
 CoaPdfInput _input({
@@ -85,35 +89,55 @@ void main() {
   });
 
   group('the certificate PDF', () {
-    test('is a real PDF that carries the number, the owner and the verify link', () async {
-      final bytes = await buildCoaPdf(
-        _input(),
-        now: DateTime(2026, 10, 2, 15, 30),
-        compress: false,
-      );
-      final raw = latin1.decode(bytes, allowInvalid: true);
-      expect(raw.startsWith('%PDF'), isTrue);
-      // The built-in fonts write text a word at a time, so read the words back.
-      final words = [
-        for (final match in RegExp(r'\[\((.*?)\)\]TJ').allMatches(raw))
-          match.group(1)!,
-      ];
-      expect(
-        words,
-        containsAllInOrder(['Certificate', 'No.', 'GZ-COA-2026-0001']),
-      );
-      expect(
-        words,
-        containsAllInOrder(['Registered', 'legal', 'owner', 'Dev', 'Mehta']),
-      );
-      expect(words, containsAllInOrder(['Rajasthan:', 'Phad', 'Painting']));
-      expect(words, containsAllInOrder(['Exclusive', 'to', 'GalleryZone']));
-      expect(words, contains('https://www.galleryzone.art/verify/aw-1'));
-      expect(
-        words,
-        containsAllInOrder(['Generated', '2', 'Oct', '2026,', '3:30', 'PM']),
-      );
-    });
+    testWidgets(
+      'is the designed certificate with the piece\x27s values on it and the verify link behind its QR',
+      (tester) async {
+        // Loading the artwork and drawing the QR are real asynchronous work.
+        final bytes = (await tester.runAsync(
+          () => buildCoaPdf(_input(), compress: false),
+        ))!;
+        final raw = latin1.decode(bytes, allowInvalid: true);
+        expect(raw.startsWith('%PDF'), isTrue);
+
+        // The page is the designed artwork: its own pixels, edge to edge, in
+        // A4 landscape's width and the artwork's proportions.
+        expect(raw, contains('/Width 1280'));
+        expect(raw, contains('/Height 853'));
+        expect(raw, contains('/MediaBox[0 0 841.88976 561.0406]'));
+
+        // The values on it, each set whole on its own line.
+        final text = [
+          for (final match in RegExp(r'\[\((.*?)\)\]TJ').allMatches(raw))
+            match.group(1)!,
+        ];
+        expect(
+          text,
+          containsAll([
+            'Ananya Rao',
+            'Monsoon, Madurai',
+            'Oil on canvas',
+            'GZ000004',
+            '2021',
+            '4 March 2026',
+            'GZ-COA-2026-0001',
+          ]),
+        );
+        expect(text.any((line) => line.contains('24 × 36 in')), isTrue);
+        expect(
+          text.any((line) => line.startsWith('Mixed media · Rajasthan')),
+          isTrue,
+          reason: 'the art form leads with the category, then its tradition',
+        );
+
+        // Ownership is not printed: a certificate is permanent, ownership is not.
+        expect(raw, isNot(contains('Dev Mehta')));
+        // Where the QR leads, readable in the file's properties.
+        expect(
+          raw,
+          contains('/Subject(https://www.galleryzone.art/verify/aw-1)'),
+        );
+      },
+    );
 
     test('typographic punctuation in a title survives the built-in font', () {
       expect(
@@ -154,10 +178,13 @@ void main() {
         ),
       );
       await tester.tap(find.text('Download certificate (PDF)'));
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 300)),
-      );
-      await tester.pump();
+      // Building the PDF is real asynchronous work.
+      for (var i = 0; i < 200 && shared == null; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+        await tester.pump();
+      }
       expect(name, 'GalleryZone-CoA-GZ-COA-2026-0001.pdf');
       expect(latin1.decode(shared!.sublist(0, 4)), '%PDF');
     });
@@ -199,6 +226,96 @@ void main() {
       );
       expect(find.text(verifyUrlFor('aw-1')), findsOneWidget);
       semantics.dispose();
+    });
+  });
+
+  group('the artist\'s certificate and display card', () {
+    Future<void> open(
+      WidgetTester tester, {
+      PaperTab tab = PaperTab.certificate,
+    }) async {
+      _phone(tester);
+      await tester.runAsync(loadAppFonts);
+      await tester.pumpWidget(
+        _app(
+          CertificatePreviewScreen(
+            artwork: fixtureArtwork(
+              artworkType: 'Rajasthan: Phad Painting',
+              exclusive: true,
+            ),
+            initialTab: tab,
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () => precacheImage(
+          const AssetImage(coaTemplateAsset),
+          tester.element(find.byType(CertificatePreviewScreen)),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'the preview is the designed certificate, with its download, and the display card beside it',
+      (tester) async {
+        await open(tester);
+
+        // The certificate itself, on its artwork, with its download.
+        expect(find.byType(CoaCertificate), findsOneWidget);
+        expect(find.text('GZ-COA-2026-0001'), findsOneWidget);
+        expect(find.text('Download certificate (PDF)'), findsOneWidget);
+        expect(find.text('FOR SALE'), findsNothing);
+
+        // The display card is one tap away, in the same place.
+        await tester.tap(find.text('Display card'));
+        await tester.pumpAndSettle();
+        expect(find.text('FOR SALE'), findsWidgets);
+        expect(find.text('Print display card'), findsOneWidget);
+        expect(find.byType(CoaCertificate), findsNothing);
+
+        // And back.
+        await tester.tap(find.text('Certificate'));
+        await tester.pumpAndSettle();
+        expect(find.byType(CoaCertificate), findsOneWidget);
+
+        // The first hand-over of the piece stays where it was.
+        expect(find.text('Transfer rights'), findsOneWidget);
+      },
+    );
+
+    testWidgets('opens on the display card when that is what was asked for', (
+      tester,
+    ) async {
+      await open(tester, tab: PaperTab.card);
+      expect(find.text('FOR SALE'), findsWidgets);
+      expect(find.text('Print display card'), findsOneWidget);
+      expect(find.byType(CoaCertificate), findsNothing);
+    });
+
+    testWidgets(
+      'tapping a paper opens it full screen to pinch and zoom, and closing returns to it',
+      (tester) async {
+        await open(tester);
+
+        await tester.tap(find.byType(CoaCertificate));
+        await tester.pumpAndSettle();
+        expect(find.byType(InteractiveViewer), findsOneWidget);
+        expect(find.text('Pinch to zoom'), findsOneWidget);
+
+        await tester.tap(find.byType(CloseButton));
+        await tester.pumpAndSettle();
+        expect(find.byType(InteractiveViewer), findsNothing);
+        expect(find.text('Download certificate (PDF)'), findsOneWidget);
+      },
+    );
+
+    testWidgets('the full passport is one tap further', (tester) async {
+      await open(tester);
+      await tester.scrollUntilVisible(find.text('View full passport'), 200);
+      await tester.tap(find.text('View full passport'));
+      await tester.pumpAndSettle();
+      expect(find.text('COA issued 4 March 2026'), findsOneWidget);
     });
   });
 

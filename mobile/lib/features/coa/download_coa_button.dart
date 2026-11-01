@@ -15,6 +15,19 @@ typedef SharePdf = Future<void> Function(Uint8List bytes, String fileName);
 Future<void> shareCoaPdf(Uint8List bytes, String fileName) =>
     Printing.sharePdf(bytes: bytes, filename: fileName);
 
+/// The outlined gold button the printed papers use (download, print).
+ButtonStyle paperButtonStyle(ThemeData theme, {bool enabled = true}) =>
+    OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      foregroundColor: theme.colorScheme.tertiary,
+      side: BorderSide(
+        color: theme.colorScheme.primary.withValues(alpha: enabled ? 0.6 : 0.25),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+    );
+
 /// One button, used wherever a certificate is shown (the artist's board, the
 /// public passport, the buyer's collection). Disabled until a number exists:
 /// numbers are issued when the artwork is approved for listing.
@@ -74,18 +87,7 @@ class _DownloadCoaButtonState extends State<DownloadCoaButton> {
             )
           : const Icon(LucideIcons.download, size: 14),
       label: const Text('Download certificate (PDF)'),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        foregroundColor: theme.colorScheme.tertiary,
-        side: BorderSide(
-          color: theme.colorScheme.primary.withValues(
-            alpha: _ready ? 0.6 : 0.25,
-          ),
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-      ),
+      style: paperButtonStyle(theme, enabled: _ready),
     );
     return _ready
         ? button
