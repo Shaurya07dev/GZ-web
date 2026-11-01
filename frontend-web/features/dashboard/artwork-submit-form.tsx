@@ -292,7 +292,9 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   );
   const submitMutation = useSubmitArtworkMutation();
   const updateMutation = useUpdateArtworkMutation();
-  const [submitted, setSubmitted] = useState<"draft" | "review" | null>(null);
+  // What the API says happened, not what was asked for: a new piece waits for GalleryZone's review, and the
+  // screen says "live" only if the API reports it actually went live.
+  const [submitted, setSubmitted] = useState<"draft" | "review" | "live" | null>(null);
   const [submittedArtworkId, setSubmittedArtworkId] = useState<string | null>(
     null,
   );
@@ -454,7 +456,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       {
         onSuccess: (artwork) => {
           setSubmittedArtworkId(artwork.id);
-          setSubmitted(mode);
+          setSubmitted(mode === "draft" ? "draft" : artwork.status === "marketplace" ? "live" : "review");
         },
       },
     );
@@ -489,6 +491,12 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
   }
 
   if (submitted) {
+    const name = `“${form.title || "Your artwork"}”`;
+    const [heading, body] = {
+      draft: ["Saved as draft.", `${name} has been saved. You can continue editing it any time from My Artworks.`],
+      review: ["Submitted for review.", `${name} is uploaded and with the GalleryZone team for review. We’ll let you know once it’s approved and live.`],
+      live: ["Approved and live.", `${name} is on the marketplace now. Collectors can see it and buy it.`],
+    }[submitted];
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -499,14 +507,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
         <span className="flex size-10 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
           <Check className="size-5 text-gold-bright" />
         </span>
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          {submitted === "draft" ? "Saved as draft." : "Approved and live."}
-        </h2>
-        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          {submitted === "draft"
-            ? `“${form.title || "Your artwork"}” has been saved. You can continue editing it any time from My Artworks.`
-            : `“${form.title || "Your artwork"}” is on the marketplace now. Collectors can see it and buy it.`}
-        </p>
+        <h2 className="font-display text-xl font-semibold text-foreground">{heading}</h2>
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">{body}</p>
 
         <div className="mt-2 flex flex-wrap items-center gap-4">
           <Link
@@ -516,7 +518,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             <ArrowLeft className="size-3.5" />
             Back to My Artworks
           </Link>
-          {submitted === "review" && submittedArtworkId && (
+          {submitted === "live" && submittedArtworkId && (
             <Link
               href={`/marketplace/${submittedArtworkId}`}
               className="inline-flex items-center gap-2 text-sm font-medium text-gold-bright hover:underline"

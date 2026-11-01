@@ -143,7 +143,7 @@ export const FAQ_KNOWLEDGE_BASE: FaqEntry[] = [
     aliases: ["artist agreement", "mou", "sign agreement", "contract"],
     tags: ["mou", "agreement", "contract"],
     answer:
-      "The Memorandum of Understanding between you and GalleryZone — commission rate, payment terms, insurance, dispute handling. You sign it digitally from your Profile page. It's updated periodically; new versions require a fresh signature before you can submit new work.",
+      "The Memorandum of Understanding between you and GalleryZone — commission rate, payment terms, who is responsible for loss or damage, dispute handling. You sign it digitally from your Profile page. It's updated periodically; new versions require a fresh signature before you can submit new work.",
   },
   {
     audience: "artist",

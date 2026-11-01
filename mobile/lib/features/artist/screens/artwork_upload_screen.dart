@@ -460,7 +460,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     return _Outcome(
       title: 'Submitted for review.',
       body:
-          '“$name” is with the GalleryZone team. We’ll let you know once it’s approved and live.',
+          '“$name” is uploaded and with the GalleryZone team for review. We’ll let you know once it’s approved and live.',
     );
   }
 
