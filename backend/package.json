@@ -37,6 +37,7 @@
     "check:email": "node --experimental-strip-types apps/api/src/mail/emails.check.ts",
     "check:email-demo": "node --experimental-strip-types scripts/email-demo-check.mjs",
     "email:preview": "node --experimental-strip-types apps/api/src/mail/emails.check.ts --out email-previews",
+    "email:send-sample": "node --experimental-strip-types apps/api/src/mail/send-sample.ts",
     "check:holding-claim": "node --experimental-strip-types packages/db/src/holding-claim.check.ts",
     "check:client-routes": "node scripts/client-routes.check.mjs",
     "check:types": "tsc -b tsconfig.build.json",
