@@ -227,11 +227,6 @@ class AboutScreen extends StatelessWidget {
                   label: galleryZoneEmail,
                   url: 'mailto:$galleryZoneEmail',
                 ),
-                ContactLinkRow(
-                  icon: LucideIcons.phone,
-                  label: '+91 94929 53627',
-                  url: 'tel:$galleryZonePhone',
-                ),
                 // Instagram only. The web footer also renders X and LinkedIn
                 // marks, but both point at "#" there — no account exists yet,
                 // and a tap that goes nowhere is worse than an absent icon.

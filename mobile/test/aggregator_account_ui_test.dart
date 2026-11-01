@@ -664,7 +664,9 @@ void main() {
       (tester) async {
         await pumpAggregator(tester, _Acct(), AggregatorSupportScreen.path);
         expect(find.text('Contact GalleryZone'), findsOneWidget);
-        expect(find.text('+91 94929 53627'), findsOneWidget);
+        expect(find.text('galleryzone@zohomail.in'), findsOneWidget);
+        // Contact is by email only: no phone number is shown.
+        expect(find.textContaining('94929'), findsNothing);
         expect(find.text('Raise a ticket'), findsOneWidget);
         expect(
           find.textContaining("5% or 3% of the artwork's value"),
