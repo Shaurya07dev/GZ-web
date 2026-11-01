@@ -101,10 +101,12 @@ flutter:
   # `/artworks/bird.png` to `assets/images/artworks/bird.jpg`.
   assets:
     # The brand mark, taken from production's `public/brand/gz-logo.png` with
-    # its white studio background keyed out. Drawn twice at launch: by
-    # flutter_native_splash before Flutter boots, and by SplashScreen after,
-    # so the handoff is invisible.
+    # its white studio background keyed out. The portals' crest.
     - assets/brand/gz-logo.png
+    # The app icon's gold GZ, framed as the Android 12 splash draws it. Drawn
+    # twice at launch: by the native splash before Flutter boots, and by
+    # SplashScreen after, in the same place, so the handoff is invisible.
+    - assets/icon/splash_android12.png
     - assets/images/artworks/
     - assets/images/early-program/
     - assets/images/ecosystem/
@@ -173,17 +175,21 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 flutter_native_splash:
-  # The app opens in light mode regardless of the device setting, so both
-  # splashes use the light background — a dark one would flash black before
-  # the first Flutter frame.
-  color: "#F7F3E9"
-  image: assets/brand/splash.png
-  color_dark: "#F7F3E9"
-  image_dark: assets/brand/splash.png
+  # The launch continues the app icon: the same brand black with the same gold
+  # GZ, so the system's zoom from the icon runs straight into it. SplashScreen
+  # starts from exactly this frame and warms it to the app's light page, so
+  # nothing flashes on the way in. Same in both device modes: it is the icon.
+  color: "#0B0A08"
+  image: assets/icon/splash.png
+  color_dark: "#0B0A08"
+  image_dark: assets/icon/splash.png
   android_12:
-    color: "#F7F3E9"
-    color_dark: "#F7F3E9"
+    color: "#0B0A08"
+    color_dark: "#0B0A08"
     # Android 12+ masks the splash icon to a circle and shows only the inner
-    # two-thirds, which would crop the wider image above.
-    image: assets/brand/splash_android12.png
-    image_dark: assets/brand/splash_android12.png
+    # two-thirds, so it gets the tighter image (the same GZ size; see
+    # assets/icon/generate_icons.py).
+    image: assets/icon/splash_android12.png
+    image_dark: assets/icon/splash_android12.png
+  # The website is the Next.js app; the Flutter web target keeps its own page.
+  web: false
