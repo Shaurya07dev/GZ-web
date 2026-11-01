@@ -172,7 +172,7 @@ export function ArtworkCertificate({
             title: artwork.title,
             description: artwork.description,
             artForm: labelize(artworkType || artwork.category),
-            medium: artwork.medium,
+            medium: labelize(artwork.medium),
             size: artwork.dimensions ?? "—",
             artworkCode: passport?.productCode || artwork.id,
             artistName: artwork.artistName,

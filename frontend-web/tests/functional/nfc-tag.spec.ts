@@ -65,6 +65,27 @@ test('the board shows three states, and flags what cannot ship', async ({ page, 
   await expect(page.locator('#link-nfc-a3')).toHaveCount(0);
 });
 
+test('the certificate and the display card read category and medium as a person writes them, not as slugs', async ({ page, baseURL }) => {
+  await openBoard(page, baseURL!, [unlinked]);
+  await json(page, '**/v1/verify/a1', passport({ artworkId: 'a1', category: 'painting', medium: 'oil-on-canvas' }));
+  await json(page, '**/v1/artworks/a1', {
+    id: 'a1', productCode: 'GZ000001', artistId: 'artist1', artistName: 'Meera Kulkarni', title: 'Piece a1', description: 'A piece.', category: 'painting',
+    medium: 'oil-on-canvas', dimensions: '24 x 36 in', yearCreated: 2025, images: [{ url: '/artworks/framed-painting.png', thumbnailUrl: null, altText: null, sortOrder: 0 }],
+    displayPricePaise: 13_650_000, insured: false, status: 'marketplace', listingType: 'marketplace_only', rarityType: 'R', createdAt: '2026-03-01T00:00:00.000Z',
+    artistLocation: 'Pune, Maharashtra', sizeBand: 'medium',
+  });
+
+  await page.getByRole('button', { name: 'Preview certificate' }).click();
+  const dialog = page.locator('[data-slot="dialog-content"]');
+  await expect(dialog.getByText('Oil on canvas', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Painting', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('oil-on-canvas')).toHaveCount(0);
+
+  await dialog.getByRole('tab', { name: 'Display card' }).click();
+  await expect(dialog.getByText('Oil on canvas', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('oil-on-canvas')).toHaveCount(0);
+});
+
 test('a tagged piece shows the link on its tag and the chip ID, as a reader app prints it', async ({ page, baseURL }) => {
   await openBoard(page, baseURL!, [unlinked, linkedUnlocked]);
 

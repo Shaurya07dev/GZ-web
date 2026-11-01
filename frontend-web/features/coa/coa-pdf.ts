@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { artworkQrDataUrl } from "@/lib/qr";
+import { humanize } from "@/lib/utils";
 
 // The Certificate of Authenticity, rendered onto GalleryZone's designed
 // certificate (public/coa-template.png) rather than drawn from scratch.
@@ -112,14 +113,16 @@ export interface CoaPdfInput {
  * Client (19 Oct 2026) asked for both to appear on the certificate without re-designing the template.
  */
 export function coaFieldRows(input: CoaPdfInput): [number, string][] {
-  const artFormBits: string[] = [input.category];
+  // The catalogue stores category and medium as slugs ("oil-on-canvas"); a certificate reads them as a person
+  // would write them ("Oil on canvas"). The app's certificate does the same.
+  const artFormBits: string[] = [humanize(input.category)];
   if (input.artworkType) artFormBits.push(input.artworkType);
   if (input.exclusive) artFormBits.push("Exclusive to GalleryZone");
   return [
     [FIELD_BASELINES.artistName, input.artistName],
     [FIELD_BASELINES.title, input.title],
     [FIELD_BASELINES.artForm, artFormBits.join(" · ")],
-    [FIELD_BASELINES.medium, input.medium],
+    [FIELD_BASELINES.medium, humanize(input.medium)],
     [FIELD_BASELINES.dimensions, input.dimensions ?? "—"],
     [FIELD_BASELINES.yearCreated, input.yearCreated ? String(input.yearCreated) : "—"],
     [FIELD_BASELINES.artworkId, input.productCode || input.artworkId],
