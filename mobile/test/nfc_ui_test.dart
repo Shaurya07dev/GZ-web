@@ -189,6 +189,36 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a tagged piece shows the link on its tag and the chip ID, as a reader app prints it',
+      (tester) async {
+        await _open(
+          tester,
+          _World([
+            _piece('a1'),
+            _piece('a3', linked: _linkedAt, locked: _lockedAt),
+          ]),
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('tag-link-a3')),
+            matching: find.text('www.galleryzone.art/verify/a3'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('tag-chip-id-a3')),
+            matching: find.text('04:A1:B2:C3:D4:E5:80'),
+          ),
+          findsOneWidget,
+        );
+        // Nothing is on a tag that does not exist yet.
+        expect(find.byKey(const Key('tag-link-a1')), findsNothing);
+        expect(find.byKey(const Key('tag-chip-id-a1')), findsNothing);
+      },
+    );
+
     testWidgets('no warning when every linked tag is locked', (tester) async {
       await _open(
         tester,

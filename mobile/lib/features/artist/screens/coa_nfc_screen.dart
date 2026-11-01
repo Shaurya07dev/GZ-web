@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -6,6 +7,7 @@ import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/launch.dart';
 import '../../../core/motion.dart';
+import '../../../core/nfc/ntag213.dart' show formatTagUid;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/verify_url.dart';
 import '../../../data/models/artwork.dart';
@@ -167,6 +169,85 @@ class _Banner extends StatelessWidget {
   }
 }
 
+/// One line of what is on a tag: a label, its value, and a copy button that
+/// turns into a tick once copied. A value with [onOpen] opens when tapped.
+class _TagFact extends StatefulWidget {
+  const _TagFact({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.copyText,
+    this.onOpen,
+  });
+
+  final String label;
+  final String value;
+  final String copyText;
+  final VoidCallback? onOpen;
+
+  @override
+  State<_TagFact> createState() => _TagFactState();
+}
+
+class _TagFactState extends State<_TagFact> {
+  bool _copied = false;
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.copyText));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future<void>.delayed(const Duration(milliseconds: 1600));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final value = Text(
+      widget.value,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.right,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: widget.onOpen == null
+            ? theme.colorScheme.onSurface
+            : theme.colorScheme.tertiary,
+        fontWeight: FontWeight.w500,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+    return Row(
+      children: [
+        Text(widget.label, style: theme.textTheme.bodySmall),
+        const SizedBox(width: 12),
+        Expanded(
+          child: widget.onOpen == null
+              ? value
+              : InkWell(
+                  onTap: widget.onOpen,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: value,
+                  ),
+                ),
+        ),
+        IconButton(
+          onPressed: _copy,
+          visualDensity: VisualDensity.compact,
+          iconSize: 15,
+          tooltip: 'Copy ${widget.label.toLowerCase()}',
+          icon: Icon(
+            _copied ? LucideIcons.check : LucideIcons.copy,
+            color: _copied
+                ? theme.colorScheme.tertiary
+                : theme.colorScheme.outline,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _CertificateRow extends ConsumerWidget {
   const _CertificateRow({required this.artwork, required this.hasNfc});
 
@@ -229,29 +310,25 @@ class _CertificateRow extends ConsumerWidget {
             _MustLock(key: Key('nfc-must-lock-${artwork.id}')),
           ],
           if (tagged) ...[
-            const SizedBox(height: 10),
-            // The address written to the tag - the same one the QR carries.
-            Text(
-              'PUBLIC VERIFY URL (WRITTEN TO TAG)',
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 10,
-                letterSpacing: 0.8,
-              ),
+            const SizedBox(height: 6),
+            // What is on the tag: the link it opens when tapped (the same one
+            // the QR carries) and the chip's own ID. The ID is the artist's to
+            // see; the public passport never shows it.
+            _TagFact(
+              key: Key('tag-link-${artwork.id}'),
+              label: 'Link on the tag',
+              value: verifyUrlFor(artwork.id)
+                  .replaceFirst(RegExp(r'^https?://'), ''),
+              copyText: verifyUrlFor(artwork.id),
+              onOpen: () => openExternal(context, verifyUrlFor(artwork.id)),
             ),
-            InkWell(
-              onTap: () => openExternal(context, verifyUrlFor(artwork.id)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  verifyUrlFor(artwork.id)
-                      .replaceFirst(RegExp(r'^https?://'), ''),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.tertiary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+            if (artwork.nfcTagUid case final uid? when uid.isNotEmpty)
+              _TagFact(
+                key: Key('tag-chip-id-${artwork.id}'),
+                label: 'Chip ID',
+                value: formatTagUid(uid),
+                copyText: formatTagUid(uid),
               ),
-            ),
           ],
           const SizedBox(height: 10),
           Wrap(

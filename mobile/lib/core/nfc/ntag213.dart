@@ -107,3 +107,10 @@ String normalizeTagUid(String raw) =>
     raw.trim().toLowerCase().replaceAll(RegExp(r'[\s:\-]'), '');
 
 bool isNtagUid(String uid) => RegExp(r'^[0-9a-f]{14}$').hasMatch(uid);
+
+/// A chip's UID the way NFC reader apps print its serial number
+/// ("04:A1:B2:C3:D4:E5:80"), so the two can be compared by eye.
+String formatTagUid(String uid) => RegExp(r'..')
+    .allMatches(normalizeTagUid(uid).toUpperCase())
+    .map((m) => m[0])
+    .join(':');
