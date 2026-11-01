@@ -39,6 +39,7 @@ import { DB, ENV } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Razorpay } from "./payments/razorpay.ts";
 import { bookInboundShipment } from "./shiprocket-booking.ts";
+import { Emails } from "./mail/emails.ts";
 
 // The response shape mirrors what openRazorpayCheckout() on the frontend
 // expects, so the client hands it straight to Checkout.js. Shape is inferred
@@ -54,6 +55,7 @@ export class AggregatorReservationIntentsController {
     @Inject(DB) private readonly db: Db,
     @Inject(ENV) private readonly env: AppEnv,
     private readonly razorpay: Razorpay,
+    private readonly emails: Emails,
   ) {}
 
   @Roles("aggregator")
@@ -212,6 +214,8 @@ export class AggregatorReservationIntentsController {
     if (outcome.kind === "needs_refund") {
       void this.issueRefund(intentId, providerPaymentId, intent.totalPayablePaise, outcome.reason).catch((err) => {
         this.logger.error(`refund failed for intent ${intentId}: ${String(err)}`);
+        // They have paid and have nothing: a person has to finish this.
+        void this.emails.refundFailed(intentId, String(err)).catch(this.emails.swallow("refund failed mail"));
       });
     }
 
@@ -219,6 +223,8 @@ export class AggregatorReservationIntentsController {
   }
 
   private async respondAndBookShipment(outcome: FinalizeOutcome, aggregatorId: string, artworkId: string) {
+    // Tell both sides. The holding's own key makes a second call (the webhook racing this one) a no-op.
+    if (outcome.kind === "finalized") void this.emails.holdingReservedById(outcome.holdingId).catch(this.emails.swallow("holding reserved mail"));
     if (outcome.kind === "finalized" || outcome.kind === "already_finalized") {
       // Book the inbound (artist → aggregator) ShipRocket leg. Fire-and-forget;
       // the webhook writes the AWB onto the holding when it comes back.
@@ -238,5 +244,6 @@ export class AggregatorReservationIntentsController {
       notes: { gzIntentId: intentId, reason: reason.slice(0, 200) },
     });
     await markIntentRefunded(this.db, intentId, refund.id);
+    void this.emails.reservationRefunded(intentId).catch(this.emails.swallow("reservation refunded mail"));
   }
 }
