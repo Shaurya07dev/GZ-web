@@ -523,6 +523,13 @@ void main() {
       return signings;
     }
 
+    /// The signature box is 256 tall, as on the website. Signing is one block (agree, name, draw, sign),
+    /// so these tests give the screen the height a tall phone has, rather than scroll between the steps.
+    Future<void> fitSigningBlock(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390 * 3, 1100 * 3);
+      await tester.pumpAndSettle();
+    }
+
     Future<void> scrollToEnd(WidgetTester tester) async {
       for (var i = 0; i < 4; i++) {
         await tester.drag(
@@ -594,6 +601,7 @@ void main() {
       'the name must match the profile, and a signature must be drawn',
       (tester) async {
         final signings = await open(tester, unsigned());
+        await fitSigningBlock(tester);
         await scrollToEnd(tester);
 
         expect(signEnabled(tester), isFalse);
@@ -667,6 +675,7 @@ void main() {
             }
           },
         );
+        await fitSigningBlock(tester);
         await scrollToEnd(tester);
         await tester.tap(find.byType(Checkbox));
         await tester.pumpAndSettle();

@@ -98,7 +98,10 @@ class SignaturePad extends StatefulWidget {
   final SignatureEncoder encode;
   final bool enabled;
 
-  static const height = 144.0;
+  /// Tall enough to sign in properly with a finger or a stylus. The small box
+  /// (144) was reported as unusable (owner, 31 Oct 2026); the website's is 256
+  /// on a phone, so the two match.
+  static const height = 256.0;
 
   /// The drawing surface itself (the pad's widget also holds its Clear button).
   static const surfaceKey = ValueKey('signature-pad-surface');
