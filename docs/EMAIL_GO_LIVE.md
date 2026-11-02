@@ -2,9 +2,7 @@
 
 What stands between the email system and real customers, how it sends safely, how it was tested,
 and the decisions that belong to the owner. Written 1 and 2 Nov 2026. The list of every email, and
-how to add one, is in `docs/EMAIL_EVENTS.md`; the rewritten version is
-[on the email branch](https://github.com/Yash13606/GZ-web/blob/feat/email-production/docs/EMAIL_EVENTS.md)
-until it merges, and the file on this branch is the old September one. The code is in
+how to add one, is in [`EMAIL_EVENTS.md`](EMAIL_EVENTS.md); the code is in
 `backend/apps/api/src/mail/`.
 
 Four things stop customers getting email today, and none of them is code: the site address in the
