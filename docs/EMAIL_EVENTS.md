@@ -1,170 +1,193 @@
 # Email events
 
-Every moment GalleryZone should send mail, who receives it, and what is
-built today. Written 19 Sep 2026, revised 22 Sep 2026 against
-`backend/apps/api/src/mail/`.
+Every email GalleryZone sends, who receives it, and what is not built. The catalogue
+in `backend/apps/api/src/mail/templates.ts` is the source of truth (66 emails); this
+page is its readable form, and `npm run check:email` fails if an email is in the
+catalogue but missing here. Rewritten 2 Nov 2026. It replaces the 19/22 Sep version,
+which still listed the insurance emails and showed the admin-delist email as live
+although nothing called it.
 
 **Status key**
 
-- **Live** — template written and wired to the event; it sends today.
-- **Template only** — the template exists but nothing calls it; no mail goes out.
-- **Not built** — neither template nor trigger.
+- **Live**: written, wired to its event, and sent when it happens.
+- **Built, not triggered**: written, but nothing fires it.
+- **Not built**: no template and no trigger.
 
-**How sending works.** `Mailer.send()` (`mail/mailer.ts`) is fire-and-forget
-and never throws — a failed send is logged, never a failed request. Every
-send carries an idempotency key (e.g. `order-paid-buyer/<orderId>`), so a
-retried request cannot send the same mail twice. With no `RESEND_API_KEY`
-the mailer dry-runs and logs instead of sending.
+## How sending works
 
-**What gates real delivery**
+1. Something happens, and a controller, a payment webhook or a timer calls one method
+   on `Emails` (`mail/emails.ts`) as `void this.emails.x(...).catch(this.emails.swallow("label"))`.
+   It never waits: a mail failure is logged and never becomes an API error.
+2. The method looks up the people and facts from ids and picks the idempotency key.
+3. A template in `templates.ts` writes the email: a pure function that returns a subject
+   and a description of the body. `layout.ts` renders it as HTML and as a plain-text twin.
+4. The in-app inbox copy is saved first, so an email outage cannot lose it. One-time
+   links (password reset, confirmation link) are kept out of the inbox.
+5. `mailer.ts` sends through Resend with `EMAIL_REPLY_TO` as the reply address, and
+   retries rate limits and server errors. With no `RESEND_API_KEY` it logs `[dry-run]`.
 
-1. `galleryzone.art` is **verified in Resend** as of 22 Sep 2026, so mail
-   leaves from the real domain rather than the sandbox sender. That has not
-   yet been confirmed by actually receiving one — send yourself a password
-   reset.
-2. Admin-recipient mails resolve to every user with `role == "admin"`. If no
-   admin account exists, those sends are silently skipped.
+**The idempotency key** is what stops a retried request or a repeated webhook from sending
+twice. Resend keeps a key for 24 hours, answers a repeat with the original result, and
+refuses the same key with different content (409). An email that can legitimately happen
+again (a second rejection, a resent link) therefore carries a part that changes: see
+`again()` in `emails.ts`.
 
-**Every CTA link is checked against `frontend-web/app`.** Three were wrong
-and shipping in live mail until 22 Sep (`/admin/withdrawals`,
-`/aggregator/holdings`, `/dashboard/coa`). There is no shared `/support`
-page either — it resolves per role.
+## What gates real delivery
 
----
+1. **`www.galleryzone.art` must serve the current build.** Every button links there, and the
+   header logo is `/brand/gz-email-logo.png`. On 1 Nov 2026 the domain served an old build
+   on which all the member-area pages the emails link to were 404.
+2. **`EMAIL_FROM`** must be an address on the verified domain, for example
+   `GalleryZone <hello@galleryzone.art>`. `galleryzone.art` is verified in Resend (DKIM and
+   return-path records were present on 1 Nov). The default, `onboarding@resend.dev`, only
+   delivers to the Resend account owner.
+3. **`EMAIL_REPLY_TO`** must be a mailbox someone reads. Several emails say "reply to this
+   email", and `galleryzone.art` had no MX record on 1 Nov, so a reply would bounce.
+4. **The Resend plan.** Free is 3,000 emails a month and 100 a day; one order sends 9.
+5. **`PUBLIC_SITE_URL`** is `https://www.galleryzone.art`.
+6. Admin-recipient emails go to every user with `role == "admin"`. With no admin account
+   they are skipped.
 
-## 1. Account
+Then read them in real inboxes: `npm run email:send-sample -- you@example.com --all`.
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Registered (email/password) | the new user | **Live** | Carries the "confirm my email" link. |
-| Registered via Google (first sign-in bootstrap) | the new user | **Live** | No verify link — Google already verified the address. |
-| Password reset requested | the account | **Live** | One-use link, one hour. Sent even when the address has no account? No — silently skipped, so the form can't be used to discover who has an account. |
-| Email verification re-sent | the account | **Live** | `POST /v1/auth/resend-verification`. |
-| Email address changed | old **and** new address | **Not built** | Security-relevant: the old address must be told. |
-| Password changed | the account | **Not built** | Same reason. |
-| Account suspended / reactivated by an admin | the user | **Live** | Suspended, blocked and restored. |
-| Deactivation requested by the artist | the artist + admins | **Live** | |
-| Deactivation approved / rejected | the artist | **Live** | Carries the reviewer’s note. |
+## The catalogue
 
-## 2. Artist — listings
+### Everyone with an account (9)
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Artwork submitted for review | the artist | **Live** | "It's in review." |
-| Artwork submitted for review | admins | **Live** | The review queue prompt. |
-| Artwork approved and listed | the artist | **Live** | Includes the CoA certificate number. |
-| Artwork rejected | the artist | **Live** | Carries the admin's reason. |
-| Artwork delisted by an admin | the artist | **Live** | |
-| Free edit window about to close | the artist | **Not built** | Needs a scheduled job. |
-| Listing expiring (end of the 180-day window) | the artist | **Not built** | Needs a scheduled job. |
-| "Sold elsewhere" declared → external-sale fee raised | the artist | **Not built** | The artist triggers this themselves and the response carries the amount, so it is the weakest gap here. |
-| External-sale fee decided by an admin | the artist | **Live** | Approved or waived, with the amount and the reviewer’s note. |
+| Email | Sends when | Status | Template id |
+| --- | --- | --- | --- |
+| Welcome, with a link to confirm the address | Someone registers | Live | `welcome` |
+| Confirm your email address (link sent again) | They ask for the confirmation link again | Live | `verify-email` |
+| Reset your password | They ask to reset their password | Live | `password-reset` |
+| Your account is suspended | An admin suspends the account | Live | `account-suspended` |
+| Your account is active again | An admin restores the account | Live | `account-restored` |
+| Your payout account was changed | The payout bank account is changed or removed | Live | `bank-account-changed` |
+| We've received your deactivation request | They ask to deactivate their account | Live | `deactivation-requested` |
+| Your deactivation was approved or put on hold | An admin decides the request | Live | `deactivation-decided` |
+| We've got your message | They send a support message | Live | `support-ack` |
 
-## 3. Artist — compliance
+### Collectors (13)
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| GSTIN approved / rejected | the artist or aggregator | **Live** | An aggregator can't reserve until it is approved. It no longer decides TDS, which follows the artist's financial-year sales. |
-| KYC approved / rejected | the artist | **Live** | Blocks payouts while unresolved. |
-| Insurance approved / rejected on a piece | the artist | **Live** | |
-| Artist MOU version bumped → re-signature required | all artists | **Not built** | Today they only find out on next sign-in. |
-| Sales crossed ₹5,00,000 in the financial year (TDS starts) | the artist | **Not built** | TDS is now withheld from the sale that crosses the line. The artist should know why a payout came in lower. |
+| Email | Sends when | Status | Template id |
+| --- | --- | --- | --- |
+| Order confirmed, payment received | Their payment is captured | Live | `order-paid-buyer` |
+| Order confirmed with the artist | An admin confirms the order | Live | `order-confirmed-buyer` |
+| Packed and ready to ship | The artist has packed it | Live | `order-packed-buyer` |
+| On its way, with the courier and an estimate | The courier has it | Live | `order-transit-buyer` |
+| Delivered, and how to open the passport | It is marked delivered | Live | `order-delivered-buyer` |
+| Order cancelled | The order is cancelled | Live | `order-cancelled-buyer` |
+| Payment didn't go through | The gateway declines their payment | Live | `payment-failed` |
+| Someone wants to transfer or lend them a piece | Someone invites them to take or borrow a piece | Live | `transfer-invite` |
+| Your transfer or loan was accepted | The person they invited accepts | Live | `transfer-accepted` |
+| The transfer or loan was cancelled | The sender cancels an invite | Live | `transfer-cancelled` |
+| Your transfer or loan was declined | The person they invited says no | Live | `transfer-declined` |
+| Your printed certificate is on its way | The artist posts the printed certificate | Live | `coa-dispatched` |
+| Your cart is waiting | A cart sits unpaid (built, nothing fires it yet) | Built, not triggered | `abandoned-cart` |
 
-## 4. Orders and payment
+### Artists (25)
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Payment captured — order confirmed | the buyer | **Live** | Receipt with the total paid. |
-| Payment captured — piece sold | the artist | **Live** | Shows their net settlement. |
-| Payment captured | admins | **Not built** | No ops notification on a sale. |
-| Payment failed or abandoned | the buyer | **Live** | On Razorpay's `payment.failed` webhook. Says they were not charged and the piece is still available. |
-| Order confirmed → packed → transit → delivered → cancelled | the buyer | **Live** | Wired into `PATCH /v1/admin/orders/:id/status`. The copy had been keyed to `shipped`/`refunded`, which are not order statuses, so nothing would have matched even once it was called. |
-| Order status changed | the artist | **Live** | On the stages that are theirs: confirmed, transit, delivered, cancelled. |
-| Order cancelled / refunded | the buyer + the artist | **Not built** | There is no refund flow yet at all. |
-| GST invoice issued | the buyer | **Not built** | Needs the invoice PDF first. |
-| Settlement released (7 days after delivery) | the artist | **Not built** | Needs the payout job. |
+| Email | Sends when | Status | Template id |
+| --- | --- | --- | --- |
+| Your artwork is in review | They submit an artwork | Live | `artwork-submitted` |
+| Your artwork is live | An admin approves it | Live | `artwork-approved` |
+| Your artwork was returned, with the reviewer's note | An admin returns it | Live | `artwork-rejected` |
+| Your artwork was removed from the marketplace | An admin removes a live piece | Live | `artwork-delisted` |
+| Your artwork sold | Their piece sells | Live | `order-paid-artist` |
+| Order confirmed: pack the piece | The order is confirmed | Live | `order-confirmed-artist` |
+| Your piece is in transit | The courier has the piece | Live | `order-transit-artist` |
+| Your piece was delivered | The piece is delivered | Live | `order-delivered-artist` |
+| The order was cancelled | The order is cancelled | Live | `order-cancelled-artist` |
+| Lock the NFC tag | A linked tag is still unlocked after 48 hours | Live | `nfc-reminder-48h` |
+| Your tag is still not locked | The tag is still unlocked after 7 days | Live | `nfc-reminder-7d` |
+| We're waiting on your NFC tag | An admin chases the tag by hand | Live | `nfc-nudge` |
+| A collector wants the printed certificate | A collector asks for the printed certificate | Live | `coa-requested` |
+| KYC verified (or needs another look) | An admin approves their KYC | Live | `kyc-verified` |
+| GSTIN needs another look (or is verified) | An admin rejects their GSTIN | Live | `gst-needs-another-look` |
+| Your agreement is signed | They sign the artist agreement | Live | `mou-signed-artist` |
+| Your blog post is published | An admin publishes their blog post | Live | `blog-published` |
+| Your blog post was returned | An admin returns their blog post | Live | `blog-returned` |
+| A gallery has reserved your artwork | A gallery reserves their piece | Live | `holding-reserved-artist` |
+| A gallery returned your artwork | A gallery sends the piece back | Live | `holding-returned-artist` |
+| Your artwork sold at a gallery | A gallery sells their piece | Live | `sale-recorded-artist` |
+| External-sale fee confirmed or waived | An admin decides an external-sale fee | Live | `external-fee-decided` |
+| Withdrawal request received | They request a withdrawal (aggregators too) | Live | `withdrawal-requested` |
+| Payout sent | An admin pays it out | Live | `withdrawal-paid` |
+| Withdrawal not approved | An admin declines it | Live | `withdrawal-declined` |
 
-## 5. Money — wallet and payouts
+### Aggregators (11)
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Withdrawal requested | the requester | **Live** | Artist, aggregator or collector. |
-| Withdrawal requested | admins | **Live** | The approval prompt. |
-| Withdrawal approved | the requester | **Live** | |
-| Withdrawal rejected | the requester | **Live** | |
-| Payout actually paid out (NEFT/Cashfree Payouts reference) | the requester | **Not built** | Approval and payment are separate events; only approval is mailed. |
-| Bank account changed on a profile | the account | **Live** | Always sent, with a “wasn’t you?” line — the point is the real owner hears about it. |
+| Email | Sends when | Status | Template id |
+| --- | --- | --- | --- |
+| Your reservation is confirmed | Their reservation completes | Live | `holding-reserved-aggregator` |
+| Extension approved or declined | An admin answers an extension request | Live | `holding-extension-decided` |
+| Your display period has ended | A placement window runs out | Live | `holding-period-ended` |
+| Your return is recorded | They return an unsold piece | Live | `holding-returned-aggregator` |
+| Your sale is recorded, and what to remit | They record a sale | Live | `sale-recorded-aggregator` |
+| Wallet top-up received | A wallet top-up is paid | Live | `wallet-topup` |
+| Cash remittance received | A cash remittance is paid | Live | `remittance-received` |
+| Reservation couldn't be completed: refund | A paid reservation can't be completed and is refunded | Live | `reservation-refunded` |
+| Your problem report is resolved | An admin resolves their problem report | Live | `holding-report-resolved` |
+| Your agreement is signed | They sign the aggregator agreement | Live | `mou-signed-aggregator` |
+| GSTIN verified (or needs another look) | An admin approves their GSTIN | Live | `gst-verified` |
 
-## 6. Certificates, ownership and the passport
+### Admins (8)
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Physical CoA requested by an owner | the artist | **Live** | They hand-sign and dispatch it. |
-| Physical CoA dispatched | the requester | **Not built** | The person waiting for it is never told it shipped. |
-| Ownership transfer invited | the recipient | **Live** | Works for an unregistered recipient — the link is the whole flow. |
-| Transfer accepted | the sender | **Not built** | |
-| Transfer cancelled or expired | both parties | **Not built** | |
-| Display period ended | both parties | **Not built** | |
-| NFC tag linked to a piece | the artist | **Not built** | Low priority; the UI confirms it. |
+| Email | Sends when | Status | Template id |
+| --- | --- | --- | --- |
+| New artwork awaiting approval | An artist submits a piece | Live | `artwork-submitted-admin` |
+| Withdrawal awaiting approval | Someone requests a withdrawal | Live | `withdrawal-requested-admin` |
+| Deactivation request | Someone asks to deactivate | Live | `deactivation-requested-admin` |
+| New support ticket (reply goes to the person) | A support ticket arrives | Live | `support-new-admin` |
+| A piece was priced far above the offer | A piece is reserved far above the offer | Live | `holding-price-warning` |
+| An aggregator wants more time | An aggregator asks for more time | Live | `holding-extension-requested` |
+| An aggregator reported a problem | An aggregator reports a problem with a piece | Live | `holding-report-filed` |
+| A refund needs doing by hand | An automatic reservation refund fails | Live | `refund-failed-admin` |
 
-## 7. Aggregators
+## Not built
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Aggregator reserved a piece | the aggregator | **Live** | Their confirmation of the advance and the placement window. |
-| Aggregator reserved a piece | the artist | **Live** | Names the gallery and the date the placement window closes. |
-| Reserved piece — shipping instructions | the artist | **Not built** | |
-| Placement window closing (7 days out) | the aggregator | **Not built** | The expiry sweep exists now (below), so this is a small addition to it. |
-| Placement window ended, piece moved on, advance released | the aggregator | **Live** | Sent by the sweep in `holding-expiry.ts`, which runs at boot and every 15 minutes. Not sent to the artist yet. |
-| Aggregator priced a piece at least double GalleryZone's offer | admins | **Live** | A warning, never a block (`aggregatorPriceWarnRate`). |
-| Aggregator asked to keep a piece past its window | admins | **Live** | Carries their assurance. |
-| Extension request approved / declined | the aggregator | **Live** | Carries GalleryZone's note. |
-| Piece returned unsold | the artist + admins | **Not built** | |
-| Sale recorded at a partner gallery | the artist + admins | **Not built** | |
-| Cash-at-premises sale due, or overdue | the aggregator | **Not built** | The full price is due 2 days after the sale (client, 30 Sep 2026). The due date and an overdue flag show on the Settlements page; no mail is sent yet. |
-| Admin pulled a piece back | the aggregator + the artist | **Not built** | |
-| Aggregator MOU re-signature required | all aggregators | **Not built** | |
+| Email | Why not yet |
+| --- | --- |
+| Password changed, email address changed (to the old and the new address) | Both happen inside Firebase Auth, not in our handlers: they need a Firebase Function on the auth events, or a server step on the reset page. |
+| Order refunded | There is no refund action for marketplace orders. The cancelled email only says a refund is on its way. |
+| Payout actually paid out (bank reference) | Approval and the bank transfer are separate events and only approval is mailed. Needs the payout integration. |
+| GST invoice issued | The invoice PDF now exists (`invoice-pdf.ts`), so this is a small addition to the order-confirmed email. |
+| Settlement released after delivery | Nothing holds a payout: the artist's ledger credit posts when the order is paid. The artist emails still say it is released after delivery and after the return window, so the owner must decide the rule first. |
+| Payment captured, to admins | No ops notification on a sale. |
+| Cart reminder | Built (`abandoned-cart`), nothing fires it. Needs a daily job over carts and the owner's go-ahead; the preference is on by default for every collector. |
+| Placement window closing (7 days out), cash sale due or overdue | Needs a daily job. The sale already stores `remitDueAt`. |
+| Free edit window closing, listing expiring (180 days) | Needs a daily job. |
+| Artist or aggregator MOU version bumped, re-signature required | Today they find out at next sign-in. |
+| Sales crossed the TDS threshold in the financial year | The artist should know why a payout came in lower. |
+| KYC or GSTIN submitted, to admins | Admins find submissions by opening the queue. |
+| Artist declares a sale made elsewhere | The fee decision is emailed; the declaration is not. |
+| Admin pulled a piece back from a gallery | Neither side is told. |
+| Shipping instructions after a reservation | |
+| Support ticket replied to | There is no admin reply action; support answers by replying to the email. |
+| Pricing rule proposed or approved | The second admin is not nudged; a change is not recorded by mail. |
+| NFC tag linked | Low priority; the app confirms it. |
+| Free access ending | Nothing bills artists yet. |
+| Sign-in or verification code by email or WhatsApp | On the client's list. Today people confirm with a link. |
+| Bounce and complaint alerts | Resend reports them as webhook events; nothing here listens, so nobody hears that a customer's address does not work. |
 
-## 8. Support and admin
+## Removed
 
-| Event | To | Status | Notes |
-|---|---|---|---|
-| Support ticket raised | the person who raised it | **Live** | |
-| Support ticket raised | admins | **Live** | Carries the message body with `replyTo` set to the requester, because there is still no admin support queue page. |
-| Support ticket replied to | the requester | **Not built** | |
-| Pricing-rule change proposed | the other platform admins | **Not built** | The two-admin approval needs a nudge to reach the second admin. |
-| Pricing-rule change approved | both admins | **Not built** | Every price on the site just moved — worth a record. |
-
----
-
-## Recommended order of work
-
-Items 1–3 and 5 of the original list were done on 22 Sep 2026: order status
-to the buyer and the artist, aggregator reservation to both sides, the
-compliance decisions, delisting, deactivation, the external-sale fee
-decision, and support acknowledgement in both directions. What is left:
-
-1. **Password changed / email address changed** → the account. The last two
-   security mails. Both happen inside Firebase Auth rather than in our own
-   handlers, so they need a Firebase Function on the auth events, not a
-   controller call — which is why they are still open while the other
-   security mails are done.
-2. **Payout actually paid out** → the requester. Approval and the bank
-   transfer are separate events; only approval is mailed. Needs the Cashfree Payouts
-   payout integration to have something to report.
-3. **GST invoice issued** → the buyer. Needs the invoice PDF first.
-4. **Scheduled mails** — listing expiry, free-edit window closing,
-   settlement released, and a 7-day warning before a placement window ends.
-   Placement expiry itself now runs (`holding-expiry.ts`); the rest all need
-   the cron work already on the launch list, so they come last.
-5. **Support ticket replied to.** There is no admin reply flow, or an admin
-   support queue page, to hang it on yet.
+- The two insurance emails (approved, rejected): the product no longer offers insurance, and
+  they told artists a piece was "covered in transit and on display". The admin endpoints for
+  insurance are untouched.
+- Three emails that were written but never called: the courier hand-over and the delivery
+  email (their wording now lives in `order-transit-buyer` and `order-delivered-buyer`), and
+  "payout released" (see the settlement row above).
 
 ## Adding one
 
-Add a method to `Emails` (`apps/api/src/mail/emails.ts`) following the shape
-of the existing ones — resolve the recipient from Firestore, build a
-`Layout`, and pass a stable idempotency key. Then call it from the
-controller that owns the event with
-`void this.emails.yourEvent(...).catch(this.emails.swallow("label"))`, so a
-mail failure can never fail the request that triggered it.
+1. Write a function in `templates.ts` that returns `{ subject, category, layout }`, and add a
+   row to `catalogue` (the id, who gets it, when, and a sample).
+2. Add a row here. `npm run check:email` fails until you do.
+3. Add a method to `Emails` that looks the facts up from ids and calls
+   `this.deliver(key, to, T.yourEmail(...))`. Choose the key so that a repeat of the same event
+   is the same key, and a legitimate second occurrence is not.
+4. Call it from the controller that owns the event with
+   `void this.emails.yourEvent(...).catch(this.emails.swallow("label"))`.
+5. `npm run check:email` renders every email and checks escaping, the plain-text part, links and
+   colour contrast. `npm run email:preview` writes them all as HTML. `npm run check:email-demo`
+   runs the real service against the seeded demo data.

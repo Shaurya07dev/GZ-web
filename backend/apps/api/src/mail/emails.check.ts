@@ -8,7 +8,7 @@
 // and text, plus an index page, to look at in a browser.
 
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { COLOR, renderEmail } from "./layout.ts";
 import { catalogue, inr, orderStatusBuyer, orderStatusArtist, artworkApproved, type Content } from "./templates.ts";
@@ -145,6 +145,16 @@ for (const r of rendered) {
   if (!allowed || !url) continue;
   const path = url.slice(SITE.length);
   assert.ok(allowed.some((p) => path === p || path.startsWith(`${p}/`) || path.startsWith(`${p}?`)), `[${r.id}] is for a ${r.who} but its button goes to ${path}`);
+}
+
+// The readable list of emails must name every email in the catalogue, so it cannot go stale.
+{
+  const docUrl = new URL("../../../../../docs/EMAIL_EVENTS.md", import.meta.url);
+  if (existsSync(docUrl)) {
+    const doc = readFileSync(docUrl, "utf8");
+    const missing = rendered.filter((r) => !doc.includes("`" + r.id + "`")).map((r) => r.id);
+    assert.deepEqual(missing, [], "docs/EMAIL_EVENTS.md does not list: " + missing.join(", "));
+  }
 }
 
 console.log(`emails.check: ${rendered.length} emails render cleanly (${pairs.length} colour pairs, escaping, links, text part)`);
