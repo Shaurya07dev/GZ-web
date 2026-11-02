@@ -54,6 +54,8 @@ export class AdminArtworksController {
   async delist(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
     await delistArtwork(this.db, id, req.authUser.uid);
     this.cache.clear();
+    // Pulling a live piece off the marketplace used to be silent to the artist.
+    void this.emails.artworkDelisted({ artworkId: id }).catch(this.emails.swallow("delist mail"));
     return { status: "returned" };
   }
 

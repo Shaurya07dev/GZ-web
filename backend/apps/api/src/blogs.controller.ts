@@ -29,6 +29,7 @@ import { Public } from "./auth/roles.decorator.ts";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
+import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 const submitSchema = z
@@ -54,7 +55,10 @@ type RejectBody = z.infer<typeof rejectSchema>;
 
 @Controller("v1")
 export class BlogsController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly emails: Emails,
+  ) {}
 
   // --- Public --------------------------------------------------------------
 
@@ -120,12 +124,16 @@ export class BlogsController {
   @Roles("admin")
   @Post("admin/blogs/:id/accept")
   async accept(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
-    return acceptBlog(this.db, { blogId: id, adminId: req.authUser.uid });
+    const result = await acceptBlog(this.db, { blogId: id, adminId: req.authUser.uid });
+    void this.emails.blogDecided({ blogId: id, approved: true }).catch(this.emails.swallow("blog decision mail"));
+    return result;
   }
 
   @Roles("admin")
   @Post("admin/blogs/:id/reject")
   async reject(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(rejectSchema)) body: RejectBody) {
-    return rejectBlog(this.db, { blogId: id, adminId: req.authUser.uid, reason: body.reason });
+    const result = await rejectBlog(this.db, { blogId: id, adminId: req.authUser.uid, reason: body.reason });
+    void this.emails.blogDecided({ blogId: id, approved: false, note: body.reason }).catch(this.emails.swallow("blog decision mail"));
+    return result;
   }
 }

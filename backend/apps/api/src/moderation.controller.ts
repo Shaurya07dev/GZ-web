@@ -65,7 +65,7 @@ export class ModerationController {
   @Post("artworks/:artworkId/insurance/approve")
   async approveInsurance(@Req() req: AuthenticatedRequest, @Param("artworkId") artworkId: string) {
     const result = await decideInsurance({ db: this.db, adminId: req.authUser.uid, artworkId, decision: "approved" });
-    void this.emails.insuranceDecided({ artworkId, approved: true }).catch(this.emails.swallow("insurance decision mail"));
+    // No email: the product no longer offers insurance (client, 24 Oct 2026), so nothing should tell anyone a piece is covered.
     return result;
   }
 
@@ -73,7 +73,7 @@ export class ModerationController {
   @Post("artworks/:artworkId/insurance/reject")
   async rejectInsurance(@Req() req: AuthenticatedRequest, @Param("artworkId") artworkId: string, @Body(new ZodValidationPipe(decisionBodySchema)) body: DecisionBody) {
     const result = await decideInsurance({ db: this.db, adminId: req.authUser.uid, artworkId, decision: "rejected", reason: body.reason });
-    void this.emails.insuranceDecided({ artworkId, approved: false, reason: body.reason }).catch(this.emails.swallow("insurance decision mail"));
+    // No email either, for the same reason as approveInsurance.
     return result;
   }
 }

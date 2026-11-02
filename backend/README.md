@@ -52,3 +52,32 @@ Both frontends' own client-side pricing math (`frontend-web/lib/pricing.ts`,
 `mobile_flutter/lib/core/pricing.dart`) gets retired once `apps/api` serves
 real numbers (Phase 6) — this package is the single source of truth in the
 meantime and going forward.
+
+## Email
+
+Transactional email goes out through Resend. The words are in
+`apps/api/src/mail/templates.ts` (one pure function per email, and a catalogue of
+who gets what and when), the look is `layout.ts`, and `emails.ts` is the service the
+controllers call (`void this.emails.orderPaid(...)`: a mail failure is logged and
+never becomes an API error). `mailer.ts` is the only code that talks to Resend.
+
+| Variable | Set to |
+| --- | --- |
+| `RESEND_API_KEY` | A sending-only key. Unset, emails are logged, not sent. |
+| `EMAIL_FROM` | `GalleryZone <hello@galleryzone.art>`: an address on the domain verified in Resend. The default, Resend's `onboarding@resend.dev`, only delivers to the Resend account's own address. |
+| `EMAIL_REPLY_TO` | A mailbox someone reads, for example `support@galleryzone.art`. Several emails say "reply to this email". |
+| `PUBLIC_SITE_URL` | `https://www.galleryzone.art`. Every button and the logo link to it. |
+
+- `npm run check:email` renders every email with sample data and checks escaping,
+  the plain-text part, links and colour contrast. It is part of `npm run check`.
+- `npm run email:preview` writes every email as HTML and text to `email-previews/`;
+  open `index.html`.
+- `npm run check:email-demo` (demo emulator running and seeded, API built) runs the
+  real service against the seeded data with a fake mailer.
+
+To add an email: write a function in `templates.ts` and a row in `catalogue`; add a
+method in `emails.ts` that looks the facts up and calls `deliver(key, to,
+T.yourEmail(...))`; call it from the controller with `void this.emails.x(...).catch(this.emails.swallow("..."))`.
+The key is the idempotency key. Resend drops a repeat of the same key within 24 hours
+and refuses the same key with different content, so anything that can legitimately
+happen twice needs a part that changes (see `again()` in `emails.ts`).

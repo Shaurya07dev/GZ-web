@@ -95,6 +95,16 @@ export class AuthController {
       .catch(this.emails.swallow("welcome mail"));
   }
 
+  /** The confirmation link again, on request. Not the welcome: see Emails.resendVerification. */
+  private sendVerification(uid: string, email: string) {
+    void generateEmailVerificationLink(email, FIREBASE_CONTINUE())
+      .then((link) => {
+        const code = oobCodeOf(link);
+        return code ? this.emails.resendVerification(uid, `${SITE()}/verify-email?token=${encodeURIComponent(code)}`) : undefined;
+      })
+      .catch(this.emails.swallow("verification mail"));
+  }
+
   @Public()
   // Each sign-up mails an address the caller chose: unthrottled, it is a spam relay from our domain.
   @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 20, ttl: 3_600_000 } })
@@ -171,11 +181,13 @@ export class AuthController {
 
   /** Re-send the verification link to a signed-in, still-unverified account. */
   @Roles("customer", "artist", "aggregator", "admin")
+  // Each call really sends an email to the address on the account now, so keep it from being a way to flood an inbox.
+  @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 10, ttl: 3_600_000 } })
   @Post("resend-verification")
   @HttpCode(202)
   async resendVerification(@Req() req: AuthenticatedRequest): Promise<{ accepted: true }> {
     const user = await getCurrentUser(this.db, req.authUser.uid);
-    if (user) this.sendWelcome(user.uid, user.email);
+    if (user) this.sendVerification(user.uid, user.email);
     return { accepted: true };
   }
 

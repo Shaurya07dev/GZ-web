@@ -21,11 +21,15 @@ import {
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
+import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
 @Controller("v1")
 export class HoldingReportsController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly emails: Emails,
+  ) {}
 
   @Roles("aggregator")
   @Post("aggregator/holdings/:id/reports")
@@ -35,12 +39,14 @@ export class HoldingReportsController {
     @Body(new ZodValidationPipe(createHoldingReportInputSchema)) body: CreateHoldingReportInput,
   ) {
     try {
-      return await createHoldingReport(this.db, {
+      const report = await createHoldingReport(this.db, {
         holdingId,
         aggregatorId: req.authUser.uid,
         issueType: body.issueType,
         description: body.description,
       });
+      void this.emails.holdingReportFiled(report).catch(this.emails.swallow("holding report mail"));
+      return report;
     } catch (err) {
       // Not-found-shaped either way: a stranger shouldn't learn whether the id exists.
       throw new NotFoundException({ type: "about:blank", title: "Holding not found", status: 404, code: "not_found" });
@@ -63,10 +69,12 @@ export class HoldingReportsController {
     @Param("id") reportId: string,
     @Body(new ZodValidationPipe(resolveHoldingReportInputSchema)) body: ResolveHoldingReportInput,
   ) {
-    return resolveHoldingReport(this.db, {
+    const report = await resolveHoldingReport(this.db, {
       reportId,
       adminId: req.authUser.uid,
       note: body.note ?? null,
     });
+    void this.emails.holdingReportResolved(report).catch(this.emails.swallow("holding report resolved mail"));
+    return report;
   }
 }

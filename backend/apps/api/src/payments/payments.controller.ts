@@ -348,6 +348,7 @@ export class PaymentsController {
       method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
       providerPaymentId: payment?.id ?? body?.razorpayPaymentId ?? null,
     });
+    void this.emails.walletTopupReceived(id).catch(this.emails.swallow("top-up receipt mail"));
     return { status: "paid" as const, amountPaise: result.amountPaise };
   }
 
@@ -365,6 +366,7 @@ export class PaymentsController {
       method: "simulated",
       providerPaymentId: null,
     });
+    void this.emails.walletTopupReceived(id).catch(this.emails.swallow("top-up receipt mail"));
     return { status: "paid" as const, amountPaise: result.amountPaise };
   }
 
@@ -474,6 +476,7 @@ export class PaymentsController {
       method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
       providerPaymentId: payment?.id ?? body?.razorpayPaymentId ?? null,
     });
+    void this.emails.remittanceReceived(id).catch(this.emails.swallow("remittance receipt mail"));
     return { status: "paid" as const, amountPaise: result.amountPaise };
   }
 
@@ -485,6 +488,7 @@ export class PaymentsController {
     }
     await this.ownRemittance(req, id);
     const result = await markRemittancePaid(this.db, id, { method: "simulated", providerPaymentId: null });
+    void this.emails.remittanceReceived(id).catch(this.emails.swallow("remittance receipt mail"));
     return { status: "paid" as const, amountPaise: result.amountPaise };
   }
 
@@ -641,14 +645,22 @@ export class PaymentsController {
         providerPaymentId,
       });
       if (outcome.kind === "needs_refund") {
-        const refund = await this.razorpay.createRefund({
-          providerPaymentId,
-          amountPaise: intent.totalPayablePaise,
-          receipt: `refund-${intentId}`.slice(0, 40),
-          notes: { gzIntentId: intentId, reason: outcome.reason.slice(0, 200), source: "webhook" },
-        });
-        await markIntentRefunded(this.db, intentId, refund.id);
+        try {
+          const refund = await this.razorpay.createRefund({
+            providerPaymentId,
+            amountPaise: intent.totalPayablePaise,
+            receipt: `refund-${intentId}`.slice(0, 40),
+            notes: { gzIntentId: intentId, reason: outcome.reason.slice(0, 200), source: "webhook" },
+          });
+          await markIntentRefunded(this.db, intentId, refund.id);
+          void this.emails.reservationRefunded(intentId).catch(this.emails.swallow("reservation refunded mail"));
+        } catch (error) {
+          // They have paid and have nothing: a person has to finish this. The webhook still fails, so Razorpay retries it.
+          void this.emails.refundFailed(intentId, String(error)).catch(this.emails.swallow("refund failed mail"));
+          throw error;
+        }
       } else if (outcome.kind === "finalized") {
+        void this.emails.holdingReservedById(outcome.holdingId).catch(this.emails.swallow("holding reserved mail"));
         void bookInboundShipment(this.db, outcome.holdingId, intent.artworkId, intent.aggregatorId).catch((err) =>
           console.error(JSON.stringify({ event: "shiprocket.inbound.failed", holdingId: outcome.holdingId, error: String(err) })),
         );
@@ -684,6 +696,7 @@ export class PaymentsController {
           method: ctx.payment?.method ? `razorpay_${ctx.payment.method}` : "razorpay",
           providerPaymentId: ctx.payment?.id ?? null,
         });
+        void this.emails.remittanceReceived(remittanceId).catch(this.emails.swallow("remittance receipt mail"));
       } else if (event === "payment.failed") {
         await markRemittanceFailed(this.db, remittanceId, { providerPaymentId: ctx.payment?.id ?? null });
       }
@@ -719,6 +732,7 @@ export class PaymentsController {
           method: ctx.payment?.method ? `razorpay_${ctx.payment.method}` : "razorpay",
           providerPaymentId: ctx.payment?.id ?? null,
         });
+        void this.emails.walletTopupReceived(topupId).catch(this.emails.swallow("top-up receipt mail"));
       } else if (event === "payment.failed") {
         await markTopupFailed(this.db, topupId, { providerPaymentId: ctx.payment?.id ?? null });
       }
