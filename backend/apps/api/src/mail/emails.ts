@@ -32,6 +32,7 @@ import type { AppEnv } from "@galleryzone/config";
 import { DB, ENV } from "../db.module.ts";
 import { renderEmail } from "./layout.ts";
 import { Mailer } from "./mailer.ts";
+import { PushSender } from "./push.ts";
 import { asText } from "./rich.ts";
 import * as T from "./templates.ts";
 
@@ -61,6 +62,7 @@ export class Emails {
     @Inject(DB) private readonly db: Db,
     @Inject(ENV) env: AppEnv,
     private readonly mailer: Mailer,
+    private readonly push: PushSender,
   ) {
     this.ctx = { site: (process.env.PUBLIC_SITE_URL || env.corsOrigins[0] || "https://www.galleryzone.art").replace(/\/$/, "") };
   }
@@ -93,15 +95,25 @@ export class Emails {
 
   /**
    * Writes the email, records its in-app copy FIRST (so a mail-provider outage
-   * can't lose it), then sends. Nothing is sent when there is nobody to send to
-   * or the template had nothing to say.
+   * can't lose it), then sends the mail and fires a mobile push alongside.
+   * Nothing is sent when there is nobody to send to or the template had
+   * nothing to say.
+   *
+   * Push notifications piggy-back on every in-app-visible mail: same key, same
+   * recipients, same first paragraph as the body. The one-time account links
+   * (password reset, email verify) are deliberately skipped because they go
+   * to the typed address and don't belong to any device yet. [PushSender]
+   * honours the recipient's `pushEnabled` preference and silently no-ops
+   * without Firebase credentials, so no transactional flow fails on a push
+   * failure.
    */
   private async deliver(key: string, to: string | string[], content: T.Content | null): Promise<void> {
     if (!content) return;
     const recipients = [...new Set((Array.isArray(to) ? to : [to]).filter(Boolean))];
     if (!recipients.length) return;
     const { layout } = content;
-    if (!NOT_IN_INBOX.some((p) => key.startsWith(p))) {
+    const inApp = !NOT_IN_INBOX.some((p) => key.startsWith(p));
+    if (inApp) {
       await recordNotifications(this.db, {
         key,
         emails: recipients,
@@ -112,6 +124,20 @@ export class Emails {
     }
     const { html, text } = renderEmail(this.ctx, layout);
     await this.mailer.send({ to: recipients, subject: content.subject, html, text, idempotencyKey: key, replyTo: content.replyTo, tag: key.split("/")[0] });
+    if (inApp) {
+      // Push mirrors the in-app notification. Non-blocking: the mail has
+      // already landed and PushSender swallows its own errors, but awaiting
+      // it in the request path would slow transactional flows for no gain.
+      void this.push
+        .sendToEmails(this.db, recipients, {
+          title: content.subject,
+          body: asText(layout.paragraphs[0] ?? ""),
+          url: this.inAppPath(layout.cta?.url),
+        })
+        .catch((error: unknown) =>
+          this.logger.warn(`push ${key} failed: ${error instanceof Error ? error.message : String(error)}`),
+        );
+    }
   }
 
   // ── Account ───────────────────────────────────────────────────────────
