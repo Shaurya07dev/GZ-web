@@ -138,6 +138,26 @@ export class Emails {
     await this.deliver(`password-reset/${email}/${again()}`, email, T.passwordReset({ name, resetUrl }));
   }
 
+  /** Six-digit email OTP for sign-up verification. `again()` on the key so a
+   *  resent code isn't rejected as a duplicate by the mail provider. */
+  async signupEmailOtp(email: string, name: string | null, code: string) {
+    await this.deliver(
+      `signup-email-otp/${email}/${again()}`,
+      email,
+      T.signupEmailOtp({ code, name }),
+    );
+  }
+
+  /** Six-digit email OTP for password reset. The user types the code into our
+   *  own reset screen; no link is sent. */
+  async passwordResetOtp(email: string, name: string | null, code: string) {
+    await this.deliver(
+      `password-reset-otp/${email}/${again()}`,
+      email,
+      T.passwordResetOtp({ code, name }),
+    );
+  }
+
   async accountStatusChanged(input: { userId: string; status: string }) {
     const user = await this.user(input.userId);
     if (!user) return;

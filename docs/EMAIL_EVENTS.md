@@ -52,13 +52,15 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 
 ## The catalogue
 
-### Everyone with an account (9)
+### Everyone with an account (11)
 
 | Email | Sends when | Status | Template id |
 | --- | --- | --- | --- |
 | Welcome, with a link to confirm the address | Someone registers | Live | `welcome` |
 | Confirm your email address (link sent again) | They ask for the confirmation link again | Live | `verify-email` |
 | Reset your password | They ask to reset their password | Live | `password-reset` |
+| Six-digit code to confirm the email | They sign up with email+password | Live | `signup-email-otp` |
+| Six-digit code to reset the password | They ask to reset their password (OTP flow) | Live | `password-reset-otp` |
 | Your account is suspended | An admin suspends the account | Live | `account-suspended` |
 | Your account is active again | An admin restores the account | Live | `account-restored` |
 | Your payout account was changed | The payout bank account is changed or removed | Live | `bank-account-changed` |

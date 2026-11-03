@@ -86,6 +86,25 @@ export interface AppEnv {
     cin: string | null;
     supportEmail: string;
   };
+  /**
+   * MSG91 — SMS gateway for phone-number OTPs. All three must be present to
+   * send a real SMS; absent, the phone-OTP endpoints answer 503 (no silent
+   * fallback: a sign-up that thinks the phone was verified when the SMS was
+   * never sent is worse than refusing). Register on
+   * https://msg91.com and get a DLT-approved template + sender header first
+   * (TRAI mandates this for every transactional SMS in India).
+   */
+  msg91: { authKey: string; templateId: string; senderId: string } | null;
+  /**
+   * The one admin account GalleryZone operates with. The seed script runs on
+   * every API boot: creates the Firebase Auth user if missing, writes the
+   * users/{uid} profile with role:admin, resets the password if it drifted.
+   * Idempotent — a second boot is a no-op if the account is already in order.
+   *
+   * Unset leaves the seed off (so dev builds don't try to touch Firebase);
+   * production must set both.
+   */
+  adminSeed: { email: string; password: string } | null;
 }
 
 function required(name: string, value: string | undefined): string {
@@ -229,5 +248,20 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
       cin: optional(source.INVOICE_SELLER_CIN?.trim()),
       supportEmail: source.INVOICE_SELLER_SUPPORT_EMAIL?.trim() || "support@galleryzone.art",
     },
+    msg91:
+      source.MSG91_AUTH_KEY && source.MSG91_TEMPLATE_ID && source.MSG91_SENDER_ID
+        ? {
+            authKey: source.MSG91_AUTH_KEY.trim(),
+            templateId: source.MSG91_TEMPLATE_ID.trim(),
+            senderId: source.MSG91_SENDER_ID.trim(),
+          }
+        : null,
+    adminSeed:
+      source.ADMIN_SEED_EMAIL && source.ADMIN_SEED_PASSWORD
+        ? {
+            email: source.ADMIN_SEED_EMAIL.trim().toLowerCase(),
+            password: source.ADMIN_SEED_PASSWORD, // never trim; a leading/trailing space is still part of the password
+          }
+        : null,
   };
 }

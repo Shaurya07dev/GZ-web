@@ -112,6 +112,53 @@ export function passwordReset(i: { name: string | null; resetUrl: string }): Con
   };
 }
 
+/**
+ * Six-digit code sent during email sign-up. The code lives in [db/otp.ts] as
+ * a one-time, 10-minute-TTL record; this mail is only its delivery. The
+ * template deliberately shows the code in both the subject preheader and
+ * the body so a glance at the inbox is enough on a phone.
+ */
+export function signupEmailOtp(i: { code: string; name: string | null }): Content {
+  return {
+    subject: `Your GalleryZone verification code is ${i.code}`,
+    category: "security",
+    layout: {
+      audience: "anyone",
+      preheader: `Code: ${i.code} (valid 10 minutes)`,
+      heading: "Confirm your email",
+      paragraphs: [
+        `Hi${i.name ? ` ${first(i.name)}` : ""}, use this six-digit code to confirm your email on GalleryZone:`,
+        rich`${strong(i.code)}`,
+        "The code is valid for 10 minutes. Don't share it — GalleryZone will never ask you for it.",
+      ],
+      footnote: "If you didn't ask to sign up, you can ignore this email.",
+    },
+  };
+}
+
+/**
+ * Six-digit code sent for password reset. Replaces the old link-based reset:
+ * the user types the code into our own screen and chooses a new password
+ * there, so a leaked link isn't a password change on its own.
+ */
+export function passwordResetOtp(i: { code: string; name: string | null }): Content {
+  return {
+    subject: `Your GalleryZone password reset code is ${i.code}`,
+    category: "security",
+    layout: {
+      audience: "anyone",
+      preheader: `Code: ${i.code} (valid 10 minutes)`,
+      heading: "Reset your password",
+      paragraphs: [
+        `Hi${i.name ? ` ${first(i.name)}` : ""}, someone asked to reset the password on this GalleryZone account. If it was you, enter this six-digit code on the reset screen to choose a new password:`,
+        rich`${strong(i.code)}`,
+        "The code is valid for 10 minutes. If it wasn't you, ignore this email — your password stays the same.",
+      ],
+      footnote: "GalleryZone will never ask you for this code.",
+    },
+  };
+}
+
 export function accountStatus(i: { status: string; role: string }): Content | null {
   const copy: Record<string, { subject: string; heading: string; body: string }> = {
     suspended: { subject: "Your account has been suspended", heading: "Your account is suspended", body: "You won't be able to sign in while this is in place. Reply to this email if you think it's a mistake and we'll take another look." },
@@ -952,6 +999,8 @@ export const catalogue: CatalogueEntry[] = [
   { id: "welcome", who: "Everyone", when: "Someone registers", make: (c) => welcome({ name: "Priya Sharma", role: "customer", verifyUrl: `${c.site}/verify-email?token=abc123` }, c) },
   { id: "verify-email", who: "Everyone", when: "They ask for the confirmation link again", make: (c) => verifyEmail({ role: "artist", verifyUrl: `${c.site}/verify-email?token=abc123` }) },
   { id: "password-reset", who: "Everyone", when: "They ask to reset their password", make: (c) => passwordReset({ name: "Priya Sharma", resetUrl: `${c.site}/reset-password?token=abc123` }) },
+  { id: "signup-email-otp", who: "Everyone", when: "They sign up with email+password", make: () => signupEmailOtp({ code: "428103", name: "Priya Sharma" }) },
+  { id: "password-reset-otp", who: "Everyone", when: "They ask to reset their password (OTP flow)", make: () => passwordResetOtp({ code: "428103", name: "Priya Sharma" }) },
   { id: "account-suspended", who: "Everyone", when: "An admin suspends the account", make: () => accountStatus({ status: "suspended", role: "artist" }) },
   { id: "account-restored", who: "Everyone", when: "An admin restores the account", make: () => accountStatus({ status: "active", role: "artist" }) },
   { id: "bank-account-changed", who: "Everyone", when: "The payout bank account is changed or removed", make: (c) => bankAccountChanged({ maskedAccount: "•••• 4821", role: "artist" }, c) },

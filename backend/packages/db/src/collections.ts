@@ -113,6 +113,12 @@ export const Collections = {
   aggregatorRemittances: "aggregatorRemittances",
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
+  /**
+   * Email + phone one-time passwords (OTP). Doc id is the hashed identifier
+   * (email or `+91XXXXXXXXXX`), so a second request for the same identifier
+   * replaces the pending code and takes its attempt count with it.
+   */
+  otps: "otps",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -147,6 +153,19 @@ export interface UserDoc {
    * field existed — absent reads as false.
    */
   externalArtist?: boolean;
+  /**
+   * Set when the signed-up user has entered the 6-digit code sent to their
+   * email. Firebase Auth's own emailVerified flag is only flipped when the
+   * user clicks a one-time magic link, which we no longer send; this is the
+   * app-level truth. Owner directive 3 Nov 2026.
+   */
+  emailVerifiedAt?: FirebaseFirestore.Timestamp | null;
+  /**
+   * Set when the user has entered the 6-digit code sent via MSG91 SMS to the
+   * phone number on this account. The number itself is on `phone`. Separate
+   * from `emailVerifiedAt` because the two steps are independent.
+   */
+  phoneVerifiedAt?: FirebaseFirestore.Timestamp | null;
 }
 
 /**
@@ -802,6 +821,42 @@ export interface CartEntry {
 export interface CartDoc {
   userId: string; // == the Firestore doc ID (users/{uid}/cart would also work; one doc per uid keeps the write path simple)
   entries: CartEntry[];
+  updatedAt: FirebaseFirestore.Timestamp;
+}
+
+/**
+ * One in-flight OTP, keyed in Firestore by the SHA-256 hash of the channel
+ * identifier (`email:you@example.com` or `phone:+919xxxxxxxxx`) so a second
+ * request for the same identifier replaces the first. Codes are stored as
+ * HMAC-SHA256 hashes, never plain — a dump of this collection cannot be
+ * replayed to sign anybody in.
+ *
+ * Two separate counters: `attempts` is wrong-code tries (lock the OTP after
+ * five), `sendsLastHour` is new-code requests (refuse a sixth within an hour
+ * to stop SMS/email flooding).
+ */
+export interface OtpDoc {
+  /** "email" or "phone" — picks the delivery channel + the attempt budget. */
+  channel: "email" | "phone";
+  /** The destination exactly as it was sent (not hashed), for the controller to
+   *  compare the typed-in value against. The DOC ID is hashed; this isn't. */
+  identifier: string;
+  /** HMAC-SHA256(code, OTP_SECRET), base64. The plaintext code is never stored. */
+  codeHash: string;
+  /** 10 minutes after `createdAt`. The verify endpoint refuses an expired code
+   *  even before checking the hash, so a timing side-channel can't leak hits. */
+  expiresAt: FirebaseFirestore.Timestamp;
+  /** Why the code was issued — the UI uses this to route after success. */
+  purpose: "signup_email" | "signup_phone" | "password_reset";
+  /** The uid this OTP is for, when known at send time. Password-reset codes
+   *  carry it (we look up the account first); sign-up codes don't yet (the
+   *  user isn't created until the email code verifies). */
+  uid: string | null;
+  /** Wrong-code tries so far. Five locks the OTP; a new /send resets it. */
+  attempts: number;
+  /** Successful `/send`s in the past hour. Caps at 5 — the sixth refuses. */
+  sendsLastHour: number;
+  createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
 }
 
