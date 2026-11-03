@@ -48,12 +48,20 @@ class CustomerShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  /// Index of the "More" destination — a menu, not a stack. Tapping it
+  /// should always land on the menu itself, never on whichever page was
+  /// last pushed from it (owner-reported 2 Nov 2026).
+  static const _moreIndex = 4;
+
   void _goBranch(int index) {
     HapticFeedback.selectionClick();
     navigationShell.goBranch(
       index,
-      // Tapping the active tab returns to that branch's first route.
-      initialLocation: index == navigationShell.currentIndex,
+      // Tapping the active tab returns to that branch's first route; the
+      // More tab resets from any origin because a menu with a persistent
+      // deep stack is confusing to come back to.
+      initialLocation:
+          index == navigationShell.currentIndex || index == _moreIndex,
     );
   }
 
