@@ -20,17 +20,28 @@ import { DbError } from "./errors.ts";
 
 export class InvoiceError extends DbError {}
 
-/** Indian fiscal year — Apr 1 to Mar 31. "FY2026-27" is Apr 2026 → Mar 2027. */
+/** IST is UTC+5:30 year-round — India has no daylight saving. */
+const IST_OFFSET_MINUTES = 330;
+
+/**
+ * Indian fiscal year — Apr 1 to Mar 31. "FY2026-27" is Apr 2026 → Mar 2027.
+ *
+ * Decided in IST, not in the server's zone: the fiscal year of a GST invoice
+ * is a fact about the Indian calendar, and this API runs on UTC. Reading the
+ * local date would file an order paid in the first 5.5 hours of 1 April IST
+ * under the previous fiscal year.
+ */
 export function fiscalYearOf(date: Date): string {
-  const year = date.getFullYear();
-  const startYear = date.getMonth() >= 3 ? year : year - 1;
+  const ist = new Date(date.getTime() + IST_OFFSET_MINUTES * 60_000);
+  const year = ist.getUTCFullYear();
+  const startYear = ist.getUTCMonth() >= 3 ? year : year - 1;
   return `FY${startYear}-${String((startYear + 1) % 100).padStart(2, "0")}`;
 }
 
 /** "GZ/26-27/000001" — short-year form, zero-padded 6-digit sequence. */
-function formatInvoiceNumber(fiscalYear: string, seq: number): string {
+export function formatInvoiceNumber(fiscalYear: string, seq: number): string {
   const short = fiscalYear.replace(/^FY\d{2}/, "");
-  return `GZ/${fiscalYear.slice(4, 6)}${short}/${String(seq).padStart(6, "0")}`;
+  return `GZ/${short}/${String(seq).padStart(6, "0")}`;
 }
 
 export interface SellerIdentity {
