@@ -49,6 +49,7 @@
     "dev": "npm run build && npm run start",
     "deploy:indexes": "node scripts/deploy-indexes.mjs",
     "clear:orphaned-images": "node --experimental-strip-types scripts/clear-orphaned-images.ts",
+    "wipe:artworks": "node --experimental-strip-types scripts/wipe-all-artworks.ts",
     "migrate:escrow": "node --experimental-strip-types scripts/migrate-escrow-account.ts",
     "backfill:public-artists": "node --experimental-strip-types scripts/backfill-public-artist-profiles.ts",
     "grant:role": "node --experimental-strip-types scripts/grant-role.ts",
