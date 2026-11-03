@@ -50,8 +50,12 @@ export function CheckoutFlow({ artwork }: CheckoutFlowProps) {
   // "placed" state is read at unmount, not frozen at mount. cartActions
   // reaches the TanStack cache + API outside the React render tree because
   // this cleanup runs after the component has already left the tree.
+  // The ref is synced in its own effect rather than assigned during render:
+  // writing a ref while rendering is unsafe once rendering can be retried.
   const placedRef = useRef(placedOrder);
-  placedRef.current = placedOrder;
+  useEffect(() => {
+    placedRef.current = placedOrder;
+  }, [placedOrder]);
   useEffect(() => {
     const artworkId = artwork.id;
     return () => {

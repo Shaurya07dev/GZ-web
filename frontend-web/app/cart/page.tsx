@@ -101,7 +101,7 @@ export default function CartPage() {
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                       These pieces have sold or been removed since you added
-                      them. They don't count toward your subtotal.
+                      them. They don&rsquo;t count toward your subtotal.
                     </p>
                     <ul className="mt-3 flex flex-col gap-2">
                       {unavailable.map((artwork) => (
