@@ -13,6 +13,7 @@ import {
   UserRoundCheck,
   Link2,
   ShieldCheck,
+  Tag,
 } from "lucide-react";
 import {
   Dialog,
@@ -29,9 +30,9 @@ import { CalendarClock } from "lucide-react";
 import { TransferRightsDialog } from "@/features/verify/transfer-rights-dialog";
 import { PhysicalCoaQueue } from "./physical-coa-queue";
 import { ArtworkHistory } from "./artwork-history";
-import { NfcArtworkPassportView } from "@/features/verify/nfc-artwork-passport-view";
+import { ArtworkCertificate, type PaperTab } from "@/features/coa/coa-certificate";
 import { LinkNfcDialog } from "./link-nfc-dialog";
-import { verifyUrlFor } from "@/lib/verify-url";
+import { TagDetails } from "@/features/verify/tag-link";
 
 type ArtistArtwork = NonNullable<
   ReturnType<typeof useArtistDashboardArtworks>["data"]
@@ -41,6 +42,7 @@ export function CoaNfcBoard() {
   const { data: me } = useCurrentUser();
   const { data: artworks } = useArtistDashboardArtworks();
   const [previewing, setPreviewing] = useState<ArtistArtwork | null>(null);
+  const [previewTab, setPreviewTab] = useState<PaperTab>("certificate");
   const [transferring, setTransferring] = useState<ArtistArtwork | null>(null);
   const [linkingNfc, setLinkingNfc] = useState<ArtistArtwork | null>(null);
   const [viewingHistory, setViewingHistory] = useState<ArtistArtwork | null>(
@@ -93,89 +95,90 @@ export function CoaNfcBoard() {
           {rows.map((artwork) => {
             const stage = nfcStageOf(artwork);
             return (
-            <div
-              key={artwork.id}
-              className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
-                  <Image
-                    src={artwork.thumbnailUrl}
-                    alt={artwork.title}
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {artwork.title}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {artwork.coaCertificateNumber}
-                  </p>
-                  <ActiveDisplayLine artworkId={artwork.id} />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                {stage !== "unlinked" && (
-                  <div className="mr-3 hidden flex-col items-end sm:flex">
-                    <p className="text-[10px] tracking-wider text-muted-foreground uppercase">
-                      Public verify URL (written to tag)
-                    </p>
-                    <a
-                      href={`/verify/${artwork.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-0.5 text-xs font-medium text-gold-bright transition-colors hover:text-gold hover:underline"
-                    >
-                      {verifyUrlFor(artwork.id).replace(/^https?:\/\//, "")}
-                    </a>
+            <div key={artwork.id} className="rounded-lg border border-border bg-card">
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                {/* The title keeps its room; the buttons wrap instead of squeezing it out. */}
+                <div className="flex min-w-0 items-center gap-3 sm:min-w-56 sm:flex-1">
+                  <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                    <Image
+                      src={artwork.thumbnailUrl}
+                      alt={artwork.title}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
                   </div>
-                )}
-
-                <NfcPill stage={stage} />
-
-                {stage === "linked_unlocked" && (
-                  <span
-                    id={`nfc-must-lock-${artwork.id}`}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-red-300"
-                  >
-                    <AlertTriangle className="size-3" strokeWidth={2} />
-                    Must lock before shipping
-                  </span>
-                )}
-
-                {stage !== "linked_locked" && (
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {artwork.title}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {artwork.coaCertificateNumber}
+                    </p>
+                    <ActiveDisplayLine artworkId={artwork.id} />
+                  </div>
+                </div>
+  
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <NfcPill stage={stage} />
+  
+                  {stage === "linked_unlocked" && (
+                    <span
+                      id={`nfc-must-lock-${artwork.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-red-300"
+                    >
+                      <AlertTriangle className="size-3" strokeWidth={2} />
+                      Must lock before shipping
+                    </span>
+                  )}
+  
+                  {stage !== "linked_locked" && (
+                    <button
+                      id={`link-nfc-${artwork.id}`}
+                      type="button"
+                      onClick={() => setLinkingNfc(artwork)}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:border-emerald-400 hover:bg-emerald-500/20"
+                    >
+                      <Link2 className="size-3.5" />
+                      {stage === "unlinked" ? "Link Tag" : "Replace tag"}
+                    </button>
+                  )}
+  
                   <button
-                    id={`link-nfc-${artwork.id}`}
                     type="button"
-                    onClick={() => setLinkingNfc(artwork)}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:border-emerald-400 hover:bg-emerald-500/20"
+                    onClick={() => {
+                      setPreviewTab("certificate");
+                      setPreviewing(artwork);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                   >
-                    <Link2 className="size-3.5" />
-                    {stage === "unlinked" ? "Link Tag" : "Replace tag"}
+                    <BadgeCheck className="size-3.5 text-gold-bright" />
+                    Preview certificate
                   </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setPreviewing(artwork)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <BadgeCheck className="size-3.5 text-gold-bright" />
-                  Preview certificate
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewingHistory(artwork)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  <History className="size-3.5 text-gold-bright" />
-                  History
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewTab("card");
+                      setPreviewing(artwork);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Tag className="size-3.5 text-gold-bright" />
+                    Display card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewingHistory(artwork)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <History className="size-3.5 text-gold-bright" />
+                    History
+                  </button>
+                </div>
               </div>
+              {stage !== "unlinked" && (
+                <TagDetails artworkId={artwork.id} tagUid={artwork.nfcTagUid} className="border-t border-border px-4 py-1" />
+              )}
             </div>
             );
           })}
@@ -196,6 +199,7 @@ export function CoaNfcBoard() {
 
       <CertificateDialog
         artwork={previewing}
+        tab={previewTab}
         onClose={() => setPreviewing(null)}
         onTransfer={(artwork) => {
           setPreviewing(null);
@@ -275,10 +279,12 @@ function NfcPill({ stage }: { stage: NfcStage }) {
 
 function CertificateDialog({
   artwork,
+  tab,
   onClose,
   onTransfer,
 }: {
   artwork: ArtistArtwork | null;
+  tab: PaperTab;
   onClose: () => void;
   onTransfer: (artwork: ArtistArtwork) => void;
 }) {
@@ -287,19 +293,25 @@ function CertificateDialog({
       open={Boolean(artwork)}
       onOpenChange={(open) => !open && onClose()}
     >
-      <DialogContent className="max-h-[90dvh] flex flex-col overflow-y-auto overflow-x-hidden p-0 sm:max-w-[440px] bg-background border-gold/20">
+      <DialogContent className="max-h-[92dvh] flex flex-col overflow-y-auto overflow-x-hidden bg-background p-4 sm:max-w-4xl sm:p-6 border-gold/20">
         <DialogTitle className="sr-only">Certificate of Authenticity</DialogTitle>
         {artwork ? (
-          <div className="relative w-full">
-            <NfcArtworkPassportView artworkId={artwork.id} />
-            {/* First hand-over of the passport: artist to buyer. The buyer can
-                pass it on again later from their own collection. Once the
-                piece has legally changed hands (via a marketplace sale or an
-                earlier hand-over) the button goes away — the artist no longer
-                owns the rights to pass on, and the backend would reject the
-                attempt anyway. */}
-            {resolveCustody(artwork).legalOwner === "artist" && (
-              <div className="border-t border-border px-5 py-4">
+          <div className="flex flex-col gap-4">
+            {/* The certificate itself, as printed. The full passport (owner, history, location) stays one click away. */}
+            <ArtworkCertificate key={`${artwork.id}-${tab}`} artworkId={artwork.id} initialTab={tab} artworkType={artwork.artworkType} />
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <a
+                href={`/verify/${artwork.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-medium text-gold-bright underline-offset-4 hover:underline"
+              >
+                View full passport
+              </a>
+              {/* First hand-over of the passport: artist to buyer. The buyer can pass it on again later from
+                  their own collection. Once the piece has legally changed hands the button goes away: the
+                  artist no longer owns the rights to pass on, and the backend would reject the attempt anyway. */}
+              {resolveCustody(artwork).legalOwner === "artist" && (
                 <button
                   type="button"
                   onClick={() => onTransfer(artwork)}
@@ -308,8 +320,8 @@ function CertificateDialog({
                   <UserRoundCheck className="size-3.5" />
                   Transfer rights
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         ) : null}
       </DialogContent>

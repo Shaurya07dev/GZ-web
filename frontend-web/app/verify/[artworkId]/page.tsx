@@ -18,7 +18,7 @@ export async function generateMetadata(
     // Optimise for the mobile card share preview when someone screenshots and
     // shares the verification page after tapping the physical NFC tag.
     openGraph: {
-      title: `${artwork.title} — Authenticated by GalleryZone`,
+      title: `${artwork.title} | Authenticated by GalleryZone`,
       description: `One tag. One artwork. One unbroken record.`,
       images: artwork.images[0]
         ? [{ url: artwork.images[0].url, width: 1200, height: 630 }]
@@ -28,16 +28,13 @@ export async function generateMetadata(
 }
 
 // Public, unauthenticated page that an NFC/QR tag resolves to.
-// Rendered as a full-bleed mobile-first experience — no site chrome —
-// because 95 %+ of visitors arrive via a phone tap, not a desktop browser.
+// Rendered as a full-bleed mobile-first experience (its own slim top bar, no
+// site navigation) because 95 %+ of visitors arrive via a phone tap, not a
+// desktop browser. The view owns <header>, <main> and <footer>.
 export default async function ArtworkPassportPage(
   props: PageProps<"/verify/[artworkId]">,
 ) {
   const { artworkId } = await props.params;
 
-  return (
-    <main className="relative min-h-dvh">
-      <NfcArtworkPassportView artworkId={artworkId} />
-    </main>
-  );
+  return <NfcArtworkPassportView artworkId={artworkId} />;
 }

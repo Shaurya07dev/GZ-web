@@ -168,6 +168,10 @@ void main() {
           findsOneWidget,
         );
 
+        // Every piece has its display card beside its certificate.
+        expect(find.text('Display card'), findsNWidgets(3));
+        expect(find.byKey(const Key('display-card-a1')), findsOneWidget);
+
         expect(find.byKey(const Key('link-nfc-a1')), findsOneWidget);
         expect(find.text('Link tag'), findsOneWidget);
         expect(
@@ -186,6 +190,36 @@ void main() {
           reason: 'a locked tag offers neither',
         );
         expect(find.byKey(const Key('lock-nfc-a3')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a tagged piece shows the link on its tag and the chip ID, as a reader app prints it',
+      (tester) async {
+        await _open(
+          tester,
+          _World([
+            _piece('a1'),
+            _piece('a3', linked: _linkedAt, locked: _lockedAt),
+          ]),
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('tag-link-a3')),
+            matching: find.text('www.galleryzone.art/verify/a3'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('tag-chip-id-a3')),
+            matching: find.text('04:A1:B2:C3:D4:E5:80'),
+          ),
+          findsOneWidget,
+        );
+        // Nothing is on a tag that does not exist yet.
+        expect(find.byKey(const Key('tag-link-a1')), findsNothing);
+        expect(find.byKey(const Key('tag-chip-id-a1')), findsNothing);
       },
     );
 

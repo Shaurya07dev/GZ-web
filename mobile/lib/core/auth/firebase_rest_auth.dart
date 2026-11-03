@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import '../config.dart';
+
 /// Firebase Auth over its public REST endpoints (Identity Toolkit and Secure
 /// Token), used instead of the native plugin so the app needs no
 /// `google-services.json` and no change to the Android build.
@@ -25,8 +27,15 @@ class FirebaseRestAuth {
   final Dio _dio;
   final DateTime Function() _now;
 
-  static const _identity = 'https://identitytoolkit.googleapis.com/v1';
-  static const _secureToken = 'https://securetoken.googleapis.com/v1/token';
+  // Local demo stack only: with GZ_AUTH_EMULATOR=10.0.2.2:9099 both endpoints point at the
+  // Firebase Auth emulator, which speaks the same REST API. Empty (the default) = real Firebase.
+  static const _emulator = AppConfig.authEmulatorHost;
+  static const _identity = _emulator == ''
+      ? 'https://identitytoolkit.googleapis.com/v1'
+      : 'http://$_emulator/identitytoolkit.googleapis.com/v1';
+  static const _secureToken = _emulator == ''
+      ? 'https://securetoken.googleapis.com/v1/token'
+      : 'http://$_emulator/securetoken.googleapis.com/v1/token';
 
   Future<FirebaseSession> signInWithPassword(
     String email,

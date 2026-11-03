@@ -112,7 +112,9 @@ export class OwnershipController {
     try {
       const event = await acceptTransfer(this.db, { transferId: id, byUserId: req.authUser.uid });
       this.cache.invalidate(CacheKeys.verify(event.artworkId));
-      return toPartyDto(this.db, event);
+      const dto = await toPartyDto(this.db, event);
+      void this.emails.transferAccepted({ transferId: dto.id, artworkId: event.artworkId, title: dto.artworkTitle, toName: event.toName, kind: event.kind, fromUserId: event.fromUserId }).catch(this.emails.swallow("transfer accepted mail"));
+      return dto;
     } catch (error) {
       rethrow(error);
     }
@@ -124,7 +126,14 @@ export class OwnershipController {
     try {
       const event = await cancelTransfer(this.db, { transferId: id, byUserId: req.authUser.uid });
       this.cache.invalidate(CacheKeys.verify(event.artworkId));
-      return toPartyDto(this.db, event);
+      const dto = await toPartyDto(this.db, event);
+      // Either party may cancel, so tell the other one: a sender who withdraws tells the invitee; an invitee who declines tells the sender.
+      if (event.fromUserId === req.authUser.uid) {
+        void this.emails.transferCancelled({ transferId: dto.id, toEmail: event.toEmail, fromName: event.fromName, title: dto.artworkTitle, kind: event.kind }).catch(this.emails.swallow("transfer cancelled mail"));
+      } else {
+        void this.emails.transferDeclined({ transferId: dto.id, artworkId: event.artworkId, title: dto.artworkTitle, toName: event.toName, kind: event.kind, fromUserId: event.fromUserId }).catch(this.emails.swallow("transfer declined mail"));
+      }
+      return dto;
     } catch (error) {
       rethrow(error);
     }

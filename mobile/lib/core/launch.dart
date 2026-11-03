@@ -6,9 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 /// the landing page, About, Contact and the artist survey.
 const galleryZoneSite = 'https://www.galleryzone.art';
 
-/// The app's public contact points, as the web's support pages show them.
+/// The app's public contact point, as the web's support pages show it. There
+/// is no phone number on purpose: contact is by email.
 const galleryZoneEmail = 'galleryzone@zohomail.in';
-const galleryZonePhone = '+919492953627';
 
 /// Opens [url] outside the app.
 ///

@@ -155,6 +155,7 @@ export class AggregatorController {
     try {
       await returnHolding(this.db, req.authUser.uid, id);
       this.cache.clear();
+      void this.emails.holdingReturned(id).catch(this.emails.swallow("holding returned mail"));
       return getAggregatorHolding(this.db, req.authUser.uid, id);
     } catch (error) {
       rethrow(error);
@@ -179,6 +180,7 @@ export class AggregatorController {
         paymentRoute: body.paymentRoute,
       });
       this.cache.clear();
+      void this.emails.saleRecorded(result.saleId).catch(this.emails.swallow("sale recorded mail"));
       return result;
     } catch (error) {
       rethrow(error);

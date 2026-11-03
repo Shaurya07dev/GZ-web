@@ -2,6 +2,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+email-previews/
 .env
 .env.*
 !.env.example
@@ -12,3 +13,6 @@ build/
 
 # Firebase emulator logs (npm run check:affiliate-db and scripts/affiliate-e2e.sh start them)
 *-debug.log
+
+# Local demo stack (npm run demo:*): emulator export of the seeded data
+.demo-data/

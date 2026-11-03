@@ -65,6 +65,37 @@ test('the board shows three states, and flags what cannot ship', async ({ page, 
   await expect(page.locator('#link-nfc-a3')).toHaveCount(0);
 });
 
+test('the certificate and the display card read category and medium as a person writes them, not as slugs', async ({ page, baseURL }) => {
+  await openBoard(page, baseURL!, [unlinked]);
+  await json(page, '**/v1/verify/a1', passport({ artworkId: 'a1', category: 'painting', medium: 'oil-on-canvas' }));
+  await json(page, '**/v1/artworks/a1', {
+    id: 'a1', productCode: 'GZ000001', artistId: 'artist1', artistName: 'Meera Kulkarni', title: 'Piece a1', description: 'A piece.', category: 'painting',
+    medium: 'oil-on-canvas', dimensions: '24 x 36 in', yearCreated: 2025, images: [{ url: '/artworks/framed-painting.png', thumbnailUrl: null, altText: null, sortOrder: 0 }],
+    displayPricePaise: 13_650_000, insured: false, status: 'marketplace', listingType: 'marketplace_only', rarityType: 'R', createdAt: '2026-03-01T00:00:00.000Z',
+    artistLocation: 'Pune, Maharashtra', sizeBand: 'medium',
+  });
+
+  await page.getByRole('button', { name: 'Preview certificate' }).click();
+  const dialog = page.locator('[data-slot="dialog-content"]');
+  await expect(dialog.getByText('Oil on canvas', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Painting', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('oil-on-canvas')).toHaveCount(0);
+
+  await dialog.getByRole('tab', { name: 'Display card' }).click();
+  await expect(dialog.getByText('Oil on canvas', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('oil-on-canvas')).toHaveCount(0);
+});
+
+test('a tagged piece shows the link on its tag and the chip ID, as a reader app prints it', async ({ page, baseURL }) => {
+  await openBoard(page, baseURL!, [unlinked, linkedUnlocked]);
+
+  await expect(page.getByRole('link', { name: /\/verify\/a2$/ })).toBeVisible();
+  await expect(page.getByText(UID_COLON, { exact: true })).toBeVisible();
+  // One line, under the piece that has a tag: nothing is on a tag that does not exist yet.
+  await expect(page.getByText('Link on the tag')).toHaveCount(1);
+  await expect(page.getByText('Chip ID')).toHaveCount(1);
+});
+
 test('no warning when every linked tag is locked', async ({ page, baseURL }) => {
   await openBoard(page, baseURL!, [unlinked, locked]);
   await expect(page.getByText('Tag locked', { exact: true })).toBeVisible();
@@ -127,7 +158,8 @@ test('Web NFC: the server is asked before the chip is written, and the link is r
 
   // The order is the point: ask, then write, then record.
   expect(events[0]).toBe('check');
-  expect(events[1]).toMatch(/^write:https?:\/\/.+\/verify\/a1$/);
+  // The public https address, never wherever the site happens to run: a locked chip keeps this link for good.
+  expect(events[1]).toMatch(/^write:https:\/\/(?!localhost|127\.)[^/]+\/verify\/a1$/);
   expect(events[2]).toBe('link');
   expect(events).toHaveLength(3);
   // The server normalises the UID, so the chip's own spelling is sent as it was read.
@@ -220,7 +252,7 @@ test('a locked tag reads "Verified via NFC + locked", and the lifecycle shows pl
   await expect(page.locator('#passport-nfc-chip')).toHaveText(/Verified via NFC \+ locked/);
   await expect(page.getByRole('status')).toContainText('Verified via NFC + locked');
 
-  const timeline = page.getByRole('region', { name: 'Lifecycle' });
+  const timeline = page.getByRole('region', { name: 'Provenance' });
   await expect(timeline.getByText('Made by Meera Kulkarni')).toBeVisible();
   await expect(timeline.getByText('Pune, Maharashtra, India')).toBeVisible();
   await expect(timeline.getByText('On display at Studio Eight')).toBeVisible();
@@ -238,8 +270,8 @@ test('a locked tag reads "Verified via NFC + locked", and the lifecycle shows pl
 
 test('a linked but unlocked tag is not presented as sealed', async ({ page }) => {
   await openPassport(page, passport({ nfcLocked: false }));
-  await expect(page.locator('#passport-nfc-chip')).toHaveText(/NFC tag linked · not yet locked/);
-  await expect(page.getByRole('status')).toContainText('NFC tag linked — not yet locked');
+  await expect(page.locator('#passport-nfc-chip')).toHaveText(/NFC tag linked, not yet locked/);
+  await expect(page.getByRole('status')).toContainText('NFC tag linked, not yet locked');
   await expect(page.getByText('Verified via NFC + locked')).toHaveCount(0);
 });
 
@@ -248,4 +280,11 @@ test('a piece with no tag shows no NFC badge', async ({ page }) => {
   await expect(page.getByText('Artwork Passport', { exact: true })).toBeVisible();
   await expect(page.locator('#passport-nfc-chip')).toHaveCount(0);
   await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('a delivered piece is held by its collector, not "awaiting delivery"', async ({ page }) => {
+  await openPassport(page, passport());
+  // The artwork's status is still 'sold', which on its own reads as awaiting delivery; the lifecycle says it arrived.
+  await expect(page.getByText('Awaiting delivery')).toHaveCount(0);
+  await expect(page.getByText('With the collector')).toBeVisible();
 });

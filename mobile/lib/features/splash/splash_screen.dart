@@ -1,81 +1,62 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../data/mock/seed/aggregator_seed.dart'
-    show currentAggregatorContact;
-import '../../data/mock/seed/artist_seed.dart' show currentArtistName;
-import '../../data/mock/seed/customer_seed.dart' show seedCustomerProfile;
 import '../../core/motion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth.dart';
 import '../auth/providers/auth_providers.dart';
 import '../auth/role_options.dart';
 import '../auth/screens/login_screen.dart';
-import '../shell/brand_mark.dart';
-import '../shell/portal_menu.dart' show accountNameProvider;
-import 'art_quotes.dart';
 
-/// How long the mark holds before anything else moves: the opening plays out,
-/// and the launch quote stays up long enough to be read. A tap moves on.
-const splashHold = Duration(milliseconds: 3200);
+/// The opening, start to finish: from a first frame identical to the native
+/// splash to the app's own page. Nothing to tap and nothing to wait on; it
+/// plays once and the app opens.
+const splashDuration = Duration(milliseconds: 2000);
 
-/// How long the greeting stays up before the app lands on the role's home.
-/// Only signed-in launches show it — there is nobody to greet otherwise.
-const splashGreetingHold = Duration(milliseconds: 1600);
+/// With animations turned off on the device, the mark holds just long enough
+/// to register and the app opens without the light.
+const splashStillHold = Duration(milliseconds: 600);
 
-/// Who the greeting names. There is no real session yet (see [SecureSession]:
-/// the stored value is the role, nothing more), so the name comes from the
-/// same "signed in as" fixture each portal's own screens already greet with.
-String splashGreetingName(Role role) => switch (role) {
-  Role.artist => currentArtistName,
-  Role.customer => seedCustomerProfile().name,
-  // The aggregator fixture is a business; greet the contact person, not
-  // the gallery, so the first name split below reads as a person.
-  Role.aggregator => currentAggregatorContact,
-};
+/// The app icon's gold GZ, framed the way Android 12+ draws its splash icon:
+/// a 288-point box. Every launch path draws the GZ at the same size (see
+/// assets/icon/generate_icons.py), so drawing this image in this box puts the
+/// mark exactly where the native splash left it.
+const splashMarkAsset = 'assets/icon/splash_android12.png';
+const _markBox = 288.0;
 
-/// Where a launch ends up once the splash is done.
+/// Where a launch ends up once the opening is done.
 String splashDestination(Role? role) => role?.home ?? LoginScreen.path;
 
-/// This launch's quote. `main()` deals it with [nextLaunchQuote]; anywhere
-/// that hasn't (a test, a preview) gets one at random.
-final launchQuoteProvider = Provider<ArtQuote>(
-  (ref) => artQuotes[math.Random().nextInt(artQuotes.length)],
-);
-
-const _quoteDeckKey = 'gz-launch-quote-deck';
-
-/// The quote for this launch, dealt from a shuffled deck kept on the device:
-/// every launch opens on a new one, and none comes round again until all of
-/// them have been shown.
-Future<ArtQuote> nextLaunchQuote() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    var deck = [
-      for (final i in prefs.getStringList(_quoteDeckKey) ?? const <String>[])
-        ?int.tryParse(i),
-    ];
-    if (deck.isEmpty || deck.any((i) => i < 0 || i >= artQuotes.length)) {
-      deck = [for (var i = 0; i < artQuotes.length; i++) i]..shuffle();
-    }
-    final next = deck.removeAt(0);
-    unawaited(prefs.setStringList(_quoteDeckKey, [for (final i in deck) '$i']));
-    return artQuotes[next];
-  } catch (_) {
-    // No device storage to keep the deck in: any quote will do.
-    return artQuotes[math.Random().nextInt(artQuotes.length)];
+/// Decodes the mark before the first frame, while the native splash is still
+/// up, so the first Flutter frame already has it: the native splash comes down
+/// on that frame, and a mark that arrived a frame late would blink. Never holds
+/// the launch up for long, and never fails it.
+Future<void> warmSplashMark() {
+  final done = Completer<void>();
+  final stream = const AssetImage(splashMarkAsset).resolve(ImageConfiguration.empty);
+  late final ImageStreamListener listener;
+  void finish() {
+    if (!done.isCompleted) done.complete();
+    stream.removeListener(listener);
   }
+
+  listener = ImageStreamListener((_, _) => finish(), onError: (_, _) => finish());
+  stream.addListener(listener);
+  return done.future.timeout(const Duration(milliseconds: 600), onTimeout: () {});
 }
 
-/// The launch screen: the mark's opening and a quote for [splashHold], then —
-/// when there is a session — a greeting, then the role's home. It is the
-/// router's initial location, so it runs on every cold start and never sits
-/// in the back stack (`go` replaces it).
+/// The launch screen. It is the router's initial location, so it runs on every
+/// cold start and never sits in the back stack (`go` replaces it).
+///
+/// The opening, in one breath: the app icon's black and gold GZ, exactly as the
+/// system left them. A band of light crosses the gilt. GALLERYZONE writes in
+/// underneath and a hairline draws under it. Then the light comes up from
+/// behind the mark and opens out to the edges, warm, like a gallery's lights
+/// coming on, and the app is there on the same paper colour, so nothing flashes.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -87,52 +68,31 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
-  Timer? _timer;
-  bool _greeting = false;
-
-  /// The whole opening on one clock: the halo, the mark's breath and glint,
-  /// the wordmark and the quote each take their stretch of it.
-  late final AnimationController _intro = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2600),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(splashHold, _afterMark);
-  }
+  late final AnimationController _opening =
+      AnimationController(vsync: this, duration: splashDuration)
+        ..addStatusListener((status) {
+          if (status == AnimationStatus.completed) _leave();
+        });
+  Timer? _still;
+  bool _started = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_intro.isDismissed) return;
+    if (_started) return;
+    _started = true;
     if (motionOf(context)) {
-      _intro.forward();
+      _opening.forward();
     } else {
-      _intro.value = 1;
+      _still = Timer(splashStillHold, _leave);
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _intro.dispose();
+    _still?.cancel();
+    _opening.dispose();
     super.dispose();
-  }
-
-  void _afterMark() {
-    if (!mounted) return;
-    if (ref.read(sessionProvider) == null) return _leave();
-    // Against the real API the greeting names the signed-in account. If that
-    // hasn't been read yet (slow network), skip the greeting rather than hold
-    // the launch up or greet a stranger.
-    if (ref.read(remoteBackendProvider) &&
-        ref.read(accountNameProvider).isEmpty) {
-      return _leave();
-    }
-    setState(() => _greeting = true);
-    _timer = Timer(splashGreetingHold, _leave);
   }
 
   void _leave() {
@@ -140,214 +100,154 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     context.go(splashDestination(ref.read(sessionProvider)));
   }
 
-  /// A tap anywhere moves on at once: the opening is a moment, not a wait.
-  void _skip() {
-    _timer?.cancel();
-    _leave();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final role = ref.watch(sessionProvider);
-    final remote = ref.watch(remoteBackendProvider);
-    final accountName = ref.watch(accountNameProvider);
-    return Scaffold(
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _skip,
-        child: Stack(
-          children: [
-            // The mark is centred on the whole window, as the native splash
-            // draws it; only the greeting keeps clear of the system bars.
-            Positioned.fill(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 450),
-                child: _greeting && role != null
-                    ? SafeArea(
-                        child: _Greeting(
-                          name: remote ? accountName : splashGreetingName(role),
-                        ),
-                      )
-                    : _Mark(intro: _intro),
-              ),
-            ),
-            // The quote stays through the greeting: it is this launch's.
-            Positioned(
-              left: 32,
-              right: 32,
-              bottom: MediaQuery.paddingOf(context).bottom + 36,
-              child: _LaunchQuote(
-                quote: ref.watch(launchQuoteProvider),
-                intro: _intro,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The brand mark, centered and alone. Same asset the native splash draws, so
-/// the handoff from the OS window to the first Flutter frame is invisible.
-/// Falls back to the lettered mark the Auth screens use if the asset is
-/// missing, so a broken image never becomes a blank launch screen.
-class _Monogram extends StatelessWidget {
-  const _Monogram({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Image.asset(
-      brandMarkAsset,
-      width: size,
-      height: size,
-      errorBuilder: (context, error, stack) => SizedBox(
-        height: size,
-        child: Center(
-          child: Text(
-            'GZ',
-            style: theme.textTheme.displaySmall?.copyWith(
-              color: theme.colorScheme.tertiary,
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The opening. The mark starts exactly where the native splash drew it, so
-/// the handoff never jumps; then a gold halo draws itself round it and lets go
-/// — widening as it fades — while a warm glow blooms behind, the mark takes one
-/// slow breath and a band of light crosses its gilt. The wordmark writes itself
-/// in underneath and a gold rule draws under that.
-class _Mark extends StatelessWidget {
-  const _Mark({required this.intro});
-
-  final Animation<double> intro;
-
-  static const _size = 148.0;
-
   Animation<double> _phase(double begin, double end, Curve curve) =>
       CurvedAnimation(
-        parent: intro,
+        parent: _opening,
         curve: Interval(begin, end, curve: curve),
       );
 
+  late final _glint = _phase(0.06, 0.5, Curves.easeInOutCubic);
+  late final _word = _phase(0.22, 0.58, AppMotion.enter);
+  late final _rule = _phase(0.42, 0.66, AppMotion.enter);
+  late final _light = _phase(0.62, 0.97, Curves.easeInOutCubic);
+  late final _wordAway = _phase(0.6, 0.7, Curves.easeOut);
+  late final _markAway = _phase(0.84, 1, Curves.easeOut);
+
   @override
   Widget build(BuildContext context) {
-    final gold = Theme.of(context).colorScheme.primary;
-    final breath = _phase(0.18, 0.72, Curves.easeInOut);
-    final rule = _phase(0.62, 0.95, AppMotion.enter);
-    return Center(
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          FadeTransition(
-            opacity: _phase(0.1, 0.6, Curves.easeOut),
-            child: Container(
-              width: _size * 2.2,
-              height: _size * 2.2,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    gold.withValues(alpha: 0.2),
-                    gold.withValues(alpha: 0),
-                  ],
+    return AnimatedBuilder(
+      animation: _light,
+      // Light status-bar icons on the black, dark ones once the light is up.
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: _light.value < 0.5
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        child: child!,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.darkBackground,
+        body: CustomPaint(
+          painter: _LightPainter(_light),
+          // The mark is centred on the whole window, as the native splash
+          // draws it.
+          child: SizedBox.expand(
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                _Vanish(
+                  away: _markAway,
+                  rise: 0.03,
+                  child: _Glint(
+                    sweep: _glint,
+                    child: Image.asset(
+                      splashMarkAsset,
+                      width: _markBox,
+                      height: _markBox,
+                      filterQuality: FilterQuality.high,
+                      gaplessPlayback: true,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
                 ),
-              ),
+                Transform.translate(
+                  offset: const Offset(0, 54),
+                  child: _Vanish(
+                    away: _wordAway,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _Wordmark(reveal: _word),
+                        const SizedBox(height: 12),
+                        AnimatedBuilder(
+                          animation: _rule,
+                          builder: (context, _) => Container(
+                            width: 40 * _rule.value,
+                            height: 1,
+                            color: AppColors.darkGold.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          RepaintBoundary(
-            child: CustomPaint(
-              size: const Size.square(_size * 1.3),
-              painter: _HaloPainter(
-                draw: _phase(0.04, 0.42, Curves.easeInOutCubic),
-                release: _phase(0.42, 0.86, Curves.easeOutCubic),
-                color: gold,
-              ),
-            ),
-          ),
-          AnimatedBuilder(
-            animation: breath,
-            builder: (context, child) => Transform.scale(
-              scale: 1 + 0.04 * math.sin(math.pi * breath.value),
-              child: child,
-            ),
-            child: _Glint(
-              sweep: _phase(0.3, 0.74, Curves.easeInOutCubic),
-              child: const _Monogram(size: _size),
-            ),
-          ),
-          Transform.translate(
-            offset: const Offset(0, _size / 2 + 10),
-            child: _Wordmark(reveal: _phase(0.32, 0.8, AppMotion.enter)),
-          ),
-          Transform.translate(
-            offset: const Offset(0, _size / 2 + 34),
-            child: AnimatedBuilder(
-              animation: rule,
-              builder: (context, _) => Container(
-                width: 44 * rule.value,
-                height: 1,
-                color: gold.withValues(alpha: 0.7),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// The halo: an arc of light drawn clockwise from the top — bright at its
-/// leading edge, a tail behind — that then widens and fades away.
-class _HaloPainter extends CustomPainter {
-  _HaloPainter({required this.draw, required this.release, required this.color})
-    : super(repaint: Listenable.merge([draw, release]));
+/// The light: the app's paper colour opening out from behind the mark to the
+/// edges of the screen, with a soft warm edge rather than a hard disc.
+class _LightPainter extends CustomPainter {
+  _LightPainter(this.progress) : super(repaint: progress);
 
-  final Animation<double> draw;
-  final Animation<double> release;
-  final Color color;
+  final Animation<double> progress;
+
+  static const _paper = AppColors.lightBackground;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final sweep = draw.value;
-    final fade = 1 - release.value;
-    if (sweep == 0 || fade == 0) return;
-    final rect = Rect.fromCircle(
-      center: size.center(Offset.zero),
-      radius: size.shortestSide / 2 * (1 + 0.22 * release.value),
-    );
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      2 * math.pi * sweep,
-      false,
+    final p = progress.value;
+    if (p <= 0) return;
+    if (p >= 1) {
+      canvas.drawRect(Offset.zero & size, Paint()..color = _paper);
+      return;
+    }
+    final center = size.center(Offset.zero);
+    // Far enough that the solid part has covered the corners when p reaches 1.
+    final reach = size.longestSide * 0.62 / 0.84;
+    // The light switches on behind the whole mark (a disc already wider than
+    // the GZ, fading up) and then opens out. Starting from a point would show
+    // as a bright dot through the gaps in the letters.
+    const start = 72.0;
+    final radius = start + (reach - start) * p;
+    // It warms up the way a lamp does: amber first, then the paper's white.
+    // A paper colour simply faded in over black would pass through flat grey.
+    final on = (p / 0.16).clamp(0.0, 1.0);
+    final light = Color.lerp(AppColors.darkGoldDeep, _paper, on)!.withValues(alpha: on);
+    canvas.drawCircle(
+      center,
+      radius,
       Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.round
-        ..shader = SweepGradient(
-          endAngle: 2 * math.pi * math.max(sweep, 0.001),
+        ..shader = RadialGradient(
           colors: [
-            color.withValues(alpha: 0.12 * fade),
-            color.withValues(alpha: fade),
+            light,
+            light,
+            AppColors.darkGoldBright.withValues(alpha: 0.16 * on),
+            AppColors.darkGoldBright.withValues(alpha: 0),
           ],
-          transform: const GradientRotation(-math.pi / 2),
-        ).createShader(rect),
+          stops: const [0, 0.84, 0.93, 1],
+        ).createShader(Rect.fromCircle(center: center, radius: radius)),
     );
   }
 
   @override
-  bool shouldRepaint(_HaloPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(_LightPainter oldDelegate) => false;
+}
+
+/// Fades its child out as [away] runs, rising very slightly as it goes.
+class _Vanish extends StatelessWidget {
+  const _Vanish({required this.away, required this.child, this.rise = 0});
+
+  final Animation<double> away;
+  final double rise;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: away,
+      builder: (context, child) => Opacity(
+        opacity: 1 - away.value,
+        child: Transform.scale(scale: 1 + rise * away.value, child: child),
+      ),
+      child: child,
+    );
+  }
 }
 
 /// One band of light passing across the mark, the way it would across gilt.
@@ -372,13 +272,13 @@ class _Glint extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               Colors.white.withValues(alpha: 0),
-              Colors.white.withValues(alpha: 0.55),
+              Colors.white.withValues(alpha: 0.6),
               Colors.white.withValues(alpha: 0),
             ],
             stops: [
-              (t - 0.12).clamp(0.0, 1.0),
+              (t - 0.1).clamp(0.0, 1.0),
               t.clamp(0.0, 1.0),
-              (t + 0.12).clamp(0.0, 1.0),
+              (t + 0.1).clamp(0.0, 1.0),
             ],
           ).createShader(bounds),
           child: child,
@@ -398,15 +298,19 @@ class _Wordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyMedium
-        ?.copyWith(fontWeight: FontWeight.w500);
+    final style = Theme.of(context).textTheme.labelLarge?.copyWith(
+      fontFamily: AppTheme.sansFamily,
+      fontWeight: FontWeight.w500,
+      fontSize: 12.5,
+      color: AppColors.darkForeground.withValues(alpha: 0.86),
+    );
     return AnimatedBuilder(
       animation: reveal,
       builder: (context, _) {
         final t = reveal.value;
         final word = Text(
           'GALLERYZONE',
-          style: style?.copyWith(letterSpacing: 3.5 + (1 - t) * 5),
+          style: style?.copyWith(letterSpacing: 5 + (1 - t) * 4),
         );
         if (t == 1) return word;
         final edge = t * 1.3 - 0.15;
@@ -419,141 +323,6 @@ class _Wordmark extends StatelessWidget {
           child: word,
         );
       },
-    );
-  }
-}
-
-/// This launch's quote at the foot of the screen: an opening mark in gold, the
-/// words in Playfair italic, and who said it between two short gold rules.
-/// It rises in as the opening settles, the name a beat after the words.
-class _LaunchQuote extends StatelessWidget {
-  const _LaunchQuote({required this.quote, required this.intro});
-
-  final ArtQuote quote;
-  final Animation<double> intro;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final gold = theme.colorScheme.tertiary;
-    Widget rise(double begin, double end, Widget child) {
-      final shown = CurvedAnimation(
-        parent: intro,
-        curve: Interval(begin, end, curve: AppMotion.enter),
-      );
-      return FadeTransition(
-        opacity: shown,
-        child: AnimatedBuilder(
-          animation: shown,
-          builder: (context, child) => Transform.translate(
-            offset: Offset(0, (1 - shown.value) * 14),
-            child: child,
-          ),
-          child: child,
-        ),
-      );
-    }
-
-    Widget rule() =>
-        Container(width: 18, height: 1, color: gold.withValues(alpha: 0.6));
-
-    return Semantics(
-      label: '${quote.text} — ${quote.author}',
-      excludeSemantics: true,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          rise(
-            0.36,
-            0.78,
-            Column(
-              children: [
-                Text(
-                  '“',
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    color: gold,
-                    height: 0.9,
-                  ),
-                ),
-                Text(
-                  quote.text,
-                  textAlign: TextAlign.center,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w400,
-                    fontSize: 18,
-                    height: 1.45,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.86),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          rise(
-            0.5,
-            0.9,
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                rule(),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    quote.author.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: gold,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 2.2,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                rule(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The mark moves to the top and the greeting takes the page — one screen, so
-/// the mark travels rather than blinking out and back.
-class _Greeting extends StatelessWidget {
-  const _Greeting({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        const Center(child: _Monogram(size: 64)),
-        const Spacer(),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Reveal(
-            index: 1,
-            child: Text(
-              'Welcome to GalleryZone,\n${name.split(' ').first}',
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w300,
-                height: 1.15,
-              ),
-            ),
-          ),
-        ),
-        const Spacer(flex: 3),
-      ],
     );
   }
 }

@@ -12,6 +12,7 @@ import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB, ENV } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
+import { Emails } from "./mail/emails.ts";
 
 const acceptSchema = z
   .object({
@@ -40,6 +41,7 @@ export class MouController {
   constructor(
     @Inject(DB) private readonly db: Db,
     @Inject(ENV) private readonly env: AppEnv,
+    private readonly emails: Emails,
   ) {}
 
   private async latest(uid: string, party: MouParty) {
@@ -59,6 +61,7 @@ export class MouController {
         ip: req.ip ?? null,
         userAgent: req.header("user-agent") ?? null,
       });
+      void this.emails.mouSigned({ uid: req.authUser.uid, party, version: acceptance.version, signatureName: acceptance.signatureName, signedAt: acceptance.acceptedAt }).catch(this.emails.swallow("mou mail"));
       return toDto(acceptance);
     } catch (error) {
       rejected(error);

@@ -547,11 +547,6 @@ class _AggregatorSupportScreenState
                         label: galleryZoneEmail,
                         url: 'mailto:$galleryZoneEmail',
                       ),
-                      ContactLinkRow(
-                        icon: LucideIcons.phone,
-                        label: '+91 94929 53627',
-                        url: 'tel:$galleryZonePhone',
-                      ),
                     ],
                   ),
                 ),

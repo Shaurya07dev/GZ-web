@@ -11,6 +11,18 @@ const rootEnv = resolve(__dirname, "..", ".env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 
+// Every QR code and NFC tag made in production carries the site address for
+// good (lib/verify-url.ts). A production build whose address is local or plain
+// http would print certificates that lead nowhere, so it stops here instead.
+// Unset is fine: the public address is the default.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+if (process.env.VERCEL_ENV === "production" && siteUrl) {
+  const { protocol, hostname } = new URL(siteUrl);
+  if (protocol !== "https:" || hostname === "localhost" || /^(127|10|192\.168)\./.test(hostname)) {
+    throw new Error(`NEXT_PUBLIC_SITE_URL must be the site's public https address in production, not "${siteUrl}".`);
+  }
+}
+
 // Artwork images are served by the API (GET /v1/images/...) from the
 // private storage bucket; next/image must be told it may optimise them.
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL) : null;

@@ -150,7 +150,8 @@ function NotificationEventRow({ event }: { event: NotificationEvent }) {
             line even in the popover, which meant long bodies were unreadable
             at a glance. Title keeps a single-line truncate for density;
             subtitle wraps up to 3 lines, and both carry the full text as a
-            native tooltip for anyone who still wants the whole string. */}
+            native tooltip. The list is a summary: selecting a row opens the
+            whole notification (components/notifications-popover.tsx). */}
         <h3
           className="truncate text-sm font-medium text-foreground"
           title={event.title}

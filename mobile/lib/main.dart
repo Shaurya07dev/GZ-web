@@ -41,8 +41,9 @@ Future<void> main() async {
   // API: the session is the refresh token; a role with no token behind it is
   // a leftover and is ignored.
   var role = RoleX.fromId(await SecureSession.getRole());
-  // A new quote at the foot of the launch screen every time the app opens.
-  final quote = await nextLaunchQuote();
+  // The opening's first frame must already carry the mark the native splash
+  // shows, or the mark would blink as the native splash comes down.
+  await warmSplashMark();
   final overrides = <Override>[];
   if (!AppConfig.useMockBackend) {
     final tokens = TokenManager(
@@ -62,7 +63,6 @@ Future<void> main() async {
       retry: (retryCount, error) => null,
       overrides: [
         initialRoleProvider.overrideWithValue(role),
-        launchQuoteProvider.overrideWithValue(quote),
         ...overrides,
       ],
       child: const GalleryZoneApp(),
@@ -75,6 +75,7 @@ Stream<LicenseEntry> _fontLicenses() async* {
   for (final (family, file) in const [
     ('Inter', 'OFL-Inter.txt'),
     ('Playfair Display', 'OFL-PlayfairDisplay.txt'),
+    ('Tinos', 'OFL-Tinos.txt'),
   ]) {
     yield LicenseEntryWithLineBreaks([
       family,

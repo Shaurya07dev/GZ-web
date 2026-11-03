@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Mail, Phone, Fingerprint, RotateCcw, Repeat2, Check } from "lucide-react";
+import { Mail, Fingerprint, RotateCcw, Repeat2, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -68,13 +68,6 @@ export function CollectorSupportView() {
             >
               <Mail className="size-4" />
               galleryzone@zohomail.in
-            </a>
-            <a
-              href="tel:+919492953627"
-              className="flex items-center gap-2 text-gold-bright hover:underline"
-            >
-              <Phone className="size-4" />
-              +91 94929 53627
             </a>
           </div>
         </div>

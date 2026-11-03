@@ -7,7 +7,7 @@
 // nothing) and comes from NEXT_PUBLIC_FIREBASE_* — see .env.example.
 
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { connectAuthEmulator, getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
 
 function readConfig() {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -31,8 +31,16 @@ function firebaseApp(): FirebaseApp {
 
 // Lazy: importing this module on the server (a page's generateMetadata,
 // say) must not throw when the env var isn't set there.
+let authInstance: Auth | undefined;
 export function firebaseAuth(): Auth {
-  return getAuth(firebaseApp());
+  if (!authInstance) {
+    authInstance = getAuth(firebaseApp());
+    // Local demo stack only (backend `npm run demo:*`): sign in against the Auth
+    // emulator, e.g. "127.0.0.1:9099". Unset in every real deployment.
+    const emulator = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;
+    if (emulator) connectAuthEmulator(authInstance, `http://${emulator}`, { disableWarnings: true });
+  }
+  return authInstance;
 }
 
 export const googleProvider = new GoogleAuthProvider();

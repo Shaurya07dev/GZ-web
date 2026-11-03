@@ -132,7 +132,10 @@ export class CoaController {
   @Post("artist/coa/requests/:id/dispatch")
   async dispatch(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(dispatchSchema)) body: DispatchBody) {
     try {
-      return toDto(this.db, await markPhysicalCoaDispatched(this.db, { requestId: id, artistId: req.authUser.uid, courierRef: body.courierRef }));
+      const dispatched = await markPhysicalCoaDispatched(this.db, { requestId: id, artistId: req.authUser.uid, courierRef: body.courierRef });
+      // Whoever asked for the printed certificate hears that it is on its way.
+      void this.emails.physicalCoaDispatched(id).catch(this.emails.swallow("coa dispatched mail"));
+      return toDto(this.db, dispatched);
     } catch (error) {
       rethrow(error);
     }

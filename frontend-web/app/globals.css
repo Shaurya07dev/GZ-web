@@ -189,3 +189,127 @@
     background-color: var(--gold);
   }
 }
+
+/* Printing the "FOR SALE" display card (features/coa/display-card.tsx): the card is mounted straight under <body>
+   at its real size and everything else is hidden, so the print dialog shows only the card. */
+@page gz-card {
+  size: 148mm 93mm;
+  margin: 0;
+}
+@media print {
+  body > :not(.gz-print-area) {
+    display: none !important;
+  }
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  .gz-print-area {
+    page: gz-card;
+    overflow: hidden;
+    break-after: avoid;
+    width: 148mm;
+    height: 93mm;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* ==========================================================================
+   Artwork passport (/verify/[artworkId], features/verify).
+   Scoped tokens and the page's motion. Appended to the site tokens above and
+   derived from them, so light and dark both work and nothing else reads them.
+   ========================================================================== */
+:root {
+  /* Strong ease-out: entering elements decelerate into place. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Secondary text that holds 4.5:1 in both themes (muted-foreground drops to ~3.6:1 on the light paper). */
+  --passport-ink-2: color-mix(in oklab, var(--foreground) 68%, var(--background));
+  /* Hairlines, and the mat board the artwork sits on: a step off the page in either theme. */
+  --passport-rule: color-mix(in oklab, var(--foreground) 14%, var(--background));
+  --passport-mat: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  /* The printed certificate is a fixed paper object, so its ink and typeface do not follow the theme. */
+  --coa-ink: #1a1612;
+  --coa-ink-2: #6e6860;
+  --font-certificate: "Times New Roman", Times, serif;
+}
+
+@theme inline {
+  --color-passport-ink-2: var(--passport-ink-2);
+  --color-passport-rule: var(--passport-rule);
+  --color-passport-mat: var(--passport-mat);
+}
+
+/* The passport must never scroll sideways, whatever the viewport: clip, not hidden, so sticky and fixed still work. */
+html:has(.passport),
+html:has(.passport) body {
+  overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The one orchestrated entrance. Each element carries its place in the sequence as --i; total stagger stays under 400ms. */
+  .pp-in {
+    animation: pp-in 520ms var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  .pp-plate {
+    animation: pp-plate 640ms var(--ease-out) 60ms both;
+  }
+  /* Swapping the artwork shown on the plate. */
+  .pp-fade {
+    animation: pp-fade 320ms var(--ease-out) both;
+  }
+  /* The verified tick draws itself once, just after the line it sits in has appeared. */
+  .pp-tick path:last-child {
+    stroke-dasharray: 10;
+    stroke-dashoffset: 10;
+    animation: pp-draw 420ms var(--ease-out) 420ms forwards;
+  }
+  /* The thread that joins the provenance steps draws down once, when it scrolls into view. JS arms it (data-armed) and
+     the observer fires it (data-inview). Only the line is drawn: the steps themselves are always visible, so a
+     full-page screenshot, a print or a share still shows the whole record. */
+  .pp-thread[data-armed] .pp-line {
+    transform: scaleY(0);
+  }
+  .pp-thread[data-armed][data-inview] .pp-line {
+    transform: none;
+    transition: transform 700ms var(--ease-out);
+    transition-delay: calc(var(--i, 0) * 110ms + 100ms);
+  }
+  html:has(.passport) {
+    scroll-behavior: smooth;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Fewer and gentler, not none: opacity only, 150ms. */
+  .pp-in,
+  .pp-plate {
+    animation: pp-fade 150ms linear both;
+  }
+}
+@keyframes pp-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes pp-plate {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+@keyframes pp-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pp-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}

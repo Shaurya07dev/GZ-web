@@ -80,10 +80,16 @@ def main() -> None:
     # and only the centre ~66% is guaranteed to survive that mask.
     monogram(SIZE, 0.42).save("assets/icon/app_icon_foreground.png")
 
-    # Splash. Android 12+ masks the splash icon to a circle showing only the
-    # inner two-thirds, so it gets its own tighter version rather than a
-    # scaled copy of the wider one.
-    monogram(SIZE, 0.52).save("assets/icon/splash.png")
+    # Splash. Both versions draw the GZ at the same physical size, so every
+    # launch path shows the mark exactly where the app's own opening animation
+    # (lib/features/splash/splash_screen.dart) picks it up:
+    #   Android 12+ draws its splash icon in a 288dp box masked to a 192dp
+    #   circle: 0.34 of 288dp is a 98dp-wide GZ that sits inside that circle.
+    #   Older Android and iOS draw this 1024px image as 4x, a 256dp box:
+    #   0.383 of 256dp is the same 98dp.
+    # The Flutter splash renders splash_android12.png in a 288-point box, so
+    # all three agree.
+    monogram(SIZE, 0.383).save("assets/icon/splash.png")
     monogram(SIZE, 0.34).save("assets/icon/splash_android12.png")
 
 

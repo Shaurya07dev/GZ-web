@@ -698,7 +698,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithText(InkWell, 'Original').last);
       await tester.pumpAndSettle();
-      expect(catalog.calls.last.rarity, ArtworkRarity.original);
+      expect(catalog.calls.last.rarities, [ArtworkRarity.original]);
     });
   });
 }

@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { artworkQrDataUrl } from "@/lib/qr";
+import { humanize } from "@/lib/utils";
 
 // The Certificate of Authenticity, rendered onto GalleryZone's designed
 // certificate (public/coa-template.png) rather than drawn from scratch.
@@ -30,8 +31,8 @@ const TEMPLATE_URL = "/coa-template.png";
 // these pixels — measured off the artwork — and scaled to the page at render
 // time, so the positions stay readable and stay correct if the page size
 // changes.
-const TPL_W = 1280;
-const TPL_H = 853;
+export const TPL_W = 1280;
+export const TPL_H = 853;
 
 /** Page width in mm; the height follows the template's aspect so nothing is stretched. */
 const PAGE_W = 297;
@@ -44,9 +45,9 @@ const mm = (px: number): number => px * PX;
 // --- measured positions on the template ------------------------------------
 
 /** Baseline of each of the seven ruled fields, and where their values start. */
-const FIELD_VALUE_X = 366;
-const FIELD_VALUE_MAX_W = 196; // the ruled line ends at ~562px
-const FIELD_BASELINES = {
+export const FIELD_VALUE_X = 366;
+export const FIELD_VALUE_MAX_W = 196; // the ruled line ends at ~562px
+export const FIELD_BASELINES = {
   artistName: 402,
   title: 446,
   artForm: 487,
@@ -57,14 +58,14 @@ const FIELD_BASELINES = {
 } as const;
 
 /** Bottom-left "DATE OF ISSUE" block — the label is on the template, the value goes under it. */
-const DATE_CENTER_X = 233;
-const DATE_BASELINE = 775;
-const CERT_NO_BASELINE = 794;
+export const DATE_CENTER_X = 233;
+export const DATE_BASELINE = 775;
+export const CERT_NO_BASELINE = 794;
 
 /** The blank panel under "VERIFIED THIS ARTWORK", above the "Scan to verify…" caption. */
-const QR_SIZE = 170;
-const QR_X = 964;
-const QR_Y = 432;
+export const QR_SIZE = 170;
+export const QR_X = 964;
+export const QR_Y = 432;
 
 /**
  * The space above the printed "Artist Signature" label, between the bottom of
@@ -72,10 +73,10 @@ const QR_Y = 432;
  * this box keeping its own aspect ratio, so a wide scrawl and a tall one both
  * sit on the line rather than being stretched to fill it.
  */
-const SIG_CENTER_X = 737;
-const SIG_BOTTOM = 662;
-const SIG_MAX_W = 180;
-const SIG_MAX_H = 62;
+export const SIG_CENTER_X = 737;
+export const SIG_BOTTOM = 662;
+export const SIG_MAX_W = 180;
+export const SIG_MAX_H = 62;
 
 const INK: [number, number, number] = [26, 22, 18];
 const MUTED: [number, number, number] = [110, 104, 96];
@@ -103,7 +104,32 @@ export interface CoaPdfInput {
   exclusive?: boolean;
 }
 
-function formatDate(iso: string): string {
+/**
+ * The seven ruled values and the baseline each sits on. Shared by the PDF and the on-screen
+ * certificate so the two can never disagree about what a field says.
+ *
+ * The ART FORM line carries the category (painting / sculpture / …) and, when relevant, suffixes
+ * with the type (Original / Limited Edition / …) and the "Exclusive to GalleryZone" marker.
+ * Client (19 Oct 2026) asked for both to appear on the certificate without re-designing the template.
+ */
+export function coaFieldRows(input: CoaPdfInput): [number, string][] {
+  // The catalogue stores category and medium as slugs ("oil-on-canvas"); a certificate reads them as a person
+  // would write them ("Oil on canvas"). The app's certificate does the same.
+  const artFormBits: string[] = [humanize(input.category)];
+  if (input.artworkType) artFormBits.push(input.artworkType);
+  if (input.exclusive) artFormBits.push("Exclusive to GalleryZone");
+  return [
+    [FIELD_BASELINES.artistName, input.artistName],
+    [FIELD_BASELINES.title, input.title],
+    [FIELD_BASELINES.artForm, artFormBits.join(" · ")],
+    [FIELD_BASELINES.medium, humanize(input.medium)],
+    [FIELD_BASELINES.dimensions, input.dimensions ?? "—"],
+    [FIELD_BASELINES.yearCreated, input.yearCreated ? String(input.yearCreated) : "—"],
+    [FIELD_BASELINES.artworkId, input.productCode || input.artworkId],
+  ];
+}
+
+export function formatDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "long", year: "numeric" }).format(date);
@@ -163,7 +189,7 @@ export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
     loadTemplate(),
     // A missing QR is survivable — every other field still identifies the
     // piece — so it must not take the whole certificate down with it.
-    artworkQrDataUrl(input.artworkId, 1024).catch(() => null),
+    artworkQrDataUrl(input.artworkId, 1024, "Q").catch(() => null),
   ]);
 
   const doc = new jsPDF({ unit: "mm", format: [PAGE_W, PAGE_H], orientation: "landscape" });
@@ -172,25 +198,7 @@ export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
   // The seven ruled fields.
   doc.setTextColor(...INK);
   doc.setFont("times", "normal");
-  // The ART FORM line carries the category (painting / sculpture / …) and,
-  // when relevant, suffixes with the type (Original / Limited Edition / …)
-  // and the "Exclusive to GalleryZone" marker. Client (19 Oct 2026) asked
-  // for both to appear on the certificate without re-designing the template.
-  const artFormBits: string[] = [input.category];
-  if (input.artworkType) artFormBits.push(input.artworkType);
-  if (input.exclusive) artFormBits.push("Exclusive to GalleryZone");
-  const artFormLine = artFormBits.join(" · ");
-
-  const fields: [number, string][] = [
-    [FIELD_BASELINES.artistName, input.artistName],
-    [FIELD_BASELINES.title, input.title],
-    [FIELD_BASELINES.artForm, artFormLine],
-    [FIELD_BASELINES.medium, input.medium],
-    [FIELD_BASELINES.dimensions, input.dimensions ?? "—"],
-    [FIELD_BASELINES.yearCreated, input.yearCreated ? String(input.yearCreated) : "—"],
-    [FIELD_BASELINES.artworkId, input.productCode || input.artworkId],
-  ];
-  for (const [baseline, value] of fields) {
+  for (const [baseline, value] of coaFieldRows(input)) {
     fitText(doc, value, FIELD_VALUE_X, baseline, FIELD_VALUE_MAX_W);
   }
 
@@ -208,8 +216,9 @@ export async function downloadCoaPdf(input: CoaPdfInput): Promise<void> {
     doc.setTextColor(...INK);
   }
 
-  // The QR, in the panel the template reserves for it.
-  if (qr) doc.addImage(qr, "PNG", mm(QR_X), mm(QR_Y), mm(QR_SIZE), mm(QR_SIZE));
+  // The QR, in the panel the template reserves for it. Compressed: stored raw, this one image is 3 MB of
+  // flat black and white; Flate makes it a few KB with every pixel intact.
+  if (qr) doc.addImage(qr, "PNG", mm(QR_X), mm(QR_Y), mm(QR_SIZE), mm(QR_SIZE), undefined, "FAST");
 
   // The artist's signature, sitting on the line above its printed label.
   if (input.artistSignatureDataUrl) {
