@@ -111,7 +111,8 @@ export interface MarketplaceQuery {
   category?: string[] | undefined;
   /** Any of these mediums match (OR). */
   medium?: string[] | undefined;
-  rarity?: string | undefined;
+  /** Any of these ranks match (OR) — multi-select on the sidebar. */
+  rarity?: string[] | undefined;
   artistId?: string | undefined;
   location?: string | undefined;
   size?: "small" | "medium" | "large" | undefined;
@@ -171,7 +172,7 @@ export function queryMarketplace(all: PublicArtworkView[], query: MarketplaceQue
   const filtered = all.filter((a) => {
     if (query.category?.length && !query.category.includes(a.category)) return false;
     if (query.medium?.length && !query.medium.includes(a.medium)) return false;
-    if (query.rarity && a.rarityType !== query.rarity) return false;
+    if (query.rarity?.length && (!a.rarityType || !query.rarity.includes(a.rarityType))) return false;
     if (query.artistId && a.artistId !== query.artistId) return false;
     if (query.location && a.artistLocation !== query.location) return false;
     if (query.size && a.sizeBand !== query.size) return false;

@@ -146,10 +146,21 @@ function NotificationEventRow({ event }: { event: NotificationEvent }) {
       </Avatar>
 
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-medium text-foreground">
+        {/* Owner-reported 31 Oct 2026: notifications were truncated to one
+            line even in the popover, which meant long bodies were unreadable
+            at a glance. Title keeps a single-line truncate for density;
+            subtitle wraps up to 3 lines, and both carry the full text as a
+            native tooltip for anyone who still wants the whole string. */}
+        <h3
+          className="truncate text-sm font-medium text-foreground"
+          title={event.title}
+        >
           {event.title}
         </h3>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+        <p
+          className="mt-0.5 line-clamp-3 text-xs leading-snug text-muted-foreground"
+          title={event.subtitle}
+        >
           {event.subtitle}
         </p>
       </div>

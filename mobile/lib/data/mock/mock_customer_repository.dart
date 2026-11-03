@@ -1,7 +1,9 @@
 import '../../core/format.dart';
 import '../models/aggregator.dart' show DeliveryAddress;
 import '../models/artwork.dart';
+import '../models/cart.dart';
 import '../models/customer.dart';
+import '../models/notification_prefs.dart';
 import '../models/order.dart';
 import '../repositories/customer_repository.dart';
 import '../storage/mock_db.dart';
@@ -499,4 +501,82 @@ class MockCustomerRepository implements CustomerRepository {
       return ticket;
     });
   }
+
+  @override
+  Future<({List<int> bytes, String filename})> downloadInvoice(
+    String orderId,
+  ) => mockError(
+    'Invoice downloads need the live backend — switch out of demo mode to try this.',
+  );
+
+  // --- Cart (demo in-memory) ------------------------------------------------
+  // Shares the same cap and shape as the real API; `addedAt` is ISO so the
+  // mock renders identically to the live cart.
+  final List<CartEntry> _cartEntries = <CartEntry>[];
+
+  @override
+  Future<Cart> getCart() => mockDelay(() => Cart(entries: List.of(_cartEntries)));
+
+  @override
+  Future<Cart> addToCart(String artworkId) => mockDelay(() {
+    if (_cartEntries.any((e) => e.artworkId == artworkId)) {
+      return Cart(entries: List.of(_cartEntries));
+    }
+    if (_cartEntries.length >= cartMaxItems) {
+      throw Exception('A cart can hold at most $cartMaxItems items.');
+    }
+    _cartEntries.add(
+      CartEntry(artworkId: artworkId, addedAt: DateTime.now().toIso8601String()),
+    );
+    return Cart(entries: List.of(_cartEntries));
+  });
+
+  @override
+  Future<Cart> removeFromCart(String artworkId) => mockDelay(() {
+    _cartEntries.removeWhere((e) => e.artworkId == artworkId);
+    return Cart(entries: List.of(_cartEntries));
+  });
+
+  @override
+  Future<Cart> clearCart() => mockDelay(() {
+    _cartEntries.clear();
+    return const Cart();
+  });
+
+  // --- Notification preferences (demo in-memory) ---------------------------
+  NotificationPreferences _prefs = const NotificationPreferences(
+    abandonedCart: true,
+    marketing: true,
+    weeklyDigest: true,
+    pushEnabled: true,
+  );
+
+  @override
+  Future<NotificationPreferences> getNotificationPreferences() =>
+      mockDelay(() => _prefs);
+
+  @override
+  Future<NotificationPreferences> updateNotificationPreferences(
+    Map<String, bool> patch,
+  ) => mockDelay(() {
+    _prefs = _prefs.copyWith(
+      abandonedCart: patch['abandonedCart'],
+      marketing: patch['marketing'],
+      weeklyDigest: patch['weeklyDigest'],
+      pushEnabled: patch['pushEnabled'],
+    );
+    return _prefs;
+  });
+
+  @override
+  Future<void> registerFcmToken({
+    required String token,
+    required String platform,
+    String? deviceLabel,
+  }) async {
+    // Mock-mode no-op: the demo build has no real FCM channel.
+  }
+
+  @override
+  Future<void> revokeFcmToken(String token) async {}
 }

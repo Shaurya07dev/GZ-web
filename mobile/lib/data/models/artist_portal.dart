@@ -114,6 +114,10 @@ abstract class ArtistProfileDetails with _$ArtistProfileDetails {
     @Default('') String pickupState,
     @Default('IN') String pickupCountry,
     @Default('') String pickupPincode,
+
+    /// Uploaded profile photo, served by the API's bucket proxy. Null until
+    /// the artist uploads one.
+    String? profileImageUrl,
   }) = _ArtistProfileDetails;
 
   const ArtistProfileDetails._();

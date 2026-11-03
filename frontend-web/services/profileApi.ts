@@ -82,7 +82,54 @@ export type OwnProfilePatch = Partial<{
   tourCompleted: { tour: "customer" | "artist" | "aggregator" | "admin"; version: number };
 }>;
 
+export const PROFILE_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+export const PROFILE_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export type ProfilePhotoContentType = (typeof PROFILE_PHOTO_CONTENT_TYPES)[number];
+
+interface UploadUrlResponse {
+  key: string;
+  uploadUrl: string;
+  expiresInSeconds: number;
+  method: "PUT";
+  headers: { "Content-Type": ProfilePhotoContentType };
+}
+
 export const profileApi = {
   get: () => http.get<OwnProfileDto>("/v1/me/profile"),
   update: (patch: OwnProfilePatch) => http.patch<OwnProfileDto>("/v1/me/profile", patch),
+
+  // --- Photo upload ---------------------------------------------------------
+  // Browser-side flow:
+  //   1. requestPhotoUploadUrl → API returns a presigned PUT
+  //   2. PUT the file bytes straight to the bucket
+  //   3. confirmPhoto(key) tells the API to accept and point the account at it
+  // Keeps the API off the hot path: file bytes never traverse our server.
+  async uploadPhoto(file: File): Promise<string> {
+    const type = file.type;
+    if (!(PROFILE_PHOTO_CONTENT_TYPES as readonly string[]).includes(type)) {
+      throw new Error("Choose a JPEG, PNG or WebP image.");
+    }
+    if (file.size > PROFILE_PHOTO_MAX_BYTES) {
+      throw new Error("Profile photos must be 5 MB or smaller. Please resize and try again.");
+    }
+    const slot = await http.post<UploadUrlResponse>("/v1/me/profile/photo/upload-url", {
+      contentType: type,
+      contentLength: file.size,
+    });
+    const put = await fetch(slot.uploadUrl, {
+      method: "PUT",
+      headers: slot.headers,
+      body: file,
+    });
+    if (!put.ok) {
+      throw new Error("Could not upload your photo. Check your connection and try again.");
+    }
+    const confirmed = await http.post<{ photoUrl: string }>("/v1/me/profile/photo/confirm", {
+      key: slot.key,
+    });
+    return confirmed.photoUrl;
+  },
+  async removePhoto() {
+    await http.delete("/v1/me/profile/photo");
+  },
 };

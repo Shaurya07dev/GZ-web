@@ -8,7 +8,7 @@
 // here.
 
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { Collections, plainText, recordNotifications, type Db, type UserDoc } from "@galleryzone/db";
+import { Collections, plainText, readNotificationPreferences, recordNotifications, type Db, type UserDoc } from "@galleryzone/db";
 import type { OrderStatus } from "@galleryzone/domain";
 import type { AppEnv } from "@galleryzone/config";
 import { DB, ENV } from "../db.module.ts";
@@ -658,6 +658,147 @@ export class Emails {
       ],
       footnote: "Reply to this email to answer them directly.",
     }, user?.email);
+  }
+
+  // ── Cart ──────────────────────────────────────────────────────────────
+
+  /**
+   * Audit §8: abandoned-cart reminder. Opt-in — anyone with
+   * notificationPreferences.abandonedCart === false is skipped. The caller
+   * is responsible for only firing this once per cart entry (idempotency
+   * key encodes the entry's artworkId + addedAt so a longer-stale cart
+   * doesn't re-fire from the same hook).
+   */
+  async abandonedCart(input: {
+    uid: string;
+    firstArtworkTitle: string;
+    firstArtworkImageUrl: string | null;
+    firstArtworkId: string;
+    extraCount: number;
+    cartEntryKey: string;
+  }) {
+    const user = await this.user(input.uid);
+    if (!user) return;
+    const prefs = await readNotificationPreferences(this.db, input.uid);
+    if (!prefs.abandonedCart) return;
+    const extra = input.extraCount > 0
+      ? ` plus <strong>${input.extraCount} other piece${input.extraCount > 1 ? "s" : ""}</strong>`
+      : "";
+    await this.deliver(
+      `abandoned-cart/${input.uid}/${input.cartEntryKey}`,
+      user.email,
+      `Still thinking about “${input.firstArtworkTitle}”?`,
+      {
+        heading: "Your cart is waiting",
+        paragraphs: [
+          `You added “${esc(input.firstArtworkTitle)}”${extra} to your cart but didn't check out.`,
+          "Each piece on GalleryZone is an original — once someone else buys it, it's gone. Pick up where you left off whenever you're ready.",
+        ],
+        cta: { label: "Return to my cart", url: `${this.site}/cart` },
+      },
+    );
+  }
+
+  // ── Shipment lifecycle ────────────────────────────────────────────────
+
+  /**
+   * Audit §8: the courier has picked the piece up from the artist. Sent to
+   * the buyer so they can start tracking; the artist already saw a dispatch
+   * confirmation via orderStatus().
+   */
+  async shipmentDispatched(input: {
+    orderId: string;
+    customerId: string;
+    title: string;
+    carrier: string | null;
+    trackingId: string | null;
+  }) {
+    const buyer = await this.user(input.customerId);
+    if (!buyer) return;
+    const trackLine = input.trackingId
+      ? `You can track it with <strong>${esc(input.carrier ?? "the courier")}</strong>, tracking id <strong>${esc(input.trackingId)}</strong>.`
+      : "A tracking link will appear on your order page as soon as the courier assigns one.";
+    await this.deliver(
+      `shipment-dispatched/${input.orderId}`,
+      buyer.email,
+      `“${input.title}” is on its way`,
+      {
+        heading: "Your artwork is on its way",
+        paragraphs: [
+          `“${esc(input.title)}” has been collected by the courier and is in transit to you.`,
+          trackLine,
+        ],
+        cta: { label: "Track my order", url: `${this.site}/account/orders/${input.orderId}` },
+      },
+    );
+  }
+
+  /**
+   * Audit §8: delivery confirmed. Asks for a review (soft; link, not a CTA
+   * block) and reminds the buyer to tap the NFC chip to see the provenance
+   * passport.
+   */
+  async deliveryConfirmed(input: {
+    orderId: string;
+    customerId: string;
+    artistId: string;
+    artistName: string;
+    title: string;
+  }) {
+    const buyer = await this.user(input.customerId);
+    if (!buyer) return;
+    await this.deliver(
+      `delivery-confirmed/${input.orderId}`,
+      buyer.email,
+      `“${input.title}” has arrived`,
+      {
+        heading: "Your artwork has arrived",
+        paragraphs: [
+          `“${esc(input.title)}” was marked delivered. Tap the NFC chip on the back of the piece with your phone to see its provenance passport — the record that it's authentic and that it belongs to you.`,
+          `If you'd like to leave a note for ${esc(input.artistName)} or rate your experience, you can do so from your order page.`,
+        ],
+        cta: { label: "Open my order", url: `${this.site}/account/orders/${input.orderId}` },
+      },
+    );
+  }
+
+  // ── Payouts ───────────────────────────────────────────────────────────
+
+  /**
+   * Audit §8: wallet credit released — the 7-day hold after delivery has
+   * ended and the artist's funds are now withdrawable. Aggregators get a
+   * separate email because their path (commission vs. sale) and the "when"
+   * are different.
+   */
+  async payoutReleased(input: {
+    uid: string;
+    role: "artist" | "aggregator";
+    orderId: string;
+    title: string;
+    amountPaise: number;
+  }) {
+    const user = await this.user(input.uid);
+    if (!user) return;
+    const roleCopy =
+      input.role === "artist"
+        ? "Your sale proceeds are now in your wallet and available to withdraw."
+        : "Your commission on this sale is now in your wallet and available to withdraw.";
+    await this.deliver(
+      `payout-released-${input.role}/${input.orderId}`,
+      user.email,
+      `Your payout for “${input.title}” is ready`,
+      {
+        heading: "Your payout is ready",
+        paragraphs: [
+          `${roleCopy} <strong>${inr(input.amountPaise)}</strong> has been credited for “${esc(input.title)}”.`,
+          "Withdrawals are processed to the bank account on your profile within 2 business days.",
+        ],
+        cta: {
+          label: "Open my wallet",
+          url: `${this.site}/${input.role === "artist" ? "dashboard" : "aggregator"}/wallet`,
+        },
+      },
+    );
   }
 
   /** Any unexpected failure in a mail hook is logged here — never propagated. */

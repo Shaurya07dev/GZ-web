@@ -46,19 +46,27 @@ import type { Request } from "express";
 import { z } from "zod";
 import {
   CheckoutError,
+  type PaymentCapture,
   WalletTopupError,
+  AggregatorRemittanceError,
   attachProviderOrder,
+  attachRemittanceProviderOrder,
   attachTopupProviderOrder,
+  createRemittance,
   createWalletTopup,
   getCurrentUser,
   getOrder,
+  getRemittance,
   getWalletTopup,
   markOrderPaid,
   markPaymentFailed,
+  markRemittanceFailed,
+  markRemittancePaid,
   markTopupFailed,
   markTopupPaid,
   orderIdForProviderOrder,
   providerOrderIdForOrder,
+  remittanceIdForProviderOrder,
   topupIdForProviderOrder,
   finalizeReservationIntent,
   getReservationIntent,
@@ -118,7 +126,19 @@ const badSignature = () => new BadRequestException({ type: "about:blank", title:
 interface WebhookEvent {
   event: string;
   payload?: {
-    payment?: { entity?: { id?: string; order_id?: string; method?: string; amount?: number; notes?: Record<string, string> } };
+    payment?: {
+      entity?: {
+        id?: string;
+        order_id?: string;
+        method?: string;
+        amount?: number;
+        notes?: Record<string, string>;
+        /** Razorpay's actual gateway fee for this payment, in paise. Varies by instrument + plan. */
+        fee?: number;
+        /** GST on that fee, in paise. */
+        tax?: number;
+      };
+    };
     order?: { entity?: { id?: string; receipt?: string; amount?: number; notes?: Record<string, string> } };
   };
 }
@@ -140,7 +160,7 @@ export class PaymentsController {
     return order;
   }
 
-  private async settle(orderId: string, capture: { method: string; providerPaymentId: string | null; rawWebhookPayload?: unknown }) {
+  private async settle(orderId: string, capture: PaymentCapture) {
     const result = await markOrderPaid(this.db, orderId, capture);
     this.cache.clear();
     void this.emails
@@ -376,6 +396,98 @@ export class PaymentsController {
     return this.simulateAggregatorPayment(req, id);
   }
 
+  // --- Remittance (cash-sale pay-in through Razorpay) ------------------------
+  //
+  // One remittance covers 1..N cash sales; `createRemittance` validates
+  // ownership + payment route + unremitted state inside a transaction before
+  // any gateway call. The flow mirrors reservation/topup payments: start →
+  // Razorpay checkout → verify (or webhook) → markRemittancePaid. The verify
+  // path trusts only our own re-read of the gateway order, and the amount
+  // must match the remittance's own total paise.
+
+  private async ownRemittance(req: AuthenticatedRequest, id: string) {
+    const rem = await getRemittance(this.db, id);
+    if (!rem || rem.aggregatorId !== req.authUser.uid) {
+      throw new NotFoundException({ type: "about:blank", title: "Remittance not found", status: 404, code: "not_found" });
+    }
+    return rem;
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/sales/remittance-payments")
+  async startRemittance(
+    @Req() req: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(z.object({ saleIds: z.array(z.string().min(1).max(60)).min(1).max(20) }).strict())) body: { saleIds: string[] },
+  ) {
+    try {
+      const { remittanceId, amountPaise } = await createRemittance(this.db, { aggregatorId: req.authUser.uid, saleIds: body.saleIds });
+      if (this.env.paymentsMode !== "razorpay") {
+        return { mode: "simulated" as const, remittanceId, amountPaise };
+      }
+      const [user, gateway] = await Promise.all([
+        getCurrentUser(this.db, req.authUser.uid, { touchLogin: false }),
+        this.razorpay.createRemittanceOrder({ remittanceId, amountPaise, aggregatorId: req.authUser.uid }),
+      ]);
+      await attachRemittanceProviderOrder(this.db, remittanceId, gateway.id);
+      return {
+        mode: "razorpay" as const,
+        remittanceId,
+        keyId: this.razorpay.keyId,
+        razorpayOrderId: gateway.id,
+        amountPaise,
+        currency: "INR",
+        name: "GalleryZone",
+        description: `Cash remittance (${body.saleIds.length} sale${body.saleIds.length > 1 ? "s" : ""})`,
+        prefill: { name: user?.name ?? "", email: user?.email ?? "", contact: user?.phone ?? "" },
+      };
+    } catch (error) {
+      if (error instanceof AggregatorRemittanceError) {
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 409, code: "remittance_rejected" });
+      }
+      throw error;
+    }
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/sales/remittance-payments/:id/verify")
+  async verifyRemittance(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(verifySchema)) body: VerifyBody,
+  ) {
+    const rem = await this.ownRemittance(req, id);
+    if (rem.status === "paid") return { status: "paid" as const, amountPaise: rem.amountPaise };
+
+    const gatewayOrderId = rem.providerOrderId ?? body?.razorpayOrderId ?? null;
+    if (!gatewayOrderId) throw notStarted("remittance");
+    if (body && (body.razorpayOrderId !== gatewayOrderId || !this.razorpay.verifyCheckoutSignature(body))) {
+      throw badSignature();
+    }
+
+    const gateway = await this.razorpay.fetchOrder(gatewayOrderId);
+    const guard = this.amountGuard(gateway, rem.amountPaise, gatewayOrderId);
+    if (guard) throw guard;
+    if (gateway.status !== "paid") return { status: gateway.status };
+
+    const payment = (await this.razorpay.fetchPayments(gatewayOrderId)).find((p) => p.status === "captured");
+    const result = await markRemittancePaid(this.db, id, {
+      method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
+      providerPaymentId: payment?.id ?? body?.razorpayPaymentId ?? null,
+    });
+    return { status: "paid" as const, amountPaise: result.amountPaise };
+  }
+
+  @Roles("aggregator")
+  @Post("aggregator/sales/remittance-payments/:id/simulate")
+  async simulateRemittance(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    if (this.env.paymentsMode !== "simulated") {
+      throw new ForbiddenException({ type: "about:blank", title: "Simulated payment is disabled", status: 403, code: "payments_not_simulated" });
+    }
+    await this.ownRemittance(req, id);
+    const result = await markRemittancePaid(this.db, id, { method: "simulated", providerPaymentId: null });
+    return { status: "paid" as const, amountPaise: result.amountPaise };
+  }
+
   @Roles("aggregator")
   @Post("aggregator/wallet/topups")
   async startTopup(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(startWalletTopupInputSchema)) body: StartWalletTopupInput) {
@@ -435,6 +547,13 @@ export class PaymentsController {
       payment?.notes?.gzTopupId ?? orderEntity?.notes?.gzTopupId ?? (providerOrderId ? await topupIdForProviderOrder(this.db, providerOrderId) : null);
     if (topupId) return this.topupWebhook(event.event, topupId, { payment, reportedAmount, providerOrderId });
 
+    // A cash-remittance payment carries its own note (gzRemittanceId). Same
+    // idempotency rule as top-ups — a late webhook after verify already won
+    // is a no-op inside markRemittancePaid.
+    const remittanceId =
+      payment?.notes?.gzRemittanceId ?? orderEntity?.notes?.gzRemittanceId ?? (providerOrderId ? await remittanceIdForProviderOrder(this.db, providerOrderId) : null);
+    if (remittanceId) return this.remittanceWebhook(event.event, remittanceId, { payment, reportedAmount, providerOrderId });
+
     // An aggregator-reservation payment intent (notes.gzIntentId). The finalize
     // transaction is idempotent — a late webhook after the browser already
     // verified safely becomes a no-op.
@@ -462,6 +581,12 @@ export class PaymentsController {
             method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
             providerPaymentId: payment?.id ?? null,
             rawWebhookPayload: event,
+            // Razorpay reports the actual fee + GST on the payment entity
+            // (paise). This is the only place these numbers reach us —
+            // /verify runs before the fee is finalized. See
+            // `docs/audit/audit-report-30oct2026.md` item #4.
+            gatewayFeeActualPaise: typeof payment?.fee === "number" ? payment.fee : null,
+            gatewayFeeGstActualPaise: typeof payment?.tax === "number" ? payment.tax : null,
           });
         } catch (error) {
           // A cancelled order that later gets a capture is an operator problem, not a retry loop.
@@ -530,6 +655,41 @@ export class PaymentsController {
       }
     } catch (error) {
       if (!(error instanceof ReservationIntentError)) throw error;
+    }
+    return { received: true, matched: true };
+  }
+
+  private async remittanceWebhook(
+    event: string,
+    remittanceId: string,
+    ctx: { payment: { id?: string; method?: string } | undefined; reportedAmount: number | null; providerOrderId: string | null },
+  ) {
+    try {
+      if (event === "payment.captured" || event === "order.paid") {
+        const rem = await getRemittance(this.db, remittanceId);
+        if (!rem) return { received: true, matched: false };
+        if (ctx.reportedAmount !== null && ctx.reportedAmount !== rem.amountPaise) {
+          console.error(
+            JSON.stringify({
+              event: "payments.amount_mismatch",
+              source: "webhook_remittance",
+              providerOrderId: ctx.providerOrderId,
+              expectedPaise: rem.amountPaise,
+              reportedAmount: ctx.reportedAmount,
+            }),
+          );
+          return { received: true, matched: false };
+        }
+        await markRemittancePaid(this.db, remittanceId, {
+          method: ctx.payment?.method ? `razorpay_${ctx.payment.method}` : "razorpay",
+          providerPaymentId: ctx.payment?.id ?? null,
+        });
+      } else if (event === "payment.failed") {
+        await markRemittanceFailed(this.db, remittanceId, { providerPaymentId: ctx.payment?.id ?? null });
+      }
+    } catch (error) {
+      // An unknown remittance id is an operator problem, not a retry loop.
+      if (!(error instanceof AggregatorRemittanceError)) throw error;
     }
     return { received: true, matched: true };
   }

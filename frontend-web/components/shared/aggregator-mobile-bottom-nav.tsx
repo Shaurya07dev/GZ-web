@@ -161,7 +161,7 @@ export function AggregatorMobileBottomNav() {
       >
         <div className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-3">
-            <UserAvatar name={me?.name} className="size-10" />
+            <UserAvatar name={me?.name} photoUrl={me?.photoUrl} className="size-10" />
             <div>
               <p className="text-sm font-semibold text-sidebar-foreground leading-tight">{me?.name ?? "Aggregator"}</p>
               <p className="text-[11px] text-muted-foreground">Aggregator</p>

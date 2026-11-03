@@ -89,10 +89,16 @@ export function ShipmentTracker({
           {STAGES[reachedIndex]?.label ?? "In transit"}
         </span>
         {trackingId && (
-          <span className="font-mono text-muted-foreground">
+          <a
+            href={`https://www.shiprocket.in/shipment-tracking/${encodeURIComponent(trackingId)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            title="Open live tracking on Shiprocket"
+          >
             {carrier ? `${carrier} · ` : ""}
             AWB {trackingId}
-          </span>
+          </a>
         )}
       </div>
     </div>

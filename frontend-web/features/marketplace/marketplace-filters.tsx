@@ -51,7 +51,7 @@ function hasActiveStructuredFilters(filters: ArtworkFilters): boolean {
   return Boolean(
     filters.category?.length ||
       filters.medium?.length ||
-      filters.rarity ||
+      filters.rarity?.length ||
       filters.artistId ||
       filters.location ||
       filters.size ||
@@ -270,14 +270,18 @@ export function MarketplaceFilters({
         {rankOptions.length > 0 && (
           <FilterGroup value="rank" label="Rank">
             {rankOptions.map((option) => {
-              const checked = filters.rarity === option.value;
+              const checked = filters.rarity?.includes(option.value) ?? false;
               return (
                 <OptionRow
                   key={option.value}
                   label={option.label}
                   count={facets.rarityCounts[option.value]}
                   checked={checked}
-                  onToggle={() => update({ rarity: checked ? undefined : option.value })}
+                  onToggle={() =>
+                    update({
+                      rarity: toggleIn(filters.rarity, option.value) as typeof filters.rarity,
+                    })
+                  }
                   leading={
                     <span
                       className={cn(

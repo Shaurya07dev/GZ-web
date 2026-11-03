@@ -102,7 +102,7 @@ export interface AggregatorSale {
   /** Cash sales: when the full price is due at GalleryZone, two days after the sale. Absent on older sales. */
   remitDueAt?: string | null;
   /** How it was paid in: from the wallet here, or by transfer to GalleryZone's bank. */
-  remittedVia?: "wallet" | "bank" | null;
+  remittedVia?: "wallet" | "bank" | "razorpay" | null;
   soldAt: string; // ISO
   /** The piece's NFC tag is locked, so it may be dispatched. Absent on mock data. */
   nfcLocked?: boolean;

@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   BadgeCheck,
   Heart,
   ScrollText,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCart, CART_MAX_ITEMS } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
@@ -51,6 +54,32 @@ export function ArtworkInfoPanel({
 }: ArtworkInfoPanelProps) {
   const isWishlisted = useWishlistStore((state) => state.has(artwork.id));
   const toggleWishlist = useWishlistStore((state) => state.toggle);
+  const cart = useCart();
+  const isInCart = cart.has(artwork.id);
+
+  async function handleCartClick() {
+    try {
+      if (isInCart) {
+        await cart.remove(artwork.id);
+        toast.success("Removed from cart");
+        return;
+      }
+      await cart.add(artwork.id);
+      toast.success("Added to cart", {
+        description: "View it in your cart whenever you're ready.",
+      });
+    } catch (error) {
+      // Server-side cap or auth problem — show the API's message. The server
+      // enforces the max so a full cart surfaces here even if the UI thought
+      // there was room.
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.toLowerCase().includes("cart")) {
+        toast.error(message || `Cart is full (max ${CART_MAX_ITEMS} items).`);
+      } else {
+        toast.error("Couldn't update your cart. Try again in a moment.");
+      }
+    }
+  }
 
   const isAvailable = artwork.status === "marketplace";
   const buyLabel =
@@ -115,6 +144,26 @@ export function ArtworkInfoPanel({
             {buyLabel}
           </button>
         )}
+
+        {isAvailable ? (
+          <button
+            type="button"
+            onClick={handleCartClick}
+            aria-pressed={isInCart}
+            className={cn(
+              "inline-flex items-center justify-center gap-2 rounded-md border px-5 py-3 text-sm font-medium transition-colors",
+              isInCart
+                ? "border-gold/50 bg-gold/10 text-gold-bright"
+                : "border-border text-foreground/85 hover:border-gold/40 hover:text-gold-bright",
+            )}
+          >
+            <ShoppingCart
+              className={cn("size-4", isInCart && "fill-gold-bright")}
+              strokeWidth={1.75}
+            />
+            {isInCart ? "In cart" : "Add to cart"}
+          </button>
+        ) : null}
 
         <button
           type="button"

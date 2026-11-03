@@ -64,7 +64,7 @@ function MarketplacePageContent() {
 
   // A rank in the showcase filters the catalogue to it and brings it into view.
   function pickRank(rarity: ArtworkRarity) {
-    setFilters((f) => ({ ...f, rarity, page: undefined }));
+    setFilters((f) => ({ ...f, rarity: [rarity], page: undefined }));
     document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
   }
 

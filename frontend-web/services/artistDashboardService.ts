@@ -54,6 +54,9 @@ export interface ArtistProfileView {
   freeAccess: FreeAccess | null;
   /** 0-10 admin-set rating of this artist; null until an admin has rated them. */
   galleryzoneRating: number | null;
+  /** The public profile photo URL, served from the API's bucket proxy. Null
+   *  until the artist uploads one. */
+  profileImageUrl: string | null;
 }
 
 function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
@@ -85,6 +88,7 @@ function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
     joinedAt: p.createdAt,
     freeAccess: p.freeAccess ?? null,
     galleryzoneRating: p.galleryzoneRating ?? null,
+    profileImageUrl: p.profileImageUrl,
   };
 }
 import { KPI_METRICS } from "@/features/dashboard/dashboard-data";

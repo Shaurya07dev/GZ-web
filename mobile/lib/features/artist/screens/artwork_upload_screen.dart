@@ -489,13 +489,22 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         ? null
         : artworkEditState(_editing!.artwork);
 
-    // PAN, not GST, is what gates going live. A draft is never blocked, and
-    // neither is an edit to a piece that is already listed.
+    // PAN *and* approved Aadhaar gate a listing going live (31 Oct 2026
+    // owner directive — mirrors the web artwork-submit-form). Drafts and
+    // edits to an already-listed piece are unaffected.
     final profile = ref.watch(artistProfileDetailsProvider);
     final panMissing =
         !_isEdit &&
         profile.hasValue &&
         (profile.requireValue.pan ?? '').trim().isEmpty;
+    final aadhaarApproved =
+        !_isEdit &&
+        profile.hasValue &&
+        profile.requireValue.aadhaarStatus == ReviewStatus.approved;
+    final kycMissing =
+        !_isEdit &&
+        profile.hasValue &&
+        (panMissing || !aadhaarApproved);
     final panPending = !_isEdit && profile.isLoading;
 
     // Two different things, and conflating them is what made the old banner
@@ -533,7 +542,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     final canSubmit =
         !_busy &&
         missing.isEmpty &&
-        !panMissing &&
+        !kycMissing &&
         !panPending &&
         (!_isEdit || (editState?.editable ?? false));
 
@@ -552,14 +561,20 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (panMissing) ...[
+                if (kycMissing) ...[
                   PortalNotice(
                     icon: LucideIcons.triangleAlert,
                     gold: true,
-                    title: 'PAN required before this can go live',
-                    body:
-                        'Add your PAN on your Profile page — you can still save this as a draft. GST is '
-                        "optional and won't block this listing.",
+                    title: 'Finish KYC before this can go live',
+                    body: (panMissing && !aadhaarApproved)
+                        ? 'Add your PAN and verify your Aadhaar through DigiLocker on your Profile '
+                              "page. You can still save this as a draft. GST is optional and won't "
+                              'block this listing.'
+                        : panMissing
+                        ? 'Add your PAN on your Profile page. You can still save this as a draft. GST '
+                              "is optional and won't block this listing."
+                        : 'Verify your Aadhaar through DigiLocker on your Profile page. You can still '
+                              "save this as a draft. GST is optional and won't block this listing.",
                     action: TextButton(
                       onPressed: () => context.push('/dashboard/profile'),
                       child: const Text('Go to Profile'),
@@ -1032,11 +1047,11 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           onChanged: (checked) => setState(() => _exclusive = checked ?? false),
           title: Text(
             _exclusive
-                ? 'Exclusive to GalleryZone'
-                : 'Mark as exclusive to GalleryZone',
+                ? 'Listed exclusively on GalleryZone'
+                : 'List this piece exclusively on GalleryZone',
           ),
           subtitle: const Text(
-            'This piece is one of a kind and will not be sold on another platform. Once saved as exclusive, this cannot be undone in the app.',
+            'By ticking this you confirm the artwork is a one-of-a-kind original and will only be sold through GalleryZone. Exclusive pieces are prioritised in curation and may qualify for a higher rarity tier. The choice is permanent once the piece is approved — write to support if you need it reviewed.',
           ),
         ),
         const SizedBox(height: 4),

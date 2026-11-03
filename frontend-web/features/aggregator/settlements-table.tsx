@@ -20,11 +20,11 @@ import {
 } from "@/features/admin/admin-status-badge";
 import {
   useAggregatorSettlements,
-  useMarkRemittedMutation,
   useProcessSettlementMutation,
+  useRazorpayRemittanceMutation,
   useRemittancesDue,
 } from "@/hooks/useAggregatorSettlements";
-import { PayeeDetails } from "@/components/shared/payee-details";
+import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import { formatINR } from "@/lib/utils";
 import type { Settlement, SettlementStatus } from "@/types/admin";
 
@@ -151,9 +151,16 @@ export function SettlementsTable() {
 // is owed — not the sale less commission. This sits above the settlements
 // table because it is the aggregator's obligation, where everything below is
 // their entitlement, and mixing the two is how people end up netting off.
+//
+// Audit §5 (30 Oct 2026): the pay-in happens through Razorpay. One checkout
+// settles every selected sale at once, and the API only stamps them remitted
+// after re-reading the gateway as paid for the right amount.
+const REMITTANCE_MAX = 20;
+
 function RemittancesDueCard() {
   const { data: due } = useRemittancesDue();
-  const markRemitted = useMarkRemittedMutation();
+  const payViaRazorpay = useRazorpayRemittanceMutation();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   // Snapshotted once: react-hooks/purity forbids Date.now() in render, and a
   // few minutes of drift can't change which day a deadline falls on.
   const [now] = useState(() => Date.now());
@@ -161,14 +168,44 @@ function RemittancesDueCard() {
   if (!due || due.length === 0) return null;
 
   const total = due.reduce((sum, sale) => sum + sale.soldPrice, 0);
-  function markTransferred(saleId: string) {
-    markRemitted.mutate(
-      { saleId, via: "bank" },
-      {
-        onSuccess: () => toast.success("Marked as transferred"),
-        onError: (error) => toast.error(error.message),
+  const selectedIds = due.filter((s) => selected.has(s.id)).map((s) => s.id);
+  // Default to paying everything in one go when nothing has been ticked —
+  // most aggregators will want the whole batch, and single-sale picks are
+  // the edge case.
+  const idsToPay = selectedIds.length > 0 ? selectedIds : due.slice(0, REMITTANCE_MAX).map((s) => s.id);
+  const amountToPay = due
+    .filter((s) => idsToPay.includes(s.id))
+    .reduce((sum, s) => sum + s.soldPrice, 0);
+
+  function toggle(saleId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(saleId)) next.delete(saleId);
+      else if (next.size < REMITTANCE_MAX) next.add(saleId);
+      else toast.warning(`Pay at most ${REMITTANCE_MAX} sales at a time`);
+      return next;
+    });
+  }
+
+  function pay() {
+    if (idsToPay.length === 0) return;
+    payViaRazorpay.mutate(idsToPay, {
+      onSuccess: () => {
+        setSelected(new Set());
+        toast.success(
+          idsToPay.length === 1
+            ? "Remittance paid"
+            : `Remitted ${idsToPay.length} sales`,
+        );
       },
-    );
+      onError: (error) => {
+        if (error instanceof PaymentDismissedError) {
+          toast.message("Payment cancelled — nothing was charged.");
+          return;
+        }
+        toast.error(error.message);
+      },
+    });
   }
 
   return (
@@ -180,8 +217,8 @@ function RemittancesDueCard() {
           </h2>
           <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
             Cash you collected on GalleryZone&rsquo;s behalf. Pay in the full
-            amount within 2 days by transfer to GalleryZone&rsquo;s
-            bank account. Your commission is settled separately, below.
+            amount within 2 days through Razorpay. Your commission is settled
+            separately, below.
           </p>
         </div>
         <span className="font-display text-2xl font-semibold tabular-nums text-gold-bright">
@@ -194,61 +231,75 @@ function RemittancesDueCard() {
           const dueAt = sale.remitDueAt ? new Date(sale.remitDueAt).getTime() : null;
           const overdueMs = dueAt !== null ? now - dueAt : 0;
           const overdueDays = Math.floor(overdueMs / 86_400_000);
+          const checked = selected.has(sale.id);
           return (
             <li
               key={sale.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background px-3.5 py-3"
             >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {sale.buyerName}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  Sold {new Date(sale.soldAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                  })}
-                  {dueAt !== null && overdueMs <= 0 && (
-                    <>
-                      {" "}&middot; due{" "}
-                      {new Date(dueAt).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </>
-                  )}
-                </p>
-                {overdueMs > 0 && (
-                  <p className="text-xs font-medium text-destructive">
-                    {overdueDays >= 1
-                      ? `Overdue by ${overdueDays} day${overdueDays > 1 ? "s" : ""}`
-                      : "Overdue"}
+              <label className="flex min-w-0 flex-1 items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(sale.id)}
+                  disabled={payViaRazorpay.isPending}
+                  className="mt-0.5 size-4 accent-gold-bright"
+                  aria-label={`Select sale to ${sale.buyerName}`}
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {sale.buyerName}
                   </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono text-sm tabular-nums text-foreground">
-                  {formatINR(sale.soldPrice)}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={markRemitted.isPending}
-                  title="You have transferred it to GalleryZone's bank account"
-                  onClick={() => markTransferred(sale.id)}
-                >
-                  Mark transferred
-                </Button>
-              </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    Sold {new Date(sale.soldAt).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                    {dueAt !== null && overdueMs <= 0 && (
+                      <>
+                        {" "}&middot; due{" "}
+                        {new Date(dueAt).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </>
+                    )}
+                  </p>
+                  {overdueMs > 0 && (
+                    <p className="text-xs font-medium text-destructive">
+                      {overdueDays >= 1
+                        ? `Overdue by ${overdueDays} day${overdueDays > 1 ? "s" : ""}`
+                        : "Overdue"}
+                    </p>
+                  )}
+                </div>
+              </label>
+              <span className="font-mono text-sm tabular-nums text-foreground">
+                {formatINR(sale.soldPrice)}
+              </span>
             </li>
           );
         })}
       </ul>
 
-      <PayeeDetails
-        amount={total}
-        note={`GZ remittance ${due.length} sale${due.length > 1 ? "s" : ""}`}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
+        <p className="text-xs text-muted-foreground">
+          {selectedIds.length > 0
+            ? `Paying ${selectedIds.length} selected sale${selectedIds.length > 1 ? "s" : ""}`
+            : due.length > REMITTANCE_MAX
+              ? `Pay the first ${REMITTANCE_MAX} sales — tick specific ones to pay a subset`
+              : "Pay every sale above in one checkout"}
+        </p>
+        <Button
+          size="sm"
+          disabled={payViaRazorpay.isPending || idsToPay.length === 0}
+          onClick={pay}
+        >
+          {payViaRazorpay.isPending
+            ? "Opening Razorpay…"
+            : `Pay ${formatINR(amountToPay)} through Razorpay`}
+        </Button>
+      </div>
     </div>
   );
 }

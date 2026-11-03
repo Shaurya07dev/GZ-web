@@ -1,6 +1,8 @@
 import '../models/aggregator.dart' show DeliveryAddress;
 import '../models/artwork.dart';
+import '../models/cart.dart';
 import '../models/customer.dart';
+import '../models/notification_prefs.dart';
 import '../models/order.dart';
 
 /// The collector's own data — profile, address book, wallet, collection,
@@ -57,4 +59,33 @@ abstract class CustomerRepository {
     required String subject,
     required String message,
   });
+
+  /// GST tax-invoice PDF for a paid order. The server builds it on demand
+  /// (invoice.ts stamps a sequential number on first fetch and keeps it on
+  /// the order), so re-downloading always returns the same invoice.
+  /// Returns raw bytes + a filename the Content-Disposition suggested.
+  Future<({List<int> bytes, String filename})> downloadInvoice(String orderId);
+
+  /// The signed-in user's cart. Moved out of local storage on 31 Oct 2026
+  /// so the cart syncs across devices.
+  Future<Cart> getCart();
+  Future<Cart> addToCart(String artworkId);
+  Future<Cart> removeFromCart(String artworkId);
+  Future<Cart> clearCart();
+
+  /// Opt-in notification categories — transactional email always goes out
+  /// regardless. `pushEnabled` gates FCM pushes.
+  Future<NotificationPreferences> getNotificationPreferences();
+  Future<NotificationPreferences> updateNotificationPreferences(
+    Map<String, bool> patch,
+  );
+
+  /// Registers (or re-confirms) a device's FCM token with the backend so
+  /// pushes land. Idempotent — the token is the doc id.
+  Future<void> registerFcmToken({
+    required String token,
+    required String platform,
+    String? deviceLabel,
+  });
+  Future<void> revokeFcmToken(String token);
 }

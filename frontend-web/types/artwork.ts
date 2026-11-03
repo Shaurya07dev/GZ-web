@@ -55,6 +55,15 @@ export interface SocialProofLink {
 export interface ArtworkStatusEvent {
   status: ArtworkStatus;
   changedAt: string; // ISO date
+  /** uid of whoever triggered the change (admin for moderation decisions,
+   *  aggregator for aggregator-driven status moves, null for automatic
+   *  transitions). Admin UIs resolve this to a display name. */
+  changedBy?: string | null;
+  /** Display name for `changedBy`, joined server-side so admin UIs don't
+   *  need a separate user lookup. */
+  changedByName?: string | null;
+  /** The reviewer's reason, when the transition was a rejection. */
+  reason?: string | null;
 }
 
 // Matches the GET /marketplace list-item shape documented in the SAD (§3.4)
@@ -525,8 +534,9 @@ export interface ArtworkFilters {
   maxPrice?: number;
   /** Any of these mediums match (OR) — empty/absent means no medium filter. */
   medium?: string[];
-  /** GalleryZone's rank — R / U / O / N. */
-  rarity?: ArtworkRarity;
+  /** Any of these ranks match (OR). R / U / O / S — a buyer can tick more
+   *  than one on the sidebar (owner directive 31 Oct 2026). */
+  rarity?: ArtworkRarity[];
   query?: string;
   sortBy?: "newest" | "price_asc" | "price_desc";
   artistId?: string;

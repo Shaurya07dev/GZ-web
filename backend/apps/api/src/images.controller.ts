@@ -202,7 +202,23 @@ export class ImagesController {
   @Get("images/artworks/:artworkId/:file")
   async serve(@Param("artworkId") artworkId: string, @Param("file") file: string, @Res() res: Response) {
     if (!/^[A-Za-z0-9]+\.(jpg|png|webp)$/.test(file) || !/^[^/]+$/.test(artworkId)) throw notFound();
-    const object = await this.storage.get(`artworks/${artworkId}/${file}`);
+    await this.stream(res, `artworks/${artworkId}/${file}`);
+  }
+
+  /**
+   * Profile photos — same immutable cache rule as artwork images. Keys sit
+   * under `profiles/{uid}/` and are rewritten on every upload (new random
+   * suffix), so the response here is immutable too.
+   */
+  @Public()
+  @Get("images/profiles/:uid/:file")
+  async serveProfilePhoto(@Param("uid") uid: string, @Param("file") file: string, @Res() res: Response) {
+    if (!/^[A-Za-z0-9]+\.(jpg|png|webp)$/.test(file) || !/^[A-Za-z0-9_-]+$/.test(uid)) throw notFound();
+    await this.stream(res, `profiles/${uid}/${file}`);
+  }
+
+  private async stream(res: Response, key: string): Promise<void> {
+    const object = await this.storage.get(key);
     if (!object) throw notFound();
     res.setHeader("Content-Type", object.contentType ?? "application/octet-stream");
     if (object.contentLength !== null) res.setHeader("Content-Length", String(object.contentLength));

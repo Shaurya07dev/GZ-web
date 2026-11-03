@@ -15,9 +15,11 @@ class FormOption {
   final String label;
 }
 
+// Sculpture dropped 31 Oct 2026 (owner): GalleryZone currently only lists
+// 2-D pieces, so offering it misleads artists into submitting work the
+// platform can't actually list. Matches web artwork-submit-data.ts.
 const artworkCategories = [
   FormOption('painting', 'Painting'),
-  FormOption('sculpture', 'Sculpture'),
   FormOption('printmaking', 'Printmaking'),
   FormOption('mixed-media', 'Mixed Media'),
   FormOption('textile', 'Textile Art'),

@@ -28,7 +28,7 @@ const csvList = (maxLen: number) =>
 const listQuerySchema = z.object({
     category: csvList(400),
     medium: csvList(400),
-    rarity: z.string().trim().min(1).max(20).optional(),
+    rarity: csvList(80),
     artistId: z.string().trim().min(1).max(200).optional(),
     location: z.string().trim().min(1).max(80).optional(),
     size: z.enum(["small", "medium", "large"]).optional(),

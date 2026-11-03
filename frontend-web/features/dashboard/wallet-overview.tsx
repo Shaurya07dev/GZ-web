@@ -228,9 +228,13 @@ function TransactionsCard({
           transactions.length > 5 ? "max-h-[320px] overflow-y-auto pr-1" : ""
         }`}
       >
-        {transactions.map((tx) => (
-          <TransactionRow key={tx.id} tx={tx} />
-        ))}
+        {transactions.length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            No transactions yet — your settlements and payouts will appear here.
+          </p>
+        ) : (
+          transactions.map((tx) => <TransactionRow key={tx.id} tx={tx} />)
+        )}
       </div>
     </div>
   );

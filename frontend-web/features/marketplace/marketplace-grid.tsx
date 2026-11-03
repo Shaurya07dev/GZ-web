@@ -81,8 +81,14 @@ export function MarketplaceGrid({
     if (filters.location) {
       chips.push({ key: "location", label: filters.location, clear: { location: undefined } });
     }
-    if (filters.rarity) {
-      chips.push({ key: "rarity", label: ARTWORK_RARITY_LABEL[filters.rarity], clear: { rarity: undefined } });
+    for (const rank of filters.rarity ?? []) {
+      chips.push({
+        key: `rarity-${rank}`,
+        label: ARTWORK_RARITY_LABEL[rank],
+        clear: {
+          rarity: (filters.rarity ?? []).filter((r) => r !== rank) as typeof filters.rarity,
+        },
+      });
     }
     if (filters.query) {
       chips.push({ key: "query", label: `“${filters.query}”`, clear: { query: undefined } });

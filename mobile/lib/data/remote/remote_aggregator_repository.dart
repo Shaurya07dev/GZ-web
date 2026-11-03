@@ -142,6 +142,35 @@ class RemoteAggregatorRepository
   }
 
   @override
+  Future<void> payRemittanceViaRazorpay(List<String> saleIds) async {
+    if (saleIds.isEmpty) {
+      throw Exception('Pick at least one sale to remit');
+    }
+    final session = asMap(
+      await api.post(
+        '/v1/aggregator/sales/remittance-payments',
+        body: {'saleIds': saleIds},
+      ),
+    );
+    final remittanceId = session['remittanceId'] as String? ?? '';
+    final base =
+        '/v1/aggregator/sales/remittance-payments/${Uri.encodeComponent(remittanceId)}';
+    if (session['mode'] == 'razorpay') {
+      final paid = await gateway.pay(GatewaySession.fromApi(session));
+      await api.post(
+        '$base/verify',
+        body: {
+          'razorpayOrderId': paid.orderId,
+          'razorpayPaymentId': paid.paymentId,
+          'signature': paid.signature,
+        },
+      );
+    } else {
+      await api.post('$base/simulate');
+    }
+  }
+
+  @override
   Future<void> payReservation(double amount) async {
     if (amount < topupMin || amount > topupMax) {
       throw Exception(

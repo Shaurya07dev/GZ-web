@@ -188,7 +188,20 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
                         month: "short",
                         year: "numeric",
                       })}
+                      {event.changedByName && (
+                        <>
+                          {" · "}
+                          <span className="text-foreground/70">
+                            by {event.changedByName}
+                          </span>
+                        </>
+                      )}
                     </time>
+                    {event.reason && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        &ldquo;{event.reason}&rdquo;
+                      </p>
+                    )}
                   </div>
                 </li>
               );

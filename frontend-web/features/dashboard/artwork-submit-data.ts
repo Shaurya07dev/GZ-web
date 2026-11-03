@@ -1,9 +1,11 @@
 import type { ListingType } from "@/types/artwork";
 import { REGIONAL_PAINTING_STYLES } from "@/features/artist-survey/artist-survey-data";
 
+// Sculpture dropped on 31 Oct 2026 (owner): GalleryZone currently only takes
+// 2-D pieces for listing, so the option would mislead artists into
+// submitting work the platform can't actually list.
 export const ARTWORK_CATEGORIES = [
   { value: "painting", label: "Painting" },
-  { value: "sculpture", label: "Sculpture" },
   { value: "printmaking", label: "Printmaking" },
   { value: "mixed-media", label: "Mixed Media" },
   { value: "textile", label: "Textile Art" },

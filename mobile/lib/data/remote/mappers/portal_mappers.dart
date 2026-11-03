@@ -69,6 +69,7 @@ ArtistProfileDetails artistProfileDetailsFromApi(Map<String, dynamic> json) =>
       pickupState: _s(json['pickupState']),
       pickupCountry: _s(json['pickupCountry'], 'IN'),
       pickupPincode: _s(json['pickupPincode']),
+      profileImageUrl: _sn(json['profileImageUrl']),
     );
 
 AggregatorProfile aggregatorProfileFromApi(

@@ -78,6 +78,7 @@ _ArtistProfileDetails _$ArtistProfileDetailsFromJson(
   pickupState: json['pickupState'] as String? ?? '',
   pickupCountry: json['pickupCountry'] as String? ?? 'IN',
   pickupPincode: json['pickupPincode'] as String? ?? '',
+  profileImageUrl: json['profileImageUrl'] as String?,
 );
 
 Map<String, dynamic> _$ArtistProfileDetailsToJson(
@@ -107,6 +108,7 @@ Map<String, dynamic> _$ArtistProfileDetailsToJson(
   'pickupState': instance.pickupState,
   'pickupCountry': instance.pickupCountry,
   'pickupPincode': instance.pickupPincode,
+  'profileImageUrl': instance.profileImageUrl,
 };
 
 const _$ReviewStatusEnumMap = {

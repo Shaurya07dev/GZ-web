@@ -7,6 +7,7 @@ import { AuthController } from "./auth/auth.controller.ts";
 import { PublicPricingRulesController, RateConfigController } from "./rate-config.controller.ts";
 import { ArtworksController } from "./artworks.controller.ts";
 import { OrdersController } from "./orders.controller.ts";
+import { InvoicesController } from "./invoices.controller.ts";
 import { AggregatorController } from "./aggregator.controller.ts";
 import { ModerationController } from "./moderation.controller.ts";
 import { ArtistArtworksController } from "./artist-artworks.controller.ts";
@@ -15,6 +16,7 @@ import { ArtistWalletController, AggregatorWalletController } from "./wallets.co
 import { AdminController } from "./admin.controller.ts";
 import { PublicArtistsController, PublicStatsController } from "./public-profiles.controller.ts";
 import { AdminArtworksController } from "./admin-artworks.controller.ts";
+import { AdminExportController } from "./admin-export.controller.ts";
 import { AddressesController } from "./addresses.controller.ts";
 import { AdminSettlementsController } from "./admin-settlements.controller.ts";
 import { AggregatorSalesController } from "./aggregator-sales.controller.ts";
@@ -37,6 +39,9 @@ import { HoldingExpirySweep } from "./holding-expiry.ts";
 import { NfcReminderSweep } from "./nfc-reminders.ts";
 import { Mailer } from "./mail/mailer.ts";
 import { Emails } from "./mail/emails.ts";
+import { PushSender } from "./mail/push.ts";
+import { NotificationPreferencesController } from "./notification-preferences.controller.ts";
+import { CartController } from "./cart.controller.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
@@ -72,6 +77,7 @@ import { DbModule } from "./db.module.ts";
     PublicPricingRulesController,
     ArtworksController,
     OrdersController,
+    InvoicesController,
     AggregatorController,
     ModerationController,
     ArtistArtworksController,
@@ -83,6 +89,7 @@ import { DbModule } from "./db.module.ts";
     PublicArtistsController,
     PublicStatsController,
     AdminArtworksController,
+    AdminExportController,
     AddressesController,
     AdminSettlementsController,
     AggregatorSalesController,
@@ -109,6 +116,8 @@ import { DbModule } from "./db.module.ts";
     BlogsController,
     HoldingReportsController,
     AggregatorReservationIntentsController,
+    NotificationPreferencesController,
+    CartController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
@@ -119,6 +128,7 @@ import { DbModule } from "./db.module.ts";
     NfcReminderSweep,
     Mailer,
     Emails,
+    PushSender,
     Razorpay,
     CashfreeVerification,
   ],

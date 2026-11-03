@@ -110,6 +110,12 @@ interface SettlementDto {
   releaseAfter: string;
   createdAt: string;
   processedAt: string | null;
+  payoutMethod?: {
+    recipientName: string;
+    bankAccountMasked: string | null;
+    ifsc: string | null;
+    upiHandle: string | null;
+  };
 }
 let sessionReports: GeneratedReport[] = [];
 
@@ -377,6 +383,7 @@ export const adminService = {
       createdAt: s.createdAt,
       processedAt: s.processedAt,
       releaseAfter: s.releaseAfter,
+      ...(s.payoutMethod ? { payoutMethod: s.payoutMethod } : {}),
     }));
   },
 

@@ -24,7 +24,7 @@ function toQuery(filters: ArtworkFilters, pageSize: number): Record<string, stri
   const q: Record<string, string> = { pageSize: String(pageSize) };
   if (filters.category?.length) q.category = filters.category.join(",");
   if (filters.medium?.length) q.medium = filters.medium.join(",");
-  if (filters.rarity) q.rarity = filters.rarity;
+  if (filters.rarity?.length) q.rarity = filters.rarity.join(",");
   if (filters.artistId) q.artistId = filters.artistId;
   if (filters.location) q.location = filters.location;
   if (filters.size) q.size = filters.size;

@@ -66,7 +66,7 @@ void main() {
         const ArtworkFilters(
           categories: ['painting', 'sculpture'],
           mediums: ['oil'],
-          rarity: ArtworkRarity.standard,
+          rarities: [ArtworkRarity.standard],
           artistId: 'artist-1',
           location: 'Pune, Maharashtra',
           size: ArtworkSizeBand.large,

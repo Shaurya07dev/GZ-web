@@ -491,35 +491,46 @@ test('a cash sale shows when it is due, and an overdue one says so', async ({ pa
   await page.goto('/aggregator/settlements');
 
   await expect(page.getByRole('heading', { name: 'Owed to GalleryZone' })).toBeVisible();
-  await expect(page.getByText(/Pay in the full amount within 2 days/)).toBeVisible();
+  await expect(page.getByText(/Pay in the full amount within 2 days through Razorpay/)).toBeVisible();
   const due = new Date(Date.now() + 1 * DAY).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   await expect(page.locator('li').filter({ hasText: 'Buyer s1' })).toContainText(`due ${due}`);
   await expect(page.locator('li').filter({ hasText: 'Buyer s2' })).toContainText('Overdue by 2 days');
 });
 
-test('a cash sale can be marked transferred only through the bank-remittance path', async ({ page, baseURL }) => {
+test('every due sale is paid in a single Razorpay checkout by default', async ({ page, baseURL }) => {
   const { remaining } = await openSettlements(page, baseURL!);
-  const bodies: Record<string, unknown> = {};
-  for (const id of ['s1', 's2']) {
-    await page.route(`**/v1/aggregator/sales/${id}/remit`, (route) => {
-      bodies[id] = route.request().postDataJSON();
-      const at = remaining.findIndex((s) => s.id === id);
-      if (at >= 0) remaining.splice(at, 1);
-      return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: '{}' });
-    });
-  }
+  let startBody: unknown = null;
+  await page.route('**/v1/aggregator/sales/remittance-payments', (route) => {
+    startBody = route.request().postDataJSON();
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ mode: 'simulated', remittanceId: 'rm1', amountPaise: 31_500_000 }) });
+  });
+  await page.route('**/v1/aggregator/sales/remittance-payments/rm1/simulate', (route) => {
+    remaining.length = 0;
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'paid', amountPaise: 31_500_000 }) });
+  });
   await page.goto('/aggregator/settlements');
 
-  await expect(page.getByRole('button', { name: 'Pay from wallet' })).toHaveCount(0);
-  await page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('button', { name: 'Mark transferred' }).click();
-  await expect(page.getByText('Marked as transferred')).toBeVisible();
-  expect(bodies).toEqual({ s1: { via: 'bank' } });
+  await page.getByRole('button', { name: /Pay .* through Razorpay/ }).click();
+  await expect(page.getByText(/Remitted 2 sales/)).toBeVisible();
+  expect(startBody).toEqual({ saleIds: ['s1', 's2'] });
 });
 
-test('bank remittance stays available without a prepaid wallet balance', async ({ page, baseURL }) => {
-  await openSettlements(page, baseURL!);
+test('ticking specific sales pays only those through Razorpay', async ({ page, baseURL }) => {
+  const { remaining } = await openSettlements(page, baseURL!);
+  let startBody: unknown = null;
+  await page.route('**/v1/aggregator/sales/remittance-payments', (route) => {
+    startBody = route.request().postDataJSON();
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ mode: 'simulated', remittanceId: 'rm2', amountPaise: 15_750_000 }) });
+  });
+  await page.route('**/v1/aggregator/sales/remittance-payments/rm2/simulate', (route) => {
+    const at = remaining.findIndex((s) => s.id === 's1');
+    if (at >= 0) remaining.splice(at, 1);
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ status: 'paid', amountPaise: 15_750_000 }) });
+  });
   await page.goto('/aggregator/settlements');
 
-  await expect(page.getByRole('button', { name: 'Pay from wallet' })).toHaveCount(0);
-  await expect(page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('button', { name: 'Mark transferred' })).toBeEnabled();
+  await page.locator('li').filter({ hasText: 'Buyer s1' }).getByRole('checkbox').check();
+  await page.getByRole('button', { name: /Pay .* through Razorpay/ }).click();
+  await expect(page.getByText(/Remittance paid/)).toBeVisible();
+  expect(startBody).toEqual({ saleIds: ['s1'] });
 });

@@ -265,13 +265,16 @@ class _FilterSheetState extends ConsumerState<_FilterSheet> {
                             _Option(
                               label: rankLabel(rank),
                               count: data.rarityCounts[rank],
-                              checked: _draft.rarity == rank,
+                              checked: _draft.rarities.contains(rank),
                               leading: _RankDot(rank: rank),
-                              onToggle: () => _update(
-                                _draft.copyWith(
-                                  rarity: _draft.rarity == rank ? null : rank,
-                                ),
-                              ),
+                              onToggle: () {
+                                final next = _draft.rarities.contains(rank)
+                                    ? _draft.rarities
+                                          .where((r) => r != rank)
+                                          .toList()
+                                    : [..._draft.rarities, rank];
+                                _update(_draft.copyWith(rarities: next));
+                              },
                             ),
                         ],
                       ),

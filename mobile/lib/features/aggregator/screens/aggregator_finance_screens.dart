@@ -5,6 +5,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/motion.dart';
+import '../../../core/payments/payment_gateway.dart'
+    show PaymentDismissedException, PaymentFailedException;
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
@@ -14,7 +16,6 @@ import '../../artist/screens/artist_settlements_screen.dart'
     show settlementStatusLabel;
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
-import '../../shell/payee_details.dart';
 import '../../shell/portal_widgets.dart';
 import '../providers/aggregator_providers.dart';
 import '../widgets/aggregator_widgets.dart';
@@ -302,9 +303,18 @@ class _SettlementCard extends ConsumerWidget {
   }
 }
 
-/// Cash the aggregator took at the counter belongs to GalleryZone, and the WHOLE
-/// sale price is owed - not the sale less commission. Their commission is settled
-/// separately, in the list below this card. Port of `RemittancesDueCard`.
+/// Cash the aggregator took at the counter belongs to GalleryZone, and the
+/// WHOLE sale price is owed — not the sale less commission.
+///
+/// Pay-in moves through a single Razorpay checkout (audit §5, 31 Oct 2026):
+/// the aggregator picks the sales they want to settle (or pays the lot in
+/// one go) and the server stamps every sale as remitted atomically on
+/// successful capture. The legacy wallet/bank path stays on the repository
+/// for backward compat but has no UI here.
+///
+/// Port of the web `RemittancesDueCard` (feat/aggregator-razorpay-remittance).
+const _remittanceMax = 20;
+
 class _OwedToGalleryZone extends ConsumerStatefulWidget {
   const _OwedToGalleryZone();
 
@@ -313,54 +323,67 @@ class _OwedToGalleryZone extends ConsumerStatefulWidget {
 }
 
 class _OwedToGalleryZoneState extends ConsumerState<_OwedToGalleryZone> {
-  /// Sales being paid in right now, so a second tap can't pay one twice.
-  final _paying = <String>{};
+  /// Which sales the aggregator ticked. Empty means "pay every due sale",
+  /// matching the web default.
+  final Set<String> _selected = <String>{};
+  bool _busy = false;
 
-  Future<void> _pay(AggregatorSale sale) async {
-    final theme = Theme.of(context);
-    // Money moves (or is claimed to have moved) and neither can be taken back, so
-    // it is asked about first. The website relies on a hover hint instead.
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Mark as transferred?'),
-        content: Text(
-          "You have transferred ${formatInr(sale.soldPrice)} to GalleryZone's bank account for "
-          "${sale.buyerName}'s purchase. GalleryZone will reconcile the bank reference before settlement.",
-          style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Not yet'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Mark transferred'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-
+  Future<void> _pay(List<String> ids, double amount) async {
+    if (ids.isEmpty || _busy) return;
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context);
-    setState(() => _paying.add(sale.id));
+    setState(() => _busy = true);
     try {
       await ref
           .read(aggregatorRepositoryProvider)
-          .markRemitted(sale.id, via: RemitVia.bank);
+          .payRemittanceViaRazorpay(ids);
       invalidateAggregatorSaleFlowIn(container);
+      if (!mounted) return;
+      setState(_selected.clear);
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Marked as transferred — awaiting reconciliation'),
+        SnackBar(
+          content: Text(
+            ids.length == 1
+                ? 'Remittance paid'
+                : 'Remitted ${ids.length} sales',
+          ),
         ),
       );
+    } on PaymentDismissedException {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Payment cancelled — nothing was charged.'),
+          ),
+        );
+      }
+    } on PaymentFailedException catch (error) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+      }
     } finally {
-      if (mounted) setState(() => _paying.remove(sale.id));
+      if (mounted) setState(() => _busy = false);
     }
+  }
+
+  void _toggle(String id) {
+    setState(() {
+      if (_selected.contains(id)) {
+        _selected.remove(id);
+      } else if (_selected.length < _remittanceMax) {
+        _selected.add(id);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pay at most $_remittanceMax sales at a time'),
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -373,6 +396,25 @@ class _OwedToGalleryZoneState extends ConsumerState<_OwedToGalleryZone> {
 
     final total = due.fold(0.0, (sum, sale) => sum + sale.soldPrice);
     final now = DateTime.now().toUtc();
+
+    // Default to paying everything (first 20) when nothing is ticked —
+    // that's the common case; selecting a subset is the edge.
+    final selectedList = due
+        .where((s) => _selected.contains(s.id))
+        .map((s) => s.id)
+        .toList();
+    final idsToPay = selectedList.isNotEmpty
+        ? selectedList
+        : due.take(_remittanceMax).map((s) => s.id).toList();
+    final amountToPay = due
+        .where((s) => idsToPay.contains(s.id))
+        .fold<double>(0, (sum, s) => sum + s.soldPrice);
+
+    final hint = selectedList.isNotEmpty
+        ? 'Paying ${selectedList.length} selected sale${selectedList.length > 1 ? 's' : ''}'
+        : due.length > _remittanceMax
+        ? 'Pay the first $_remittanceMax sales — tick specific ones to pay a subset'
+        : 'Pay every sale above in one checkout';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -397,7 +439,7 @@ class _OwedToGalleryZoneState extends ConsumerState<_OwedToGalleryZone> {
                       const SizedBox(height: 2),
                       Text(
                         "Cash you collected on GalleryZone's behalf. Pay in the full amount "
-                        "within $cashRemittanceDays days by transfer to GalleryZone's bank account. Your commission is settled "
+                        "within $cashRemittanceDays days through Razorpay. Your commission is settled "
                         'separately, below.',
                         style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                       ),
@@ -413,20 +455,43 @@ class _OwedToGalleryZoneState extends ConsumerState<_OwedToGalleryZone> {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
             for (final sale in due) ...[
               _DueRow(
                 sale: sale,
                 now: now,
-                busy: _paying.contains(sale.id),
-                onPay: () => _pay(sale),
+                checked: _selected.contains(sale.id),
+                disabled: _busy,
+                onToggle: () => _toggle(sale.id),
               ),
               const SizedBox(height: 8),
             ],
             const SizedBox(height: 4),
-            PayeeDetails(
-              amount: total,
-              note:
-                  'GZ remittance ${due.length} sale${due.length > 1 ? 's' : ''}',
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(hint, style: theme.textTheme.labelSmall),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.icon(
+                  onPressed: _busy || idsToPay.isEmpty
+                      ? null
+                      : () => _pay(idsToPay, amountToPay),
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(LucideIcons.creditCard, size: 14),
+                  label: Text(
+                    _busy
+                        ? 'Opening Razorpay…'
+                        : 'Pay ${formatInr(amountToPay)}',
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -439,15 +504,16 @@ class _DueRow extends StatelessWidget {
   const _DueRow({
     required this.sale,
     required this.now,
-    required this.busy,
-    required this.onPay,
+    required this.checked,
+    required this.disabled,
+    required this.onToggle,
   });
 
   final AggregatorSale sale;
   final DateTime now;
-
-  final bool busy;
-  final VoidCallback onPay;
+  final bool checked;
+  final bool disabled;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -458,68 +524,61 @@ class _DueRow extends StatelessWidget {
     final overdue = dueAt == null ? Duration.zero : now.difference(dueAt);
     final overdueDays = overdue.inDays;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: theme.colorScheme.outline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+    return InkWell(
+      onTap: disabled ? null : onToggle,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: theme.colorScheme.outline),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Checkbox(
+              value: checked,
+              onChanged: disabled ? null : (_) => onToggle(),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sale.buyerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'Sold ${formatDay(sale.soldAt)}'
+                    '${dueAt != null && overdue <= Duration.zero ? ' · due ${formatDay(dueAt.toIso8601String())}' : ''}',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                  if (overdue > Duration.zero)
                     Text(
-                      sale.buyerName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
+                      overdueDays >= 1
+                          ? 'Overdue by $overdueDays day${overdueDays > 1 ? 's' : ''}'
+                          : 'Overdue',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      'Sold ${formatDay(sale.soldAt)}'
-                      '${dueAt != null && overdue <= Duration.zero ? ' · due ${formatDay(dueAt.toIso8601String())}' : ''}',
-                      style: theme.textTheme.labelSmall,
-                    ),
-                    if (overdue > Duration.zero)
-                      Text(
-                        overdueDays >= 1
-                            ? 'Overdue by $overdueDays day${overdueDays > 1 ? 's' : ''}'
-                            : 'Overdue',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
-              const SizedBox(width: 8),
-              PriceTag(
-                amount: sale.soldPrice,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton(
-                onPressed: busy ? null : onPay,
-                child: const Text('Mark transferred'),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(width: 8),
+            PriceTag(
+              amount: sale.soldPrice,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ],
+        ),
       ),
     );
   }
