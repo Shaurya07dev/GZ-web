@@ -193,4 +193,52 @@ class RemoteAuthRepository implements AuthRepository {
       rethrow;
     }
   }
+
+  // --- OTP (3 Nov 2026) ------------------------------------------------------
+  // Thin pass-through to the API. See the controller comments in
+  // backend/apps/api/src/auth/otp.controller.ts for the exact semantics.
+
+  @override
+  Future<void> sendEmailOtp({required String email, required String purpose}) async {
+    await api.post(
+      '/v1/auth/email-otp/send',
+      auth: false,
+      body: {'email': email.trim(), 'purpose': purpose},
+    );
+  }
+
+  @override
+  Future<void> verifyEmailOtp({required String email, required String code}) async {
+    await api.post(
+      '/v1/auth/email-otp/verify',
+      auth: false,
+      body: {'email': email.trim(), 'code': code.trim(), 'purpose': 'signup'},
+    );
+  }
+
+  @override
+  Future<void> sendPhoneOtp({required String phone}) async {
+    await api.post('/v1/auth/phone-otp/send', body: {'phone': phone.trim()});
+  }
+
+  @override
+  Future<void> verifyPhoneOtp({required String phone, required String code}) async {
+    await api.post(
+      '/v1/auth/phone-otp/verify',
+      body: {'phone': phone.trim(), 'code': code.trim()},
+    );
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  }) async {
+    await api.post(
+      '/v1/auth/reset-password',
+      auth: false,
+      body: {'email': email.trim(), 'code': code.trim(), 'password': password},
+    );
+  }
 }

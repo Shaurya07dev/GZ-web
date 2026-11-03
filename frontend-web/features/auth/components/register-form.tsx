@@ -113,9 +113,13 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
             );
           }
         }
-        // authService.register signs the new account in and writes the
-        // role cookie, so land straight in the portal.
-        router.push(landingAfterRegister(grantedRole));
+        // Owner directive 3 Nov 2026: send the new user through the OTP
+        // verification screen (email code, then phone) before landing in
+        // the portal. OnboardingVerify auto-fires the first email /send on
+        // mount and redirects to landingAfterRegister when done.
+        void landingAfterRegister;
+        const qs = new URLSearchParams({ email: values.email, role: grantedRole });
+        router.push(`/onboarding/verify?${qs.toString()}`);
       },
       onError: (error) => {
         toast.error(
@@ -283,9 +287,18 @@ export function RegisterForm({ initialRole }: RegisterFormProps) {
           <GoogleAuthButton
             role={role}
             name={name || undefined}
-            onSignedIn={(grantedRole) =>
-              router.push(landingAfterRegister(grantedRole))
-            }
+            onSignedIn={(grantedRole, email) => {
+              // Google already verified the email, so the OTP page skips
+              // step 1 (emailVerified=1) and goes straight to the phone
+              // step. The user still needs to add their mobile to receive
+              // order SMS updates.
+              const qs = new URLSearchParams({
+                email: email ?? "",
+                role: grantedRole,
+                emailVerified: "1",
+              });
+              router.push(`/onboarding/verify?${qs.toString()}`);
+            }}
           />
         </div>
       </div>
