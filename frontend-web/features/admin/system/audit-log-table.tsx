@@ -44,6 +44,7 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   "category.updated": "Category updated",
   "category.deleted": "Category deleted",
   "settlement.retried": "Settlement retried",
+  "settlement.marked_paid": "Settlement marked paid",
   "settings.updated": "Settings updated",
 };
 

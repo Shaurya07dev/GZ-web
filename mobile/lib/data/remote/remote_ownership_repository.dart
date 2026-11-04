@@ -78,6 +78,7 @@ class RemoteOwnershipRepository implements OwnershipRepository {
     TransferKind kind = TransferKind.ownership,
     String? displayStartsAt,
     String? displayEndsAt,
+    int? givingPricePaise,
   }) async {
     if (kind == TransferKind.display &&
         (displayStartsAt == null ||
@@ -91,12 +92,18 @@ class RemoteOwnershipRepository implements OwnershipRepository {
             .isAfter(DateTime.parse(displayStartsAt!))) {
       throw Exception('The display end date must be after its start date');
     }
+    if (kind == TransferKind.ownership &&
+        (givingPricePaise == null || givingPricePaise <= 0)) {
+      throw Exception('Enter the price this piece is changing hands at');
+    }
     final json = await api.post(
       '/v1/artworks/${Uri.encodeComponent(artworkId)}/transfers',
       body: {
         'kind': kind.name,
         'toName': toName.trim(),
         'toEmail': toEmail.trim(),
+        if (kind == TransferKind.ownership && givingPricePaise != null)
+          'givingPricePaise': givingPricePaise,
         if (kind == TransferKind.display && displayStartsAt != null)
           'displayStartsAt': _midnightUtcOf(displayStartsAt),
         if (kind == TransferKind.display && displayEndsAt != null)
@@ -105,6 +112,37 @@ class RemoteOwnershipRepository implements OwnershipRepository {
     );
     return transferFromApi(asMap(json));
   }
+
+  @override
+  Future<TransferFeeSession> startFeeSession(String transferId) async {
+    final json = asMap(await api.post(
+      '/v1/transfers/${Uri.encodeComponent(transferId)}/fee-session',
+    ));
+    final prefill = json['prefill'];
+    final prefillMap = prefill is Map<String, dynamic> ? prefill : const <String, dynamic>{};
+    return TransferFeeSession(
+      mode: json['mode'] as String? ?? 'simulated',
+      amountPaise: (json['amountPaise'] as num?)?.toInt() ?? 0,
+      keyId: json['keyId'] as String?,
+      razorpayOrderId: json['razorpayOrderId'] as String?,
+      currency: json['currency'] as String?,
+      name: json['name'] as String?,
+      description: json['description'] as String?,
+      prefillName: prefillMap['name'] as String?,
+      prefillEmail: prefillMap['email'] as String?,
+      prefillContact: prefillMap['contact'] as String?,
+    );
+  }
+
+  @override
+  Future<OwnershipTransfer> verifyFeePayment(String transferId) async =>
+      transferFromApi(
+        asMap(
+          await api.post(
+            '/v1/transfers/${Uri.encodeComponent(transferId)}/fee-verify',
+          ),
+        ),
+      );
 
   /// The calendar day the person picked, as midnight UTC — what the website
   /// sends for the same date. Going through local time instead would turn

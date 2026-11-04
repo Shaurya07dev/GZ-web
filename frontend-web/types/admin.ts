@@ -82,6 +82,20 @@ export interface Settlement {
   /** Links to the artist wallet row this settlement created, so releasing the
    *  money can flip that row from pending to completed. */
   walletTransactionId?: string;
+  /**
+   * What this settlement pays for. Absent = "sale" (older rows). A resale
+   * transfer writes `artist_royalty` rows that admin pays by hand out of
+   * the 5% platform fee they collected from the seller.
+   */
+  kind?: "sale" | "artist_royalty";
+  /** For "artist_royalty": the ownership event this came from, and the
+   *  context admin needs to audit the 2% against the 5% collected. */
+  transferId?: string | null;
+  royaltyContext?: {
+    sellerName: string;
+    recipientName: string;
+    givingPrice: number | null;
+  };
 }
 
 // --- Account deactivation ----------------------------------------------------
@@ -129,6 +143,7 @@ export type AuditAction =
   | "category.updated"
   | "category.deleted"
   | "settlement.retried"
+  | "settlement.marked_paid"
   | "settings.updated";
 
 export interface AuditLogEntry {

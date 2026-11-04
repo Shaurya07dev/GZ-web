@@ -27,6 +27,12 @@ interface TransferDto {
   displayStartsAt: string | null;
   displayEndsAt: string | null;
   displayEndedAt: string | null;
+  givingPricePaise: number | null;
+  royaltyPaise: number | null;
+  platformFeeNetPaise: number | null;
+  feeGstPaise: number | null;
+  feeTotalPaise: number | null;
+  feePaidAt: string | null;
 }
 
 function fromDto(dto: TransferDto): OwnershipTransfer {
@@ -45,7 +51,25 @@ function fromDto(dto: TransferDto): OwnershipTransfer {
     displayStartsAt: dto.displayStartsAt,
     displayEndsAt: dto.displayEndsAt,
     displayEndedAt: dto.displayEndedAt,
+    givingPricePaise: dto.givingPricePaise,
+    royaltyPaise: dto.royaltyPaise,
+    platformFeeNetPaise: dto.platformFeeNetPaise,
+    feeGstPaise: dto.feeGstPaise,
+    feeTotalPaise: dto.feeTotalPaise,
+    feePaidAt: dto.feePaidAt,
   };
+}
+
+/** The Razorpay checkout session + amount, returned by fee-session. */
+export interface TransferFeeSession {
+  mode: "razorpay" | "simulated";
+  keyId?: string | null;
+  razorpayOrderId?: string;
+  amountPaise: number;
+  currency?: string;
+  name?: string;
+  description?: string;
+  prefill?: { name: string; email: string; contact: string };
 }
 
 export const ownershipService = {
@@ -70,7 +94,9 @@ export const ownershipService = {
 
   // Starts a hand-over. The backend enforces "current owner only" and "one
   // open transfer per artwork". `fromName` is accepted for call-site
-  // compatibility; the sender is the signed-in account.
+  // compatibility; the sender is the signed-in account. For ownership
+  // transfers, `givingPricePaise` is required (drives the 5% fee split)
+  // and the invitee must already have a GalleryZone account.
   initiate: async (input: {
     artworkId: string;
     fromName?: string;
@@ -79,8 +105,12 @@ export const ownershipService = {
     kind?: TransferKind;
     displayStartsAt?: string | null;
     displayEndsAt?: string | null;
+    givingPricePaise?: number;
   }): Promise<OwnershipTransfer> => {
     const kind: TransferKind = input.kind ?? "ownership";
+    if (kind === "ownership" && !(input.givingPricePaise && input.givingPricePaise > 0)) {
+      throw new Error("Enter the price this piece is changing hands at");
+    }
     if (kind === "display" && !input.displayEndsAt) {
       throw new Error("Pick the date the display runs to");
     }
@@ -98,6 +128,9 @@ export const ownershipService = {
         kind,
         toName: input.toName.trim(),
         toEmail: input.toEmail.trim(),
+        ...(kind === "ownership" && input.givingPricePaise
+          ? { givingPricePaise: input.givingPricePaise }
+          : {}),
         ...(kind === "display" && input.displayStartsAt
           ? { displayStartsAt: new Date(input.displayStartsAt).toISOString() }
           : {}),
@@ -109,7 +142,9 @@ export const ownershipService = {
     return fromDto(dto);
   },
 
-  // The recipient accepting is what actually moves ownership.
+  // The recipient confirming moves ownership for display / price-less
+  // transfers, or moves it to `awaiting_payment` for priced ownership
+  // transfers (the sender now owes the 5% fee).
   accept: async (transferId: string): Promise<OwnershipTransfer> =>
     fromDto(await http.post<TransferDto>(`/v1/transfers/${encodeURIComponent(transferId)}/accept`)),
 
@@ -118,4 +153,10 @@ export const ownershipService = {
 
   cancel: async (transferId: string): Promise<OwnershipTransfer> =>
     fromDto(await http.post<TransferDto>(`/v1/transfers/${encodeURIComponent(transferId)}/cancel`)),
+
+  startFeeSession: (transferId: string): Promise<TransferFeeSession> =>
+    http.post<TransferFeeSession>(`/v1/transfers/${encodeURIComponent(transferId)}/fee-session`),
+
+  verifyFeePayment: async (transferId: string): Promise<OwnershipTransfer> =>
+    fromDto(await http.post<TransferDto>(`/v1/transfers/${encodeURIComponent(transferId)}/fee-verify`)),
 };

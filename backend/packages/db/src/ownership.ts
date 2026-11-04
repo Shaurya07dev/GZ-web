@@ -17,7 +17,7 @@
 
 import { FieldValue, Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore";
 import { transferStateMachine, type TransferStatus } from "@galleryzone/domain";
-import { Collections, artworkOwnershipEventsCol, type ArtworkDoc, type OwnershipEventDoc, type UserDoc } from "./collections.ts";
+import { Collections, artworkOwnershipEventsCol, type ArtworkDoc, type OwnershipEventDoc, type SettlementDoc, type UserDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
 import { latestStatusOf } from "./listing-projection.ts";
 
@@ -106,6 +106,35 @@ export interface InitiateTransferInput {
   displayStartsAt?: Date | undefined;
   /** Display transfers only. */
   displayEndsAt?: Date | undefined;
+  /** Ownership kind only: what the piece is changing hands at, in paise.
+   *  Drives the 5% platform fee (2% artist royalty + 3% platform net).
+   *  Required when kind is "ownership"; ignored for display. */
+  givingPricePaise?: number | undefined;
+}
+
+/** 2% + 3% = 5% of giving price; +18% GST on the fee. Everything paise. */
+export interface TransferFeeSplit {
+  royaltyPaise: number;
+  platformFeeNetPaise: number;
+  feeGstPaise: number;
+  feeTotalPaise: number;
+}
+
+const ROYALTY_RATE = 0.02;
+const PLATFORM_RATE = 0.03;
+const GST_RATE = 0.18;
+
+export function computeTransferFee(givingPricePaise: number): TransferFeeSplit {
+  const royalty = Math.round(givingPricePaise * ROYALTY_RATE);
+  const platformNet = Math.round(givingPricePaise * PLATFORM_RATE);
+  const feeNet = royalty + platformNet;
+  const gst = Math.round(feeNet * GST_RATE);
+  return {
+    royaltyPaise: royalty,
+    platformFeeNetPaise: platformNet,
+    feeGstPaise: gst,
+    feeTotalPaise: feeNet + gst,
+  };
 }
 
 const ON_SALE = new Set(["marketplace", "reserved", "with_aggregator"]);
@@ -122,10 +151,31 @@ export async function initiateTransfer(db: Firestore, input: InitiateTransferInp
   }
 
   const events = await listOwnershipEvents(db, input.artworkId);
-  if (events.some((e) => e.status === "pending")) throw new OwnershipConflictError("A transfer is already pending for this artwork");
+  if (events.some((e) => e.status === "pending" || e.status === "awaiting_payment")) {
+    throw new OwnershipConflictError("A transfer is already in progress for this artwork");
+  }
   if (input.kind === "ownership" && events.some((e) => e.kind === "display" && e.status === "accepted" && !e.displayEndedAt)) {
     throw new OwnershipConflictError("End the current display period before transferring ownership");
   }
+
+  // Ownership transfers need a real giving price (drives the 5% fee) and
+  // the invitee must already have a GalleryZone account on that email —
+  // the owner pays the fee on confirmation, so finding out at that point
+  // that the recipient never signed up would strand the money.
+  let feeSplit: TransferFeeSplit | null = null;
+  if (input.kind === "ownership") {
+    if (!Number.isInteger(input.givingPricePaise) || (input.givingPricePaise ?? 0) <= 0) {
+      throw new OwnershipConflictError("Enter the price this piece is changing hands at");
+    }
+    feeSplit = computeTransferFee(input.givingPricePaise!);
+
+    const inviteeEmail = input.toEmail.trim().toLowerCase();
+    const existing = await db.collection(Collections.users).where("email", "==", inviteeEmail).limit(1).get();
+    if (existing.empty) {
+      throw new OwnershipConflictError("That email isn't on GalleryZone yet — ask them to sign up, then try again");
+    }
+  }
+
   if (input.kind === "display") {
     if (!input.displayEndsAt || input.displayEndsAt.getTime() <= Date.now()) {
       throw new OwnershipConflictError("A display transfer needs an end date in the future");
@@ -153,6 +203,15 @@ export async function initiateTransfer(db: Firestore, input: InitiateTransferInp
     displayStartsAt: input.displayStartsAt ? Timestamp.fromDate(input.displayStartsAt) : null,
     displayEndsAt: input.displayEndsAt ? Timestamp.fromDate(input.displayEndsAt) : null,
     displayEndedAt: null,
+    givingPricePaise: input.kind === "ownership" ? input.givingPricePaise! : null,
+    royaltyPaise: feeSplit?.royaltyPaise ?? null,
+    platformFeeNetPaise: feeSplit?.platformFeeNetPaise ?? null,
+    feeGstPaise: feeSplit?.feeGstPaise ?? null,
+    feeTotalPaise: feeSplit?.feeTotalPaise ?? null,
+    feeProviderOrderId: null,
+    feeProviderPaymentId: null,
+    feePaidAt: null,
+    royaltySettlementId: null,
   };
   const ref = await db.collection(artworkOwnershipEventsCol(input.artworkId)).add(doc);
   const saved = await ref.get();
@@ -203,17 +262,153 @@ async function settle(
   return { id: transferId, artworkId: found.artworkId, ...(saved.data() as OwnershipEventDoc) };
 }
 
-/** The invited recipient accepts. Matched on the signed-in account's email (the invite was sent to an address, not a uid). */
+/**
+ * The invited recipient confirms. Matched on the signed-in account's email
+ * (the invite was sent to an address, not a uid).
+ *
+ * For an ownership kind with a giving price (= the resale royalty path),
+ * this transitions to `awaiting_payment` rather than `accepted` — title
+ * doesn't pass until the sender pays the 5% fee. `display` kinds and
+ * price-less ownership events (sale-triggered or legacy) go straight to
+ * `accepted` as before.
+ */
 export async function acceptTransfer(db: Firestore, { transferId, byUserId }: { transferId: string; byUserId: string }): Promise<OwnershipEvent> {
   const userSnap = await db.collection(Collections.users).doc(byUserId).get();
   const user = userSnap.data() as UserDoc | undefined;
   if (!user) throw new OwnershipNotFoundError(`No user ${byUserId}`);
 
-  return settle(db, transferId, "accepted", async (event) => {
+  const found = await getTransfer(db, transferId);
+  if (!found) throw new OwnershipNotFoundError(`No transfer ${transferId}`);
+  const target: TransferStatus =
+    found.kind === "ownership" && (found.givingPricePaise ?? 0) > 0 ? "awaiting_payment" : "accepted";
+
+  return settle(db, transferId, target, async (event) => {
     if (event.toEmail !== user.email.toLowerCase()) throw new OwnershipNotFoundError(`No transfer ${transferId}`);
     if (event.fromUserId === byUserId) throw new OwnershipConflictError("You can't accept your own transfer");
-    return { toUserId: byUserId, toName: user.name, acceptedAt: serverNow() };
+    return target === "accepted"
+      ? { toUserId: byUserId, toName: user.name, acceptedAt: serverNow() }
+      : { toUserId: byUserId, toName: user.name };
   });
+}
+
+/**
+ * Stamp the Razorpay order id on the transfer so the webhook has a path
+ * back to it. Called the moment the controller creates the gateway order.
+ */
+export async function attachTransferFeeProviderOrder(
+  db: Firestore,
+  transferIdValue: string,
+  providerOrderId: string,
+): Promise<void> {
+  const parsed = parseTransferId(transferIdValue);
+  if (!parsed) throw new OwnershipNotFoundError(`No transfer ${transferIdValue}`);
+  const ref = db.collection(artworkOwnershipEventsCol(parsed.artworkId)).doc(parsed.eventId);
+  await ref.update({ feeProviderOrderId: providerOrderId });
+}
+
+/** Reverse lookup for the Razorpay webhook. */
+export async function transferIdForProviderOrder(
+  db: Firestore,
+  providerOrderId: string,
+): Promise<string | null> {
+  const snap = await db.collectionGroup("ownershipEvents").where("feeProviderOrderId", "==", providerOrderId).limit(1).get();
+  const doc = snap.docs[0];
+  const artworkId = doc?.ref.parent.parent?.id;
+  if (!doc || !artworkId) return null;
+  return transferId(artworkId, doc.id);
+}
+
+/**
+ * The sender has paid the 5% fee. Finalise the ownership transfer AND
+ * write the artist-royalty settlement (admin pays it out manually, same
+ * pattern as aggregator commissions).
+ *
+ * Idempotent on the pair (transferId, providerPaymentId): a webhook that
+ * fires twice does nothing the second time. If the transfer is already
+ * accepted (verify beat the webhook) this is a no-op.
+ */
+export async function markTransferFeePaid(
+  db: Firestore,
+  input: {
+    transferId: string;
+    providerPaymentId: string;
+    reportedAmountPaise?: number | null;
+  },
+): Promise<{ eventId: string; settlementId: string | null; artistId: string | null }> {
+  const parsed = parseTransferId(input.transferId);
+  if (!parsed) throw new OwnershipNotFoundError(`No transfer ${input.transferId}`);
+  const eventRef = db.collection(artworkOwnershipEventsCol(parsed.artworkId)).doc(parsed.eventId);
+
+  // The artist that collects the royalty is the ORIGINAL artist, read once
+  // outside the transaction. The settlement doc writes a snapshot.
+  const artworkSnap = await db.collection(Collections.artworks).doc(parsed.artworkId).get();
+  if (!artworkSnap.exists) throw new OwnershipNotFoundError(`No artwork ${parsed.artworkId}`);
+  const artwork = artworkSnap.data() as ArtworkDoc;
+  const artistId = artwork.artistId;
+
+  const settlementRef = db.collection(Collections.settlements).doc();
+
+  const result = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists) throw new OwnershipNotFoundError(`No transfer ${input.transferId}`);
+    const event = snap.data() as OwnershipEventDoc;
+
+    // Replay guard — same paymentId already recorded: no-op.
+    if (event.feeProviderPaymentId === input.providerPaymentId && event.status === "accepted") {
+      return { settlementId: event.royaltySettlementId ?? null, artistId, created: false };
+    }
+    if (event.status !== "awaiting_payment") {
+      // Either a late webhook (already accepted) or a cancelled transfer.
+      return { settlementId: event.royaltySettlementId ?? null, artistId, created: false };
+    }
+
+    if (
+      typeof input.reportedAmountPaise === "number" &&
+      event.feeTotalPaise != null &&
+      input.reportedAmountPaise !== event.feeTotalPaise
+    ) {
+      throw new OwnershipConflictError(
+        `Paid amount ${input.reportedAmountPaise} does not match transfer fee ${event.feeTotalPaise}`,
+      );
+    }
+
+    const royaltyPaise = event.royaltyPaise ?? 0;
+    const platformNetPaise = event.platformFeeNetPaise ?? 0;
+    const feeGstPaise = event.feeGstPaise ?? 0;
+
+    // Settlement row for the artist's 2% royalty. Platform revenue on this
+    // row is the 3% platform retention + the full GST collected (which is
+    // remitted, not paid out to anyone). orderId / holdingId are null —
+    // transferId points back to where this settlement came from.
+    const settlementDoc: SettlementDoc = {
+      orderId: null,
+      holdingId: null,
+      artistId,
+      artistAmountPaise: royaltyPaise,
+      aggregatorCommissionPaise: null,
+      platformRevenuePaise: platformNetPaise + feeGstPaise,
+      status: "pending",
+      releaseAfter: serverNow(),
+      createdAt: serverNow(),
+      processedAt: null,
+      kind: "artist_royalty",
+      transferId: input.transferId,
+    };
+
+    transferStateMachine.assertTransition(event.status, "accepted");
+    tx.update(eventRef, {
+      status: "accepted",
+      acceptedAt: serverNow(),
+      feeProviderPaymentId: input.providerPaymentId,
+      feePaidAt: serverNow(),
+      royaltySettlementId: settlementRef.id,
+    });
+    tx.set(settlementRef, settlementDoc);
+
+    return { settlementId: settlementRef.id, artistId, created: true };
+  });
+
+  return { eventId: input.transferId, settlementId: result.settlementId, artistId };
 }
 
 /** Either party may cancel while pending. */

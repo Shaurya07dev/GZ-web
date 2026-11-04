@@ -52,8 +52,42 @@ export function useAcceptTransferMutation() {
   return useMutation({
     mutationFn: (transferId: string) => ownershipService.accept(transferId),
     onError: notify.error("Couldn't accept the transfer"),
-    onSuccess: () => {
-      notify.success("Transfer accepted", "The provenance passport now shows you as the owner.");
+    onSuccess: (transfer) => {
+      if (transfer.status === "awaiting_payment") {
+        notify.success(
+          "Confirmed — waiting on payment",
+          "Ownership passes once the sender pays the GalleryZone transfer fee.",
+        );
+      } else {
+        notify.success(
+          "Transfer accepted",
+          "The provenance passport now shows you as the owner.",
+        );
+      }
+      invalidateOwnership(queryClient);
+    },
+  });
+}
+
+export function useStartTransferFeeSession() {
+  return useMutation({
+    mutationFn: (transferId: string) => ownershipService.startFeeSession(transferId),
+    onError: notify.error("Couldn't start the transfer fee payment"),
+  });
+}
+
+export function useVerifyTransferFeePayment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (transferId: string) => ownershipService.verifyFeePayment(transferId),
+    onError: notify.error("Couldn't verify the transfer fee payment"),
+    onSuccess: (transfer) => {
+      if (transfer.status === "accepted") {
+        notify.success(
+          "Transfer complete",
+          "The artwork has passed to the new owner.",
+        );
+      }
       invalidateOwnership(queryClient);
     },
   });

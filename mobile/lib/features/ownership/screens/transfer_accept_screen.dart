@@ -96,6 +96,7 @@ class _Body extends ConsumerWidget {
     // The tag's state is on the public passport; the listing doesn't carry it.
     final passport = ref.watch(passportProvider(transfer.artworkId)).value;
     final isDisplay = transferKindOf(transfer) == TransferKind.display;
+    final priced = !isDisplay && (transfer.givingPricePaise ?? 0) > 0;
 
     return ContentWidth(
       maxWidth: 520,
@@ -159,6 +160,11 @@ class _Body extends ConsumerWidget {
                   label: 'Started',
                   value: formatLongDate(transfer.initiatedAt),
                 ),
+                if (priced)
+                  PortalDetailRow(
+                    label: 'Changing hands at',
+                    value: formatInr((transfer.givingPricePaise ?? 0) / 100),
+                  ),
                 if (isDisplay)
                   PortalDetailRow(
                     label: 'On display from',
@@ -246,6 +252,34 @@ class _Body extends ConsumerWidget {
                 ),
               ],
             ),
+            TransferStatus.awaitingPayment => Column(
+              children: [
+                Icon(
+                  LucideIcons.circleCheckBig,
+                  size: 34,
+                  color: theme.colorScheme.tertiary,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Confirmed — waiting on the transfer fee',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${transfer.fromName} is paying GalleryZone\'s transfer fee. '
+                  'Ownership of “${transfer.artworkTitle}” passes to you as '
+                  'soon as that goes through.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () =>
+                      context.push('/verify/${transfer.artworkId}'),
+                  child: const Text('Watch the passport'),
+                ),
+              ],
+            ),
             TransferStatus.pending => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -254,8 +288,14 @@ class _Body extends ConsumerWidget {
                       ? 'Accepting records the piece as on display with you until '
                             'that date. Ownership stays where it is, and the display '
                             'ends on its own when the date passes.'
-                      : 'Accepting records you as the artwork’s owner on its digital passport. The previous '
-                            'owners stay in its history — provenance is added to, never rewritten.',
+                      : priced
+                          ? 'Settle the ${formatInr((transfer.givingPricePaise ?? 0) / 100)} with '
+                                '${transfer.fromName} off GalleryZone (bank, UPI or in person). '
+                                'Confirming here tells GalleryZone to charge ${transfer.fromName} '
+                                'the 5% platform fee (2% artist royalty, 3% platform) — '
+                                'ownership passes the moment that fee is captured.'
+                          : 'Accepting records you as the artwork’s owner on its digital passport. The previous '
+                                'owners stay in its history — provenance is added to, never rewritten.',
                   style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                 ),
                 const SizedBox(height: 18),
@@ -266,7 +306,9 @@ class _Body extends ConsumerWidget {
                         ? 'Accepting…'
                         : isDisplay
                         ? 'Accept display rights'
-                        : 'Accept ownership',
+                        : priced
+                            ? 'Confirm — ownership passes on payment'
+                            : 'Accept ownership',
                   ),
                 ),
               ],

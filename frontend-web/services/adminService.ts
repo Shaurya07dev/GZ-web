@@ -98,8 +98,10 @@ function toDeactivation(d: DeactivationDto): DeactivationRequest {
 
 interface SettlementDto {
   id: string;
+  kind?: "sale" | "artist_royalty";
   orderId: string | null;
   holdingId: string | null;
+  transferId?: string | null;
   artistId: string;
   artistName: string;
   artworkTitle: string;
@@ -115,6 +117,11 @@ interface SettlementDto {
     bankAccountMasked: string | null;
     ifsc: string | null;
     upiHandle: string | null;
+  };
+  royaltyContext?: {
+    sellerName: string;
+    recipientName: string;
+    givingPricePaise: number | null;
   };
 }
 let sessionReports: GeneratedReport[] = [];
@@ -373,7 +380,9 @@ export const adminService = {
     const rows = await http.get<SettlementDto[] | { settlements: SettlementDto[] }>("/v1/admin/settlements");
     return (Array.isArray(rows) ? rows : rows.settlements).map((s) => ({
       id: s.id,
-      orderId: s.orderId ?? s.holdingId ?? "",
+      kind: s.kind ?? "sale",
+      orderId: s.orderId ?? s.holdingId ?? s.transferId ?? "",
+      transferId: s.transferId ?? null,
       artworkTitle: s.artworkTitle,
       artistName: s.artistName,
       artistAmount: paiseToRupees(s.artistAmountPaise),
@@ -384,11 +393,26 @@ export const adminService = {
       processedAt: s.processedAt,
       releaseAfter: s.releaseAfter,
       ...(s.payoutMethod ? { payoutMethod: s.payoutMethod } : {}),
+      ...(s.royaltyContext
+        ? {
+            royaltyContext: {
+              sellerName: s.royaltyContext.sellerName,
+              recipientName: s.royaltyContext.recipientName,
+              givingPrice: s.royaltyContext.givingPricePaise != null ? paiseToRupees(s.royaltyContext.givingPricePaise) : null,
+            },
+          }
+        : {}),
     }));
   },
 
   retrySettlement: async (id: string): Promise<{ id: string; status: "processed" }> => {
     await http.post(`/v1/admin/settlements/${encodeURIComponent(id)}/retry`);
+    return { id, status: "processed" };
+  },
+
+  /** Admin confirms a settlement paid out of band — used for artist royalty rows. */
+  markSettlementPaid: async (id: string): Promise<{ id: string; status: "processed" }> => {
+    await http.post(`/v1/admin/settlements/${encodeURIComponent(id)}/mark-paid`);
     return { id, status: "processed" };
   },
 

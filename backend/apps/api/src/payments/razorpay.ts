@@ -93,6 +93,13 @@ export class Razorpay {
     return this.post({ receipt: input.remittanceId, amountPaise: input.amountPaise, notes: { gzRemittanceId: input.remittanceId, gzAggregatorId: input.aggregatorId } });
   }
 
+  /** The same, for a collector paying the 5% fee on a resale ownership
+   *  transfer. The notes carry the transfer id for the webhook. Razorpay
+   *  receipts cap at 40 chars, so a composite transfer id is truncated. */
+  createTransferFeeOrder(input: { transferId: string; amountPaise: number; senderId: string }): Promise<RazorpayOrder> {
+    return this.post({ receipt: input.transferId, amountPaise: input.amountPaise, notes: { gzTransferId: input.transferId, gzSenderId: input.senderId } });
+  }
+
   /**
    * POST /v1/payments/{id}/refund — refund the captured amount back to the
    * original payment source. Called when a reservation payment captures but

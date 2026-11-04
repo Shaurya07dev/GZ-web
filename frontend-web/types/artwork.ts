@@ -436,7 +436,12 @@ export function isPenaltyCollectable(penalty: ExternalSalePenalty): boolean {
 // named buyer: the owner starts it, the buyer accepts through a link, and the
 // artwork's custody plus this list update together. The same flow runs again
 // on every resale, which is what keeps provenance continuous.
-export type TransferStatus = "pending" | "accepted" | "cancelled";
+// `awaiting_payment` is the resale-royalty mid-state: the recipient has
+// confirmed on the invite, but the sender still owes the 5% platform fee
+// (2% artist royalty + 3% platform + 18% GST on the fee). Ownership
+// passes only once that fee is captured, at which point the status flips
+// to accepted.
+export type TransferStatus = "pending" | "awaiting_payment" | "accepted" | "cancelled";
 
 // Art travels to be shown, and the piece that goes on a gallery wall for a
 // month has not changed hands. So a transfer is one of two things: a permanent
@@ -471,6 +476,16 @@ export interface OwnershipTransfer {
   displayEndsAt?: string | null;
   /** Display transfers only: set when the owner pulls the piece back early. */
   displayEndedAt?: string | null;
+  /** Resale royalty fields — ownership kind with a priced hand-over. Absent
+   *  for display transfers and for sale-triggered events (the order carried
+   *  the full price there) and for legacy transfers written before this
+   *  field existed. */
+  givingPricePaise?: number | null;
+  royaltyPaise?: number | null;
+  platformFeeNetPaise?: number | null;
+  feeGstPaise?: number | null;
+  feeTotalPaise?: number | null;
+  feePaidAt?: string | null;
 }
 
 export function transferKind(transfer: OwnershipTransfer): TransferKind {
