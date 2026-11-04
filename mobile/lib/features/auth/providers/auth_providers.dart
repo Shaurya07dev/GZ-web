@@ -149,9 +149,14 @@ final accountProvider = FutureProvider<CurrentUser?>((ref) async {
 /// `Exception: ` prefix so screens show the message the repository wrote, not
 /// the wrapper's `toString()`. The real layer's errors (`ApiError`, Firebase's)
 /// are written to read the same way, so every screen shows both alike.
+///
+/// A truly-unknown error ("Something went wrong") would leave the user with no
+/// idea what to do, so the fallback also names a next step.
 String authErrorMessage(Object error) {
   final text = error.toString();
-  return text.startsWith('Exception: ')
-      ? text.substring(11)
-      : 'Something went wrong.';
+  if (text.startsWith('Exception: ')) return text.substring(11);
+  // Dio's own exception toString includes the URL and stack, which is not for
+  // end users — show a clean fallback and tell them where to get help.
+  return 'That did not work. Try again in a moment. If it keeps happening, '
+      'email support@galleryzone.art with a screenshot and what you were doing.';
 }

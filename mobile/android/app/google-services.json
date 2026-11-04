@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "102284420053",
+    "project_id": "upkem-11eb7",
+    "storage_bucket": "upkem-11eb7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:102284420053:android:b336389e686c3766b9d35c",
+        "android_client_info": {
+          "package_name": "com.upkemlabs.b2b"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS6SJ89FVMK9Y1O-OKnpadOj3_1XXfkbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

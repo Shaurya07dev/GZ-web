@@ -18,7 +18,10 @@ class RemoteArtistNetworkRepository implements ArtistNetworkRepository {
 
   final ApiClient api;
 
-  static const _connectionsSoon = 'Artist connections are coming soon.';
+  static const _connectionsSoon =
+      'Artist-to-artist connections are not available yet. This feature is '
+      'planned for a future update — for now, reach other artists through their '
+      'public profiles or email support@galleryzone.art.';
 
   @override
   Future<ArtistRating> getRating(String artistId) async =>
@@ -80,6 +83,10 @@ class RemoteArtistNetworkRepository implements ArtistNetworkRepository {
   /// plain message, not a silent no-op.
   @override
   Future<void> withdrawDeactivation(String requestId) => Future.error(
-    Exception('Contact support to withdraw a pending deactivation request'),
+    Exception(
+      'To withdraw your pending deactivation request, email '
+      'support@galleryzone.art with your account email. An admin will cancel '
+      'the request within one business day.',
+    ),
   );
 }

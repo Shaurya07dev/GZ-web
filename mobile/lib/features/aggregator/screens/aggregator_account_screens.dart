@@ -450,7 +450,8 @@ class AggregatorSettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Push delivery is not wired up in this build — these only record your preference.',
+                  'Push notifications are sent via Firebase on Android. If you do not see them, '
+                  'check Settings → Notifications → GalleryZone is allowed to notify you.',
                   style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
                 ),
                 const Divider(height: 32),

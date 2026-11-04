@@ -112,7 +112,11 @@ class RemoteCustomerRepository implements CustomerRepository {
   /// request one). Refused plainly rather than faked.
   @override
   Future<WalletTransaction> requestWithdrawal(double amount) => Future.error(
-    Exception('Bank withdrawals for collectors are coming soon.'),
+    Exception(
+      'Bank withdrawals for collectors are not available yet. For now, email '
+      'support@galleryzone.art with your account email and the amount — we will '
+      'process it manually.',
+    ),
   );
 
   // --- Collection -------------------------------------------------------------------
