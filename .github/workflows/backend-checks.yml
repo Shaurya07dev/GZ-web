@@ -14,6 +14,8 @@ on:
       # check:client-routes reads the web and mobile API calls too.
       - "frontend-web/**"
       - "mobile/lib/**"
+      # check:email enforces parity between the email catalogue and this doc.
+      - "docs/EMAIL_EVENTS.md"
       - ".github/workflows/backend-checks.yml"
   pull_request:
     paths:
@@ -21,6 +23,8 @@ on:
       # check:client-routes reads the web and mobile API calls too.
       - "frontend-web/**"
       - "mobile/lib/**"
+      # check:email enforces parity between the email catalogue and this doc.
+      - "docs/EMAIL_EVENTS.md"
       - ".github/workflows/backend-checks.yml"
 
 jobs:
