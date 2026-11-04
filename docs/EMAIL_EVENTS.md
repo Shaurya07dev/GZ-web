@@ -80,6 +80,7 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 | Order cancelled | The order is cancelled | Live | `order-cancelled-buyer` |
 | Payment didn't go through | The gateway declines their payment | Live | `payment-failed` |
 | Someone wants to transfer or lend them a piece | Someone invites them to take or borrow a piece | Live | `transfer-invite` |
+| Pay the GalleryZone transfer fee | The recipient confirmed; the sender owes the 5% fee (2% artist royalty + 3% platform + GST) before title passes | Live | `transfer-fee-due` |
 | Your transfer or loan was accepted | The person they invited accepts | Live | `transfer-accepted` |
 | The transfer or loan was cancelled | The sender cancels an invite | Live | `transfer-cancelled` |
 | Your transfer or loan was declined | The person they invited says no | Live | `transfer-declined` |
