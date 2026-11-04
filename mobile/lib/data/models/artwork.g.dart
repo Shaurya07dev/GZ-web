@@ -278,6 +278,12 @@ _OwnershipTransfer _$OwnershipTransferFromJson(Map<String, dynamic> json) =>
       displayStartsAt: json['displayStartsAt'] as String?,
       displayEndsAt: json['displayEndsAt'] as String?,
       displayEndedAt: json['displayEndedAt'] as String?,
+      givingPricePaise: (json['givingPricePaise'] as num?)?.toInt(),
+      royaltyPaise: (json['royaltyPaise'] as num?)?.toInt(),
+      platformFeeNetPaise: (json['platformFeeNetPaise'] as num?)?.toInt(),
+      feeGstPaise: (json['feeGstPaise'] as num?)?.toInt(),
+      feeTotalPaise: (json['feeTotalPaise'] as num?)?.toInt(),
+      feePaidAt: json['feePaidAt'] as String?,
     );
 
 Map<String, dynamic> _$OwnershipTransferToJson(_OwnershipTransfer instance) =>
@@ -296,10 +302,17 @@ Map<String, dynamic> _$OwnershipTransferToJson(_OwnershipTransfer instance) =>
       'displayStartsAt': instance.displayStartsAt,
       'displayEndsAt': instance.displayEndsAt,
       'displayEndedAt': instance.displayEndedAt,
+      'givingPricePaise': instance.givingPricePaise,
+      'royaltyPaise': instance.royaltyPaise,
+      'platformFeeNetPaise': instance.platformFeeNetPaise,
+      'feeGstPaise': instance.feeGstPaise,
+      'feeTotalPaise': instance.feeTotalPaise,
+      'feePaidAt': instance.feePaidAt,
     };
 
 const _$TransferStatusEnumMap = {
   TransferStatus.pending: 'pending',
+  TransferStatus.awaitingPayment: 'awaiting_payment',
   TransferStatus.accepted: 'accepted',
   TransferStatus.cancelled: 'cancelled',
 };

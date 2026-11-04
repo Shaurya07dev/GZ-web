@@ -1,6 +1,37 @@
 import '../models/artwork.dart';
 import '../models/passport.dart';
 
+/// What the sender's 5% fee checkout returns. Mirrors the API JSON — the
+/// Razorpay fields are only populated when PAYMENTS_MODE=razorpay; in
+/// simulated mode only [amountPaise] + [mode] are meaningful.
+class TransferFeeSession {
+  const TransferFeeSession({
+    required this.mode,
+    required this.amountPaise,
+    this.keyId,
+    this.razorpayOrderId,
+    this.currency,
+    this.name,
+    this.description,
+    this.prefillName,
+    this.prefillEmail,
+    this.prefillContact,
+  });
+
+  final String mode;
+  final int amountPaise;
+  final String? keyId;
+  final String? razorpayOrderId;
+  final String? currency;
+  final String? name;
+  final String? description;
+  final String? prefillName;
+  final String? prefillEmail;
+  final String? prefillContact;
+
+  bool get isRazorpay => mode == 'razorpay';
+}
+
 /// Digital ownership hand-over for an artwork's passport, mirroring
 /// `services/ownershipService.ts`.
 ///
@@ -20,6 +51,8 @@ abstract class OwnershipRepository {
   ///
   /// [kind] picks what is being handed over. A display transfer needs
   /// [displayStartsAt], [displayEndsAt] and leaves the owner unchanged.
+  /// A priced ownership transfer needs [givingPricePaise]; the recipient
+  /// must already have a GalleryZone account on [toEmail].
   Future<OwnershipTransfer> initiate({
     required String artworkId,
     required String fromName,
@@ -28,7 +61,16 @@ abstract class OwnershipRepository {
     TransferKind kind,
     String? displayStartsAt,
     String? displayEndsAt,
+    int? givingPricePaise,
   });
+
+  /// Opens the Razorpay checkout for the sender's 5% platform fee. Returns
+  /// the pieces the Razorpay Flutter plugin needs plus the exact amount.
+  Future<TransferFeeSession> startFeeSession(String transferId);
+
+  /// Called after the sender returns from Razorpay. Server-side re-reads
+  /// the gateway order and finalises the transfer if it is paid.
+  Future<OwnershipTransfer> verifyFeePayment(String transferId);
 
   /// The buyer accepting is what actually moves ownership: nothing changes on
   /// the artwork until this runs. A display transfer accepted here moves

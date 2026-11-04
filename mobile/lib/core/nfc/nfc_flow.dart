@@ -270,13 +270,27 @@ class _Session {
 
   /// Only an NTAG213 is written or locked: the plan's chip, and the one whose
   /// lock bytes the lock sequence knows.
+  ///
+  /// Compatibility notes (owner-reported 2 Nov 2026 — NFC errors on real
+  /// NTAG213 chips the client bought):
+  ///  * The OS tag-type signal is unreliable: iOS classifies NTAG213 as
+  ///    MIFARE Ultralight sometimes and as "unknown" other times. We treat
+  ///    it as a hint only — the CC bytes decide.
+  ///  * Factory-fresh NTAG213 chips have `00 00 00 00` on the CC page
+  ///    because no NDEF message has been written yet. We format them
+  ///    ourselves to the standard default (`E1 10 12 00`) before writing
+  ///    the URL, so a brand-new chip from any supplier works out of the box.
+  ///  * The UID shape is the authoritative check (7 bytes), after
+  ///    [normalizeTagUid] strips any cascade-tag prefix the stack might add.
   Future<void> requireNtag213(NfcChip chip) async {
     step = NfcFailureStep.chipType;
-    const refusal = NfcFlowException(
-      NfcFailureStep.chipType,
-      "This isn't an NTAG213 chip. Please use a GalleryZone-supplied tag.",
-    );
-    if (!chip.isMifareUltralight || !isNtagUid(chip.uid)) throw refusal;
+    if (!isNtagUid(chip.uid)) {
+      throw NfcFlowException(
+        NfcFailureStep.chipType,
+        "This chip has a ${(chip.uid.length / 2).round()}-byte UID; "
+            'NTAG213 is 7 bytes. Use a GalleryZone-supplied tag.',
+      );
+    }
     final Uint8List cc;
     try {
       cc = Ntag213.firstPage(
@@ -285,10 +299,35 @@ class _Session {
     } catch (_) {
       throw const NfcFlowException(
         NfcFailureStep.chipType,
-        "The tag couldn't be read. Hold it steady and try again.",
+        "The tag couldn't be read. Hold it flat and steady against the back of your phone and try again.",
       );
     }
-    if (!Ntag213.isNtag213(cc)) throw refusal;
+    if (Ntag213.isNtag213(cc)) return;
+    if (Ntag213.isBlankCapabilityContainer(cc)) {
+      // Format the chip ourselves before the first write. The CC on a
+      // factory-fresh NTAG213 is writable; only the lock bytes are OTP.
+      try {
+        await device.transceive(
+          Ntag213.write(
+            Ntag213.capabilityContainerPage,
+            Ntag213.defaultCapabilityContainer(),
+          ),
+        );
+      } catch (_) {
+        throw const NfcFlowException(
+          NfcFailureStep.chipType,
+          "This looks like a blank NTAG213 but we couldn't format it. Try again, or use a different tag.",
+        );
+      }
+      return;
+    }
+    final variant = Ntag213.recognisedButIncompatibleChip(cc);
+    throw NfcFlowException(
+      NfcFailureStep.chipType,
+      variant != null
+          ? 'This is an $variant chip, not an NTAG213. Use a GalleryZone-supplied tag.'
+          : "This isn't an NTAG213 chip. Use a GalleryZone-supplied tag.",
+    );
   }
 }
 

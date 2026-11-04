@@ -32,6 +32,7 @@ import type { AppEnv } from "@galleryzone/config";
 import { DB, ENV } from "../db.module.ts";
 import { renderEmail } from "./layout.ts";
 import { Mailer } from "./mailer.ts";
+import { PushSender } from "./push.ts";
 import { asText } from "./rich.ts";
 import * as T from "./templates.ts";
 
@@ -61,6 +62,7 @@ export class Emails {
     @Inject(DB) private readonly db: Db,
     @Inject(ENV) env: AppEnv,
     private readonly mailer: Mailer,
+    private readonly push: PushSender,
   ) {
     this.ctx = { site: (process.env.PUBLIC_SITE_URL || env.corsOrigins[0] || "https://www.galleryzone.art").replace(/\/$/, "") };
   }
@@ -93,15 +95,25 @@ export class Emails {
 
   /**
    * Writes the email, records its in-app copy FIRST (so a mail-provider outage
-   * can't lose it), then sends. Nothing is sent when there is nobody to send to
-   * or the template had nothing to say.
+   * can't lose it), then sends the mail and fires a mobile push alongside.
+   * Nothing is sent when there is nobody to send to or the template had
+   * nothing to say.
+   *
+   * Push notifications piggy-back on every in-app-visible mail: same key, same
+   * recipients, same first paragraph as the body. The one-time account links
+   * (password reset, email verify) are deliberately skipped because they go
+   * to the typed address and don't belong to any device yet. [PushSender]
+   * honours the recipient's `pushEnabled` preference and silently no-ops
+   * without Firebase credentials, so no transactional flow fails on a push
+   * failure.
    */
   private async deliver(key: string, to: string | string[], content: T.Content | null): Promise<void> {
     if (!content) return;
     const recipients = [...new Set((Array.isArray(to) ? to : [to]).filter(Boolean))];
     if (!recipients.length) return;
     const { layout } = content;
-    if (!NOT_IN_INBOX.some((p) => key.startsWith(p))) {
+    const inApp = !NOT_IN_INBOX.some((p) => key.startsWith(p));
+    if (inApp) {
       await recordNotifications(this.db, {
         key,
         emails: recipients,
@@ -112,6 +124,20 @@ export class Emails {
     }
     const { html, text } = renderEmail(this.ctx, layout);
     await this.mailer.send({ to: recipients, subject: content.subject, html, text, idempotencyKey: key, replyTo: content.replyTo, tag: key.split("/")[0] });
+    if (inApp) {
+      // Push mirrors the in-app notification. Non-blocking: the mail has
+      // already landed and PushSender swallows its own errors, but awaiting
+      // it in the request path would slow transactional flows for no gain.
+      void this.push
+        .sendToEmails(this.db, recipients, {
+          title: content.subject,
+          body: asText(layout.paragraphs[0] ?? ""),
+          url: this.inAppPath(layout.cta?.url),
+        })
+        .catch((error: unknown) =>
+          this.logger.warn(`push ${key} failed: ${error instanceof Error ? error.message : String(error)}`),
+        );
+    }
   }
 
   // ── Account ───────────────────────────────────────────────────────────
@@ -136,6 +162,26 @@ export class Emails {
 
   async passwordReset(email: string, name: string | null, resetUrl: string) {
     await this.deliver(`password-reset/${email}/${again()}`, email, T.passwordReset({ name, resetUrl }));
+  }
+
+  /** Six-digit email OTP for sign-up verification. `again()` on the key so a
+   *  resent code isn't rejected as a duplicate by the mail provider. */
+  async signupEmailOtp(email: string, name: string | null, code: string) {
+    await this.deliver(
+      `signup-email-otp/${email}/${again()}`,
+      email,
+      T.signupEmailOtp({ code, name }),
+    );
+  }
+
+  /** Six-digit email OTP for password reset. The user types the code into our
+   *  own reset screen; no link is sent. */
+  async passwordResetOtp(email: string, name: string | null, code: string) {
+    await this.deliver(
+      `password-reset-otp/${email}/${again()}`,
+      email,
+      T.passwordResetOtp({ code, name }),
+    );
   }
 
   async accountStatusChanged(input: { userId: string; status: string }) {
@@ -263,8 +309,43 @@ export class Emails {
 
   // ── Ownership and certificates ────────────────────────────────────────
 
-  async transferInvite(input: { transferId: string; toEmail: string; toName: string; fromName: string; title: string; kind: string }) {
-    await this.deliver(`transfer-invite/${input.transferId}`, input.toEmail, T.transferInvite({ transferId: input.transferId, toName: input.toName, fromName: input.fromName, title: input.title, kind: input.kind }, this.ctx));
+  async transferInvite(input: { transferId: string; toEmail: string; toName: string; fromName: string; title: string; kind: string; givingPricePaise: number | null }) {
+    await this.deliver(
+      `transfer-invite/${input.transferId}`,
+      input.toEmail,
+      T.transferInvite(
+        {
+          transferId: input.transferId,
+          toName: input.toName,
+          fromName: input.fromName,
+          title: input.title,
+          kind: input.kind,
+          givingPricePaise: input.givingPricePaise,
+        },
+        this.ctx,
+      ),
+    );
+  }
+
+  /** Tells the SENDER the recipient confirmed and the 5% fee is now due. */
+  async transferFeeDue(input: { transferId: string; title: string; toName: string; fromUserId: string | null; givingPricePaise: number; feeTotalPaise: number }) {
+    const sender = input.fromUserId ? await this.user(input.fromUserId) : null;
+    if (!sender) return;
+    await this.deliver(
+      `transfer-fee-due/${input.transferId}`,
+      sender.email,
+      T.transferFeeDue(
+        {
+          transferId: input.transferId,
+          title: input.title,
+          toName: input.toName,
+          givingPricePaise: input.givingPricePaise,
+          feeTotalPaise: input.feeTotalPaise,
+          role: sender.role,
+        },
+        this.ctx,
+      ),
+    );
   }
 
   /** Tells the person who made the offer. */

@@ -195,11 +195,63 @@ export const authService = {
   // The API sends a branded reset email (Resend) whose link lands on
   // /reset-password?token=<oobCode>; it always answers 202 so the UI can't
   // be used to probe which addresses have accounts.
+  //
+  // Legacy link-based reset. Kept so an old email that already landed in
+  // someone's inbox still works; the new flow goes through sendEmailOtp +
+  // resetPasswordWithOtp below.
   forgotPassword: async (
     input: ForgotPasswordInput,
   ): Promise<{ email: string }> => {
     await http.post("/v1/auth/password-reset", { email: input.email });
     return { email: input.email };
+  },
+
+  // --- OTP flow (3 Nov 2026) -------------------------------------------------
+  // Replaces the Firebase email-verification link with a six-digit code the
+  // user types on our own screen. Sign-up is unchanged below (register still
+  // creates the Firebase user + Firestore profile); after register succeeds
+  // the UI calls sendEmailOtp({purpose: "signup"}), waits for the user to
+  // type the code, calls verifyEmailOtp. Then the phone-number step kicks
+  // in with sendPhoneOtp/verifyPhoneOtp.
+  //
+  // Password reset is one shot: sendEmailOtp({purpose: "password_reset"})
+  // then resetPasswordWithOtp(code, newPassword) — no interim "verify"
+  // step, so a leaked verify response doesn't give an attacker a token.
+
+  sendEmailOtp: async (input: {
+    email: string;
+    purpose: "signup" | "password_reset";
+  }): Promise<{ accepted: true }> => {
+    await http.post("/v1/auth/email-otp/send", input);
+    return { accepted: true };
+  },
+
+  verifyEmailOtp: async (input: {
+    email: string;
+    code: string;
+    purpose: "signup" | "password_reset";
+  }): Promise<{ verified: true; uid: string | null }> => {
+    return http.post("/v1/auth/email-otp/verify", input);
+  },
+
+  sendPhoneOtp: async (input: { phone: string }): Promise<{ accepted: true }> => {
+    await http.post("/v1/auth/phone-otp/send", input);
+    return { accepted: true };
+  },
+
+  verifyPhoneOtp: async (input: {
+    phone: string;
+    code: string;
+  }): Promise<{ verified: true }> => {
+    return http.post("/v1/auth/phone-otp/verify", input);
+  },
+
+  resetPasswordWithOtp: async (input: {
+    email: string;
+    code: string;
+    password: string;
+  }): Promise<{ reset: true }> => {
+    return http.post("/v1/auth/reset-password", input);
   },
 
   resendVerification: async (): Promise<void> => {

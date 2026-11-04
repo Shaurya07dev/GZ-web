@@ -58,4 +58,35 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<CurrentUser?> resumeSession() async => null;
+
+  // OTP mocks: a four-six-two "123456" always passes, anything else fails,
+  // so the screens can be exercised offline the same way the web mock does.
+  @override
+  Future<void> sendEmailOtp({required String email, required String purpose}) =>
+      mockDelay(() {});
+
+  @override
+  Future<void> verifyEmailOtp({required String email, required String code}) {
+    if (code != '123456') return mockError('That code is wrong or expired.');
+    return mockDelay(() {});
+  }
+
+  @override
+  Future<void> sendPhoneOtp({required String phone}) => mockDelay(() {});
+
+  @override
+  Future<void> verifyPhoneOtp({required String phone, required String code}) {
+    if (code != '123456') return mockError('That code is wrong or expired.');
+    return mockDelay(() {});
+  }
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  }) {
+    if (code != '123456') return mockError('That code is wrong or expired.');
+    return mockDelay(() {});
+  }
 }

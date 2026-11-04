@@ -136,6 +136,7 @@ class MockOwnershipRepository implements OwnershipRepository {
     TransferKind kind = TransferKind.ownership,
     String? displayStartsAt,
     String? displayEndsAt,
+    int? givingPricePaise,
   }) {
     final artwork = _findArtwork(artworkId);
     if (artwork == null) return mockError('Artwork not found');
@@ -156,13 +157,20 @@ class MockOwnershipRepository implements OwnershipRepository {
         return mockError('The display end date must be after its start date');
       }
     }
-    // One open transfer per artwork: two pending ones would let two people
-    // each claim the same piece.
+    if (kind == TransferKind.ownership &&
+        (givingPricePaise == null || givingPricePaise <= 0)) {
+      return mockError('Enter the price this piece is changing hands at');
+    }
+    // One open transfer per artwork: two pending (or awaiting payment)
+    // transfers would let two people each claim the same piece.
     if (_read().any(
-      (t) => t.artworkId == artworkId && t.status == TransferStatus.pending,
+      (t) =>
+          t.artworkId == artworkId &&
+          (t.status == TransferStatus.pending ||
+              t.status == TransferStatus.awaitingPayment),
     )) {
       return mockError(
-        'A transfer for this artwork is already waiting to be accepted',
+        'A transfer for this artwork is already in progress',
       );
     }
     // A piece cannot be lent twice over. The active loan has to end — by its
@@ -174,6 +182,16 @@ class MockOwnershipRepository implements OwnershipRepository {
     }
 
     return mockDelay(() {
+      int? royalty;
+      int? platform;
+      int? gst;
+      int? total;
+      if (kind == TransferKind.ownership && givingPricePaise != null) {
+        royalty = (givingPricePaise * 0.02).round();
+        platform = (givingPricePaise * 0.03).round();
+        gst = ((royalty + platform) * 0.18).round();
+        total = royalty + platform + gst;
+      }
       final transfer = OwnershipTransfer(
         id: 'tr-${DateTime.now().microsecondsSinceEpoch}',
         artworkId: artwork.id,
@@ -186,9 +204,57 @@ class MockOwnershipRepository implements OwnershipRepository {
         kind: kind,
         displayStartsAt: kind == TransferKind.display ? displayStartsAt : null,
         displayEndsAt: kind == TransferKind.display ? displayEndsAt : null,
+        givingPricePaise: givingPricePaise,
+        royaltyPaise: royalty,
+        platformFeeNetPaise: platform,
+        feeGstPaise: gst,
+        feeTotalPaise: total,
       );
       _write([transfer, ..._read()]);
       return transfer;
+    });
+  }
+
+  @override
+  Future<TransferFeeSession> startFeeSession(String transferId) {
+    final transfer = _read().where((t) => t.id == transferId).firstOrNull;
+    if (transfer == null) return mockError('Transfer not found');
+    final amount = transfer.feeTotalPaise ?? 0;
+    return mockDelay(
+      () => TransferFeeSession(mode: 'simulated', amountPaise: amount),
+    );
+  }
+
+  @override
+  Future<OwnershipTransfer> verifyFeePayment(String transferId) {
+    final transfers = _read();
+    final transfer = transfers.where((t) => t.id == transferId).firstOrNull;
+    if (transfer == null) return mockError('Transfer not found');
+    return mockDelay(() {
+      final paid = transfer.copyWith(
+        status: TransferStatus.accepted,
+        acceptedAt: DateTime.now().toIso8601String(),
+        feePaidAt: DateTime.now().toIso8601String(),
+      );
+      _write([for (final t in transfers) t.id == transferId ? paid : t]);
+      // Move custody for the newly-accepted piece.
+      final artwork = _findArtwork(transfer.artworkId);
+      if (artwork != null && transferKindOf(paid) == TransferKind.ownership) {
+        final current = resolveCustody(artwork);
+        _writeArtwork(
+          artwork.copyWith(
+            custody: current.copyWith(
+              legalOwner: CustodyParty.customer,
+              legalOwnerName: paid.toName,
+              custodian: current.custodian == CustodyParty.artist
+                  ? CustodyParty.customer
+                  : current.custodian,
+              locationLabel: 'With ${paid.toName}',
+            ),
+          ),
+        );
+      }
+      return paid;
     });
   }
 
@@ -208,6 +274,19 @@ class MockOwnershipRepository implements OwnershipRepository {
 
     return mockDelay(() {
       final now = DateTime.now().toIso8601String();
+      final priced = transferKindOf(transfer) == TransferKind.ownership &&
+          (transfer.givingPricePaise ?? 0) > 0;
+      // A priced ownership transfer moves to awaiting_payment first — the
+      // sender still owes the 5% platform fee before title can pass.
+      if (priced) {
+        final confirmed = transfer.copyWith(
+          status: TransferStatus.awaitingPayment,
+        );
+        _write([
+          for (final t in transfers) t.id == transferId ? confirmed : t,
+        ]);
+        return confirmed;
+      }
       final accepted = transfer.copyWith(
         status: TransferStatus.accepted,
         acceptedAt: now,

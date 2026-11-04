@@ -8,6 +8,7 @@ import '../../features/auth/providers/auth_providers.dart';
 import '../../features/auth/role_options.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/onboarding_verify_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/auth/screens/verify_email_screen.dart';
@@ -66,6 +67,7 @@ import '../../features/marketplace/screens/artwork_detail_screen.dart';
 import '../../features/marketplace/screens/marketplace_screen.dart';
 import '../../features/marketplace/screens/passport_screen.dart';
 import '../../features/ownership/screens/transfer_accept_screen.dart';
+import '../../features/ownership/screens/transfer_pay_fee_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -214,6 +216,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             VerifyEmailScreen(token: state.uri.queryParameters['token']),
       ),
+      GoRoute(
+        path: OnboardingVerifyScreen.path,
+        builder: (context, state) {
+          final params = state.uri.queryParameters;
+          final role = RoleX.fromId(params['role']);
+          final email = params['email'];
+          if (role == null || email == null || email.isEmpty) {
+            // Reached without the context the register / Google flows pass
+            // — go back to sign in rather than show a half-set-up screen.
+            return const LoginScreen();
+          }
+          return OnboardingVerifyScreen(
+            email: email,
+            role: role,
+            emailAlreadyVerified: params['emailVerified'] == '1',
+          );
+        },
+      ),
       // Public, unguarded — same as the web, where none of these sit under
       // a GUARDED_PREFIX. A physical NFC tag resolving to /verify/<id> has
       // to work for someone who has never signed in.
@@ -285,6 +305,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: TransferAcceptScreen.path,
         builder: (context, state) => TransferAcceptScreen(
+          transferId: state.pathParameters['transferId']!,
+        ),
+      ),
+      GoRoute(
+        path: TransferPayFeeScreen.path,
+        builder: (context, state) => TransferPayFeeScreen(
           transferId: state.pathParameters['transferId']!,
         ),
       ),

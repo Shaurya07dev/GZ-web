@@ -3,7 +3,7 @@
 // file's own header for why confirmSimulatedPayment is explicitly a
 // pre-gateway placeholder); this controller is deliberately thin.
 
-import { Body, ConflictException, Controller, ForbiddenException, Inject, Logger, NotFoundException, Param, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Inject, Logger, NotFoundException, Param, Post, Req } from "@nestjs/common";
 import {
   createOrder,
   confirmSimulatedPayment,
@@ -43,17 +43,36 @@ export class OrdersController {
   async create(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(createOrderInputSchema)) body: CreateOrderInput) {
     // customerId comes from the verified token, never the body.
 
-    // Audit #3: before creating the order, ask ShipRocket for a real quote
-    // for this specific pickup→drop + weight + value. If the call fails or
-    // no courier is serviceable, we fall back to the flat
-    // `rates.deliveryChargePaise` and the order carries `shippingQuote:
-    // null` so the UI can mark it as estimated. Resolution happens here (not
-    // inside createOrder) because the db package can't depend on an HTTP
-    // integration without pulling the whole gateway into unit tests.
-    const deliveryQuote = await this.resolveShippingQuote(body.artworkId, body.addressId, req.authUser.uid).catch((err) => {
-      this.logger.warn(`ShipRocket rate quote failed: ${String(err)} — falling back to flat rate`);
-      return undefined;
+    // Audit #3 (D1, 2 Nov 2026): the delivery charge is ShipRocket's quote
+    // for this specific pickup→drop + weight + value, nothing else. The
+    // flat fallback that lived here used to invent a ₹25 charge from a
+    // stale config key and ship real orders with made-up money, so when
+    // ShipRocket is configured we now REFUSE the order instead of
+    // guessing — the buyer sees a clear "delivery rate unavailable" and
+    // retries once the artist's pincode / weight / ShipRocket is sorted.
+    //
+    // The flat fallback still works when ShipRocket isn't configured at
+    // all (local demo, offline dev); production always has it configured,
+    // so the only path through on live is the real quote.
+    const requireRealQuote = isShiprocketConfigured();
+    const resolution = await this.resolveShippingQuote(
+      body.artworkId,
+      body.addressId,
+      req.authUser.uid,
+    ).catch((err) => {
+      this.logger.warn(`ShipRocket rate quote threw: ${String(err)}`);
+      return { quote: undefined, reason: "shiprocket_error" as const };
     });
+
+    if (requireRealQuote && !resolution.quote) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: this.deliveryUnavailableMessage(resolution.reason),
+        status: 400,
+        code: "delivery_unavailable",
+        reason: resolution.reason,
+      });
+    }
 
     try {
       return await createOrder({
@@ -62,7 +81,7 @@ export class OrdersController {
         artworkId: body.artworkId,
         addressId: body.addressId,
         idempotencyKey: body.idempotencyKey,
-        deliveryQuote,
+        deliveryQuote: resolution.quote,
       });
     } catch (error) {
       if (error instanceof CheckoutError) {
@@ -74,29 +93,62 @@ export class OrdersController {
     }
   }
 
+  /** The actionable message the buyer sees when ShipRocket can't quote. */
+  private deliveryUnavailableMessage(
+    reason: "no_pickup_pincode" | "no_drop_pincode" | "not_serviceable" | "shiprocket_error" | undefined,
+  ): string {
+    switch (reason) {
+      case "no_pickup_pincode":
+        return "The artist's pickup address is incomplete — delivery can't be quoted. Contact support so they can finish their profile.";
+      case "no_drop_pincode":
+        return "Please add a complete delivery address (pincode is required) and try again.";
+      case "not_serviceable":
+        return "No courier delivers to this address right now. Try a different address or contact support.";
+      default:
+        return "We couldn't get a delivery rate for this order. Try again in a minute; if it keeps failing, contact support.";
+    }
+  }
+
   /**
    * Resolve the four inputs ShipRocket's serviceability endpoint needs:
    * pickup pincode (artist's studio), drop pincode (buyer's address),
-   * parcel weight, and declared value. Returns undefined when any input is
-   * missing or ShipRocket isn't configured — createOrder falls back cleanly.
+   * parcel weight, and declared value. Returns the quote and a specific
+   * `reason` on failure so the caller can tell the buyer which half of
+   * the trip is wrong.
    *
    * Deliberately bails on the first missing piece rather than guessing a
    * default: a wrong pincode would return a plausible-looking but wrong
-   * rate, and silent wrong rates are worse than the honest flat fallback.
+   * rate, and a wrong rate silently debits the wrong amount.
    */
   private async resolveShippingQuote(
     artworkId: string,
     addressId: string,
     customerId: string,
-  ): Promise<ShippingQuoteSnapshot | undefined> {
-    if (!isShiprocketConfigured()) return undefined;
+  ): Promise<{
+    quote: ShippingQuoteSnapshot | undefined;
+    reason:
+      | "no_pickup_pincode"
+      | "no_drop_pincode"
+      | "not_serviceable"
+      | "shiprocket_error"
+      | undefined;
+  }> {
+    if (!isShiprocketConfigured()) {
+      // Local/offline dev: let createOrder's flat fallback kick in. On live
+      // the caller refuses before reaching this.
+      return { quote: undefined, reason: undefined };
+    }
     const [artworkSnap, addressSnap] = await Promise.all([
       this.db.collection(Collections.artworks).doc(artworkId).get(),
       this.db.collection(Collections.addresses).doc(addressId).get(),
     ]);
     const artwork = artworkSnap.data() as ArtworkDoc | undefined;
     const address = addressSnap.data() as (AddressDoc & { userId?: string }) | undefined;
-    if (!artwork || !address || address.userId !== customerId) return undefined;
+    if (!artwork || !address || address.userId !== customerId) {
+      // Downstream createOrder throws its own 404 for these; no delivery
+      // rate decision applies.
+      return { quote: undefined, reason: undefined };
+    }
 
     const artistProfileSnap = await this.db
       .collection(`users/${artwork.artistId}/profile`)
@@ -105,7 +157,8 @@ export class OrdersController {
     const artistProfile = artistProfileSnap.data() as ProfileDoc | undefined;
     const pickupPincode = artistProfile?.pickupPincode?.trim();
     const dropPincode = address.pincode?.trim();
-    if (!pickupPincode || !dropPincode) return undefined;
+    if (!pickupPincode) return { quote: undefined, reason: "no_pickup_pincode" };
+    if (!dropPincode) return { quote: undefined, reason: "no_drop_pincode" };
 
     const weightKg = artwork.physical?.weightKg ?? 2;
     const valueInr = artwork.listing?.displayPricePaise
@@ -113,12 +166,15 @@ export class OrdersController {
       : 1;
 
     const quote = await getShippingRate({ pickupPincode, dropPincode, weightKg, valueInr });
-    if (!quote) return undefined;
+    if (!quote) return { quote: undefined, reason: "not_serviceable" };
     return {
-      carrier: quote.carrier,
-      ratePaise: quote.ratePaise,
-      courierCompanyId: quote.courierCompanyId,
-      estimatedDeliveryDays: quote.estimatedDeliveryDays,
+      quote: {
+        carrier: quote.carrier,
+        ratePaise: quote.ratePaise,
+        courierCompanyId: quote.courierCompanyId,
+        estimatedDeliveryDays: quote.estimatedDeliveryDays,
+      },
+      reason: undefined,
     };
   }
 

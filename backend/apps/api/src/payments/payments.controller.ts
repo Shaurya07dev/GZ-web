@@ -52,6 +52,10 @@ import {
   attachProviderOrder,
   attachRemittanceProviderOrder,
   attachTopupProviderOrder,
+  markTransferFeePaid,
+  transferIdForProviderOrder,
+  OwnershipConflictError,
+  OwnershipNotFoundError,
   createRemittance,
   createWalletTopup,
   getCurrentUser,
@@ -558,6 +562,13 @@ export class PaymentsController {
       payment?.notes?.gzRemittanceId ?? orderEntity?.notes?.gzRemittanceId ?? (providerOrderId ? await remittanceIdForProviderOrder(this.db, providerOrderId) : null);
     if (remittanceId) return this.remittanceWebhook(event.event, remittanceId, { payment, reportedAmount, providerOrderId });
 
+    // A resale-ownership transfer fee carries gzTransferId. markTransferFeePaid
+    // is idempotent on (transferId, paymentId) and no-ops when the verify
+    // path already finalised it.
+    const transferId =
+      payment?.notes?.gzTransferId ?? orderEntity?.notes?.gzTransferId ?? (providerOrderId ? await transferIdForProviderOrder(this.db, providerOrderId) : null);
+    if (transferId) return this.transferFeeWebhook(event.event, transferId, { payment, reportedAmount, providerOrderId });
+
     // An aggregator-reservation payment intent (notes.gzIntentId). The finalize
     // transaction is idempotent — a late webhook after the browser already
     // verified safely becomes a no-op.
@@ -703,6 +714,33 @@ export class PaymentsController {
     } catch (error) {
       // An unknown remittance id is an operator problem, not a retry loop.
       if (!(error instanceof AggregatorRemittanceError)) throw error;
+    }
+    return { received: true, matched: true };
+  }
+
+  private async transferFeeWebhook(
+    event: string,
+    transferId: string,
+    ctx: { payment: { id?: string; method?: string } | undefined; reportedAmount: number | null; providerOrderId: string | null },
+  ) {
+    try {
+      if (event !== "payment.captured" && event !== "order.paid") {
+        // payment.failed: the state machine leaves the transfer in
+        // awaiting_payment; the sender can retry from the pay screen.
+        return { received: true, matched: true };
+      }
+      if (!ctx.payment?.id) return { received: true, matched: false };
+      await markTransferFeePaid(this.db, {
+        transferId,
+        providerPaymentId: ctx.payment.id,
+        reportedAmountPaise: ctx.reportedAmount,
+      });
+      this.cache.clear();
+    } catch (error) {
+      // An unknown transfer id, a wrong amount, or an already-accepted
+      // transfer — anything that is an operator / replay case, not a
+      // retry loop. The webhook stays 200.
+      if (!(error instanceof OwnershipNotFoundError) && !(error instanceof OwnershipConflictError)) throw error;
     }
     return { received: true, matched: true };
   }

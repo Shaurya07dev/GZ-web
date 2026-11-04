@@ -78,6 +78,14 @@ export async function createUserProfile(
   uid: string,
   { email, name, role, phone = null }: CreateUserProfileInput,
 ): Promise<void> {
+  // Admin role lockdown (owner directive 3 Nov 2026): the only path that
+  // writes role:"admin" is the AdminSeed script (apps/api/src/admin-seed.ts),
+  // which calls db.set() directly, not through this helper. Nothing in the UI
+  // or in a self-serve route can elevate — the controller rejects it earlier,
+  // but this is the second barrier in case a future caller forgets.
+  if ((role as string) === "admin") {
+    throw new AuthError("Admin accounts are seeded by the server, not registered through the app.");
+  }
   const userRef = db.collection(Collections.users).doc(uid);
   if ((await userRef.get()).exists) throw new AuthError(`User ${uid} already has a profile`);
 
@@ -189,4 +197,49 @@ export async function grantRole(db: Firestore, uid: string, grant: string): Prom
   await userRef.update({ roleGrants: grants });
   const authUser = await auth.getUser(uid);
   await auth.setCustomUserClaims(uid, { ...(authUser.customClaims ?? {}), grants });
+}
+
+/**
+ * Change a user's password through the Admin SDK — used after a password-reset
+ * OTP verifies. Separate from Firebase's own reset-link flow because we no
+ * longer send that link; the user types the OTP on our screen and we apply
+ * the new password here.
+ */
+export async function setPassword(uid: string, password: string): Promise<void> {
+  if (password.length < 8) throw new AuthError("Password must be at least 8 characters");
+  await authService().updateUser(uid, { password });
+}
+
+/**
+ * Marks `users/{uid}.emailVerifiedAt` so the app knows the OTP step is done.
+ * We also flip Firebase's own `emailVerified` so other places that read it
+ * (admin tools, Firebase console) stay in sync.
+ */
+export async function markEmailVerified(db: Firestore, uid: string): Promise<void> {
+  await db
+    .collection(Collections.users)
+    .doc(uid)
+    .set({ emailVerifiedAt: FieldValue.serverTimestamp(), status: "active" }, { merge: true });
+  await authService().updateUser(uid, { emailVerified: true });
+}
+
+/**
+ * Stores the user's phone and marks it verified. Phone format is normalised
+ * to a 10-digit Indian mobile on write (country code stripped) — the mobile
+ * client and MSG91 can both tolerate +91 but the Firestore schema stays
+ * compact.
+ */
+export async function markPhoneVerified(db: Firestore, uid: string, phone: string): Promise<void> {
+  const digits = phone.replace(/\D/g, "");
+  const normalised = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  if (!/^[6-9]\d{9}$/.test(normalised)) {
+    throw new AuthError("Enter a valid 10-digit Indian mobile number");
+  }
+  await db
+    .collection(Collections.users)
+    .doc(uid)
+    .set(
+      { phone: normalised, phoneVerifiedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
 }

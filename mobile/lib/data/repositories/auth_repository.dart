@@ -36,4 +36,37 @@ abstract class AuthRepository {
   /// there is no session, or it has ended. The offline mock never has one:
   /// its "session" is just the role chosen on the device.
   Future<CurrentUser?> resumeSession();
+
+  // --- OTP (3 Nov 2026) ------------------------------------------------------
+  // Replace Firebase's email-verification link + reset-link with six-digit
+  // OTPs issued by our own backend. Sign-up: register → sendEmailOtp
+  // (purpose: signup) → user types code → verifyEmailOtp → sendPhoneOtp →
+  // verifyPhoneOtp → land in portal. Password reset: sendEmailOtp
+  // (purpose: password_reset) → resetPasswordWithOtp (one-shot).
+
+  /// Six-digit code to the user's email, delivered via Resend. Silently
+  /// accepts for a missing account on `password_reset` so the response
+  /// shape doesn't leak whether an address is registered.
+  Future<void> sendEmailOtp({required String email, required String purpose});
+
+  /// Marks the signed-up account's email as verified. Pass the exact email
+  /// that received the code and the six-digit code.
+  Future<void> verifyEmailOtp({required String email, required String code});
+
+  /// Six-digit SMS code via MSG91. Caller must be authenticated — the OTP
+  /// records which uid it was issued for and `verifyPhoneOtp` refuses a
+  /// code issued for a different account.
+  Future<void> sendPhoneOtp({required String phone});
+
+  /// Stores the number on the signed-in user and marks it verified.
+  Future<void> verifyPhoneOtp({required String phone, required String code});
+
+  /// One-shot reset: verifies the password-reset OTP and applies the new
+  /// password together. No interim token, so a leaked verify response
+  /// isn't replayable.
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  });
 }

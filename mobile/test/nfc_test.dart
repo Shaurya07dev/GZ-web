@@ -208,31 +208,50 @@ void main() {
     });
 
     test('a chip that is not an NTAG213 is refused before the server is even asked', () async {
-      final unformatted = FakeNtagDevice(
-        capabilityContainer: [0x00, 0x00, 0x00, 0x00],
+      // An NTAG215 or NTAG216 announces itself through the memory-size byte
+      // of its capability container. Writing the lock sequence to one of
+      // those would miss the dynamic lock bytes it has on different pages.
+      final ntag215 = FakeNtagDevice(
+        capabilityContainer: [0xE1, 0x10, 0x3E, 0x00],
       );
-      final rig = _rig(device: unformatted);
+      final rig = _rig(device: ntag215);
       final failure = await _failure(rig.flow.link('aw-1'));
 
       expect(failure.step, NfcFailureStep.chipType);
-      expect(
-        failure.message,
-        "This isn't an NTAG213 chip. Please use a GalleryZone-supplied tag.",
-      );
+      expect(failure.message, contains('NTAG215'));
       expect(rig.repository.calls.where((c) => c.startsWith('check')), isEmpty);
-      expect(unformatted.events, isNot(contains('writeUrl')));
+      expect(ntag215.events, isNot(contains('writeUrl')));
 
-      final other = FakeNtagDevice(mifareUltralight: false);
-      expect(
-        (await _failure(_rig(device: other).flow.link('aw-1'))).step,
-        NfcFailureStep.chipType,
-      );
+      // 4-byte UID is a MIFARE Ultralight C or a different Type 2 chip —
+      // definitely not an NTAG213.
       final shortId = FakeNtagDevice(uid: '04a1b2c3');
       expect(
         (await _failure(_rig(device: shortId).flow.link('aw-1'))).step,
         NfcFailureStep.chipType,
       );
     });
+
+    test(
+      'a factory-fresh NTAG213 is formatted on first contact (31 Oct 2026 — client reported write failures)',
+      () async {
+        // Brand-new chips ship with 00 00 00 00 on the CC page; the capability
+        // container only lands after the first NDEF write. The flow formats
+        // the chip itself so the first-write doesn't depend on OS-specific
+        // auto-formatting behaviour.
+        final blank = FakeNtagDevice(
+          capabilityContainer: [0x00, 0x00, 0x00, 0x00],
+        );
+        final rig = _rig(device: blank);
+        await rig.flow.link('aw-1');
+
+        // The write to the CC page is what makes the chip a valid NTAG213
+        // from here on. After it, the whole link flow completes normally.
+        final cc = blank.pages[3];
+        expect(cc[0], 0xE1);
+        expect(cc[2], 0x12);
+        expect(rig.repository.calls, contains('confirmLinked:$_uid'));
+      },
+    );
 
     test('a write that does not read back is not recorded', () async {
       final device = FakeNtagDevice()..corruptWrites = true;
