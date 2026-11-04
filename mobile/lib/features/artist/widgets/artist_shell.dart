@@ -32,11 +32,21 @@ class ArtistShell extends ConsumerWidget {
 
   final StatefulNavigationShell navigationShell;
 
+  /// The "More" tab is a menu, not a deep stack: tapping it from anywhere
+  /// should always land on the menu itself, never on whichever sub-page was
+  /// last pushed from it. Owner-reported 2 Nov 2026 — tapping More after
+  /// visiting COA & NFC was taking you straight back to COA & NFC because
+  /// go_router preserves each branch's navigator stack by default.
+  static const _moreIndex = 3;
+
   void _goBranch(int index) {
     HapticFeedback.selectionClick();
     navigationShell.goBranch(
       index,
-      initialLocation: index == navigationShell.currentIndex,
+      // Reset on double-tap (standard pattern) OR when tapping More from
+      // anywhere — a menu with a persistent deep stack is confusing.
+      initialLocation:
+          index == navigationShell.currentIndex || index == _moreIndex,
     );
   }
 
