@@ -9,7 +9,7 @@ import '../role_options.dart';
 import '../validators.dart';
 import '../widgets/auth_widgets.dart';
 import 'login_screen.dart';
-import 'verify_email_screen.dart';
+import 'onboarding_verify_screen.dart';
 
 /// Port of `features/auth/components/register-form.tsx`. One form for all
 /// three roles (not three forms): the aggregator-only company fields appear
@@ -38,7 +38,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   late Role _role = widget.initialRole ?? Role.artist;
   bool _acceptedTerms = false;
   bool _isSubmitting = false;
-  bool _isRegistered = false;
 
   bool get _isAggregator => _role == Role.aggregator;
 
@@ -71,7 +70,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final ack = await ref
+      await ref
           .read(authRepositoryProvider)
           .register(
             RegisterInput(
@@ -86,18 +85,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           );
       if (!mounted) return;
-      final granted = ack.role;
-      if (granted != null) {
-        // The real backend signs the new account straight in, so land in the
-        // portal — an artist or aggregator on their profile, where the
-        // details everything else depends on get filled in.
-        await ref.read(sessionProvider.notifier).signIn(granted);
-        ref.invalidate(accountProvider);
-        if (!mounted) return;
-        context.go(landingAfterRegister(granted));
-        return;
-      }
-      setState(() => _isRegistered = true);
+      // The real backend already signed the Firebase session in (so
+      // /phone-otp/send has an auth header). The Riverpod session role is
+      // written only after the user finishes OTP verification, so the
+      // router does not drop them in a portal before their account is
+      // fully set up.
+      final uri = Uri(
+        path: OnboardingVerifyScreen.path,
+        queryParameters: {
+          'email': _email.text.trim(),
+          'role': _role.id,
+        },
+      );
+      context.go(uri.toString());
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -119,48 +119,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final remote = ref.watch(remoteBackendProvider);
-    if (_isRegistered) {
-      return AuthScaffold(
-        child: AuthResultPanel(
-          icon: LucideIcons.mailCheck,
-          title: 'Check your email',
-          description: Text.rich(
-            TextSpan(
-              text: "We've sent a verification link to ",
-              children: [
-                TextSpan(
-                  text: _email.text.trim(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const TextSpan(text: '. Follow it to activate your account.'),
-              ],
-            ),
-          ),
-          children: [
-            TextButton(
-              onPressed: () => context.go(LoginScreen.path),
-              child: const Text('Back to sign in'),
-            ),
-            DevPanel(
-              child: Row(
-                children: [
-                  const Expanded(child: Text('Skip the real email')),
-                  TextButton(
-                    onPressed: () =>
-                        context.push('${VerifyEmailScreen.path}?token=mock'),
-                    child: const Text('Skip to verification'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return AuthScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

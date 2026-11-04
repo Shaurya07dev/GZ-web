@@ -42,7 +42,9 @@ export function GoogleAuthButton({
 }: {
   role?: Role;
   name?: string;
-  onSignedIn: (role: SessionRole) => void;
+  /** `email` is passed through so onboarding can preload the OTP screen's
+   *  URL with it after a first-time Google sign-up. */
+  onSignedIn: (role: SessionRole, email: string) => void;
   label?: string;
 }) {
   const [pending, setPending] = useState(false);
@@ -51,7 +53,7 @@ export function GoogleAuthButton({
     setPending(true);
     try {
       const ack = await authService.loginWithGoogle({ role, name });
-      if (ack) onSignedIn(ack.role);
+      if (ack) onSignedIn(ack.role, ack.email);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Google sign-in failed.",

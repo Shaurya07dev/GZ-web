@@ -114,6 +114,7 @@ String? safeNextPath(String? next) {
     '/forgot-password',
     '/reset-password',
     '/verify-email',
+    '/onboarding',
   ];
   final path = uri.path;
   if (authPaths.any((auth) => path == auth || path.startsWith('$auth/'))) {

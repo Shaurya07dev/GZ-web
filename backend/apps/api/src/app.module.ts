@@ -42,6 +42,9 @@ import { Emails } from "./mail/emails.ts";
 import { PushSender } from "./mail/push.ts";
 import { NotificationPreferencesController } from "./notification-preferences.controller.ts";
 import { CartController } from "./cart.controller.ts";
+import { OtpController } from "./auth/otp.controller.ts";
+import { AdminSeed } from "./admin-seed.ts";
+import { Msg91Sender } from "./sms/msg91.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
@@ -118,6 +121,7 @@ import { DbModule } from "./db.module.ts";
     AggregatorReservationIntentsController,
     NotificationPreferencesController,
     CartController,
+    OtpController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
@@ -129,8 +133,10 @@ import { DbModule } from "./db.module.ts";
     Mailer,
     Emails,
     PushSender,
+    Msg91Sender,
     Razorpay,
     CashfreeVerification,
+    AdminSeed,
   ],
 })
 export class AppModule implements NestModule {
