@@ -6,7 +6,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Receipt, RotateCw } from "lucide-react";
+import { CheckCircle2, Receipt, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +25,7 @@ import {
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
   useAdminSettlements,
+  useMarkSettlementPaidMutation,
   useRetrySettlementMutation,
 } from "@/hooks/useAdminCommerce";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
@@ -51,7 +52,9 @@ export function SettlementTable() {
             {row.artworkTitle}
           </p>
           <p className="truncate text-xs text-muted-foreground">
-            {row.artistName}
+            {row.kind === "artist_royalty"
+              ? `${row.artistName} · resale royalty`
+              : row.artistName}
           </p>
         </div>
       ),
@@ -150,7 +153,37 @@ function SettlementDetailDrawer({
   const queryClient = useQueryClient();
   const appendAudit = useAdminAuditStore((s) => s.append);
   const retryMutation = useRetrySettlementMutation();
+  const markPaidMutation = useMarkSettlementPaidMutation();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+
+  async function handleMarkPaid() {
+    if (!settlement) return;
+    try {
+      await markPaidMutation.mutateAsync(settlement.id);
+      queryClient.setQueryData<Settlement[]>(["admin-settlements"], (prev) =>
+        (prev ?? []).map((s) =>
+          s.id === settlement.id
+            ? { ...s, status: "processed", processedAt: new Date().toISOString() }
+            : s,
+        ),
+      );
+      appendAudit({
+        adminName,
+        action: "settlement.marked_paid",
+        entityType: "settlement",
+        entityId: settlement.id,
+        entityLabel: settlement.artworkTitle,
+      });
+      setMarkPaidOpen(false);
+      onClose();
+      toast.success("Settlement marked paid", {
+        description: `${formatINR(settlement.artistAmount)} recorded as paid to ${settlement.artistName}.`,
+      });
+    } catch {
+      toast.error("Could not mark the settlement paid. Try again.");
+    }
+  }
 
   async function handleRetry() {
     if (!settlement) return;
@@ -286,16 +319,54 @@ function SettlementDetailDrawer({
                 </section>
               ) : null}
 
+              {settlement.kind === "artist_royalty" && settlement.royaltyContext ? (
+                <section className="mt-4 rounded-md border border-border/60 bg-muted/20 p-3.5">
+                  <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Resale royalty
+                  </h3>
+                  <dl className="mt-2 space-y-1.5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-xs text-muted-foreground">Sold by</dt>
+                      <dd className="truncate text-sm text-foreground">
+                        {settlement.royaltyContext.sellerName}
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-xs text-muted-foreground">Sold to</dt>
+                      <dd className="truncate text-sm text-foreground">
+                        {settlement.royaltyContext.recipientName}
+                      </dd>
+                    </div>
+                    {settlement.royaltyContext.givingPrice != null ? (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-xs text-muted-foreground">Giving price</dt>
+                        <dd className="truncate text-sm tabular-nums text-foreground">
+                          {formatINR(settlement.royaltyContext.givingPrice)}
+                        </dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </section>
+              ) : null}
+
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4">
                 <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">Order</dt>
+                  <dt className="text-xs text-muted-foreground">
+                    {settlement.kind === "artist_royalty" ? "Transfer" : "Order"}
+                  </dt>
                   <dd className="truncate text-sm">
-                    <Link
-                      href={`/admin/orders/${settlement.orderId}`}
-                      className="text-gold-bright transition-colors hover:text-gold"
-                    >
-                      {settlement.orderId}
-                    </Link>
+                    {settlement.kind === "artist_royalty" && settlement.transferId ? (
+                      <span className="font-mono text-xs text-foreground">
+                        {settlement.transferId}
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/admin/orders/${settlement.orderId}`}
+                        className="text-gold-bright transition-colors hover:text-gold"
+                      >
+                        {settlement.orderId}
+                      </Link>
+                    )}
                   </dd>
                 </div>
                 <div className="min-w-0">
@@ -324,6 +395,15 @@ function SettlementDetailDrawer({
                   <RotateCw className="size-4" />
                   Retry settlement
                 </Button>
+              ) : settlement.status === "pending" ? (
+                <Button
+                  onClick={() => setMarkPaidOpen(true)}
+                  disabled={markPaidMutation.isPending}
+                  className="mt-4 w-full"
+                >
+                  <CheckCircle2 className="size-4" />
+                  Mark paid
+                </Button>
               ) : null}
             </>
           ) : null}
@@ -338,6 +418,20 @@ function SettlementDetailDrawer({
         confirmLabel="Retry"
         isPending={retryMutation.isPending}
         onConfirm={handleRetry}
+      />
+
+      <ConfirmActionDialog
+        open={markPaidOpen}
+        onOpenChange={setMarkPaidOpen}
+        title="Mark this settlement paid?"
+        description={
+          settlement?.kind === "artist_royalty"
+            ? `Record the ${settlement ? formatINR(settlement.artistAmount) : ""} royalty as paid to ${settlement?.artistName}. Do this after you transfer the money by bank or UPI — it does not move money itself.`
+            : "Record this settlement as paid. Do this after the manual transfer has gone out — it does not move money itself."
+        }
+        confirmLabel="Mark paid"
+        isPending={markPaidMutation.isPending}
+        onConfirm={handleMarkPaid}
       />
     </>
   );

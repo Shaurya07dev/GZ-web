@@ -419,6 +419,27 @@ export interface OwnershipEventDoc {
   displayStartsAt: FirebaseFirestore.Timestamp | null;
   displayEndsAt: FirebaseFirestore.Timestamp | null;
   displayEndedAt: FirebaseFirestore.Timestamp | null;
+  /**
+   * Resale royalty fields (ownership kind only). What the sender declared
+   * the piece is changing hands for, the split (2% artist, 3% platform),
+   * the GST on the fee (18%), and the total the sender pays through our
+   * gateway. Null on display transfers and on sale-triggered events (the
+   * marketplace order already carried its own fee). Older ownership
+   * events that pre-date this field are null too; the admin screen treats
+   * null the same as 0 for display purposes.
+   */
+  givingPricePaise?: number | null;
+  royaltyPaise?: number | null;
+  platformFeeNetPaise?: number | null;
+  feeGstPaise?: number | null;
+  feeTotalPaise?: number | null;
+  /** Razorpay order id for the sender's fee payment. */
+  feeProviderOrderId?: string | null;
+  /** Captured payment id when the webhook (or verify) marks it paid. */
+  feeProviderPaymentId?: string | null;
+  feePaidAt?: FirebaseFirestore.Timestamp | null;
+  /** The settlement doc that carries the 2% royalty owed to the artist. */
+  royaltySettlementId?: string | null;
 }
 
 export interface CategoryDoc {
@@ -631,6 +652,15 @@ export interface SettlementDoc {
   releaseAfter: FirebaseFirestore.Timestamp;
   createdAt: FirebaseFirestore.Timestamp;
   processedAt: FirebaseFirestore.Timestamp | null;
+  /**
+   * What the settlement pays for. Absent on docs written before this field
+   * existed — admin screens read absent as "sale" to stay backward
+   * compatible. "artist_royalty" is the 2% owed to the artist on a resale
+   * ownership transfer (see `markTransferFeePaid`); `transferId` names the
+   * ownership event it came from.
+   */
+  kind?: "sale" | "artist_royalty";
+  transferId?: string | null;
 }
 
 export interface WithdrawalRequestDoc {

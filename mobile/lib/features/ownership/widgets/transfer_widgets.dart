@@ -50,6 +50,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
+  final _price = TextEditingController();
   bool _busy = false;
   OwnershipTransfer? _created;
   TransferKind _kind = TransferKind.ownership;
@@ -61,13 +62,21 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     super.initState();
     final now = DateTime.now();
     _displayStartsAt = DateTime(now.year, now.month, now.day);
+    _price.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _name.dispose();
     _email.dispose();
+    _price.dispose();
     super.dispose();
+  }
+
+  int? _givingPricePaise() {
+    final value = double.tryParse(_price.text.trim());
+    if (value == null || value <= 0) return null;
+    return (value * 100).round();
   }
 
   Future<void> _submit() async {
@@ -90,6 +99,14 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
       );
       return;
     }
+    if (_kind == TransferKind.ownership && _givingPricePaise() == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter the price this piece is changing hands at'),
+        ),
+      );
+      return;
+    }
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -103,6 +120,8 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
             kind: _kind,
             displayStartsAt: _displayStartsAt?.toIso8601String(),
             displayEndsAt: _displayEndsAt?.toIso8601String(),
+            givingPricePaise:
+                _kind == TransferKind.ownership ? _givingPricePaise() : null,
           );
       ref.invalidate(artworkTransfersProvider(widget.artwork.id));
       if (!mounted) return;
@@ -311,6 +330,38 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                             : "New owner's email",
                       ),
                     ),
+                    if (_kind == TransferKind.ownership) ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _price,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (value) {
+                          final v = double.tryParse((value ?? '').trim());
+                          if (v == null || v <= 0) {
+                            return 'Enter the price this piece is changing hands at';
+                          }
+                          return null;
+                        },
+                        decoration: const InputDecoration(
+                          labelText: 'Changing hands at (₹)',
+                          hintText: '85000',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'The piece itself is settled off GalleryZone. '
+                        'GalleryZone charges a 5% fee on this price (with GST) — '
+                        '2% artist royalty, 3% platform.',
+                        style: theme.textTheme.labelSmall,
+                      ),
+                      if (_givingPricePaise() != null) ...[
+                        const SizedBox(height: 10),
+                        _FeePreview(givingPricePaise: _givingPricePaise()!),
+                      ],
+                    ],
                     const SizedBox(height: 18),
                     FilledButton(
                       onPressed: _busy ? null : _submit,
@@ -510,6 +561,71 @@ class _Line extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FeePreview extends StatelessWidget {
+  const _FeePreview({required this.givingPricePaise});
+
+  final int givingPricePaise;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final royalty = (givingPricePaise * 0.02).round();
+    final platform = (givingPricePaise * 0.03).round();
+    final gst = ((royalty + platform) * 0.18).round();
+    final total = royalty + platform + gst;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: theme.colorScheme.tertiary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        children: [
+          _FeeRow(label: 'Artist royalty (2%)', value: royalty),
+          _FeeRow(label: 'GalleryZone (3%)', value: platform),
+          _FeeRow(label: 'GST on the fee (18%)', value: gst),
+          const Divider(height: 14),
+          _FeeRow(label: 'You will pay to GalleryZone', value: total, bold: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeeRow extends StatelessWidget {
+  const _FeeRow({required this.label, required this.value, this.bold = false});
+
+  final String label;
+  final int value;
+  final bool bold;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ),
+        Text(
+          formatInr(value / 100),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ],
     );
   }
 }

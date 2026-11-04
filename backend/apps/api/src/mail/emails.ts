@@ -263,8 +263,43 @@ export class Emails {
 
   // ── Ownership and certificates ────────────────────────────────────────
 
-  async transferInvite(input: { transferId: string; toEmail: string; toName: string; fromName: string; title: string; kind: string }) {
-    await this.deliver(`transfer-invite/${input.transferId}`, input.toEmail, T.transferInvite({ transferId: input.transferId, toName: input.toName, fromName: input.fromName, title: input.title, kind: input.kind }, this.ctx));
+  async transferInvite(input: { transferId: string; toEmail: string; toName: string; fromName: string; title: string; kind: string; givingPricePaise: number | null }) {
+    await this.deliver(
+      `transfer-invite/${input.transferId}`,
+      input.toEmail,
+      T.transferInvite(
+        {
+          transferId: input.transferId,
+          toName: input.toName,
+          fromName: input.fromName,
+          title: input.title,
+          kind: input.kind,
+          givingPricePaise: input.givingPricePaise,
+        },
+        this.ctx,
+      ),
+    );
+  }
+
+  /** Tells the SENDER the recipient confirmed and the 5% fee is now due. */
+  async transferFeeDue(input: { transferId: string; title: string; toName: string; fromUserId: string | null; givingPricePaise: number; feeTotalPaise: number }) {
+    const sender = input.fromUserId ? await this.user(input.fromUserId) : null;
+    if (!sender) return;
+    await this.deliver(
+      `transfer-fee-due/${input.transferId}`,
+      sender.email,
+      T.transferFeeDue(
+        {
+          transferId: input.transferId,
+          title: input.title,
+          toName: input.toName,
+          givingPricePaise: input.givingPricePaise,
+          feeTotalPaise: input.feeTotalPaise,
+          role: sender.role,
+        },
+        this.ctx,
+      ),
+    );
   }
 
   /** Tells the person who made the offer. */

@@ -174,11 +174,20 @@ export const penaltyStateMachine = createStateMachine<PenaltyStatus>("ExternalSa
 });
 
 // --- Ownership / display transfer ---------------------------------------------
+//
+// `pending` is the invite state; the recipient opens the link and clicks
+// confirm, which moves it to `awaiting_payment` — a resale royalty event
+// needs the sender to pay 5% (2% artist royalty + 3% platform + 18% GST
+// on the fee) before title actually passes. Sale-triggered transfers and
+// `display` kinds skip the fee entirely: initiate writes them straight
+// into `accepted` (orderId set) or moves `pending -> accepted` on display
+// acceptance.
 
-export type TransferStatus = "pending" | "accepted" | "cancelled";
+export type TransferStatus = "pending" | "awaiting_payment" | "accepted" | "cancelled";
 
 export const transferStateMachine = createStateMachine<TransferStatus>("OwnershipTransfer", {
-  pending: ["accepted", "cancelled"],
+  pending: ["awaiting_payment", "accepted", "cancelled"],
+  awaiting_payment: ["accepted", "cancelled"],
   accepted: [],
   cancelled: [],
 });

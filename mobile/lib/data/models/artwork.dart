@@ -573,7 +573,17 @@ abstract class PhysicalCoaRequest with _$PhysicalCoaRequest {
 /// named buyer: the owner starts it, the buyer accepts through a link, and
 /// the artwork's custody plus this list update together. The same flow runs
 /// again on every resale, which is what keeps provenance continuous.
-enum TransferStatus { pending, accepted, cancelled }
+/// `awaitingPayment` is the resale-royalty mid-state: the recipient has
+/// confirmed on the invite, but the sender still owes GalleryZone the 5%
+/// platform fee (2% artist royalty + 3% platform + 18% GST on the fee).
+/// Ownership passes only once the fee is captured.
+enum TransferStatus {
+  pending,
+  @JsonValue('awaiting_payment')
+  awaitingPayment,
+  accepted,
+  cancelled,
+}
 
 /// Art travels to be shown, and the piece that goes on a gallery wall for a
 /// month has not changed hands. So a transfer is one of two things: a
@@ -612,6 +622,15 @@ abstract class OwnershipTransfer with _$OwnershipTransfer {
 
     /// Display transfers only: set when the owner pulls the piece back early.
     String? displayEndedAt,
+
+    /// Resale royalty fields — ownership kind with a priced hand-over. Null
+    /// for display transfers, sale-triggered events, and legacy transfers.
+    int? givingPricePaise,
+    int? royaltyPaise,
+    int? platformFeeNetPaise,
+    int? feeGstPaise,
+    int? feeTotalPaise,
+    String? feePaidAt,
   }) = _OwnershipTransfer;
 
   factory OwnershipTransfer.fromJson(Map<String, dynamic> json) =>

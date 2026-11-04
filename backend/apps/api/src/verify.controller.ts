@@ -16,10 +16,16 @@ import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 const iso = (t: FirebaseFirestore.Timestamp | null | undefined) => t?.toDate().toISOString() ?? null;
 
 export function toPublicEvent(e: OwnershipEvent): VerifyPassportDto["events"][number] {
+  // The public passport only distinguishes between accepted, cancelled and
+  // pending — `awaiting_payment` (the sender owes the 5% fee) is an
+  // internal state and is deliberately folded into pending for the
+  // outside world, so a scan never reveals that someone is mid-payment.
+  const publicStatus: "pending" | "accepted" | "cancelled" =
+    e.status === "awaiting_payment" ? "pending" : e.status;
   return {
     id: e.id,
     kind: e.kind,
-    status: e.status,
+    status: publicStatus,
     fromName: e.fromName,
     toName: e.toName,
     viaSale: e.orderId !== null,

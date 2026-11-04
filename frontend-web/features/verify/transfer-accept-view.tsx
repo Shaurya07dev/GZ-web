@@ -11,6 +11,14 @@ import { useArtwork } from "@/hooks/useArtwork";
 import { useVerifyPassport } from "@/hooks/useVerify";
 import { transferKind } from "@/types/artwork";
 
+function inr(paise: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(paise / 100);
+}
+
 // What the incoming owner sees when they open the transfer link. The route is
 // public (the recipient may not have an account yet), but the API only reveals
 // the transfer to a signed-in account, so signed-out visitors are asked to sign
@@ -86,7 +94,7 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
     );
   }
 
-  if (transfer.status === "accepted" || acceptMutation.isSuccess) {
+  if (transfer.status === "accepted" || (acceptMutation.isSuccess && acceptMutation.data?.status === "accepted")) {
     return (
       <Panel
         tone="ok"
@@ -113,7 +121,30 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
     );
   }
 
+  // Priced ownership transfer, mid-flight: the recipient confirmed and
+  // the sender still owes the 5% fee. The RECIPIENT sees "waiting on the
+  // sender"; the sender gets a different "pay the fee" view below.
+  if (transfer.status === "awaiting_payment") {
+    return (
+      <Panel
+        tone="ok"
+        title="Confirmed — waiting on the transfer fee"
+        body={`${transfer.fromName} is paying the GalleryZone transfer fee. Ownership of “${transfer.artworkTitle}” passes to you the moment that goes through — you'll see the passport update automatically.`}
+        action={
+          <Link
+            href={`/verify/${transfer.artworkId}`}
+            className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-medium text-foreground/85 transition-colors hover:border-gold/40 hover:text-gold-bright"
+          >
+            Watch the passport
+            <ArrowRight className="size-3.5" />
+          </Link>
+        }
+      />
+    );
+  }
+
   const isDisplay = transferKind(transfer) === "display";
+  const priced = !isDisplay && (transfer.givingPricePaise ?? 0) > 0;
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-6 py-16 lg:py-24">
@@ -144,6 +175,12 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
           <Row label="Artwork" value={transfer.artworkTitle} />
           <Row label="From" value={transfer.fromName} />
           <Row label="To" value={`${transfer.toName} · ${transfer.toEmail}`} />
+          {priced && (
+            <Row
+              label="Changing hands at"
+              value={inr(transfer.givingPricePaise!)}
+            />
+          )}
           {isDisplay && transfer.displayEndsAt && (
             <Row
               label="On display"
@@ -172,7 +209,9 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
       <p className="text-sm leading-relaxed text-muted-foreground">
         {isDisplay
           ? "Accepting records the piece as on display with you until that date. Ownership stays where it is, and the display ends on its own when the date passes."
-          : "Accepting records you as the artwork’s owner on its digital passport. The previous owners stay in its history — provenance is added to, never rewritten."}
+          : priced
+            ? `Settle the ${inr(transfer.givingPricePaise!)} with ${transfer.fromName} off GalleryZone (bank, UPI or in person). Confirming here tells GalleryZone to charge ${transfer.fromName} the 5% platform fee (2% artist royalty, 3% platform) — ownership passes the moment that fee is captured.`
+            : "Accepting records you as the artwork’s owner on its digital passport. The previous owners stay in its history — provenance is added to, never rewritten."}
       </p>
 
       {acceptMutation.isError && (
@@ -189,7 +228,11 @@ export function TransferAcceptView({ transferId }: { transferId: string }) {
         disabled={acceptMutation.isPending}
         className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
       >
-        {isDisplay ? "Accept display rights" : "Accept ownership"}
+        {isDisplay
+          ? "Accept display rights"
+          : priced
+            ? "Confirm — ownership passes on payment"
+            : "Accept ownership"}
       </button>
     </div>
   );

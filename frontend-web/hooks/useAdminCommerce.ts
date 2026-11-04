@@ -51,3 +51,15 @@ export function useRetrySettlementMutation() {
     },
   });
 }
+
+/** Admin confirms a settlement paid out of band — artist royalty rows. */
+export function useMarkSettlementPaidMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (settlementId: string) =>
+      adminService.markSettlementPaid(settlementId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-settlements"] });
+    },
+  });
+}

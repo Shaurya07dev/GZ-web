@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Copy, Check, Send } from "lucide-react";
 import {
   Dialog,
@@ -13,6 +13,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useInitiateTransferMutation } from "@/hooks/useOwnershipTransfers";
 import { TRANSFER_KIND_LABEL, type TransferKind } from "@/types/artwork";
+
+const ROYALTY_RATE = 0.02;
+const PLATFORM_RATE = 0.03;
+const GST_RATE = 0.18;
+
+function rupeesToPaise(rupees: string): number | null {
+  const n = Number(rupees);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100);
+}
+
+function inr(paise: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(paise / 100);
+}
 
 // Used by whoever currently owns the piece — the artist after a first sale,
 // or a collector reselling it later. Two kinds of hand-over go through it:
@@ -42,11 +60,25 @@ export function TransferRightsDialog({
   const [displayEndsAt, setDisplayEndsAt] = useState("");
   const [toName, setToName] = useState("");
   const [toEmail, setToEmail] = useState("");
+  const [givingPriceRupees, setGivingPriceRupees] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Live preview of the 2% / 3% / GST split so the owner sees what they
+  // will owe before they commit. Nothing is sent to the server from here.
+  const feePreview = useMemo(() => {
+    if (kind !== "ownership") return null;
+    const paise = rupeesToPaise(givingPriceRupees);
+    if (!paise) return null;
+    const royalty = Math.round(paise * ROYALTY_RATE);
+    const platform = Math.round(paise * PLATFORM_RATE);
+    const gst = Math.round((royalty + platform) * GST_RATE);
+    return { givingPricePaise: paise, royalty, platform, gst, total: royalty + platform + gst };
+  }, [kind, givingPriceRupees]);
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const givingPricePaise = kind === "ownership" ? rupeesToPaise(givingPriceRupees) ?? undefined : undefined;
     initiateMutation.mutate(
       {
         artworkId,
@@ -56,6 +88,7 @@ export function TransferRightsDialog({
         kind,
         displayStartsAt: kind === "display" ? displayStartsAt : null,
         displayEndsAt: kind === "display" ? displayEndsAt : null,
+        givingPricePaise,
       },
       {
         onSuccess: (transfer) => {
@@ -75,6 +108,7 @@ export function TransferRightsDialog({
       setDisplayEndsAt("");
       setToName("");
       setToEmail("");
+      setGivingPriceRupees("");
       setLink(null);
       setCopied(false);
       initiateMutation.reset();
@@ -255,9 +289,70 @@ export function TransferRightsDialog({
               <p className="text-xs text-muted-foreground">
                 {kind === "display"
                   ? "They receive a link and have to accept before the display is recorded. Ownership does not change."
-                  : "They receive a link and have to accept before the ownership record changes."}
+                  : "They must already have a GalleryZone account on this email. They get a link, confirm, and ownership passes once you pay the transfer fee."}
               </p>
             </div>
+
+            {kind === "ownership" && (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="givingPrice">What is it changing hands at?</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    ₹
+                  </span>
+                  <Input
+                    id="givingPrice"
+                    type="number"
+                    inputMode="decimal"
+                    min={1}
+                    step="1"
+                    value={givingPriceRupees}
+                    onChange={(e) => setGivingPriceRupees(e.target.value)}
+                    placeholder="85000"
+                    className="h-10 pl-7"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The money for the piece itself is settled between you and{" "}
+                  {toName || "the new owner"} off-platform. GalleryZone only
+                  charges a <strong>5% fee</strong> on this price, with GST on
+                  the fee — 2% goes to the original artist as royalty, 3% to
+                  GalleryZone.
+                </p>
+                {feePreview && (
+                  <div className="rounded-md border border-gold/25 bg-gold/5 p-3 text-xs">
+                    <div className="flex justify-between py-0.5">
+                      <span className="text-muted-foreground">
+                        Giving price
+                      </span>
+                      <span>{inr(feePreview.givingPricePaise)}</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span className="text-muted-foreground">
+                        Artist royalty (2%)
+                      </span>
+                      <span>{inr(feePreview.royalty)}</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span className="text-muted-foreground">
+                        GalleryZone (3%)
+                      </span>
+                      <span>{inr(feePreview.platform)}</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span className="text-muted-foreground">
+                        GST on the fee (18%)
+                      </span>
+                      <span>{inr(feePreview.gst)}</span>
+                    </div>
+                    <div className="mt-1 border-t border-border/50 pt-1 flex justify-between font-semibold text-foreground">
+                      <span>You pay to GalleryZone</span>
+                      <span>{inr(feePreview.total)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {initiateMutation.isError && (
               <p className="text-sm text-destructive">
@@ -272,6 +367,7 @@ export function TransferRightsDialog({
               disabled={
                 !toName.trim() ||
                 !toEmail.trim() ||
+                (kind === "ownership" && !feePreview) ||
                 (kind === "display" &&
                   (!displayStartsAt ||
                     !displayEndsAt ||

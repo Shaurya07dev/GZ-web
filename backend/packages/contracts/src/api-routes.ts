@@ -45,6 +45,8 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/transfers/:id/accept", authRole: "customer", summary: "Invited recipient accepts", replaces: "ownershipService.accept" },
   { method: "POST", path: "/v1/transfers/:id/cancel", authRole: "customer", summary: "Either party cancels while pending", replaces: "ownershipService.cancel" },
   { method: "POST", path: "/v1/transfers/:id/end-display", authRole: "customer", summary: "Owner ends a display period early", replaces: "ownershipService.endDisplay" },
+  { method: "POST", path: "/v1/transfers/:id/fee-session", authRole: "customer", summary: "Sender opens the Razorpay checkout for the 5% resale transfer fee (2% royalty + 3% platform + 18% GST on the fee)", replaces: "ownershipService.startFeePayment" },
+  { method: "POST", path: "/v1/transfers/:id/fee-verify", authRole: "customer", summary: "Sender returns from Razorpay — verifies the fee was captured and finalises the transfer", replaces: "ownershipService.verifyFeePayment" },
   { method: "GET", path: "/v1/artist/mou", authRole: "artist", summary: "Latest signed artist MOU record + the current version's blanks filled from my profile", replaces: "artistDashboardService.getProfile().mouAcceptance" },
   { method: "POST", path: "/v1/artist/mou/accept", authRole: "artist", summary: "Sign the current artist MOU (server-timed; snapshots the filled blanks)", replaces: "artistDashboardService.acceptMou" },
   { method: "GET", path: "/v1/aggregator/mou", authRole: "aggregator", summary: "Latest signed aggregator MOU record + the current version's blanks filled from my profile", replaces: "aggregatorProfileService.getProfile().mouAcceptance" },
@@ -115,6 +117,7 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/withdrawals/:id/reject", authRole: "admin", summary: "Reject a payout, reason required", replaces: "adminService.rejectWithdrawal" },
   { method: "GET", path: "/v1/admin/settlements", authRole: "admin", summary: "Settlement ledger view", replaces: "adminService.listSettlements" },
   { method: "POST", path: "/v1/admin/settlements/:id/retry", authRole: "admin", summary: "Retry a failed settlement", replaces: "adminService.retrySettlement" },
+  { method: "POST", path: "/v1/admin/settlements/:id/mark-paid", authRole: "admin", summary: "Mark a settlement paid out of band (artist royalty on a resale, or an ops fix)", replaces: "adminService.markSettlementPaid" },
 
   // --- Trust / KYC / Insurance ---------------------------------------------------
   { method: "POST", path: "/v1/admin/moderation/kyc/:userId/approve", authRole: "admin", summary: "Approve KYC", replaces: "adminService.approveKyc" },

@@ -465,18 +465,52 @@ export function abandonedCart(i: { title: string; extraCount: number }, c: Ctx):
 
 // ── Ownership transfers ─────────────────────────────────────────────────
 
-export function transferInvite(i: { transferId: string; toName: string; fromName: string; title: string; kind: string }, c: Ctx): Content {
+export function transferInvite(
+  i: { transferId: string; toName: string; fromName: string; title: string; kind: string; givingPricePaise: number | null },
+  c: Ctx,
+): Content {
   const ownership = i.kind === "ownership";
+  const priced = ownership && (i.givingPricePaise ?? 0) > 0;
   const what = ownership ? "transfer ownership of" : "lend for display";
+  const priceLine = priced
+    ? rich`${strong(i.fromName)} is transferring it to you for ${strong(inr(i.givingPricePaise!))}. If you confirm, ${i.fromName} pays the GalleryZone platform fee (5% of that price, with GST) and ownership passes to you.`
+    : null;
   return {
     subject: `${i.fromName} wants to ${what} ${q(short(i.title))}`,
     category: "transactional",
     layout: {
       audience: "anyone",
       heading: `A ${ownership ? "transfer" : "display loan"} is waiting for you`,
-      paragraphs: [rich`${strong(i.fromName)} wants to ${what} ${q(i.title)} to you (${i.toName}).`, "Sign in with this email address to accept or decline. Once accepted, the artwork's provenance passport records the change."],
+      paragraphs: [
+        rich`${strong(i.fromName)} wants to ${what} ${q(i.title)} to you (${i.toName}).`,
+        ...(priceLine ? [priceLine] : []),
+        "Sign in with this email address to accept or decline. Once accepted, the artwork's provenance passport records the change.",
+      ],
       cta: { label: "Review the transfer", url: `${c.site}/transfer/${i.transferId}` },
       reason: `You're getting this because ${i.fromName} entered this email address on GalleryZone.`,
+    },
+  };
+}
+
+/**
+ * The recipient confirmed; the SENDER now owes the 5% fee before title
+ * passes. The email names what they pay and sends them to the pay screen.
+ */
+export function transferFeeDue(
+  i: { transferId: string; title: string; toName: string; givingPricePaise: number; feeTotalPaise: number; role: string },
+  c: Ctx,
+): Content {
+  return {
+    subject: `${i.toName} accepted ${q(short(i.title))} — pay the transfer fee to finish`,
+    category: "transactional",
+    layout: {
+      audience: audienceOf(i.role),
+      heading: "One step left — pay the transfer fee",
+      paragraphs: [
+        rich`${strong(i.toName)} confirmed the transfer of ${q(i.title)} at ${strong(inr(i.givingPricePaise))}.`,
+        rich`Ownership passes once you pay the GalleryZone platform fee of ${strong(inr(i.feeTotalPaise))} (5% of the giving price plus 18% GST — 2% goes to the artist as royalty, 3% to GalleryZone).`,
+      ],
+      cta: { label: "Pay the transfer fee", url: `${c.site}/account/transfers/${i.transferId}/pay` },
     },
   };
 }
@@ -966,7 +1000,8 @@ export const catalogue: CatalogueEntry[] = [
   { id: "order-delivered-buyer", who: "Collector", when: "It is marked delivered", make: (c) => orderStatusBuyer({ orderId: "ord_8f3k2", title: T, status: "delivered" }, c) },
   { id: "order-cancelled-buyer", who: "Collector", when: "The order is cancelled", make: (c) => orderStatusBuyer({ orderId: "ord_8f3k2", title: T, status: "cancelled" }, c) },
   { id: "payment-failed", who: "Collector", when: "The gateway declines their payment", make: (c) => paymentFailed({ orderId: "ord_8f3k2", title: T, totalPaise: 1_850_000 }, c) },
-  { id: "transfer-invite", who: "Collector", when: "Someone invites them to take or borrow a piece", make: (c) => transferInvite({ transferId: "tr_91", toName: "Priya Sharma", fromName: "Arjun Mehta", title: T, kind: "ownership" }, c) },
+  { id: "transfer-invite", who: "Collector", when: "Someone invites them to take or borrow a piece", make: (c) => transferInvite({ transferId: "tr_91", toName: "Priya Sharma", fromName: "Arjun Mehta", title: T, kind: "ownership", givingPricePaise: 85_000_00 }, c) },
+  { id: "transfer-fee-due", who: "Collector", when: "The recipient confirmed; the sender owes the 5% transfer fee", make: (c) => transferFeeDue({ transferId: "tr_91", title: T, toName: "Priya Sharma", givingPricePaise: 85_000_00, feeTotalPaise: 5_017_00, role: "customer" }, c) },
   { id: "transfer-accepted", who: "Collector", when: "The person they invited accepts", make: (c) => transferAccepted({ artworkId: "art_44", title: T, toName: "Priya Sharma", kind: "ownership", role: "customer" }, c) },
   { id: "transfer-cancelled", who: "Collector", when: "The sender cancels an invite", make: () => transferCancelled({ title: T, fromName: "Arjun Mehta", kind: "ownership" }) },
   { id: "transfer-declined", who: "Collector", when: "The person they invited says no", make: (c) => transferDeclined({ artworkId: "art_44", title: T, toName: "Priya Sharma", kind: "ownership", role: "customer" }, c) },

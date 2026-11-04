@@ -288,8 +288,11 @@ TransferKind transferKindFromApi(Object? code) =>
 TransferStatus transferStatusFromApi(Object? code) => switch (code) {
   'accepted' => TransferStatus.accepted,
   'cancelled' => TransferStatus.cancelled,
+  'awaiting_payment' => TransferStatus.awaitingPayment,
   _ => TransferStatus.pending,
 };
+
+int? _intOrNull(Object? raw) => raw is num ? raw.toInt() : null;
 
 /// A transfer as one of its two parties sees it (`GET /v1/transfers/:id`).
 OwnershipTransfer transferFromApi(Map<String, dynamic> json) =>
@@ -308,6 +311,12 @@ OwnershipTransfer transferFromApi(Map<String, dynamic> json) =>
       displayStartsAt: isoOrNull(json['displayStartsAt']),
       displayEndsAt: isoOrNull(json['displayEndsAt']),
       displayEndedAt: isoOrNull(json['displayEndedAt']),
+      givingPricePaise: _intOrNull(json['givingPricePaise']),
+      royaltyPaise: _intOrNull(json['royaltyPaise']),
+      platformFeeNetPaise: _intOrNull(json['platformFeeNetPaise']),
+      feeGstPaise: _intOrNull(json['feeGstPaise']),
+      feeTotalPaise: _intOrNull(json['feeTotalPaise']),
+      feePaidAt: isoOrNull(json['feePaidAt']),
     );
 
 PassportEvent passportEventFromApi(Map<String, dynamic> json) => PassportEvent(

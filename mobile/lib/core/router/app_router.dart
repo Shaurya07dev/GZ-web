@@ -66,6 +66,7 @@ import '../../features/marketplace/screens/artwork_detail_screen.dart';
 import '../../features/marketplace/screens/marketplace_screen.dart';
 import '../../features/marketplace/screens/passport_screen.dart';
 import '../../features/ownership/screens/transfer_accept_screen.dart';
+import '../../features/ownership/screens/transfer_pay_fee_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../theme/app_theme.dart';
 
@@ -285,6 +286,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: TransferAcceptScreen.path,
         builder: (context, state) => TransferAcceptScreen(
+          transferId: state.pathParameters['transferId']!,
+        ),
+      ),
+      GoRoute(
+        path: TransferPayFeeScreen.path,
+        builder: (context, state) => TransferPayFeeScreen(
           transferId: state.pathParameters['transferId']!,
         ),
       ),
