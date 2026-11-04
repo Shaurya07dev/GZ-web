@@ -12,6 +12,7 @@ import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../providers/artist_providers.dart';
 import '../widgets/artist_widgets.dart';
+import 'artist_kyc_screen.dart';
 
 /// Each tab is a bucket of statuses, not one status: a piece that is
 /// "reserved" by an aggregator belongs under "With aggregator", and one that is
@@ -458,7 +459,25 @@ Future<void> _sendForReview(
       ),
     );
   } catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+    final message = authErrorMessage(error);
+    // KYC gate: the toast alone leaves the artist wondering where to go.
+    // Give them a direct link into the profile/KYC screen.
+    if (message.toLowerCase().contains('kyc')) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          action: SnackBarAction(
+            label: 'Complete KYC',
+            onPressed: () {
+              if (context.mounted) context.push(ArtistKycScreen.path);
+            },
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

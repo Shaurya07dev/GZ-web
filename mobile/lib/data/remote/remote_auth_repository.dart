@@ -64,7 +64,9 @@ class RemoteAuthRepository implements AuthRepository {
       await tokens.clear();
       if (error.isUnauthorized) {
         throw Exception(
-          'No GalleryZone account exists for this sign-in yet. Create one first.',
+          'Either your password is wrong, or no GalleryZone account exists for '
+          'this email. Check the password, or tap "Create account" below to '
+          'register.',
         );
       }
       rethrow;

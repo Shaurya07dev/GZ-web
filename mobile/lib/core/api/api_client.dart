@@ -188,14 +188,28 @@ class ApiClient {
 ApiError _toApiError(DioException error) {
   final response = error.response;
   if (response == null) {
+    // Distinguish "actually offline" from "server slow": the DioException
+    // type tells us which, and each wants a different next step.
+    final type = error.type;
+    if (type == DioExceptionType.connectionTimeout ||
+        type == DioExceptionType.receiveTimeout ||
+        type == DioExceptionType.sendTimeout) {
+      return const ApiError(
+        status: 0,
+        code: 'timeout',
+        message: 'GalleryZone is slow to respond right now. Try again in a moment, or switch to a stronger network.',
+      );
+    }
     return const ApiError(
       status: 0,
       code: 'network_error',
-      message: "Can't reach GalleryZone. Check your connection and try again.",
+      message: 'Looks like you are offline. Check your Wi-Fi or mobile data and try again.',
     );
   }
   final status = response.statusCode ?? 0;
   final data = response.data;
+  // The backend speaks RFC 7807 problem+json: `{title, detail, code}`. That
+  // copy is already written to be shown to the user, so prefer it verbatim.
   if (data is Map && data['code'] is String && data['title'] is String) {
     final detail = data['detail'];
     final title = data['title'] as String;
@@ -206,16 +220,44 @@ ApiError _toApiError(DioException error) {
       message: detail is String && detail.isNotEmpty ? detail : title,
     );
   }
+  if (status == 401) {
+    return const ApiError(
+      status: 401,
+      code: 'unauthorized',
+      message: 'Your session has ended. Sign in again to continue.',
+    );
+  }
+  if (status == 403) {
+    return const ApiError(
+      status: 403,
+      code: 'forbidden',
+      message: "You don't have permission for this. If this looks wrong, contact support@galleryzone.art.",
+    );
+  }
+  if (status == 404) {
+    return const ApiError(
+      status: 404,
+      code: 'not_found',
+      message: "That is no longer available. It may have been removed. Go back and try a different one.",
+    );
+  }
   if (status == 429) {
     return const ApiError(
       status: 429,
       code: 'rate_limited',
-      message: 'Too many requests — wait a moment and try again.',
+      message: 'You are going too fast. Wait a few seconds and try again.',
+    );
+  }
+  if (status >= 500) {
+    return ApiError(
+      status: status,
+      code: 'server_error',
+      message: 'GalleryZone is having a problem on our end. Try again in a minute. If this keeps happening, email support@galleryzone.art and include what you were doing.',
     );
   }
   return ApiError(
     status: status,
     code: 'http_$status',
-    message: 'Something went wrong ($status). Please try again.',
+    message: 'That didn\'t work (error $status). Try again — if it keeps happening, email support@galleryzone.art.',
   );
 }

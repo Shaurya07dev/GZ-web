@@ -333,6 +333,15 @@ class _Session {
 
 String _textOf(Object error) {
   final text = error.toString();
+  // Raw platform errors from the NFC plugin are not useful to the person
+  // holding the phone — translate "PlatformException(500, Communication
+  // error, null, null)" into something they can act on.
+  if (text.contains('PlatformException') ||
+      text.contains('Communication error') ||
+      text.toLowerCase().contains('tag connection lost') ||
+      text.toLowerCase().contains('transceive')) {
+    return 'The chip lost contact with the phone mid-operation. Hold it flat and steady against the back of the phone and try again.';
+  }
   return text.startsWith('Exception: ')
       ? text.substring('Exception: '.length)
       : text;

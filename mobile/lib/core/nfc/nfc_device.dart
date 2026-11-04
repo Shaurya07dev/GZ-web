@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:ndef/ndef.dart' as ndef;
 
@@ -68,8 +70,21 @@ class FlutterNfcKitDevice implements NfcDevice {
   }
 
   @override
-  Future<Uint8List> transceive(Uint8List command) =>
-      FlutterNfcKit.transceive(command);
+  Future<Uint8List> transceive(Uint8List command) async {
+    // A PlatformException from flutter_nfc_kit is almost always a momentary
+    // RF drop (the chip shifted, phone's NFC chipset timed out). The lock
+    // sequence does 7 commands back-to-back on a hand-held chip, so a single
+    // retry after a short settle is the difference between "worked" and
+    // "The tag wasn't locked · PlatformException(500 …)". One retry only —
+    // a chip that is truly gone will fail the second time just as fast.
+    try {
+      return await FlutterNfcKit.transceive(command);
+    } on PlatformException catch (error) {
+      if (error.code == '406' || error.code == 'input_output') rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 90));
+      return await FlutterNfcKit.transceive(command);
+    }
+  }
 
   @override
   Future<void> writeUrl(String url) =>

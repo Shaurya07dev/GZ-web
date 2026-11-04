@@ -104,10 +104,13 @@ export class OtpController {
   ) {}
 
   /**
-   * Issues an email OTP. For sign-up: refuses if the email already has an
-   * account (nothing to verify). For password-reset: refuses silently with
-   * 202 if there's no account (same shape as a successful send) so the
-   * response never reveals whether an address is registered.
+   * Issues an email OTP. For sign-up: refuses only if the email already
+   * has a VERIFIED account (the registration flow creates the Firebase
+   * user unverified, then calls this endpoint — so "account exists but
+   * not verified yet" is exactly the state we want to send OTPs to).
+   * For password-reset: refuses silently with 202 if there's no account
+   * (same shape as a successful send) so the response never reveals
+   * whether an address is registered.
    */
   @Public()
   @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 20, ttl: 3_600_000 } })
@@ -115,7 +118,7 @@ export class OtpController {
   @HttpCode(202)
   async sendEmailOtp(@Body(new ZodValidationPipe(emailOtpSendSchema)) body: EmailOtpSendBody) {
     const record = await userRecordByEmail(body.email);
-    if (body.purpose === "signup" && record) {
+    if (body.purpose === "signup" && record?.emailVerified) {
       throw new ConflictException(problem(409, "An account with this email already exists", "email_taken"));
     }
     if (body.purpose === "password_reset" && !record) {

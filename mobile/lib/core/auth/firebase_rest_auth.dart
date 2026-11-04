@@ -165,16 +165,26 @@ class FirebaseAuthException implements Exception {
 }
 
 const _friendly = {
-  'INVALID_LOGIN_CREDENTIALS': 'Invalid email or password',
-  'INVALID_PASSWORD': 'Invalid email or password',
-  'EMAIL_NOT_FOUND': 'Invalid email or password',
-  'INVALID_EMAIL': 'Enter a valid email address',
-  'USER_DISABLED': 'This account has been disabled.',
+  'INVALID_LOGIN_CREDENTIALS':
+      'Your email or password is wrong. Check both and try again, or tap "Forgot password?" to reset it.',
+  'INVALID_PASSWORD':
+      'That password is wrong. Try again, or tap "Forgot password?" to reset it.',
+  'EMAIL_NOT_FOUND':
+      'No GalleryZone account uses this email. Check for typos, or tap "Create account" to sign up.',
+  'INVALID_EMAIL':
+      'That is not a valid email address. Check for typos (e.g. missing @ or .com).',
+  'USER_DISABLED':
+      'This account has been suspended. Email support@galleryzone.art to appeal, mentioning this email.',
   'TOO_MANY_ATTEMPTS_TRY_LATER':
-      'Too many attempts. Please wait a moment and try again.',
-  'INVALID_OOB_CODE': 'This link is invalid or has expired. Request a new one.',
-  'EXPIRED_OOB_CODE': 'This link is invalid or has expired. Request a new one.',
-  'WEAK_PASSWORD': 'That password is too weak. Choose a stronger one.',
+      'Too many failed attempts. Wait 15 minutes and try again — or reset your password to unlock sooner.',
+  'INVALID_OOB_CODE':
+      'This link is invalid or has already been used. Request a new one from "Forgot password?".',
+  'EXPIRED_OOB_CODE':
+      'This link has expired. Request a new one from "Forgot password?".',
+  'WEAK_PASSWORD':
+      'That password is too weak. Use at least 8 characters, with a mix of letters and numbers.',
+  'EMAIL_EXISTS':
+      'An account with this email already exists. Tap "Sign in" instead, or use "Forgot password?" if you cannot remember it.',
 };
 
 FirebaseAuthException _toException(DioException error) {
@@ -185,17 +195,20 @@ FirebaseAuthException _toException(DioException error) {
     final code = raw.split(' : ').first.trim();
     return FirebaseAuthException(
       code,
-      _friendly[code] ?? 'Something went wrong. Please try again.',
+      _friendly[code] ??
+          'Sign-in failed (Firebase: $code). Try again in a moment. '
+              'If it keeps happening, email support@galleryzone.art.',
     );
   }
   if (error.response == null) {
     return const FirebaseAuthException(
       'network_error',
-      'Network error. Check your connection and try again.',
+      'Looks like you are offline. Check your Wi-Fi or mobile data and try again.',
     );
   }
   return const FirebaseAuthException(
     'UNKNOWN',
-    'Something went wrong. Please try again.',
+    'Sign-in failed for an unknown reason. Try again in a moment, and email '
+        'support@galleryzone.art if it keeps happening.',
   );
 }
