@@ -234,7 +234,10 @@ export function DisplayCardView({ input }: { input: DisplayCardInput }) {
     // H: the GZ seal sits over the middle of the code, and the code has to scan through it.
     artworkQrDataUrl(input.artworkId, 800, "H")
       .then((d) => live && setQr(d))
-      .catch(() => {});
+      .catch((error) => {
+        // Don't swallow — a display card with no QR is unverifiable.
+        console.error("Display card QR generation failed", { artworkId: input.artworkId, error });
+      });
     return () => {
       live = false;
     };

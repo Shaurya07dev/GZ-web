@@ -18,7 +18,14 @@ import { readSessionRole, subscribeToSession } from "@/lib/session";
 // use for it, and showing a dead button to a signed-out visitor is worse than
 // showing nothing.
 
+// Hidden entirely until the backend's connection endpoints are wired —
+// sendConnectionRequest throws "coming soon" server-side. Showing the
+// button means the client taps it and sees an error. Flip to true once
+// the API supports it.
+const CONNECTIONS_ENABLED = false;
+
 export function ArtistConnectButton({ artistId }: { artistId: string }) {
+  if (!CONNECTIONS_ENABLED) return null;
   const viewerUid = useCurrentUser().data?.uid ?? "";
   const sessionRole = useSyncExternalStore(
     subscribeToSession,
