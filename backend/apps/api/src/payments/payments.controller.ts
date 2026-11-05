@@ -233,11 +233,23 @@ export class PaymentsController {
     if (guard) throw guard;
     if (gateway.status !== "paid") return { status: gateway.status };
 
+    // Belt-and-suspenders (client-reported 5 Nov 2026: "closed Razorpay
+    // without paying — order shows bought"). `gateway.status === "paid"`
+    // means Razorpay says the order reached its full amount, but we only
+    // settle when we can also POINT TO a captured payment entity. A paid
+    // order with no captured payment is a Razorpay reconciliation glitch,
+    // not a payment we should act on.
     const payment = (await this.razorpay.fetchPayments(gatewayOrderId)).find((p) => p.status === "captured");
+    if (!payment) {
+      console.error(
+        JSON.stringify({ event: "payments.verify.no_captured_payment", gatewayOrderId, orderId: id, gatewayStatus: gateway.status }),
+      );
+      return { status: gateway.status };
+    }
     try {
       const result = await this.settle(id, {
-        method: payment?.method ? `razorpay_${payment.method}` : "razorpay",
-        providerPaymentId: payment?.id ?? body?.razorpayPaymentId ?? null,
+        method: payment.method ? `razorpay_${payment.method}` : "razorpay",
+        providerPaymentId: payment.id ?? body?.razorpayPaymentId ?? null,
       });
       return { status: "paid" as const, transactionId: result.transactionId };
     } catch (error) {

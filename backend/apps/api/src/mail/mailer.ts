@@ -58,6 +58,26 @@ export class Mailer {
     return this.client !== null;
   }
 
+  /**
+   * True once the Mailer can actually deliver to a stranger — key set AND
+   * EMAIL_FROM not the Resend sandbox sender (which only reaches the
+   * Resend account owner). OTP endpoints check this before issuing a
+   * code; a false here means a signup silently stalls because the user
+   * never gets their code.
+   */
+  get canDeliverExternally(): boolean {
+    return this.client !== null && !SANDBOX_SENDER.test(this.from);
+  }
+
+  /** The reason canDeliverExternally is false — used in error responses. */
+  get setupHint(): string | null {
+    if (!this.client) return "RESEND_API_KEY is not set on the backend.";
+    if (SANDBOX_SENDER.test(this.from)) {
+      return "EMAIL_FROM is still the Resend sandbox sender (onboarding@resend.dev). Set it to an address on a domain you've verified in Resend (e.g. 'GalleryZone <hello@galleryzone.art>').";
+    }
+    return null;
+  }
+
   /** Says at boot, in the logs, what would otherwise only show up as customers not getting email. */
   private checkSetup(): void {
     const production = process.env.NODE_ENV === "production" || Boolean(process.env.RAILWAY_ENVIRONMENT);

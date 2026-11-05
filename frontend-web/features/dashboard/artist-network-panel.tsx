@@ -30,7 +30,14 @@ function errorMessage(error: unknown): string | null {
   return error instanceof Error ? error.message : null;
 }
 
+// The entire panel is hidden while artist-to-artist connections are not
+// wired on the server (sendConnectionRequest + respondToConnection both
+// throw "coming soon"). Showing accept/ignore buttons that silently fail
+// is worse than hiding them — the client flagged this 5 Nov 2026.
+const CONNECTIONS_ENABLED = false;
+
 export function ArtistNetworkPanel() {
+  if (!CONNECTIONS_ENABLED) return null;
   const artistId = useCurrentUser().data?.uid ?? "";
   const { data: connections } = useArtistConnections(artistId);
   const rows = connections ?? [];

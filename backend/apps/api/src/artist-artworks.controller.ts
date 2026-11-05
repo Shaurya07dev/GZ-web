@@ -53,7 +53,17 @@ const physicalSchema = z
 const artworkFields = {
   title: z.string().trim().min(1).max(160),
   description: z.string().trim().max(5000),
-  category: z.string().trim().min(1).max(80),
+  // Paintings-only enforcement (owner directive, repeated 5 Nov 2026).
+  // The frontend dropdown is already restricted to "painting"; this
+  // server-side enum guard ensures a stale client or a direct API call
+  // cannot sneak in sculpture/digital/printmaking etc.
+  category: z
+    .string()
+    .trim()
+    .transform((s) => s.toLowerCase())
+    .refine((s) => s === "painting", {
+      message: "GalleryZone currently only accepts paintings. Choose 'Painting' as the category.",
+    }),
   medium: z.string().trim().min(1).max(80),
   artistPricePaise: z.number().int().positive().max(1_000_000_000),
   listingType: z.enum(["marketplace_only", "aggregator_only", "marketplace_and_aggregator"]),

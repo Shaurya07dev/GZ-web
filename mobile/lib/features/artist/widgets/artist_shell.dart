@@ -60,11 +60,22 @@ class ArtistShell extends ConsumerWidget {
 
     if (size.isCompact) {
       return Scaffold(
+        extendBody: true,
         body: body,
         bottomNavigationBar: ShellNavigationBar(
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: _goBranch,
           destinations: artistDestinations,
+          // Uploading a new piece is the artist's primary action. One-tap
+          // from anywhere — no need to route through My Art → New.
+          floatingAction: GlassNavAction(
+            icon: LucideIcons.plus,
+            tooltip: 'Upload a new artwork',
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              context.push('/dashboard/artworks/upload');
+            },
+          ),
         ),
       );
     }

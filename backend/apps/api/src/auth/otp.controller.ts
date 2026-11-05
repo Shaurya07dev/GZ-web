@@ -117,6 +117,21 @@ export class OtpController {
   @Post("email-otp/send")
   @HttpCode(202)
   async sendEmailOtp(@Body(new ZodValidationPipe(emailOtpSendSchema)) body: EmailOtpSendBody) {
+    // If the Mailer cannot reach a stranger (RESEND_API_KEY missing OR
+    // EMAIL_FROM still pointing at Resend's sandbox) we would silently
+    // issue codes that never arrive. Fail loud with an actionable
+    // message so the operator sees the config issue instead of the
+    // customer sitting on a "verify your email" screen forever.
+    const hint = this.emails.setupHint;
+    if (hint) {
+      throw new ServiceUnavailableException(
+        problem(
+          503,
+          `Email service is not fully configured on the backend: ${hint}`,
+          "email_not_configured",
+        ),
+      );
+    }
     const record = await userRecordByEmail(body.email);
     if (body.purpose === "signup" && record?.emailVerified) {
       throw new ConflictException(problem(409, "An account with this email already exists", "email_taken"));

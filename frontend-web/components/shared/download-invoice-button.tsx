@@ -28,20 +28,58 @@ export function DownloadInvoiceButton({
     setLoading(true);
     try {
       const token = await currentIdToken();
+      if (!token) {
+        toast.error(
+          "Please sign in again to download your invoice. Your session may have expired.",
+        );
+        return;
+      }
       const res = await fetch(
         `${API_URL}/v1/orders/${encodeURIComponent(orderId)}/invoice.pdf`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as
-          | { title?: string }
+          | { title?: string; code?: string }
           | null;
-        throw new Error(body?.title ?? `Download failed (${res.status})`);
+        const title = body?.title;
+        const code = body?.code;
+        // Common server cases, named clearly.
+        if (res.status === 401) {
+          throw new Error(
+            "Your session has ended. Sign in again, then download the invoice.",
+          );
+        }
+        if (res.status === 403 || code === "invoice_not_available") {
+          throw new Error(
+            title ??
+              "Invoice is not available yet — payments are still being confirmed. Try again in a minute.",
+          );
+        }
+        if (res.status === 404) {
+          throw new Error(
+            "This order could not be found. Refresh the page and try again.",
+          );
+        }
+        if (res.status >= 500) {
+          throw new Error(
+            "GalleryZone could not generate the invoice right now. Try again in a minute, or email support@galleryzone.art.",
+          );
+        }
+        throw new Error(title ?? `Download failed (${res.status})`);
       }
       const filename =
         parseFilename(res.headers.get("Content-Disposition")) ??
         `invoice-${orderId}.pdf`;
       const blob = await res.blob();
+      // Sanity check the response is really a PDF — a misconfigured backend
+      // could send an HTML error page with a 200, which would download as a
+      // "PDF" that no reader can open.
+      if (blob.type && !blob.type.includes("pdf")) {
+        throw new Error(
+          "The invoice file came back malformed. Try again — if it keeps happening, email support@galleryzone.art.",
+        );
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -49,7 +87,8 @@ export function DownloadInvoiceButton({
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      // Give the browser a moment to start the download before freeing the blob.
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Download failed");
     } finally {

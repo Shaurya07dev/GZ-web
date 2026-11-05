@@ -49,7 +49,12 @@ export function CoaCertificate({ input, className }: { input: CoaPdfInput; class
     // The same code the PDF prints (coa-pdf.ts), so what is previewed is what is printed.
     artworkQrDataUrl(input.artworkId, 640, "Q")
       .then((u) => live && setQr(u))
-      .catch(() => {});
+      .catch((error) => {
+        // A failed QR used to be swallowed, leaving the printed COA with
+        // a blank verification code — the one thing that makes the
+        // certificate scannable. Loud is better than silent here.
+        console.error("COA QR generation failed", { artworkId: input.artworkId, error });
+      });
     return () => {
       live = false;
     };

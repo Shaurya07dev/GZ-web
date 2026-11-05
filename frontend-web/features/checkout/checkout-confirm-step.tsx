@@ -55,7 +55,11 @@ export function CheckoutConfirmStep({
     );
   }
 
-  if (placedOrder) {
+  // Only render the success panel for an ORDER that is actually paid.
+  // A non-paid placedOrder here would mean something slipped through
+  // the error path — treat it as if nothing happened and show the Pay
+  // button again rather than falsely saying "Order placed".
+  if (placedOrder && placedOrder.status === "paid") {
     // gstAmount is the tax already inside `amount`, never an addition to it.
     const paidTotal = placedOrder.amount + placedOrder.deliveryCharge;
     return (
