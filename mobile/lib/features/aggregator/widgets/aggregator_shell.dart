@@ -61,6 +61,7 @@ class AggregatorShell extends ConsumerWidget {
 
     if (size.isCompact) {
       return Scaffold(
+        extendBody: true,
         endDrawer: drawer,
         body: body,
         // The Builder is what puts `Scaffold.of` below this Scaffold, so the
@@ -77,6 +78,16 @@ class AggregatorShell extends ConsumerWidget {
               }
             },
             destinations: const [...aggregatorDestinations, profileDestination],
+            // Primary action for an aggregator: browse what's available to
+            // reserve. One tap from any screen.
+            floatingAction: GlassNavAction(
+              icon: LucideIcons.search,
+              tooltip: 'Browse inventory',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                context.go('/aggregator/browse');
+              },
+            ),
           ),
         ),
       );

@@ -1,17 +1,18 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/launch.dart';
 import '../../core/format.dart';
-import '../../core/motion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/artwork.dart' show ReviewStatus;
 import '../../data/models/customer.dart'
     show WalletTransaction, WalletTransactionStatus;
 import '../legal/data/faq_data.dart';
 import '../legal/screens/faq_screen.dart';
+import 'glass_nav.dart';
+
+export 'glass_nav.dart' show GlassNavAction;
 
 /// One destination model, shared by all three portal shells. Each portal's
 /// web sidebar (nine to fifteen grouped items) collapses to four primary
@@ -24,118 +25,38 @@ class ShellDestination {
   final String label;
 }
 
-/// The portals' bottom bar on a phone: the theme's [NavigationBar] under a
-/// hairline, so the page ends on a clean edge instead of fading into the bar.
-/// On an iPhone it is Apple's own tab bar instead — translucent, a hairline
-/// on top, the chosen tab tinted gold rather than set in a pill — so the app
-/// sits among the phone's other apps rather than looking like a visitor.
+/// The portals' bottom bar on a phone, rebuilt 5 Nov 2026 as a floating
+/// glassmorphism pill (see [GlassNavBar]). Same single widget across iOS
+/// and Android — the reference the owner supplied is platform-agnostic, and
+/// a single surface across both means screenshots, QA and support
+/// conversations all name the same thing.
+///
+/// Optional [floatingAction] mounts a separate circular FAB above the pill
+/// (e.g. a search button on the collector shell, an upload button on the
+/// artist shell).
 class ShellNavigationBar extends StatelessWidget {
   const ShellNavigationBar({
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
+    this.floatingAction,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<ShellDestination> destinations;
+  final GlassNavAction? floatingAction;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    if (theme.platform case TargetPlatform.iOS || TargetPlatform.macOS) {
-      return CupertinoTabBar(
-        currentIndex: selectedIndex,
-        onTap: onDestinationSelected,
-        activeColor: scheme.tertiary,
-        inactiveColor: scheme.onSurfaceVariant,
-        // Translucent, so the bar blurs whatever passes beneath it.
-        backgroundColor: scheme.surface.withValues(alpha: 0.9),
-        border: Border(
-          top: BorderSide(color: scheme.outlineVariant, width: 0.5),
-        ),
-        iconSize: 24,
-        items: [
-          for (final destination in destinations)
-            BottomNavigationBarItem(
-              icon: Icon(destination.icon),
-              // Built fresh each time its tab is chosen, so the icon gives one
-              // small bounce, as Apple's own tab bars do.
-              activeIcon: _TabBounce(child: Icon(destination.icon)),
-              label: destination.label,
-            ),
-        ],
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onDestinationSelected,
-        destinations: [
-          for (final destination in destinations)
-            NavigationDestination(
-              icon: Icon(destination.icon),
-              label: destination.label,
-            ),
-        ],
-      ),
+    return GlassNavBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onDestinationSelected,
+      destinations: destinations,
+      floatingAction: floatingAction,
     );
   }
-}
-
-/// A tab icon that swells a touch and settles when its tab is chosen.
-class _TabBounce extends StatefulWidget {
-  const _TabBounce({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_TabBounce> createState() => _TabBounceState();
-}
-
-class _TabBounceState extends State<_TabBounce>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 360),
-  );
-  late final Animation<double> _scale = TweenSequence([
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 1.0,
-        end: 1.16,
-      ).chain(CurveTween(curve: Curves.easeOut)),
-      weight: 40,
-    ),
-    TweenSequenceItem(
-      tween: Tween(
-        begin: 1.16,
-        end: 1.0,
-      ).chain(CurveTween(curve: Curves.easeOutBack)),
-      weight: 60,
-    ),
-  ]).animate(_controller);
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_controller.isDismissed && motionOf(context)) _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      ScaleTransition(scale: _scale, child: widget.child);
 }
 
 /// Card frame the customer, artist and aggregator portals' rows and panels
