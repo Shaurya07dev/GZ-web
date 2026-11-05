@@ -6,13 +6,9 @@ export const metadata: Metadata = {
   title: "Browse GalleryZone | Aggregator Portal",
 };
 
-const CATEGORIES = [
-  "All",
-  "Painting",
-  "Sculpture",
-  "Textile Art",
-  "Printmaking",
-];
+// Paintings only (owner directive 5 Nov 2026) — other categories hidden
+// across the platform until the business model expands beyond paintings.
+const CATEGORIES = ["All", "Painting"];
 
 export default function AggregatorInventoryPage() {
   return (

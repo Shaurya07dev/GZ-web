@@ -56,6 +56,24 @@ export interface CreateOrderResult {
 }
 
 export async function createOrder({ db, customerId, artworkId, addressId, idempotencyKey, deliveryQuote }: CreateOrderInput): Promise<CreateOrderResult> {
+  // Guard against duplicate orders for the same (customer, artwork) that
+  // happen when the client generates a fresh idempotencyKey on each tap
+  // (double-tap, React-retry after a flaky network, mobile tap+touch).
+  // Returns the existing pending order rather than creating a new one —
+  // the customer continues the exact checkout they started.
+  const existing = await db
+    .collection(Collections.orders)
+    .where("customerId", "==", customerId)
+    .where("artworkId", "==", artworkId)
+    .where("status", "==", "pending")
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    const doc = existing.docs[0]!;
+    const data = doc.data() as OrderDoc;
+    return { orderId: doc.id, totalPaise: data.totalPaise };
+  }
+
   const pricingSnap = await db.collection(artworkPricingCol(artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new CheckoutError(`No artwork ${artworkId}`);
   const pricing = pricingSnap.data() as ArtworkPricingDoc;

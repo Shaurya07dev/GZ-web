@@ -65,6 +65,15 @@ export const orderService = {
     }
     const order = await orderService.get(orderId);
     if (!order) throw new Error("Order was created but could not be read back");
+    // Belt-and-suspenders: never claim success if the ORDER itself isn't
+    // paid. This catches the "verify returned OK, but the re-read came
+    // before the write landed" race AND any case where the backend is
+    // mis-configured (PAYMENTS_MODE=simulated on prod, webhook secret
+    // missing, etc). A pending order here means the payment did not
+    // actually move money — treat it as a cancellation.
+    if (order.status !== "paid") {
+      throw new PaymentDismissedError();
+    }
     return order;
   },
 };

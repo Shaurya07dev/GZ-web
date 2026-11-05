@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { RotateCcw, X } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
@@ -45,6 +45,23 @@ function MarketplacePageContent() {
   }));
   const [showFilters, setShowFilters] = useState(true);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Keep filters in sync when the URL's `q` or `category` param changes
+  // without a remount — e.g. the header's search popover routes to
+  // `/marketplace?q=sunset` while this page is already mounted (soft nav).
+  // Without this effect the useState initializer only runs once, so the
+  // header's query would vanish into thin air. Reported 5 Nov 2026 as
+  // "the search button is not working".
+  const qParam = searchParams.get("q") ?? "";
+  const catParam = searchParams.get("category") ?? "";
+  useEffect(() => {
+    setFilters((f) => {
+      const nextQuery = qParam || undefined;
+      const nextCategory = catParam ? [catParam] : f.category;
+      if (f.query === nextQuery && (f.category?.[0] ?? "") === catParam) return f;
+      return { ...f, query: nextQuery, category: nextCategory, page: undefined };
+    });
+  }, [qParam, catParam]);
 
   // The unfiltered first page, newest first: its facets feed the hero's
   // category pills, and it picks the piece the passport band shows (one with a

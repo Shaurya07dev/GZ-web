@@ -1,15 +1,13 @@
 import type { ListingType } from "@/types/artwork";
 import { REGIONAL_PAINTING_STYLES } from "@/features/artist-survey/artist-survey-data";
 
-// Sculpture dropped on 31 Oct 2026 (owner): GalleryZone currently only takes
-// 2-D pieces for listing, so the option would mislead artists into
-// submitting work the platform can't actually list.
+// Paintings only (owner directive, repeated 5 Nov 2026): GalleryZone
+// currently only accepts paintings, so every other category — sculpture,
+// digital, printmaking, textile, ceramics, mixed-media — is hidden
+// everywhere (dropdown here, backend validation, admin moderation,
+// marketplace filters). Re-add them once the business model expands.
 export const ARTWORK_CATEGORIES = [
   { value: "painting", label: "Painting" },
-  { value: "printmaking", label: "Printmaking" },
-  { value: "mixed-media", label: "Mixed Media" },
-  { value: "textile", label: "Textile Art" },
-  { value: "ceramics", label: "Ceramics" },
 ];
 
 // Artwork type = one of the 28 regional Indian art traditions the survey
@@ -29,14 +27,16 @@ export const DIMENSION_UNITS = [
   { value: "cm", label: "cm" },
 ];
 
+// Painting-only mediums (bronze, ceramic-mixed-media dropped 5 Nov 2026).
 export const ARTWORK_MEDIUMS = [
   { value: "oil-on-canvas", label: "Oil on Canvas" },
   { value: "acrylic-on-canvas", label: "Acrylic on Canvas" },
   { value: "watercolor", label: "Watercolor" },
+  { value: "gouache", label: "Gouache" },
+  { value: "tempera", label: "Tempera" },
+  { value: "pastel", label: "Pastel" },
   { value: "charcoal", label: "Charcoal" },
   { value: "ink", label: "Ink" },
-  { value: "bronze", label: "Bronze" },
-  { value: "ceramic-mixed-media", label: "Ceramic & Mixed Media" },
   { value: "other", label: "Other" },
 ];
 

@@ -67,6 +67,17 @@ export class Emails {
     this.ctx = { site: (process.env.PUBLIC_SITE_URL || env.corsOrigins[0] || "https://www.galleryzone.art").replace(/\/$/, "") };
   }
 
+  /** True when outgoing email can actually reach a stranger (not just the
+   *  Resend sandbox owner). OTP flows check this before issuing codes. */
+  get canDeliverExternally(): boolean {
+    return this.mailer.canDeliverExternally;
+  }
+
+  /** Why canDeliverExternally is false, or null if it's fine. */
+  get setupHint(): string | null {
+    return this.mailer.setupHint;
+  }
+
   // ── Plumbing ──────────────────────────────────────────────────────────
 
   private async read<D>(collection: string, id: string): Promise<D | undefined> {
