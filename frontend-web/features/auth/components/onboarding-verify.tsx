@@ -58,14 +58,27 @@ export function OnboardingVerify() {
   const [phoneSent, setPhoneSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * The "we tried to send the code and it failed" error — kept separate
+   * from `error` (which is the form validation / verify error) so the
+   * message stays on screen under the headline until the next send
+   * succeeds. Without this, the UI claimed "we sent a code to…" even
+   * when the backend refused (RESEND_API_KEY missing on prod, 5 Nov
+   * 2026) and users sat waiting forever for an email that never arrived.
+   */
+  const [sendError, setSendError] = useState<string | null>(null);
 
   // Fire the email OTP exactly once per mount. The backend already caps
   // five sends per hour; the UI gives a Resend button for the second one.
   useEffect(() => {
     if (step !== "email" || !email) return;
-    void authService.sendEmailOtp({ email, purpose: "signup" }).catch((e) => {
-      toast.error(e instanceof Error ? e.message : "Couldn't send the code.");
-    });
+    void authService.sendEmailOtp({ email, purpose: "signup" })
+      .then(() => setSendError(null))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : "Couldn't send the code.";
+        setSendError(msg);
+        toast.error(msg);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -73,9 +86,12 @@ export function OnboardingVerify() {
     try {
       setBusy(true);
       await authService.sendEmailOtp({ email, purpose: "signup" });
+      setSendError(null);
       toast.success("We've sent a new code.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't send the code.");
+      const msg = e instanceof Error ? e.message : "Couldn't send the code.";
+      setSendError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -161,11 +177,23 @@ export function OnboardingVerify() {
         title={step === "email" ? "Confirm your email" : "Add your phone"}
         description={
           step === "email"
-            ? `We've sent a 6-digit code to ${email}. Enter it below to confirm this address.`
+            ? (sendError
+              ? `We couldn't send a code to ${email}. See the error below, then tap Resend to try again.`
+              : `We've sent a 6-digit code to ${email}. Enter it below to confirm this address.`)
             : "A verified mobile means your order updates land directly. We'll send you a 6-digit SMS code."
         }
         icon={step === "email" ? Mail : Phone}
       />
+
+      {step === "email" && sendError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          <p className="font-medium">Email not sent</p>
+          <p className="mt-1 opacity-90">{sendError}</p>
+        </div>
+      )}
 
       {step === "email" && (
         <div className="flex flex-col gap-4">
