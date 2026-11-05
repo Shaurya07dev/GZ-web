@@ -76,4 +76,30 @@ export const orderService = {
     }
     return order;
   },
+
+  /**
+   * Resume a previously-created pending order's payment. Same flow as
+   * create() minus the POST /v1/orders step — the order already exists,
+   * we just re-open its Razorpay session and verify. Added 5 Nov 2026
+   * after live QA found that a user who dismissed Razorpay had no way
+   * to try paying again — the order sat in /account/orders forever.
+   */
+  resumePayment: async (orderId: string): Promise<Order> => {
+    const base = `/v1/orders/${encodeURIComponent(orderId)}`;
+    const session = await http.post<{ mode: "simulated" } | RazorpaySession>(`${base}/payment/session`);
+    if (session.mode === "razorpay") {
+      const outcome = await openRazorpayCheckout(session);
+      const confirmed = await http.post<{ status: string }>(`${base}/payment/verify`, outcome.success ?? undefined);
+      if (confirmed.status !== "paid") {
+        if (outcome.dismissed) throw new PaymentDismissedError();
+        throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was charged.");
+      }
+    } else {
+      await http.post(`${base}/simulate-payment`);
+    }
+    const order = await orderService.get(orderId);
+    if (!order) throw new Error("Order could not be re-read after payment");
+    if (order.status !== "paid") throw new PaymentDismissedError();
+    return order;
+  },
 };

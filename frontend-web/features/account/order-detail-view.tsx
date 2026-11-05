@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ArrowLeft, CreditCard, Loader2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { useOrder } from "@/hooks/useOrders";
 import { useArtwork } from "@/hooks/useArtwork";
@@ -13,6 +16,10 @@ import { OrderStatusTimeline } from "@/features/account/order-status-timeline";
 import { OrderPriceBreakdown } from "@/features/account/order-price-breakdown";
 import { DownloadInvoiceButton } from "@/components/shared/download-invoice-button";
 import { RequestRefundDialog } from "@/features/account/request-refund-dialog";
+import { Button } from "@/components/ui/button";
+import { orderService } from "@/services/orderService";
+import { PaymentDismissedError } from "@/lib/razorpay-checkout";
+import type { Order } from "@/types/order";
 import { formatINR } from "@/lib/utils";
 
 function formatDate(iso: string): string {
@@ -149,7 +156,18 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             deliveryCharge={order.deliveryCharge}
             convenienceFee={order.convenienceFee}
             convenienceGst={order.convenienceGst}
+            status={order.status}
           />
+
+          {/* A pending order is a stranded order unless we offer a way
+            * forward. Live QA (5 Nov 2026) caught: a buyer who dismissed
+            * Razorpay could see the order but had no button to retry, and
+            * no path to cancel it either. Offer "Complete payment" that
+            * re-opens the same Razorpay session, plus a note on how to
+            * cancel. */}
+          {order.status === "pending" && (
+            <PendingOrderActions order={order} />
+          )}
 
           {/* Audit §9: tax invoice is only valid once the order is paid. */}
           <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
@@ -199,6 +217,72 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The "you started an order, didn't pay, now what?" box.
+ *
+ * Shown on every pending order. "Complete payment" re-opens Razorpay on
+ * the SAME order id — no duplicate order is created (and the backend
+ * dedup catches it anyway). Cancellation is a support request today, not
+ * a button, because a self-service cancel endpoint would need to reason
+ * about (webhook arrived first), (refund if money moved), (artwork
+ * returns to marketplace) all at once, and getting that wrong in a rush
+ * is worse than a one-day email round-trip.
+ */
+function PendingOrderActions({ order }: { order: Order }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const total = order.amount + order.deliveryCharge + order.convenienceFee + order.convenienceGst;
+
+  async function resumePayment() {
+    setBusy(true);
+    try {
+      await orderService.resumePayment(order.id);
+      toast.success("Payment received — thank you.");
+      queryClient.invalidateQueries({ queryKey: ["order", order.id] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["artworks"] });
+    } catch (error) {
+      if (error instanceof PaymentDismissedError) {
+        toast.info("Payment cancelled — nothing was charged. You can try again any time.");
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : "Could not complete the payment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-gold/40 bg-gold/5 p-4">
+      <div>
+        <h3 className="font-display text-sm font-semibold text-foreground">
+          Finish paying for this order
+        </h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Your payment never went through. Tap below to re-open the secure
+          Razorpay checkout — nothing is charged until you confirm. The
+          artwork is held for you while this order is pending.
+        </p>
+      </div>
+      <Button onClick={resumePayment} disabled={busy} className="self-start">
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <CreditCard className="size-4" />}
+        {busy ? "Opening checkout…" : `Complete payment · ${formatINR(total)}`}
+      </Button>
+      <p className="text-xs text-muted-foreground">
+        Changed your mind? Email{" "}
+        <a
+          href="mailto:support@galleryzone.art"
+          className="text-gold-bright underline-offset-2 hover:underline"
+        >
+          support@galleryzone.art
+        </a>{" "}
+        with order <span className="font-mono">{order.id}</span> and
+        we&rsquo;ll cancel it for you.
+      </p>
     </div>
   );
 }
