@@ -1,4 +1,5 @@
 import { PriceBreakdown } from "@/components/shared/price-breakdown";
+import type { OrderStatus } from "@/types/order";
 
 // The receipt on a past order. amount/gstAmount/deliveryCharge are the values
 // frozen onto the Order record when it was placed (see types/order.ts), so a
@@ -15,6 +16,12 @@ interface OrderPriceBreakdownProps {
   deliveryCharge: number;
   convenienceFee?: number;
   convenienceGst?: number;
+  /** The order's lifecycle status. Governs whether the total is labelled
+   *  "Total paid" (money moved) or "Order total" (still pending/cancelled).
+   *  Reported 5 Nov 2026: a pending order said "Total paid" even though the
+   *  invoice box one line above said "An invoice is issued once your
+   *  payment is confirmed". Two contradictory claims on the same screen. */
+  status?: OrderStatus;
 }
 
 export function OrderPriceBreakdown({
@@ -23,7 +30,9 @@ export function OrderPriceBreakdown({
   deliveryCharge,
   convenienceFee = 0,
   convenienceGst = 0,
+  status,
 }: OrderPriceBreakdownProps) {
+  const hasPaid = status !== undefined && status !== "pending" && status !== "cancelled";
   return (
     <div>
       <h2 className="font-display text-lg font-semibold text-foreground">
@@ -36,7 +45,7 @@ export function OrderPriceBreakdown({
         deliveryCharge={deliveryCharge}
         convenienceFee={convenienceFee}
         convenienceGst={convenienceGst}
-        totalLabel="Total paid"
+        totalLabel={hasPaid ? "Total paid" : "Order total"}
       />
     </div>
   );
