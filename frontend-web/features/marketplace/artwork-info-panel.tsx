@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { isApiError } from "@/lib/api";
 import {
   BadgeCheck,
   Heart,
@@ -56,6 +58,7 @@ export function ArtworkInfoPanel({
   const toggleWishlist = useWishlistStore((state) => state.toggle);
   const cart = useCart();
   const isInCart = cart.has(artwork.id);
+  const router = useRouter();
 
   async function handleCartClick() {
     try {
@@ -69,6 +72,23 @@ export function ArtworkInfoPanel({
         description: "View it in your cart whenever you're ready.",
       });
     } catch (error) {
+      // 401/403 means a signed-out visitor tried to add to cart. Guide them
+      // to sign in with a next= param back to this artwork, instead of
+      // leaving a confusing "couldn't update your cart" toast.
+      if (isApiError(error, 401) || isApiError(error, 403)) {
+        toast.error("Sign in to use your cart", {
+          description: "Your cart stays with your account across devices.",
+          action: {
+            label: "Sign in",
+            onClick: () => {
+              router.push(
+                `/login?next=${encodeURIComponent(`/marketplace/${artwork.id}`)}`,
+              );
+            },
+          },
+        });
+        return;
+      }
       // Server-side cap or auth problem — show the API's message. The server
       // enforces the max so a full cart surfaces here even if the UI thought
       // there was room.

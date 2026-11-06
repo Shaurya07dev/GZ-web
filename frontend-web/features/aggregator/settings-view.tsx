@@ -26,6 +26,19 @@ export function AggregatorSettingsView() {
         <h2 className="font-display text-base font-semibold text-foreground">
           Notifications
         </h2>
+        <p className="mt-2 text-xs text-muted-foreground">
+          These remember your preference on this browser. All four
+          notifications are currently sent by GalleryZone regardless — a
+          per-aggregator opt-out is coming in a later update. For urgent
+          opt-out requests, email{" "}
+          <a
+            href="mailto:support@galleryzone.art"
+            className="text-gold-bright underline-offset-2 hover:underline"
+          >
+            support@galleryzone.art
+          </a>
+          .
+        </p>
         <div className="mt-4 flex flex-col divide-y divide-border">
           {NOTIFICATION_TOGGLES.map((toggle) => (
             <div
