@@ -1,9 +1,12 @@
 import {
   applyActionCode,
   confirmPasswordReset,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
+  updatePassword as firebaseUpdatePassword,
 } from "firebase/auth";
 import { firebaseAuth, googleProvider } from "@/lib/firebase";
 import { http, isApiError } from "@/lib/api";
@@ -256,6 +259,27 @@ export const authService = {
 
   resendVerification: async (): Promise<void> => {
     await http.post("/v1/auth/resend-verification");
+  },
+
+  /**
+   * Change the signed-in user's password through Firebase Auth.
+   * Firebase requires a fresh credential, so we reauth with the current
+   * password before the update — same flow Google/Facebook use. If the
+   * current password is wrong, Firebase throws auth/wrong-password and
+   * the caller surfaces the message.
+   */
+  updatePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    const user = firebaseAuth().currentUser;
+    if (!user || !user.email) {
+      throw new Error("You need to be signed in to change your password.");
+    }
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await firebaseUpdatePassword(user, newPassword);
+    } catch (error) {
+      throw friendlyAuthError(error);
+    }
   },
 
   // `token` is Firebase's oobCode from the emailed link (?oobCode=…).

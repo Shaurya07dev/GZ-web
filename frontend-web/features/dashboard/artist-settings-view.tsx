@@ -19,6 +19,7 @@ import {
   useWithdrawDeactivationMutation,
 } from "@/hooks/useArtistAccount";
 import { passwordRule } from "@/features/auth/schemas/auth-schemas";
+import { authService } from "@/services/authService";
 import { SUBSCRIPTION } from "./dashboard-data";
 import { useArtistAccountProfile } from "@/hooks/useArtistAccount";
 
@@ -44,6 +45,19 @@ export function ArtistSettingsView() {
         <h2 className="font-display text-base font-semibold text-foreground">
           Notifications
         </h2>
+        <p className="mt-2 text-xs text-muted-foreground">
+          These remember your preference on this browser. All four
+          notifications are currently sent by GalleryZone regardless — a
+          per-artist opt-out is coming in a later update. For urgent
+          opt-out requests, email{" "}
+          <a
+            href="mailto:support@galleryzone.art"
+            className="text-gold-bright underline-offset-2 hover:underline"
+          >
+            support@galleryzone.art
+          </a>
+          .
+        </p>
         <div className="mt-4 flex flex-col divide-y divide-border">
           {NOTIFICATION_TOGGLES.map((toggle) => (
             <div
@@ -270,11 +284,14 @@ const passwordSchema = z
 
 type PasswordFormInput = z.infer<typeof passwordSchema>;
 
-// Client-validated only — there's no real auth backend to check the current
-// password against, so this is an honest mock (like GoogleAuthButton),
-// reusing the same 8-char/letter/number rule the register form enforces.
+// Real password change through Firebase Auth. authService.updatePassword
+// reauths with the current password first, then applies the new one.
+// Previously this card was a client-only mock — it showed a success tick
+// without actually changing anything. That's the kind of thing that gets
+// us fired, so now it actually works.
 function SecurityCard() {
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -287,9 +304,18 @@ function SecurityCard() {
 
   function onSubmit(e?: FormEvent<HTMLFormElement>) {
     e?.preventDefault();
-    handleSubmit(() => {
-      setSaved(true);
-      reset();
+    setError(null);
+    handleSubmit(async (values) => {
+      try {
+        await authService.updatePassword(values.currentPassword, values.newPassword);
+        setSaved(true);
+        toast.success("Password updated. You'll use the new one next time you sign in.");
+        reset();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not change password.";
+        setError(message);
+        toast.error(message);
+      }
     })(e);
   }
 
@@ -350,6 +376,11 @@ function SecurityCard() {
             </span>
           )}
         </div>
+        {error && (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
       </form>
     </div>
   );
