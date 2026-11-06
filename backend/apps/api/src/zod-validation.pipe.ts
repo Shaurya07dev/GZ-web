@@ -11,9 +11,20 @@ export class ZodValidationPipe implements PipeTransform {
   transform(value: unknown): unknown {
     const result = this.schema.safeParse(value);
     if (!result.success) {
+      // Humans see `title`; ops see `detail` + `issues`. The old title
+      // ("Validation failed") said nothing — the client flagged this
+      // after a buyer saw "razorpayOrderId: Required; razorpayPaymentId:
+      // Required; razorpaySignature: Required" as a toast on the
+      // aggregator reserve flow (5 Nov 2026). The new title names one
+      // field that's wrong so the UI can display a concrete sentence.
+      const first = result.error.issues[0];
+      const firstField = first?.path.join(".") || "a field";
+      const friendlyTitle = first
+        ? `Please check "${firstField}" and try again`
+        : "Please fill in the required details and try again";
       throw new BadRequestException({
         type: "about:blank",
-        title: "Validation failed",
+        title: friendlyTitle,
         status: 400,
         code: "validation_error",
         detail: result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),

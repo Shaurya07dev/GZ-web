@@ -17,15 +17,35 @@ export interface ProblemDetails {
   [key: string]: unknown;
 }
 
+/**
+ * Zod validation errors reach us as a `detail` string like
+ * "razorpayOrderId: Required; razorpayPaymentId: Required; ...". That is
+ * useful in dev tools but unreadable in a user-facing toast — the user
+ * asked for that fix after seeing it on the aggregator reserve flow
+ * (5 Nov 2026). Collapse any `detail` that looks like a Zod bullet-list
+ * into the problem's `title` instead; the title is already written for
+ * users.
+ */
+function isZodValidationChatter(detail: string): boolean {
+  // Typical shapes from ZodValidationPipe:
+  //   "fieldX: Required"
+  //   "fieldX: Required; fieldY: String must contain at least 1 character(s)"
+  //   "needs a letter; needs a number"
+  return /: (Required|Invalid|Expected|String must|Number must|needs a)/i.test(detail);
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly detail: string | undefined;
 
   constructor(problem: ProblemDetails) {
-    // detail (e.g. the validation issue list) is more actionable than the
-    // generic title when present.
-    super(problem.detail ?? problem.title);
+    // Prefer detail (more actionable) UNLESS it is raw Zod validation
+    // chatter — in that case the title is the message users should see.
+    const message = problem.detail && !isZodValidationChatter(problem.detail)
+      ? problem.detail
+      : problem.title;
+    super(message);
     this.name = "ApiError";
     this.status = problem.status;
     this.code = problem.code;

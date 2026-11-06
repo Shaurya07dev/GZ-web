@@ -202,16 +202,41 @@ export const aggregatorService = {
       prefill: { name: "", email: "", contact: "" },
     };
     const outcome = await openRazorpayCheckout(session);
-    const result = await http.post<{ status: string; holdingId?: string; reason?: string }>(
-      verifyPath,
-      outcome.success
-        ? {
-            razorpayOrderId: outcome.success.razorpay_order_id,
-            razorpayPaymentId: outcome.success.razorpay_payment_id,
-            razorpaySignature: outcome.success.razorpay_signature,
-          }
-        : undefined,
-    );
+
+    // Dismiss-first short-circuit: if the buyer closed the Razorpay modal
+    // without paying, don't bother POST'ing a bodyless verify — the
+    // backend's Zod schema has partial fields marked required and used to
+    // surface "razorpayOrderId: Required; razorpayPaymentId: Required;
+    // razorpaySignature: Required" as a toast, which is unreadable to the
+    // user. The server's webhook will still finalise if a late UPI
+    // capture arrives out of band.
+    if (!outcome.success && outcome.dismissed) throw new PaymentDismissedError();
+    if (!outcome.success && outcome.failureMessage) {
+      throw new Error(outcome.failureMessage);
+    }
+
+    let result: { status: string; holdingId?: string; reason?: string };
+    try {
+      result = await http.post<{ status: string; holdingId?: string; reason?: string }>(
+        verifyPath,
+        outcome.success
+          ? {
+              razorpayOrderId: outcome.success.razorpay_order_id,
+              razorpayPaymentId: outcome.success.razorpay_payment_id,
+              razorpaySignature: outcome.success.razorpay_signature,
+            }
+          : undefined,
+      );
+    } catch (error) {
+      // Re-shape any raw Zod / 400 chatter into something a human reads.
+      if (error instanceof Error && /Required|signature|validation/i.test(error.message)) {
+        throw new Error(
+          "Something went wrong verifying your payment. If money was taken from your account it will refund automatically — check back in a few minutes. Contact support@galleryzone.art if it does not.",
+        );
+      }
+      throw error;
+    }
+
     if (result.status === "finalized" && result.holdingId) {
       return (await aggregatorService.getHolding(result.holdingId))!;
     }
