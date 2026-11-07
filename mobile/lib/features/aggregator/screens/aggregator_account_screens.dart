@@ -418,6 +418,15 @@ class AggregatorSettingsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text('Notifications', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(
+                  'These remember your preference on this phone only. All '
+                  'four notifications are currently sent by GalleryZone '
+                  'regardless — a per-aggregator opt-out is coming in a '
+                  'later update. For urgent opt-outs, email '
+                  'support@galleryzone.art.',
+                  style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                ),
                 const SizedBox(height: 8),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,

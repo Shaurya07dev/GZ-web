@@ -41,6 +41,25 @@ export function ContactSection() {
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Public contact — no API on the backend for this (would need an
+    // anonymous ticketing endpoint). Rather than silently discard the
+    // message like the old handler did (which showed "Message sent"
+    // but did nothing), open the user's mail client with the form
+    // contents pre-filled. If they don't have a default mail handler
+    // they see the fallback address and can copy it.
+    const subject = encodeURIComponent(
+      `GalleryZone contact from ${form.fullName || "a visitor"}${form.role ? ` (${form.role})` : ""}`,
+    );
+    const bodyLines = [
+      `Name: ${form.fullName || "(not provided)"}`,
+      `Email: ${form.email || "(not provided)"}`,
+      form.role ? `Role: ${form.role}` : null,
+      "",
+      "Message:",
+      form.message,
+    ].filter(Boolean);
+    const body = encodeURIComponent(bodyLines.join("\n"));
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
     setSubmitted(true);
   }
 
@@ -73,11 +92,19 @@ export function ContactSection() {
                   <Check className="size-6 text-gold-bright" />
                 </span>
                 <h2 className="font-display text-2xl font-semibold text-foreground">
-                  Message sent.
+                  Check your mail app
                 </h2>
                 <p className="max-w-sm text-balance text-base leading-relaxed text-muted-foreground">
-                  Thanks, {form.fullName.split(" ")[0] || "we've got it"}. We
-                  typically reply within 1 business day.
+                  We opened your email client with the message ready to go —
+                  tap Send there to deliver it. If nothing opened, write to us
+                  at{" "}
+                  <a
+                    href={`mailto:${CONTACT_EMAIL}`}
+                    className="text-gold-bright underline-offset-2 hover:underline"
+                  >
+                    {CONTACT_EMAIL}
+                  </a>{" "}
+                  — we reply within one business day.
                 </p>
               </motion.div>
             ) : (

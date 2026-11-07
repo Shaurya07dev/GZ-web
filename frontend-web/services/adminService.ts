@@ -32,20 +32,18 @@ import { paiseToRupees, toArtworkSummary, type ArtworkDto } from "@/lib/api-mapp
 import { aggregatorService } from "@/services/aggregatorService";
 
 // ---------------------------------------------------------------------------
-// Mock admin service. Reads/writes for the moderation → catalog pipeline
-// (pending artworks, the marketplace catalog, admin users, orders, addresses)
-// go through lib/mock-collections.ts, so an approval here actually shows up
-// on the Marketplace and in the Artist Dashboard, and survives a refresh.
-// Everything else (withdrawals, categories, settlements, audit log, settings,
-// reports) keeps the original mock contract — reads resolve fixture data,
-// mutations resolve a *plausible next value* WITHOUT persisting it, exactly
-// like customerService/aggregatorService document. Those pages already work
-// correctly via TanStack Query's optimistic setQueryData (the audit log page
-// additionally has its own live-append store, store/useAdminAuditStore) and
-// sit outside the artist → admin → marketplace → checkout loop this
-// persistence layer exists to support.
+// Admin service. Every action here is backed by a real HTTP call via
+// adminApi.ts (see the /v1/admin/* endpoints). An earlier version had
+// fixture-backed mutations for some tabs; those have all been swapped for
+// real backend calls now. Comment kept as a ghost note so future readers
+// know not to re-mock any of these — approving KYC, approving GST,
+// approving withdrawals, deciding external-sale fees, deciding
+// deactivation, retrying/marking-paid settlements all hit the server.
 //
-// Swapping any of this for a real axios call later is a same-shape change.
+// listReports is still session-only (per-browser list of generated
+// reports) because the backend doesn't persist a report queue yet;
+// generateReport itself hits /v1/admin/reports for live totals and the
+// comment on line 438 says so explicitly.
 // ---------------------------------------------------------------------------
 
 const REPORT_TYPE_LABELS: Record<ReportType, string> = {
