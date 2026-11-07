@@ -26,7 +26,7 @@ const FALLBACK = (query: string): ChatMessage => ({
   role: "assistant",
   kind: "fallback",
   content:
-    `I don't have an answer for "${query}" yet. For help, open a Support ticket from your sidebar or email support@galleryzone.art — a human will get back within a day.`,
+    `I don't have an answer for "${query}" yet. For help, open a Support ticket from your sidebar or email support@galleryzone.in — a human will get back within a day.`,
 });
 
 export function useAssistant() {

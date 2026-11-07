@@ -174,7 +174,7 @@ const _friendly = {
   'INVALID_EMAIL':
       'That is not a valid email address. Check for typos (e.g. missing @ or .com).',
   'USER_DISABLED':
-      'This account has been suspended. Email support@galleryzone.art to appeal, mentioning this email.',
+      'This account has been suspended. Email support@galleryzone.in to appeal, mentioning this email.',
   'TOO_MANY_ATTEMPTS_TRY_LATER':
       'Too many failed attempts. Wait 15 minutes and try again — or reset your password to unlock sooner.',
   'INVALID_OOB_CODE':
@@ -197,7 +197,7 @@ FirebaseAuthException _toException(DioException error) {
       code,
       _friendly[code] ??
           'Sign-in failed (Firebase: $code). Try again in a moment. '
-              'If it keeps happening, email support@galleryzone.art.',
+              'If it keeps happening, email support@galleryzone.in.',
     );
   }
   if (error.response == null) {
@@ -209,6 +209,6 @@ FirebaseAuthException _toException(DioException error) {
   return const FirebaseAuthException(
     'UNKNOWN',
     'Sign-in failed for an unknown reason. Try again in a moment, and email '
-        'support@galleryzone.art if it keeps happening.',
+        'support@galleryzone.in if it keeps happening.',
   );
 }

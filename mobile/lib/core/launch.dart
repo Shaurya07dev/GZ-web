@@ -4,7 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// The public site. The legal documents and the FAQ are native screens now
 /// (see `features/legal/`); what still links out is the marketing copy —
 /// the landing page, About, Contact and the artist survey.
-const galleryZoneSite = 'https://www.galleryzone.art';
+const galleryZoneSite = 'https://www.galleryzone.in';
 
 /// The app's public contact point, as the web's support pages show it. There
 /// is no phone number on purpose: contact is by email.

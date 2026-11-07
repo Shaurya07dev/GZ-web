@@ -206,7 +206,7 @@ void main() {
         expect(
           find.descendant(
             of: find.byKey(const Key('tag-link-a3')),
-            matching: find.text('www.galleryzone.art/verify/a3'),
+            matching: find.text('www.galleryzone.in/verify/a3'),
           ),
           findsOneWidget,
         );
@@ -382,7 +382,7 @@ void main() {
           tester,
           world,
           device: FakeNtagDevice()
-            ..url = 'https://www.galleryzone.art/verify/other',
+            ..url = 'https://www.galleryzone.in/verify/other',
         );
         await _tap(tester, find.byKey(const Key('lock-nfc-a2')));
         await _tap(tester, find.byKey(const Key('nfc-start')));

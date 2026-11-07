@@ -184,7 +184,7 @@ void main() {
       final repository = FakeNfcRepository()
         ..checkRefusal = 'This chip is already linked to another artwork.';
       final rig = _rig(repository: repository);
-      rig.device.url = 'https://www.galleryzone.art/verify/someone-elses-piece';
+      rig.device.url = 'https://www.galleryzone.in/verify/someone-elses-piece';
 
       final failure = await _failure(rig.flow.link('aw-1'));
 
@@ -195,7 +195,7 @@ void main() {
       expect(failure.step, NfcFailureStep.uidMismatch);
       expect(
         rig.device.url,
-        'https://www.galleryzone.art/verify/someone-elses-piece',
+        'https://www.galleryzone.in/verify/someone-elses-piece',
         reason: 'the other piece\'s chip is untouched',
       );
       expect(rig.device.events, isNot(contains('writeUrl')));
@@ -284,7 +284,7 @@ void main() {
       '...but is rewritten if the address on it is not this piece\'s',
       () async {
         final device = FakeNtagDevice()
-          ..url = 'https://www.galleryzone.art/verify/other';
+          ..url = 'https://www.galleryzone.in/verify/other';
         final rig = _rig(
           device: device,
           repository: FakeNfcRepository(linkAction: NfcCheckAction.noop),
@@ -382,7 +382,7 @@ void main() {
 
     test('a chip that does not carry this artwork\'s address is never locked: the address is permanent', () async {
       final device = FakeNtagDevice()
-        ..url = 'https://www.galleryzone.art/verify/some-other-piece';
+        ..url = 'https://www.galleryzone.in/verify/some-other-piece';
       final rig = _rig(device: device);
       final failure = await _failure(rig.flow.lock('aw-1'));
 

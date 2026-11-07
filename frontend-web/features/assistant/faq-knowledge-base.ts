@@ -36,7 +36,7 @@ export const FAQ_KNOWLEDGE_BASE: FaqEntry[] = [
     aliases: ["where's help", "customer service", "need help", "support email"],
     tags: ["support", "contact"],
     answer:
-      "Open the Support tab in your sidebar — artists at /dashboard/support, aggregators at /aggregator/support, collectors at /account/support. Or email support@galleryzone.art.",
+      "Open the Support tab in your sidebar — artists at /dashboard/support, aggregators at /aggregator/support, collectors at /account/support. Or email support@galleryzone.in.",
   },
   {
     audience: "everyone",

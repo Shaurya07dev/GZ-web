@@ -55,7 +55,7 @@ const privacySections = <LegalSection>[
     heading: 'Your Rights and Account Deletion',
     body: [
       'You can request access to or correction of your personal information, or request deletion of your GalleryZone account and associated data, subject to records we are legally required to retain.',
-      'In the mobile app, open your portal settings and select Delete account. You can also start a deletion request at https://www.galleryzone.art/account-deletion. GalleryZone confirms completion by email after required financial, shipment or dispute items have been reconciled.',
+      'In the mobile app, open your portal settings and select Delete account. You can also start a deletion request at https://www.galleryzone.in/account-deletion. GalleryZone confirms completion by email after required financial, shipment or dispute items have been reconciled.',
     ],
   ),
   LegalSection(

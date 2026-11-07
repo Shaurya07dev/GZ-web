@@ -23,10 +23,10 @@ function fail(message: string): never {
 
 if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) fail("Usage: npm run email:send-sample -- you@example.com [--all | <email id> ...]");
 const key = process.env.RESEND_API_KEY || fail("RESEND_API_KEY is not set.");
-const from = process.env.EMAIL_FROM || fail("EMAIL_FROM is not set (for example: GalleryZone <hello@galleryzone.art>).");
+const from = process.env.EMAIL_FROM || fail("EMAIL_FROM is not set (for example: GalleryZone <hello@galleryzone.in>).");
 if (/@resend\.dev>?$/i.test(from)) fail(`EMAIL_FROM is "${from}", Resend's test sender, which only delivers to the Resend account's own address. Use an address on the verified domain.`);
 
-const site = (process.env.PUBLIC_SITE_URL || "https://www.galleryzone.art").replace(/\/$/, "");
+const site = (process.env.PUBLIC_SITE_URL || "https://www.galleryzone.in").replace(/\/$/, "");
 const replyTo = process.env.EMAIL_REPLY_TO;
 const wanted = rest.filter((a) => !a.startsWith("--"));
 const unknown = wanted.filter((id) => !catalogue.some((e) => e.id === id));

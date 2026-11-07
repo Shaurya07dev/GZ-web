@@ -14,7 +14,7 @@ import { COLOR, renderEmail } from "./layout.ts";
 import { catalogue, inr, orderStatusBuyer, orderStatusArtist, artworkApproved, type Content } from "./templates.ts";
 import { esc, rich, strong } from "./rich.ts";
 
-const SITE = "https://www.galleryzone.art";
+const SITE = "https://www.galleryzone.in";
 const ctx = { site: SITE };
 
 // ── Colour contrast (WCAG 2.x) ──────────────────────────────────────────

@@ -16,7 +16,7 @@
 // that was created 26 days ago); every such edit is marked `backdate(...)` below.
 //
 // Logins (all accounts): password Demo@12345
-//   admin@demo.galleryzone.art, artistN@..., aggregatorN@..., customerN@...  (see PEOPLE)
+//   admin@demo.galleryzone.in, artistN@..., aggregatorN@..., customerN@...  (see PEOPLE)
 //
 // DEMO_IMAGE_BASE: artwork photos are the files in frontend-web/public/artworks. They are stored
 // as relative URLs (/artworks/x.png) for the website. For the Flutter app on an Android emulator
@@ -45,7 +45,7 @@ const {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const PASSWORD = "Demo@12345";
-const DOMAIN = "demo.galleryzone.art";
+const DOMAIN = "demo.galleryzone.in";
 const IMAGE_BASE = process.env.DEMO_IMAGE_BASE ?? "";
 const rs = (rupees: number) => Math.round(rupees * 100);
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);

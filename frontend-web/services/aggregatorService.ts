@@ -231,7 +231,7 @@ export const aggregatorService = {
       // Re-shape any raw Zod / 400 chatter into something a human reads.
       if (error instanceof Error && /Required|signature|validation/i.test(error.message)) {
         throw new Error(
-          "Something went wrong verifying your payment. If money was taken from your account it will refund automatically — check back in a few minutes. Contact support@galleryzone.art if it does not.",
+          "Something went wrong verifying your payment. If money was taken from your account it will refund automatically — check back in a few minutes. Contact support@galleryzone.in if it does not.",
         );
       }
       throw error;

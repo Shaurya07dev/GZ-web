@@ -7,7 +7,7 @@
 // next.config.ts refuses a production build where it is not a public https
 // address. Kept dependency-free so both server and client code can import it.
 
-export const PUBLIC_SITE_URL = "https://www.galleryzone.art";
+export const PUBLIC_SITE_URL = "https://www.galleryzone.in";
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || PUBLIC_SITE_URL).replace(/\/+$/, "");
 

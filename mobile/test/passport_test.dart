@@ -80,10 +80,10 @@ void main() {
 
   group('the verification link', () {
     test('is one address on the real site, whatever the artwork id holds', () {
-      expect(verifyUrlFor('aw-1'), 'https://www.galleryzone.art/verify/aw-1');
+      expect(verifyUrlFor('aw-1'), 'https://www.galleryzone.in/verify/aw-1');
       expect(
         verifyUrlFor('a b/c'),
-        'https://www.galleryzone.art/verify/a%20b%2Fc',
+        'https://www.galleryzone.in/verify/a%20b%2Fc',
       );
     });
   });
@@ -134,7 +134,7 @@ void main() {
         // Where the QR leads, readable in the file's properties.
         expect(
           raw,
-          contains('/Subject(https://www.galleryzone.art/verify/aw-1)'),
+          contains('/Subject(https://www.galleryzone.in/verify/aw-1)'),
         );
       },
     );

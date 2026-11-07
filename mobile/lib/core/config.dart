@@ -31,7 +31,7 @@ class AppConfig {
   /// from a dev build still points at the real site.
   static const siteUrl = String.fromEnvironment(
     'GZ_SITE_URL',
-    defaultValue: 'https://www.galleryzone.art',
+    defaultValue: 'https://www.galleryzone.in',
   );
 
   /// Local demo stack: host:port of the Firebase Auth emulator as the phone sees it

@@ -158,5 +158,5 @@ String authErrorMessage(Object error) {
   // Dio's own exception toString includes the URL and stack, which is not for
   // end users — show a clean fallback and tell them where to get help.
   return 'That did not work. Try again in a moment. If it keeps happening, '
-      'email support@galleryzone.art with a screenshot and what you were doing.';
+      'email support@galleryzone.in with a screenshot and what you were doing.';
 }

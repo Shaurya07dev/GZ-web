@@ -4,7 +4,7 @@
 // app, so this is a single static "signed in as" fixture.
 export const ADMIN = {
   name: "Ops Console",
-  email: "ops@galleryzone.art",
+  email: "ops@galleryzone.in",
   avatar: "/early-program/avatar-1.png",
 };
 

@@ -275,10 +275,10 @@ function PendingOrderActions({ order }: { order: Order }) {
       <p className="text-xs text-muted-foreground">
         Changed your mind? Email{" "}
         <a
-          href="mailto:support@galleryzone.art"
+          href="mailto:support@galleryzone.in"
           className="text-gold-bright underline-offset-2 hover:underline"
         >
-          support@galleryzone.art
+          support@galleryzone.in
         </a>{" "}
         with order <span className="font-mono">{order.id}</span> and
         we&rsquo;ll cancel it for you.

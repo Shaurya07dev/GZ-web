@@ -141,7 +141,7 @@ class AboutScreen extends StatelessWidget {
                 Text('Company', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 4),
                 Text(
-                  'These pages open galleryzone.art in your browser, so you '
+                  'These pages open galleryzone.in in your browser, so you '
                   'always get the current version.',
                   style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
                 ),
@@ -243,7 +243,7 @@ class AboutScreen extends StatelessWidget {
                   child: TextButton.icon(
                     onPressed: () => openExternal(context, galleryZoneSite),
                     icon: const Icon(LucideIcons.externalLink, size: 15),
-                    label: const Text('Visit galleryzone.art'),
+                    label: const Text('Visit galleryzone.in'),
                   ),
                 ),
               ],

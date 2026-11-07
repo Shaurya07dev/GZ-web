@@ -231,7 +231,7 @@ ApiError _toApiError(DioException error) {
     return const ApiError(
       status: 403,
       code: 'forbidden',
-      message: "You don't have permission for this. If this looks wrong, contact support@galleryzone.art.",
+      message: "You don't have permission for this. If this looks wrong, contact support@galleryzone.in.",
     );
   }
   if (status == 404) {
@@ -252,12 +252,12 @@ ApiError _toApiError(DioException error) {
     return ApiError(
       status: status,
       code: 'server_error',
-      message: 'GalleryZone is having a problem on our end. Try again in a minute. If this keeps happening, email support@galleryzone.art and include what you were doing.',
+      message: 'GalleryZone is having a problem on our end. Try again in a minute. If this keeps happening, email support@galleryzone.in and include what you were doing.',
     );
   }
   return ApiError(
     status: status,
     code: 'http_$status',
-    message: 'That didn\'t work (error $status). Try again — if it keeps happening, email support@galleryzone.art.',
+    message: 'That didn\'t work (error $status). Try again — if it keeps happening, email support@galleryzone.in.',
   );
 }

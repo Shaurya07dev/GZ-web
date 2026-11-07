@@ -62,7 +62,7 @@ type BootstrapBody = z.infer<typeof bootstrapSchema>;
 const emailOnlySchema = z.object({ email: z.string().email() }).strict();
 type EmailOnlyBody = z.infer<typeof emailOnlySchema>;
 
-const SITE = () => (process.env.PUBLIC_SITE_URL || "https://www.galleryzone.art").replace(/\/$/, "");
+const SITE = () => (process.env.PUBLIC_SITE_URL || "https://www.galleryzone.in").replace(/\/$/, "");
 // Firebase only accepts a continue URL on one of the project's authorised
 // domains. We never send that link — we lift the oobCode out of it and
 // build our own — so the project's own firebaseapp.com host is the safe

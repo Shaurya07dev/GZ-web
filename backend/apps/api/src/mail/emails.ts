@@ -64,7 +64,7 @@ export class Emails {
     private readonly mailer: Mailer,
     private readonly push: PushSender,
   ) {
-    this.ctx = { site: (process.env.PUBLIC_SITE_URL || env.corsOrigins[0] || "https://www.galleryzone.art").replace(/\/$/, "") };
+    this.ctx = { site: (process.env.PUBLIC_SITE_URL || env.corsOrigins[0] || "https://www.galleryzone.in").replace(/\/$/, "") };
   }
 
   /** True when outgoing email can actually reach a stranger (not just the

@@ -247,7 +247,7 @@ export const termsSections: LegalSection[] = [
     body: [
       "For questions, complaints, or requests relating to these Terms & Conditions, please contact:",
       "Galleryzone Private Limited",
-      "Website: www.galleryzone.art",
+      "Website: www.galleryzone.in",
       "Email: " + CONTACT_EMAIL,
     ],
   },

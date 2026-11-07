@@ -63,7 +63,7 @@ export function DownloadInvoiceButton({
         }
         if (res.status >= 500) {
           throw new Error(
-            "GalleryZone could not generate the invoice right now. Try again in a minute, or email support@galleryzone.art.",
+            "GalleryZone could not generate the invoice right now. Try again in a minute, or email support@galleryzone.in.",
           );
         }
         throw new Error(title ?? `Download failed (${res.status})`);
@@ -77,7 +77,7 @@ export function DownloadInvoiceButton({
       // "PDF" that no reader can open.
       if (blob.type && !blob.type.includes("pdf")) {
         throw new Error(
-          "The invoice file came back malformed. Try again — if it keeps happening, email support@galleryzone.art.",
+          "The invoice file came back malformed. Try again — if it keeps happening, email support@galleryzone.in.",
         );
       }
       const url = URL.createObjectURL(blob);

@@ -32,10 +32,10 @@ export function AggregatorSettingsView() {
           per-aggregator opt-out is coming in a later update. For urgent
           opt-out requests, email{" "}
           <a
-            href="mailto:support@galleryzone.art"
+            href="mailto:support@galleryzone.in"
             className="text-gold-bright underline-offset-2 hover:underline"
           >
-            support@galleryzone.art
+            support@galleryzone.in
           </a>
           .
         </p>

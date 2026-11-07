@@ -28,7 +28,7 @@ class RemoteAuthRepository implements AuthRepository {
   final TokenManager tokens;
 
   static const _adminMessage =
-      'Admin tools are on the GalleryZone website. Sign in at galleryzone.art to use them.';
+      'Admin tools are on the GalleryZone website. Sign in at galleryzone.in to use them.';
 
   Future<CurrentUser> _me() async {
     final json = await api.getMap('/v1/auth/me');

@@ -246,7 +246,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
       gstin: optional(source.INVOICE_SELLER_GSTIN?.trim()),
       stateCode: source.INVOICE_SELLER_STATE_CODE?.trim().toUpperCase() || "KA",
       cin: optional(source.INVOICE_SELLER_CIN?.trim()),
-      supportEmail: source.INVOICE_SELLER_SUPPORT_EMAIL?.trim() || "support@galleryzone.art",
+      supportEmail: source.INVOICE_SELLER_SUPPORT_EMAIL?.trim() || "support@galleryzone.in",
     },
     msg91:
       source.MSG91_AUTH_KEY && source.MSG91_TEMPLATE_ID && source.MSG91_SENDER_ID

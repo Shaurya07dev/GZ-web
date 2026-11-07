@@ -9,7 +9,7 @@
 //
 // Production settings (all environment variables, see backend/README.md):
 //   RESEND_API_KEY   a sending-only key for the verified domain
-//   EMAIL_FROM       "GalleryZone <hello@galleryzone.art>": an address on the verified domain
+//   EMAIL_FROM       "GalleryZone <hello@galleryzone.in>": an address on the verified domain
 //   EMAIL_REPLY_TO   the monitored mailbox replies should reach. Several emails say
 //                    "reply to this email", so without it a reply goes to EMAIL_FROM.
 
@@ -73,7 +73,7 @@ export class Mailer {
   get setupHint(): string | null {
     if (!this.client) return "RESEND_API_KEY is not set on the backend.";
     if (SANDBOX_SENDER.test(this.from)) {
-      return "EMAIL_FROM is still the Resend sandbox sender (onboarding@resend.dev). Set it to an address on a domain you've verified in Resend (e.g. 'GalleryZone <hello@galleryzone.art>').";
+      return "EMAIL_FROM is still the Resend sandbox sender (onboarding@resend.dev). Set it to an address on a domain you've verified in Resend (e.g. 'GalleryZone <hello@galleryzone.in>').";
     }
     return null;
   }
