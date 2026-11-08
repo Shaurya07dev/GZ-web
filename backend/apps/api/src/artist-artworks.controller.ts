@@ -19,6 +19,7 @@ import {
   listArtistOrders,
   listArtistPenalties,
   listHoldingsForArtist,
+  listSettlements,
   lockNfcTag,
   markSoldElsewhere,
   listArtistArtworksOwned,
@@ -153,6 +154,28 @@ export class ArtistArtworksController {
   @Get("artist/gallery-spaces")
   async myGallerySpaces(@Req() req: AuthenticatedRequest) {
     return { holdings: await listHoldingsForArtist(this.db, req.authUser.uid) };
+  }
+
+  /**
+   * Settlements the artist is party to, newest first. Shares the admin
+   * SettlementView shape — same fields the admin dashboard reads — but
+   * filtered to this artist's rows and with payoutMethod stripped (the
+   * artist knows their own bank; the field exists for the admin audit
+   * trail, not for the artist's screen).
+   *
+   * 9 Nov 2026 — mobile was deriving settlements client-side by walking
+   * the artist's orders, which meant admin adjustments (holdback, manual
+   * mark-paid for royalty rows, dispute reversals) were invisible to the
+   * artist. This endpoint makes the ledger the one source of truth.
+   */
+  @Roles("artist")
+  @Get("artist/settlements")
+  async settlements(@Req() req: AuthenticatedRequest) {
+    const all = await listSettlements(this.db);
+    const mine = all.filter((s) => s.artistId === req.authUser.uid);
+    return {
+      settlements: mine.map(({ payoutMethod: _ignored, ...rest }) => rest),
+    };
   }
 
   @Roles("artist")

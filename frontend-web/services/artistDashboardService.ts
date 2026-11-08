@@ -363,7 +363,51 @@ export const artistDashboardService = {
     return orders.map((o) => ({ ...toOrder(o), artistPayout: paiseToRupees(o.artistNetPaise) }));
   },
 
-  listSettlements: (): Promise<Settlement[]> => settlementsFromOrders(),
+  /**
+   * Settlements the artist is party to. Prefers the real
+   * /v1/artist/settlements ledger endpoint (adds admin-processed payout
+   * status, holdback, dispute reversals and resale royalty rows that the
+   * order projection can't see). Falls back to the derived projection
+   * when the endpoint is empty or unreachable — matches the mobile repo
+   * so an artist sees the same list on both. 9 Nov 2026.
+   */
+  listSettlements: async (): Promise<Settlement[]> => {
+    try {
+      const { settlements } = await http.get<{
+        settlements: Array<{
+          id: string;
+          orderId: string | null;
+          artworkTitle: string;
+          artistName?: string;
+          artistAmountPaise: number;
+          aggregatorCommissionPaise: number | null;
+          platformRevenuePaise: number;
+          status: Settlement["status"];
+          createdAt: string;
+          processedAt: string | null;
+          releaseAfter: string | null;
+        }>;
+      }>("/v1/artist/settlements");
+      if (settlements.length) {
+        return settlements.map((s) => ({
+          id: s.id,
+          orderId: s.orderId ?? "",
+          artworkTitle: s.artworkTitle,
+          artistName: s.artistName ?? "",
+          artistAmount: paiseToRupees(s.artistAmountPaise),
+          aggregatorCommission: paiseToRupees(s.aggregatorCommissionPaise ?? 0),
+          platformRevenue: paiseToRupees(s.platformRevenuePaise),
+          status: s.status,
+          createdAt: s.createdAt,
+          processedAt: s.processedAt,
+          releaseAfter: s.releaseAfter,
+        }));
+      }
+    } catch {
+      // Fall through to the projection so an older build keeps working.
+    }
+    return settlementsFromOrders();
+  },
 
   // Partner-gallery placements for THIS artist, pulled from the aggregator
   // holdings collection joined to the artwork. Includes the inbound

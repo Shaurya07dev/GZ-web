@@ -510,11 +510,27 @@ class RemoteArtistRepository implements ArtistRepository {
     ];
   }
 
-  /// A projection of the artist's own orders: paid is pending until the piece
-  /// is delivered and the payout window has passed, then processed. The
-  /// amounts are the artist's net for that order.
+  /// Settlements as the ledger has them, filtered to this artist.
+  ///
+  /// 9 Nov 2026 — hits the new /v1/artist/settlements endpoint (adds the
+  /// admin-processed payout state, dispute reversals, royalty rows from
+  /// resale transfers — all of which were invisible before). Falls back to
+  /// a derived projection off the artist's own orders when the endpoint
+  /// is unreachable or empty, so an artist on an older staging build still
+  /// sees something. The fallback is the same math the screen used to do
+  /// locally.
   @override
   Future<List<Settlement>> listSettlements() async {
+    try {
+      final json = asMap(await api.getMap('/v1/artist/settlements'));
+      final rows = (json['settlements'] as List? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(_settlementFromApi)
+          .toList();
+      if (rows.isNotEmpty) return rows;
+    } catch (_) {
+      // Fall through to the derived projection.
+    }
     final orders = await listOrders();
     final now = DateTime.now();
     return [
@@ -523,6 +539,29 @@ class RemoteArtistRepository implements ArtistRepository {
             entry.order.status != OrderStatus.cancelled)
           _settlementOf(entry, now),
     ];
+  }
+
+  Settlement _settlementFromApi(Map<String, dynamic> json) {
+    final statusRaw = (json['status'] as String? ?? '').toLowerCase();
+    final status = switch (statusRaw) {
+      'processed' || 'paid' => SettlementStatus.processed,
+      'failed' => SettlementStatus.failed,
+      _ => SettlementStatus.pending,
+    };
+    double paiseToRupees(Object? v) => ((v as num?)?.toDouble() ?? 0) / 100.0;
+    return Settlement(
+      id: json['id'] as String? ?? '',
+      orderId: json['orderId'] as String? ?? '',
+      artworkTitle: json['artworkTitle'] as String? ?? '',
+      artistName: json['artistName'] as String? ?? '',
+      artistAmount: paiseToRupees(json['artistAmountPaise']),
+      aggregatorCommission: paiseToRupees(json['aggregatorCommissionPaise']),
+      platformRevenue: paiseToRupees(json['platformRevenuePaise']),
+      status: status,
+      createdAt: json['createdAt'] as String? ?? '',
+      processedAt: json['processedAt'] as String?,
+      releaseAfter: json['releaseAfter'] as String?,
+    );
   }
 
   Settlement _settlementOf(ArtistOrder entry, DateTime now) {
