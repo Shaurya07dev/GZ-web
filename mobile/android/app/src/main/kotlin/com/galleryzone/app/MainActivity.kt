@@ -1,4 +1,4 @@
-package `in`.galleryzone.app
+package com.galleryzone.app
 
 import android.os.Build
 import android.os.Bundle

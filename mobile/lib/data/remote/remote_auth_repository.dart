@@ -1,3 +1,5 @@
+import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../core/api/api_client.dart';
 import '../../core/api/api_error.dart';
 import '../../core/auth/firebase_rest_auth.dart';
@@ -21,11 +23,25 @@ class RemoteAuthRepository implements AuthRepository {
     required this.api,
     required this.firebase,
     required this.tokens,
-  });
+    GoogleSignIn? googleSignIn,
+  }) : _google = googleSignIn ??
+            GoogleSignIn(
+              scopes: const ['email', 'profile'],
+              // Android `google_sign_in` returns `idToken: null` unless the
+              // sign-in is bound to the Firebase project's auto-generated
+              // WEB OAuth client. The ID + SHA-1 pair is the Android OAuth
+              // client (which authorises this APK), but the id_token we hand
+              // Firebase has to be audience = web client. The id below is
+              // the type-3 entry in android/app/google-services.json for
+              // galleryzone-prod — not a secret (OAuth client ids never are).
+              serverClientId:
+                  '558316713525-ceic2am5gqt73fq9u254fe0ulupogsr9.apps.googleusercontent.com',
+            );
 
   final ApiClient api;
   final FirebaseRestAuth firebase;
   final TokenManager tokens;
+  final GoogleSignIn _google;
 
   static const _adminMessage =
       'Admin tools are on the GalleryZone website. Sign in at galleryzone.in to use them.';
@@ -88,6 +104,72 @@ class RemoteAuthRepository implements AuthRepository {
   @override
   Future<AuthAck> login(LoginInput input, {bool simulateError = false}) =>
       _establish(input.email, input.password, remember: input.rememberMe);
+
+  @override
+  Future<AuthAck> loginWithGoogle({Role? defaultRole, String? name}) async {
+    // 1. Google account chooser — a cancelled tap is a silent no-op, not an
+    //    error. signInSilently first tries the already-chosen account, falling
+    //    back to the chooser.
+    final account = await _google.signIn();
+    if (account == null) {
+      throw Exception('Google sign-in cancelled.');
+    }
+    final auth = await account.authentication;
+    final googleIdToken = auth.idToken;
+    if (googleIdToken == null || googleIdToken.isEmpty) {
+      await _google.signOut();
+      throw Exception(
+        'Google did not return an ID token. Try again, or sign in with email '
+        'and password.',
+      );
+    }
+
+    // 2. Exchange it for a Firebase session.
+    final session = await firebase.signInWithGoogleIdToken(googleIdToken);
+    await tokens.start(session, remember: true);
+
+    // 3. Look up the GalleryZone profile. A first-time Google signer has no
+    //    row yet — the API's bootstrap endpoint creates it with the role
+    //    the user picked on the register screen (or `customer` as a default
+    //    on the login screen).
+    CurrentUser user;
+    try {
+      user = await _me();
+    } on ApiError catch (error) {
+      if (!error.isUnauthorized) {
+        await tokens.clear();
+        await _google.signOut();
+        rethrow;
+      }
+      try {
+        await api.post(
+          '/v1/auth/bootstrap',
+          body: {
+            if (defaultRole != null) 'role': defaultRole.name,
+            if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+          },
+        );
+        user = await _me();
+      } catch (bootstrapError) {
+        await tokens.clear();
+        await _google.signOut();
+        rethrow;
+      }
+    }
+
+    final role = user.role;
+    if (role == null) {
+      // An admin signed in on the app, which has no admin portal.
+      await tokens.clear();
+      await _google.signOut();
+      throw Exception(_adminMessage);
+    }
+    return AuthAck(
+      email: user.email.isEmpty ? (account.email) : user.email,
+      role: role,
+      name: user.name,
+    );
+  }
 
   @override
   Future<AuthAck> register(
@@ -166,7 +248,19 @@ class RemoteAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signOut() => tokens.clear();
+  Future<void> signOut() async {
+    // Also forget the Google account on-device: without this, the next
+    // Google button tap signs the same account back in silently instead
+    // of showing the chooser — surprising when more than one account is
+    // on the phone.
+    try {
+      await _google.signOut();
+    } catch (_) {
+      // The plugin can throw if it was never used; the sign-out is
+      // best-effort.
+    }
+    await tokens.clear();
+  }
 
   @override
   Future<void> requestAccountDeletion() async {

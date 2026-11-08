@@ -747,7 +747,12 @@ class _ReviewStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final quote = ref.watch(checkoutQuoteProvider(artwork.id));
+    // Address-aware: the delivery line changes when the buyer swaps address.
+    final quote = ref.watch(
+      addressedCheckoutQuoteProvider(
+        AddressedQuoteKey(artworkId: artwork.id, addressId: address.id),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1013,7 +1018,11 @@ class _ConfirmStep extends ConsumerWidget {
       );
     }
 
-    final quote = ref.watch(checkoutQuoteProvider(artwork.id));
+    final quote = ref.watch(
+      addressedCheckoutQuoteProvider(
+        AddressedQuoteKey(artworkId: artwork.id, addressId: address.id),
+      ),
+    );
     final total = quote.value?.total;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -3,16 +3,16 @@ import 'package:dio/dio.dart';
 import '../config.dart';
 
 /// Firebase Auth over its public REST endpoints (Identity Toolkit and Secure
-/// Token), used instead of the native plugin so the app needs no
-/// `google-services.json` and no change to the Android build.
+/// Token). The API only ever sees the resulting ID token as
+/// `Authorization: Bearer`; it never handles a password.
 ///
-/// It does exactly what the website's `firebase/auth` calls do for this app:
-/// email + password sign-in, ID-token refresh, confirming a password reset and
-/// applying an email-verification link. The API only ever sees the resulting
-/// ID token as `Authorization: Bearer`; it never handles a password.
-///
-/// Google sign-in is deliberately absent — it needs a native OAuth client,
-/// which is the one thing the plugin route buys (decision D1).
+/// What this covers:
+///  * email + password sign-in
+///  * Google sign-in (the `google_sign_in` plugin collects the Google ID
+///    token; we exchange it for a Firebase session via `accounts:signInWithIdp`,
+///    so the whole app stays on one session shape)
+///  * ID-token refresh
+///  * confirming a password reset / applying an email-verification link
 class FirebaseRestAuth {
   FirebaseRestAuth({required this.apiKey, Dio? dio, DateTime Function()? clock})
     : _dio = dio ?? Dio(),
@@ -45,6 +45,30 @@ class FirebaseRestAuth {
       'email': email,
       'password': password,
       'returnSecureToken': true,
+    });
+    return FirebaseSession(
+      uid: data['localId'] as String,
+      email: data['email'] as String?,
+      idToken: data['idToken'] as String,
+      refreshToken: data['refreshToken'] as String,
+      expiresAt: _expiry(data['expiresIn']),
+    );
+  }
+
+  /// Exchanges a Google ID token for a Firebase session. The caller gets
+  /// the Google token from the `google_sign_in` plugin's `authentication`;
+  /// we POST it to Identity Toolkit which either returns a Firebase session
+  /// for an existing account OR silently links/creates one, per the
+  /// project's Google provider settings in Firebase Console.
+  ///
+  /// `requestUri` is required by the IDP endpoint — any valid URL works,
+  /// it isn't actually fetched; the common convention is `http://localhost`.
+  Future<FirebaseSession> signInWithGoogleIdToken(String googleIdToken) async {
+    final data = await _post('$_identity/accounts:signInWithIdp', {
+      'postBody': 'id_token=$googleIdToken&providerId=google.com',
+      'requestUri': 'http://localhost',
+      'returnSecureToken': true,
+      'returnIdpCredential': true,
     });
     return FirebaseSession(
       uid: data['localId'] as String,

@@ -26,7 +26,7 @@ val releaseStoreFile = if (hasReleaseSigningValues) {
 val hasReleaseKeystore = releaseStoreFile?.isFile == true
 
 android {
-    namespace = "in.galleryzone.app"
+    namespace = "com.galleryzone.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -36,7 +36,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "in.galleryzone.app"
+        // Aligned with Firebase Android app registration on 7 Nov 2026.
+        // Firebase accepts one package per Android app; the google-services.json
+        // in android/app is the project's galleryzone-prod registration for
+        // this exact id. Changing this would also require re-registering with
+        // a new SHA-1 and re-downloading the config.
+        applicationId = "com.galleryzone.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

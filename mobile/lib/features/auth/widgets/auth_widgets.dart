@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/auth.dart';
 import '../../shell/brand_mark.dart';
+import '../providers/auth_providers.dart';
+import '../role_options.dart';
 import '../validators.dart';
 
 /// Shared pieces of the five Auth screens, ported from
@@ -505,17 +510,118 @@ class PasswordStrengthMeter extends StatelessWidget {
   }
 }
 
-/// Google sign-in is not wired on mobile yet (needs a native OAuth client
-/// and the Android app's SHA-1 registered with Firebase). Rather than show
-/// a button that only says it is not available — which the client flagged
-/// as confusing — this returns nothing on mobile. Email and password sign-up
-/// is the only path the APK exposes right now. Apple was dropped at the same
-/// time the website removed its stub.
-class SocialAuthRow extends StatelessWidget {
-  const SocialAuthRow({super.key});
+/// Google sign-in button. Not drawn in offline mock mode — the mock has no
+/// real Firebase or Google credentials and the button would be a lie there.
+/// On the real backend it calls
+/// [AuthRepository.loginWithGoogle], then writes the session role and
+/// sends the user to their portal (or to `next` if the login screen carried
+/// one through), matching what the email + password form does on success.
+///
+/// Apple was dropped at the same time the website removed its stub.
+class SocialAuthRow extends ConsumerStatefulWidget {
+  const SocialAuthRow({
+    super.key,
+    this.defaultRole,
+    this.name,
+    this.next,
+  });
+
+  /// The role to bootstrap with if this is a first-time Google signer.
+  /// The register screen passes the role selected on the form; the login
+  /// screen passes null (the API falls back to `customer`).
+  final Role? defaultRole;
+
+  /// Pre-filled name for the bootstrap call — only the register screen
+  /// has one typed in.
+  final String? name;
+
+  /// Deep-link target the login screen was bounced from, so a successful
+  /// sign-in resumes that destination instead of the role's home.
+  final String? next;
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  ConsumerState<SocialAuthRow> createState() => _SocialAuthRowState();
+}
+
+class _SocialAuthRowState extends ConsumerState<SocialAuthRow> {
+  bool _busy = false;
+
+  Future<void> _signIn() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    HapticFeedback.selectionClick();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final ack = await ref.read(authRepositoryProvider).loginWithGoogle(
+            defaultRole: widget.defaultRole,
+            name: widget.name,
+          );
+      final role = ack.role;
+      if (role == null) {
+        // Shouldn't happen — the remote repo errors out before returning
+        // a role-less ack — but catching it here keeps the type non-null
+        // for the navigation.
+        throw Exception(
+          'Signed in to Google, but your GalleryZone account is missing a '
+          'role. Email support@galleryzone.in.',
+        );
+      }
+      await ref.read(sessionProvider.notifier).signIn(role);
+      ref.invalidate(accountProvider);
+      if (!mounted) return;
+      context.go(landingAfterLogin(role, next: widget.next));
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only draw against the real backend — the offline mock explicitly
+    // throws from loginWithGoogle, and showing a button that always fails
+    // is exactly the fake-UI pattern the client flagged.
+    final remote = ref.watch(remoteBackendProvider);
+    if (!remote) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'or',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _signIn,
+          icon: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(LucideIcons.globe, size: 18),
+          label: Text(_busy ? 'Signing in…' : 'Continue with Google'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Primary submit button with the inline spinner every Auth form shows

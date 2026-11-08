@@ -3,11 +3,13 @@
 // file's own header for why confirmSimulatedPayment is explicitly a
 // pre-gateway placeholder); this controller is deliberately thin.
 
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Inject, Logger, NotFoundException, Param, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Inject, Logger, NotFoundException, Param, Post, Query, Req } from "@nestjs/common";
 import {
   createOrder,
   confirmSimulatedPayment,
+  FirestoreRateConfigStore,
   getOrder,
+  getPublicArtwork,
   CheckoutError,
   Collections,
   type Db,
@@ -18,11 +20,11 @@ import {
 } from "@galleryzone/db";
 import { createOrderInputSchema, type CreateOrderInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
-import { IllegalTransitionError } from "@galleryzone/domain";
+import { checkoutTotal, IllegalTransitionError } from "@galleryzone/domain";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB, ENV } from "./db.module.ts";
-import { ReadCache } from "./read-cache.ts";
+import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { getShippingRate, isShiprocketConfigured } from "./shiprocket.ts";
@@ -37,6 +39,79 @@ export class OrdersController {
     private readonly cache: ReadCache,
     private readonly emails: Emails,
   ) {}
+
+  /**
+   * Live checkout quote for a specific buyer address.
+   *
+   * The public `GET /v1/artworks/:id/quote` endpoint can't know the drop
+   * pincode, so it falls back to the flat `rates.deliveryChargePaise`. The
+   * review step shows that ₹25 "estimated" number regardless of which address
+   * the buyer picks — client flagged this on 7 Nov 2026. This endpoint runs
+   * the same Shiprocket quote `POST /v1/orders` will use, so the preview and
+   * the order match to the paise.
+   *
+   * Auth: customer — the address has to belong to the caller.
+   */
+  @Roles("customer")
+  @Get("quote")
+  async addressedQuote(
+    @Req() req: AuthenticatedRequest,
+    @Query("artworkId") artworkId: string,
+    @Query("addressId") addressId: string,
+  ) {
+    if (!artworkId || !addressId) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "artworkId and addressId are both required",
+        status: 400,
+        code: "missing_params",
+      });
+    }
+    const artwork = await this.cache.getOrFill(
+      CacheKeys.artwork(artworkId),
+      TTL.artwork,
+      () => getPublicArtwork(this.db, artworkId),
+    );
+    if (!artwork) {
+      throw new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
+    }
+    const version = await new FirestoreRateConfigStore(this.db).getActiveVersion(new Date());
+    if (!version) {
+      throw new NotFoundException({ type: "about:blank", title: "Pricing rules are not configured yet", status: 404, code: "no_active_rates" });
+    }
+
+    const resolution = await this.resolveShippingQuote(artworkId, addressId, req.authUser.uid).catch((err) => {
+      this.logger.warn(`ShipRocket rate quote threw: ${String(err)}`);
+      return { quote: undefined, reason: "shiprocket_error" as const };
+    });
+    const requireRealQuote = isShiprocketConfigured();
+    if (requireRealQuote && !resolution.quote) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: this.deliveryUnavailableMessage(resolution.reason),
+        status: 400,
+        code: "delivery_unavailable",
+        reason: resolution.reason,
+      });
+    }
+
+    const total = checkoutTotal(artwork.displayPricePaise, version.rates, resolution.quote?.ratePaise);
+    return {
+      artworkId,
+      addressId,
+      displayPricePaise: total.displayPrice,
+      gstPaise: total.gstIncluded,
+      gstRate: version.rates.gstRate,
+      convenienceFeePaise: total.convenienceFee,
+      convenienceGstPaise: total.convenienceGst,
+      deliveryChargePaise: total.deliveryCharge,
+      totalPaise: total.total,
+      rateConfigVersionId: version.id,
+      // Lets the UI show "Delivered by <carrier>" + ETA without a second call.
+      carrier: resolution.quote?.carrier ?? null,
+      estimatedDeliveryDays: resolution.quote?.estimatedDeliveryDays ?? null,
+    };
+  }
 
   @Roles("customer")
   @Post()

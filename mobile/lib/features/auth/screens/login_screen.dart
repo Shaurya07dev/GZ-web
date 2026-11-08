@@ -278,7 +278,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const SocialAuthRow(),
+          SocialAuthRow(next: widget.next),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

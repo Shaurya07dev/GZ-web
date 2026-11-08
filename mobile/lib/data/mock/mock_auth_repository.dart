@@ -51,6 +51,17 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<AuthAck> loginWithGoogle({Role? defaultRole, String? name}) {
+    // The mock has no real Firebase or Google credentials; it would be
+    // dishonest to return a fake ack here. The button is hidden in mock
+    // mode, so this should only fire from a test that reaches it directly.
+    return mockError(
+      'Google sign-in is not available offline. Run the app against the real '
+      'backend to use it.',
+    );
+  }
+
+  @override
   Future<void> signOut() async {}
 
   @override

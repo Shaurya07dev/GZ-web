@@ -60,7 +60,7 @@ class MockCheckoutRepository implements CheckoutRepository {
   ], (a) => a.toJson());
 
   @override
-  Future<CheckoutQuote> getQuote(String artworkId) {
+  Future<CheckoutQuote> getQuote(String artworkId, {String? addressId}) {
     final artwork = _readArtworks().where((a) => a.id == artworkId).firstOrNull;
     if (artwork == null) return mockError('Artwork not found');
     final totals = checkoutTotal(artwork.customerPrice);

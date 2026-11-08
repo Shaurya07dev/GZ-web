@@ -39,12 +39,18 @@ class RemoteCheckoutRepository implements CheckoutRepository {
   ).join();
 
   @override
-  Future<CheckoutQuote> getQuote(String artworkId) async => quoteFromApi(
-    await api.getMap(
-      '/v1/artworks/${Uri.encodeComponent(artworkId)}/quote',
-      auth: false,
-    ),
-  );
+  Future<CheckoutQuote> getQuote(String artworkId, {String? addressId}) async {
+    // With an address: hit the authenticated endpoint that runs the real
+    // Shiprocket quote for that pincode. Without one: the public preview,
+    // which uses the flat fallback (shown on artwork detail before the
+    // buyer has picked an address).
+    final path = (addressId != null && addressId.isNotEmpty)
+        ? '/v1/orders/quote?artworkId=${Uri.encodeQueryComponent(artworkId)}&addressId=${Uri.encodeQueryComponent(addressId)}'
+        : '/v1/artworks/${Uri.encodeComponent(artworkId)}/quote';
+    return quoteFromApi(
+      await api.getMap(path, auth: addressId != null && addressId.isNotEmpty),
+    );
+  }
 
   @override
   Future<Order> createOrder({

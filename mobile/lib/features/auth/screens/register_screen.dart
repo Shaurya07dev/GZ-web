@@ -261,7 +261,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const SocialAuthRow(),
+          SocialAuthRow(defaultRole: _role, name: _name.text.trim()),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

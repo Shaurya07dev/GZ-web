@@ -1,26 +1,51 @@
 {
   "project_info": {
-    "project_number": "102284420053",
-    "project_id": "upkem-11eb7",
-    "storage_bucket": "upkem-11eb7.firebasestorage.app"
+    "project_number": "558316713525",
+    "project_id": "galleryzone-prod",
+    "storage_bucket": "galleryzone-prod.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:102284420053:android:b336389e686c3766b9d35c",
+        "mobilesdk_app_id": "1:558316713525:android:31579c3da5cfc85a91e37c",
         "android_client_info": {
-          "package_name": "com.upkemlabs.b2b"
+          "package_name": "com.galleryzone.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "558316713525-gdamneu9nmudq8cgdc1ike5sj3huiv5a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.galleryzone.app",
+            "certificate_hash": "286d9b1713cead8529b03b8b6545ddd12f880377"
+          }
+        },
+        {
+          "client_id": "558316713525-ceic2am5gqt73fq9u254fe0ulupogsr9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyDS6SJ89FVMK9Y1O-OKnpadOj3_1XXfkbM"
+          "current_key": "AIzaSyAviy07mU18bNYHTLxVUm-FPU9C99aWum4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "558316713525-ceic2am5gqt73fq9u254fe0ulupogsr9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "558316713525-hr9p7cnd1ljv74h6edt0jgo13tot66af.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.galleryzone.app"
+              }
+            }
+          ]
         }
       }
     }

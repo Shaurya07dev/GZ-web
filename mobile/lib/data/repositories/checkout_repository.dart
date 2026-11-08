@@ -29,7 +29,11 @@ abstract class CheckoutRepository {
   /// right now: the price (GST inside), the convenience fee and its own GST,
   /// delivery, and the total. The review and payment steps show exactly this,
   /// so a preview can never disagree with the order that follows.
-  Future<CheckoutQuote> getQuote(String artworkId);
+  ///
+  /// Pass [addressId] on the review step to get the real Shiprocket rate
+  /// for that pincode; without it the API returns the flat fallback
+  /// (artwork-detail preview, before an address is picked).
+  Future<CheckoutQuote> getQuote(String artworkId, {String? addressId});
 
   Future<List<Order>> listOrders();
 

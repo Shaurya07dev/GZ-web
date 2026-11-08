@@ -19,6 +19,16 @@ abstract class AuthRepository {
   });
   Future<AuthResult> verifyEmail({String? token, bool simulateError = false});
 
+  /// Google sign-in. The `google_sign_in` plugin opens the account chooser;
+  /// we exchange the Google ID token for a Firebase session and then look up
+  /// the GalleryZone account. If none exists yet, [defaultRole] decides what
+  /// to bootstrap — the register screen passes the role the user picked;
+  /// the login screen passes null (which the API resolves to `customer` for
+  /// a first-time Google signer).
+  ///
+  /// Not available in the offline mock — throws there.
+  Future<AuthAck> loginWithGoogle({Role? defaultRole, String? name});
+
   /// Ends the session: the real backend forgets the tokens. The offline mock
   /// has nothing to forget.
   Future<void> signOut();
