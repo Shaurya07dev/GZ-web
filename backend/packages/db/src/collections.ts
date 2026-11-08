@@ -557,6 +557,12 @@ export interface OrderDoc {
    *  so the invoice number and tax split stay stable regardless of later rate
    *  changes or buyer-address edits. Audit §9. */
   invoice?: InvoiceSnapshot | null;
+  /** Set by markOrderRefunded when admin issues a Razorpay refund. The
+   *  order status is also moved to "cancelled" in the same write. Absent on
+   *  orders that were never refunded. Added 8 Nov 2026. */
+  refundedAt?: FirebaseFirestore.Timestamp | null;
+  providerRefundId?: string | null;
+  refundReason?: string | null;
 }
 
 /** Lives on the order doc so the invoice number can't drift across reads. */

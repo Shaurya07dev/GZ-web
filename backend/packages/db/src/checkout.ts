@@ -220,6 +220,39 @@ export async function providerOrderIdForOrder(db: Firestore, orderId: string): P
   return snap.empty ? null : ((snap.docs[0]!.data() as PaymentDoc).providerOrderId ?? null);
 }
 
+/** The captured Razorpay payment id for an order, if one was captured. */
+export async function providerPaymentIdForOrder(db: Firestore, orderId: string): Promise<string | null> {
+  const snap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
+  if (snap.empty) return null;
+  const payment = snap.docs[0]!.data() as PaymentDoc;
+  return payment.providerPaymentId ?? null;
+}
+
+/**
+ * Mark an order refunded. Admin-only. Called after Razorpay has confirmed
+ * the refund so the record and reality agree. Stamps the refund id and
+ * timestamp on the order doc; a parallel auditLog entry is written by the
+ * controller so the "who/why" trail is kept with the entity, not inside
+ * the order.
+ *
+ * The transition "paid|confirmed|packed → cancelled" is already in the
+ * state machine; this helper stamps the refund metadata on top. Delivered
+ * orders cannot be refunded here — the piece has shipped.
+ */
+export async function markOrderRefunded(
+  db: Firestore,
+  orderId: string,
+  detail: { providerRefundId: string; reason: string },
+): Promise<void> {
+  const ref = db.collection(Collections.orders).doc(orderId);
+  await ref.update({
+    status: "cancelled",
+    refundedAt: FieldValue.serverTimestamp(),
+    providerRefundId: detail.providerRefundId,
+    refundReason: detail.reason.slice(0, 500),
+  });
+}
+
 export async function markPaymentFailed(db: Firestore, orderId: string, detail: { providerPaymentId: string | null; rawWebhookPayload: unknown }): Promise<void> {
   const snap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
   if (snap.empty) return;
