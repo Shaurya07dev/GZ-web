@@ -543,6 +543,32 @@ class MockCustomerRepository implements CustomerRepository {
     return const Cart();
   });
 
+  // --- Wishlist + follows (demo in-memory) ---------------------------------
+  final Set<String> _wishlist = <String>{};
+  final Set<String> _follows = <String>{};
+
+  @override
+  Future<Set<String>> getWishlist() => mockDelay(() => Set.of(_wishlist));
+
+  @override
+  Future<void> addToWishlist(String artworkId) =>
+      mockDelay(() => _wishlist.add(artworkId));
+
+  @override
+  Future<void> removeFromWishlist(String artworkId) =>
+      mockDelay(() => _wishlist.remove(artworkId));
+
+  @override
+  Future<Set<String>> getFollows() => mockDelay(() => Set.of(_follows));
+
+  @override
+  Future<void> followArtist(String artistId) =>
+      mockDelay(() => _follows.add(artistId));
+
+  @override
+  Future<void> unfollowArtist(String artistId) =>
+      mockDelay(() => _follows.remove(artistId));
+
   // --- Notification preferences (demo in-memory) ---------------------------
   NotificationPreferences _prefs = const NotificationPreferences(
     abandonedCart: true,

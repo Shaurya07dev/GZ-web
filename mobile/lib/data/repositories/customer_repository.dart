@@ -73,6 +73,17 @@ abstract class CustomerRepository {
   Future<Cart> removeFromCart(String artworkId);
   Future<Cart> clearCart();
 
+  /// Saved artworks (wishlist) — moved to the server on 8 Nov 2026 so a
+  /// save survives reinstall and syncs across devices.
+  Future<Set<String>> getWishlist();
+  Future<void> addToWishlist(String artworkId);
+  Future<void> removeFromWishlist(String artworkId);
+
+  /// Followed artists — same shape and same rationale as the wishlist.
+  Future<Set<String>> getFollows();
+  Future<void> followArtist(String artistId);
+  Future<void> unfollowArtist(String artistId);
+
   /// Opt-in notification categories — transactional email always goes out
   /// regardless. `pushEnabled` gates FCM pushes.
   Future<NotificationPreferences> getNotificationPreferences();

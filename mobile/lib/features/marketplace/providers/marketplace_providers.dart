@@ -7,7 +7,7 @@ import '../../../data/models/artwork.dart';
 import '../../../data/models/artwork_filters.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../data/repositories/artwork_repository.dart';
-import '../../../data/storage/mock_db.dart';
+import '../../account/providers/account_providers.dart';
 import '../filter_options.dart';
 
 /// Only place the concrete implementation is named — a dio-backed
@@ -192,24 +192,51 @@ final filterCountsProvider = Provider.autoDispose<FilterCounts?>((ref) {
   return overview == null ? null : FilterCounts.from(overview);
 });
 
+/// Saved artworks for the signed-in user. 8 Nov 2026 — moved off local
+/// MockDb to the real `/v1/me/wishlist` endpoint so a save survives
+/// reinstall and syncs across devices. The notifier exposes the same
+/// `Set<String>` shape every callsite already uses; `build()` seeds empty
+/// and kicks an async refresh that writes the fetched set to `state`.
+/// `toggle` updates optimistically and sends the mutation in the
+/// background — a failed mutation rolls back and surfaces the error.
 class WishlistNotifier extends Notifier<Set<String>> {
-  static const _key = 'wishlist';
-
   @override
-  Set<String> build() => MockDb.getCollection<String>(
-    _key,
-    () => const [],
-    (json) => json['id'] as String,
-    (id) => {'id': id},
-  ).toSet();
+  Set<String> build() {
+    _refresh();
+    return const <String>{};
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final ids = await ref.read(customerRepositoryProvider).getWishlist();
+      state = ids;
+    } catch (_) {
+      // Logged-out callers get an API 401 — leave the set empty and let
+      // the UI show its signed-out state.
+    }
+  }
 
   bool has(String artworkId) => state.contains(artworkId);
 
-  void toggle(String artworkId) {
-    final next = Set<String>.from(state);
-    if (!next.remove(artworkId)) next.add(artworkId);
-    MockDb.setCollection<String>(_key, next.toList(), (id) => {'id': id});
-    state = next;
+  Future<void> toggle(String artworkId) async {
+    final was = state.contains(artworkId);
+    final optimistic = Set<String>.from(state);
+    was ? optimistic.remove(artworkId) : optimistic.add(artworkId);
+    state = optimistic;
+    try {
+      final repo = ref.read(customerRepositoryProvider);
+      if (was) {
+        await repo.removeFromWishlist(artworkId);
+      } else {
+        await repo.addToWishlist(artworkId);
+      }
+    } catch (error) {
+      // Roll back on failure; the UI stays truthful to what the server has.
+      final rolled = Set<String>.from(state);
+      was ? rolled.add(artworkId) : rolled.remove(artworkId);
+      state = rolled;
+      rethrow;
+    }
   }
 }
 
@@ -217,31 +244,45 @@ final wishlistProvider = NotifierProvider<WishlistNotifier, Set<String>>(
   WishlistNotifier.new,
 );
 
-/// Artists this device follows. Deliberately the same shape as
-/// [WishlistNotifier] — a persisted set of ids with no API behind it yet —
-/// so both swap to a query-backed hook the same way.
-///
-/// Client-only has a real consequence worth knowing: a follow is not visible
-/// to the artist. Nothing in the artist portal shows a follower count,
-/// because a number derived from one device's storage would be fiction.
+/// Followed artists — same pattern as the wishlist. 8 Nov 2026 — moved to
+/// `/v1/me/follows` so the artist's follower count can eventually be a
+/// real number instead of client-only fiction.
 class FollowsNotifier extends Notifier<Set<String>> {
-  static const _key = 'follows';
-
   @override
-  Set<String> build() => MockDb.getCollection<String>(
-    _key,
-    () => const [],
-    (json) => json['id'] as String,
-    (id) => {'id': id},
-  ).toSet();
+  Set<String> build() {
+    _refresh();
+    return const <String>{};
+  }
+
+  Future<void> _refresh() async {
+    try {
+      final ids = await ref.read(customerRepositoryProvider).getFollows();
+      state = ids;
+    } catch (_) {
+      // Signed-out path.
+    }
+  }
 
   bool has(String artistId) => state.contains(artistId);
 
-  void toggle(String artistId) {
-    final next = Set<String>.from(state);
-    if (!next.remove(artistId)) next.add(artistId);
-    MockDb.setCollection<String>(_key, next.toList(), (id) => {'id': id});
-    state = next;
+  Future<void> toggle(String artistId) async {
+    final was = state.contains(artistId);
+    final optimistic = Set<String>.from(state);
+    was ? optimistic.remove(artistId) : optimistic.add(artistId);
+    state = optimistic;
+    try {
+      final repo = ref.read(customerRepositoryProvider);
+      if (was) {
+        await repo.unfollowArtist(artistId);
+      } else {
+        await repo.followArtist(artistId);
+      }
+    } catch (error) {
+      final rolled = Set<String>.from(state);
+      was ? rolled.add(artistId) : rolled.remove(artistId);
+      state = rolled;
+      rethrow;
+    }
   }
 }
 

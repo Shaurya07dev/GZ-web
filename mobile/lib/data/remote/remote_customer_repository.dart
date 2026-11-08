@@ -288,6 +288,54 @@ class RemoteCustomerRepository implements CustomerRepository {
   Future<Cart> clearCart() async =>
       Cart.fromJson(asMap(await api.delete('/v1/me/cart')));
 
+  // --- Wishlist + follows ----------------------------------------------------
+
+  Set<String> _artworkIds(Object? body) {
+    final entries = (asMap(body)['entries'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>();
+    return {for (final e in entries) e['artworkId'] as String? ?? ''}
+      ..removeWhere((id) => id.isEmpty);
+  }
+
+  Set<String> _artistIds(Object? body) {
+    final entries = (asMap(body)['entries'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>();
+    return {for (final e in entries) e['artistId'] as String? ?? ''}
+      ..removeWhere((id) => id.isEmpty);
+  }
+
+  @override
+  Future<Set<String>> getWishlist() async =>
+      _artworkIds(await api.getMap('/v1/me/wishlist'));
+
+  @override
+  Future<void> addToWishlist(String artworkId) async {
+    await api.post('/v1/me/wishlist/items', body: {'artworkId': artworkId});
+  }
+
+  @override
+  Future<void> removeFromWishlist(String artworkId) async {
+    await api.delete(
+      '/v1/me/wishlist/items/${Uri.encodeComponent(artworkId)}',
+    );
+  }
+
+  @override
+  Future<Set<String>> getFollows() async =>
+      _artistIds(await api.getMap('/v1/me/follows'));
+
+  @override
+  Future<void> followArtist(String artistId) async {
+    await api.post('/v1/me/follows/items', body: {'artistId': artistId});
+  }
+
+  @override
+  Future<void> unfollowArtist(String artistId) async {
+    await api.delete(
+      '/v1/me/follows/items/${Uri.encodeComponent(artistId)}',
+    );
+  }
+
   // --- Notification preferences --------------------------------------------
   @override
   Future<NotificationPreferences> getNotificationPreferences() async =>

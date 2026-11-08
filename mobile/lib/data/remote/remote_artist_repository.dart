@@ -554,10 +554,28 @@ class RemoteArtistRepository implements ArtistRepository {
     );
   }
 
-  /// Which of this artist's pieces are on aggregators' walls isn't served to
-  /// artists yet, so — like the website — this is honestly empty.
+  /// Which of this artist's pieces are on aggregators' walls. Reads
+  /// `GET /v1/artist/gallery-spaces` (the backend joins the piece onto the
+  /// holding) and maps each row to [GallerySpacePlacement]. 8 Nov 2026 —
+  /// this used to return `const []` with a stale comment claiming the data
+  /// wasn't served; the endpoint has been live for a while and it broke
+  /// the screen quietly for every artist.
   @override
-  Future<List<GallerySpacePlacement>> listGallerySpaces() async => const [];
+  Future<List<GallerySpacePlacement>> listGallerySpaces() async {
+    final json = asMap(await api.getMap('/v1/artist/gallery-spaces'));
+    final rows = (json['holdings'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>();
+    return [
+      for (final row in rows)
+        () {
+          final view = holdingViewFromApi(row);
+          return GallerySpacePlacement(
+            holding: view.holding,
+            artwork: view.artwork,
+          );
+        }(),
+    ];
+  }
 
   // --- Dashboard ----------------------------------------------------------------------------------
 
