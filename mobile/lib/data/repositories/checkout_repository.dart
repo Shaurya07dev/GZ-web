@@ -25,6 +25,10 @@ abstract class CheckoutRepository {
   /// demo drives it by hand from the order screen.
   Future<Order> advanceOrder(String id);
 
+  /// Resume payment on a pending order that was abandoned at the gateway.
+  /// Reopens the gateway sheet and reads the order back when it clears.
+  Future<Order> resumePayment(String orderId);
+
   /// What the artwork costs at checkout, from the pricing rules in force
   /// right now: the price (GST inside), the convenience fee and its own GST,
   /// delivery, and the total. The review and payment steps show exactly this,

@@ -30,10 +30,24 @@ final ordersProvider = FutureProvider.autoDispose<List<Order>>((ref) async {
   final orders = await ref.watch(checkoutRepositoryProvider).listOrders();
   // Newest first — the list, the dashboard's "recent orders" and any future
   // caller all want the same order, so it's sorted once here.
-  return [...orders]..sort(
+  final sorted = [...orders]..sort(
     (a, b) =>
         DateTime.parse(b.createdAt).compareTo(DateTime.parse(a.createdAt)),
   );
+  // Collapse duplicate pending orders for the same artwork. Backend's
+  // createOrder dedupes going forward (one pending per customer+artwork),
+  // but any legacy duplicates in Firestore from before that check still
+  // show up — keep only the newest, so the list reads as "one abandoned
+  // checkout per piece" instead of a messy stack. Paid/delivered orders
+  // are always kept (the same piece could legitimately be bought twice if
+  // resold later).
+  final seenPending = <String>{};
+  return [
+    for (final order in sorted)
+      if (order.status != OrderStatus.pending ||
+          seenPending.add(order.artworkId))
+        order,
+  ];
 });
 
 final orderProvider = FutureProvider.autoDispose.family<Order?, String>((

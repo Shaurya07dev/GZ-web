@@ -76,7 +76,10 @@ class NfcFlow {
       );
 
       // Already linked to this very chip: leave a good write alone.
-      if (action != NfcCheckAction.noop || await device.readUrl() != url) {
+      // Compare by path too — an older chip may still carry the
+      // galleryzone.art URL, which is the same destination.
+      if (action != NfcCheckAction.noop ||
+          !_pathPointsTo(await device.readUrl(), artworkId)) {
         session.step = NfcFailureStep.write;
         onProgress?.call(NfcProgress.writing);
         await device.writeUrl(url);
@@ -111,7 +114,6 @@ class NfcFlow {
     void Function(NfcProgress progress)? onProgress,
   }) {
     return _session(artworkId, (session) async {
-      final url = _urlFor(artworkId);
       onProgress?.call(NfcProgress.waitingForTag);
       final chip = await session.poll();
       await session.requireNtag213(chip);
@@ -126,23 +128,35 @@ class NfcFlow {
 
       if (action != NfcCheckAction.noop) {
         // Permanent means permanent: never lock a chip that doesn't point here.
+        // Match the URL by its `/verify/<id>` path, not the full string: the
+        // site domain has moved (galleryzone.art → galleryzone.in, 7 Nov 2026)
+        // and chips written against the old host must still lock.
         session.step = NfcFailureStep.uidMismatch;
-        if (await device.readUrl() != url) {
+        final chipUrl = await device.readUrl();
+        if (!_pathPointsTo(chipUrl, artworkId)) {
           throw const NfcFlowException(
             NfcFailureStep.uidMismatch,
             "This chip doesn't hold this artwork's link, so it was not locked. Link it to this piece first.",
           );
         }
 
-        onProgress?.call(NfcProgress.locking);
-        await _lockChip(session);
-        onProgress?.call(NfcProgress.verifyingLock);
-        session.step = NfcFailureStep.verifyLock;
+        // Prior lock attempt partially succeeded (chip is fully locked
+        // already, server didn't get the confirm): skip straight to the
+        // record step rather than retrying writes the chip is going to
+        // refuse. Running the whole lock sequence again on a locked chip
+        // was giving transient "chip lost contact" errors to buyers who
+        // just needed the record caught up (client-reported 8 Nov 2026).
         if (!await _isLocked()) {
-          throw const NfcFlowException(
-            NfcFailureStep.verifyLock,
-            "The tag didn't lock completely, so nothing was recorded. Hold it steady against the phone and try again.",
-          );
+          onProgress?.call(NfcProgress.locking);
+          await _lockChip(session);
+          onProgress?.call(NfcProgress.verifyingLock);
+          session.step = NfcFailureStep.verifyLock;
+          if (!await _isLocked()) {
+            throw const NfcFlowException(
+              NfcFailureStep.verifyLock,
+              "The tag didn't lock completely, so nothing was recorded. Hold it steady against the phone and try again.",
+            );
+          }
         }
       }
 
@@ -329,6 +343,22 @@ class _Session {
           : "This isn't an NTAG213 chip. Use a GalleryZone-supplied tag.",
     );
   }
+}
+
+/// True when [chipUrl] points at this artwork's passport, regardless of host.
+/// Matches `.../verify/<artworkId>` so a chip written under galleryzone.art
+/// (pre-7 Nov 2026) is still recognised as belonging to [artworkId] once the
+/// site moves to galleryzone.in — the chip is a pointer; what matters is where
+/// it points.
+bool _pathPointsTo(String? chipUrl, String artworkId) {
+  if (chipUrl == null || chipUrl.isEmpty) return false;
+  final parsed = Uri.tryParse(chipUrl);
+  if (parsed == null) return false;
+  final segments = parsed.pathSegments;
+  if (segments.length < 2) return false;
+  // Last two path segments must be "verify" / "<artworkId>".
+  return segments[segments.length - 2] == 'verify' &&
+      segments[segments.length - 1] == artworkId;
 }
 
 String _textOf(Object error) {

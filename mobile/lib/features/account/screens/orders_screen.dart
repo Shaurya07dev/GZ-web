@@ -16,6 +16,7 @@ import '../../auth/providers/auth_providers.dart';
 import '../../checkout/providers/checkout_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../providers/account_providers.dart';
+import '../widgets/cart_action.dart';
 import '../widgets/order_widgets.dart';
 import '../widgets/customer_shell.dart';
 
@@ -30,7 +31,10 @@ class OrdersScreen extends ConsumerWidget {
     final orders = ref.watch(ordersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Orders')),
+      appBar: AppBar(
+        title: const Text('Orders'),
+        actions: const [CartAction(), SizedBox(width: 4)],
+      ),
       body: orders.when(
         loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(
@@ -269,6 +273,13 @@ class OrderDetailScreen extends ConsumerWidget {
                     OrderStatusTimeline(history: data.statusHistory),
                     const SizedBox(height: 12),
                     _AdvanceOrderControl(order: data),
+                    // Resume payment: a pending order sat here with no next
+                    // step for buyers who had closed the Razorpay sheet.
+                    // 8 Nov 2026 — give them one tap back.
+                    if (data.status == OrderStatus.pending) ...[
+                      const SizedBox(height: 16),
+                      _ResumePaymentCta(orderId: data.id),
+                    ],
                     const SizedBox(height: 28),
                     OrderPriceBreakdown(order: data),
                     const SizedBox(height: 28),
@@ -569,4 +580,92 @@ class _TaxInvoiceCardState extends ConsumerState<_TaxInvoiceCard> {
       ),
     );
   }
+}
+
+/// Reopens the payment sheet for a pending (abandoned-at-checkout) order and
+/// refreshes the order detail once the gateway settles it.
+class _ResumePaymentCta extends ConsumerStatefulWidget {
+  const _ResumePaymentCta({required this.orderId});
+
+  final String orderId;
+
+  @override
+  ConsumerState<_ResumePaymentCta> createState() => _ResumePaymentCtaState();
+}
+
+class _ResumePaymentCtaState extends ConsumerState<_ResumePaymentCta> {
+  bool _busy = false;
+
+  Future<void> _pay() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(checkoutRepositoryProvider)
+          .resumePayment(widget.orderId);
+      ref.invalidate(orderProvider(widget.orderId));
+      ref.invalidate(ordersProvider);
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(_payErrorText(error))),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment not completed',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Finish checkout now and the artwork is yours. '
+            'The piece is still held for you until this order is paid or cancelled.',
+            style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _busy ? null : _pay,
+            icon: _busy
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(LucideIcons.creditCard, size: 16),
+            label: Text(_busy ? 'Opening payment…' : 'Complete payment'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _payErrorText(Object error) {
+  final text = error.toString();
+  if (text.contains('cancelled')) {
+    return 'Payment cancelled. You can try again any time.';
+  }
+  return text.startsWith('Exception: ')
+      ? text.substring('Exception: '.length)
+      : 'Payment could not be completed. Please try again.';
 }

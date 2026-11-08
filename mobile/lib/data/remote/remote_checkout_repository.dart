@@ -75,8 +75,23 @@ class RemoteCheckoutRepository implements CheckoutRepository {
         message: 'The order could not be created.',
       );
     }
-    final base = '/v1/orders/${Uri.encodeComponent(orderId)}';
+    return _runPayment(orderId);
+  }
 
+  /// Resume payment on an order that was created but not paid.
+  ///
+  /// Added 8 Nov 2026 — client reported that buyers who closed the gateway
+  /// sheet had no path back from the order detail. The backend keeps the
+  /// order in `pending` and will issue a fresh Razorpay session on request,
+  /// so all this does is call `/payment/session` again on the existing order.
+  @override
+  Future<Order> resumePayment(String orderId) => _runPayment(orderId);
+
+  /// Opens a gateway session on [orderId] and reads the order back once
+  /// payment lands. Used by both the "pay now" step of a brand-new order
+  /// and the "complete payment" button on a pending one.
+  Future<Order> _runPayment(String orderId) async {
+    final base = '/v1/orders/${Uri.encodeComponent(orderId)}';
     final session = asMap(await api.post('$base/payment/session'));
     if (session['mode'] == 'razorpay') {
       // Closing the sheet leaves the order pending; the exception says so.

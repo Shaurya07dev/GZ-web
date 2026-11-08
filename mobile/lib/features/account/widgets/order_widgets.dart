@@ -62,10 +62,13 @@ class OrderStatusStyle {
     ),
   };
 
-  /// The timeline's wording differs from the chip's — "Order placed" reads
-  /// as an event, "Pending" as a state.
+  /// The timeline's wording differs from the chip's — the chip is the
+  /// current state, the timeline entry is the event that put it there.
+  /// Client flagged on 8 Nov 2026: labeling pending as "Order placed"
+  /// alongside a green checkmark made buyers who had abandoned payment
+  /// think the order was successful. Pending gets its own event/icon now.
   static String timelineLabel(OrderStatus status) => switch (status) {
-    OrderStatus.pending => 'Order placed',
+    OrderStatus.pending => 'Payment pending',
     OrderStatus.paid => 'Payment received',
     OrderStatus.confirmed => 'Order confirmed',
     OrderStatus.packed => 'Packed for dispatch',
@@ -223,8 +226,9 @@ class OrderStatusTimeline extends StatelessWidget {
                   children: [
                     Builder(
                       builder: (context) {
-                        final isCancelled =
-                            ordered[i].status == OrderStatus.cancelled;
+                        final status = ordered[i].status;
+                        final isCancelled = status == OrderStatus.cancelled;
+                        final isPending = status == OrderStatus.pending;
                         final tint = isCancelled
                             ? theme.colorScheme.error
                             : theme.colorScheme.primary;
@@ -239,9 +243,14 @@ class OrderStatusTimeline extends StatelessWidget {
                             ),
                           ),
                           child: Icon(
+                            // A check mark on a pending step reads as
+                            // "order complete", which it isn't — the buyer
+                            // abandoned payment. Clock = "still waiting".
                             isCancelled
                                 ? LucideIcons.circleX
-                                : LucideIcons.check,
+                                : isPending
+                                    ? LucideIcons.clock3
+                                    : LucideIcons.check,
                             size: 12,
                             color: isCancelled
                                 ? theme.colorScheme.error

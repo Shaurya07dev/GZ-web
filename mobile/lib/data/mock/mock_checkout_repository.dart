@@ -213,6 +213,12 @@ class MockCheckoutRepository implements CheckoutRepository {
           .firstOrNull;
 
   @override
+  Future<Order> resumePayment(String orderId) async {
+    // Offline mode pretends the gateway cleared the pending order.
+    return advanceOrder(orderId);
+  }
+
+  @override
   Future<Order> advanceOrder(String id) {
     final orders = _readOrders();
     final order = orders.where((o) => o.id == id).firstOrNull;
