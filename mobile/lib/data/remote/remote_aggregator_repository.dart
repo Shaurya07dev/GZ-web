@@ -123,22 +123,102 @@ class RemoteAggregatorRepository
   /// Reserving needs a signed MOU and an approved GST number; the server
   /// refuses otherwise with a sentence that says which. [sellingPrice] is the
   /// price before GST, month 1 only, never below GalleryZone's offer.
+  ///
+  /// Flow (per-reservation Razorpay — replaces the old wallet-balance path
+  /// that this file used until 9 Nov 2026):
+  ///   1. POST /reservation-intents           → opens Razorpay order
+  ///   2. gateway.pay(session)                → aggregator pays via Checkout
+  ///   3. POST /reservation-intents/:id/verify → server verifies signature +
+  ///      Razorpay, then atomically creates the holding OR queues a refund
+  ///      (if another aggregator won the race).
+  ///
+  /// Verify is called even on dismiss / failure, because a UPI app can still
+  /// complete the payment out of band after the sheet closes.
   @override
   Future<AggregatorHolding> reserve(
     String artworkId, {
     double? sellingPrice,
     bool simulateConflict = false,
   }) async {
-    final json = await api.post(
-      '/v1/aggregator/holdings',
-      body: {
-        'artworkId': artworkId,
-        'sellingPricePaise': ?(sellingPrice == null
-            ? null
-            : rupeesToPaise(sellingPrice)),
-      },
+    final init = asMap(
+      await api.post(
+        '/v1/aggregator/reservation-intents',
+        body: {
+          'artworkId': artworkId,
+          if (sellingPrice != null)
+            'sellingPricePaise': rupeesToPaise(sellingPrice),
+          // One idempotency key per attempt — a double-tap hits the same
+          // intent instead of opening a second Razorpay order.
+          'idempotencyKey':
+              '${DateTime.now().microsecondsSinceEpoch}-${math.Random().nextInt(1 << 32).toRadixString(16)}',
+        },
+      ),
     );
-    return holdingFromApi(asMap(json));
+    final intentId = init['intentId'] as String? ?? '';
+    if (intentId.isEmpty) {
+      throw const ApiError(
+        status: 0,
+        code: 'bad_response',
+        message: 'The reservation could not be started.',
+      );
+    }
+    final verifyPath =
+        '/v1/aggregator/reservation-intents/${Uri.encodeComponent(intentId)}/verify';
+
+    // Simulated mode: server finalises without a real payment.
+    if (init['mode'] != 'razorpay') {
+      final result = asMap(await api.post(verifyPath));
+      return _finishReservation(result);
+    }
+
+    // Razorpay path. If the sheet is dismissed, verify with no body — a
+    // UPI app may still complete out of band; the server's own fetchOrder
+    // is the only authoritative "paid?" answer.
+    Map<String, dynamic> body = const {};
+    try {
+      final paid = await gateway.pay(GatewaySession.fromApi(init));
+      body = {
+        'razorpayOrderId': paid.orderId,
+        'razorpayPaymentId': paid.paymentId,
+        'signature': paid.signature,
+      };
+    } catch (_) {
+      // Fall through to a bodyless verify; the server distinguishes a
+      // true dismiss from a late capture.
+    }
+    final result = asMap(await api.post(verifyPath, body: body));
+    return _finishReservation(result);
+  }
+
+  Future<AggregatorHolding> _finishReservation(Map<String, dynamic> result) async {
+    final status = result['status'] as String? ?? '';
+    final holdingId = result['holdingId'] as String?;
+    if (status == 'finalized' && holdingId != null && holdingId.isNotEmpty) {
+      final view = await getHolding(holdingId);
+      if (view != null) return view.holding;
+    }
+    final reason = result['reason'] as String?;
+    if (status == 'needs_refund' || status == 'refunded') {
+      throw ApiError(
+        status: 409,
+        code: 'reservation_lost_race',
+        message: reason ??
+            'Someone else reserved this piece before your payment could be confirmed. Your payment is being refunded.',
+      );
+    }
+    if (status == 'cancelled') {
+      throw const ApiError(
+        status: 0,
+        code: 'cancelled',
+        message: 'The payment was cancelled.',
+      );
+    }
+    throw ApiError(
+      status: 0,
+      code: 'reserve_failed',
+      message:
+          reason ?? 'The reservation could not be completed. Please try again.',
+    );
   }
 
   @override
