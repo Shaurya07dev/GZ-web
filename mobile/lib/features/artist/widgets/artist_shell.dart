@@ -60,22 +60,23 @@ class ArtistShell extends ConsumerWidget {
 
     if (size.isCompact) {
       return Scaffold(
-        extendBody: true,
+        extendBody: false,
         body: body,
         bottomNavigationBar: ShellNavigationBar(
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: _goBranch,
           destinations: artistDestinations,
-          // Uploading a new piece is the artist's primary action. One-tap
-          // from anywhere — no need to route through My Art → New.
-          floatingAction: GlassNavAction(
-            icon: LucideIcons.plus,
-            tooltip: 'Upload a new artwork',
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              context.push('/dashboard/artworks/upload');
-            },
-          ),
+        ),
+        // Uploading a new piece is the artist's primary action from any tab.
+        // Material 3's endFloat location puts the FAB above the right of the
+        // nav bar automatically — no manual positioning.
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            context.push('/dashboard/artworks/upload');
+          },
+          tooltip: 'Upload a new artwork',
+          child: const Icon(LucideIcons.plus),
         ),
       );
     }

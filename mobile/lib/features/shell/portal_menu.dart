@@ -70,6 +70,17 @@ List<PortalMenuItem> _helpSection(String supportRoute) => [
 
 final customerMenu = <PortalMenuSection>[
   const PortalMenuSection(
+    title: 'Shopping',
+    items: [
+      PortalMenuItem(
+        icon: LucideIcons.shoppingCart,
+        label: 'Cart',
+        subtitle: 'Review pieces you want to buy',
+        route: '/account/cart',
+      ),
+    ],
+  ),
+  const PortalMenuSection(
     title: 'Account',
     items: [
       PortalMenuItem(

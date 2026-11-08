@@ -10,9 +10,6 @@ import '../../data/models/customer.dart'
     show WalletTransaction, WalletTransactionStatus;
 import '../legal/data/faq_data.dart';
 import '../legal/screens/faq_screen.dart';
-import 'glass_nav.dart';
-
-export 'glass_nav.dart' show GlassNavAction;
 
 /// One destination model, shared by all three portal shells. Each portal's
 /// web sidebar (nine to fifteen grouped items) collapses to four primary
@@ -25,36 +22,44 @@ class ShellDestination {
   final String label;
 }
 
-/// The portals' bottom bar on a phone, rebuilt 5 Nov 2026 as a floating
-/// glassmorphism pill (see [GlassNavBar]). Same single widget across iOS
-/// and Android — the reference the owner supplied is platform-agnostic, and
-/// a single surface across both means screenshots, QA and support
-/// conversations all name the same thing.
+/// The portals' bottom bar on a phone.
 ///
-/// Optional [floatingAction] mounts a separate circular FAB above the pill
-/// (e.g. a search button on the collector shell, an upload button on the
-/// artist shell).
+/// 8 Nov 2026 — replaced the floating glassmorphism pill with Material 3's
+/// standard [NavigationBar]. The pill was a bespoke pattern that paired
+/// badly with a separate floating FAB: the two sat as unrelated objects
+/// with awkward whitespace between them, and client review called it out
+/// as unprofessional. The platform's own nav bar is what every major
+/// consumer app ships (Instagram, Gmail, LinkedIn, Uber) — a solid, full
+/// width bar tinted from the surface, flush to the bottom edge.
+///
+/// A primary action (upload / search) is handled separately by the shell
+/// as a standard [Scaffold.floatingActionButton] with endFloat location —
+/// Material positions it above the nav bar for us.
 class ShellNavigationBar extends StatelessWidget {
   const ShellNavigationBar({
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.destinations,
-    this.floatingAction,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final List<ShellDestination> destinations;
-  final GlassNavAction? floatingAction;
 
   @override
   Widget build(BuildContext context) {
-    return GlassNavBar(
+    return NavigationBar(
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
-      destinations: destinations,
-      floatingAction: floatingAction,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      destinations: [
+        for (final destination in destinations)
+          NavigationDestination(
+            icon: Icon(destination.icon),
+            label: destination.label,
+          ),
+      ],
     );
   }
 }

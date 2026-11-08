@@ -75,23 +75,21 @@ class CustomerShell extends ConsumerWidget {
 
     if (size.isCompact) {
       return Scaffold(
-        extendBody: true,
+        extendBody: false,
         body: body,
         bottomNavigationBar: ShellNavigationBar(
           selectedIndex: navigationShell.currentIndex,
           onDestinationSelected: _goBranch,
           destinations: shellDestinations,
-          // Search is the collector's most frequent action after sign-in.
-          // Lifting it to a FAB means a one-tap jump into the marketplace
-          // from any portal screen, without eating a tab slot.
-          floatingAction: GlassNavAction(
-            icon: LucideIcons.search,
-            tooltip: 'Search the marketplace',
-            onPressed: () {
-              HapticFeedback.selectionClick();
-              context.push('/marketplace');
-            },
-          ),
+        ),
+        // Search the marketplace from any tab.
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            context.push('/marketplace');
+          },
+          tooltip: 'Search the marketplace',
+          child: const Icon(LucideIcons.search),
         ),
       );
     }

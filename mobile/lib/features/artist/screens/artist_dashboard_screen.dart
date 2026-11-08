@@ -658,6 +658,26 @@ class _ActivityRow extends StatelessWidget {
     ActivityKind.withdrawal => LucideIcons.arrowDownRight,
   };
 
+  /// Raw ISO timestamps were taking half the row and forcing the title to
+  /// wrap mid-word (owner-reported 8 Nov 2026: "Settlement credited" was
+  /// rendering as "Settleme / nt / credited"). Short relative labels keep
+  /// the timestamp out of the way so the title gets its full column.
+  static String _shortTime(String raw) {
+    final at = DateTime.tryParse(raw);
+    if (at == null) return raw;
+    final local = at.toLocal();
+    final diff = DateTime.now().difference(local);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${local.day} ${months[local.month - 1]}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -690,7 +710,12 @@ class _ActivityRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Text(entry.time, style: theme.textTheme.labelSmall),
+        Text(
+          _shortTime(entry.time),
+          style: theme.textTheme.labelSmall,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
       ],
     );
   }

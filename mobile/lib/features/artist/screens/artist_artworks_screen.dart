@@ -95,13 +95,11 @@ class _ArtistArtworksScreenState extends ConsumerState<ArtistArtworksScreen> {
     final artworks = ref.watch(artistArtworksProvider);
     final theme = Theme.of(context);
 
+    // The shell owns the "+" upload FAB (ArtistShell.floatingActionButton),
+    // so this screen must not add another — two FABs overlapped and raised
+    // a RenderFlex overflow in the empty state (client-reported 8 Nov 2026).
     return Scaffold(
       appBar: AppBar(title: const Text('My Artworks')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/dashboard/artworks/upload'),
-        icon: const Icon(LucideIcons.plus, size: 18),
-        label: const Text('List new artwork'),
-      ),
       body: artworks.when(
         loading: () => const PageSkeleton(),
         error: (error, stack) => Center(

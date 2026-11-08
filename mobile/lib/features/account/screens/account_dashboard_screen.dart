@@ -12,6 +12,7 @@ import '../../../data/models/customer.dart';
 import '../../../data/models/order.dart';
 import '../../marketplace/providers/marketplace_providers.dart';
 import '../providers/account_providers.dart';
+import '../widgets/cart_action.dart';
 import '../widgets/order_widgets.dart';
 import '../widgets/customer_shell.dart';
 
@@ -37,7 +38,10 @@ class AccountDashboardScreen extends ConsumerWidget {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: AppBar(
+        title: const Text('Account'),
+        actions: const [CartAction(), SizedBox(width: 4)],
+      ),
       body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(ordersProvider);

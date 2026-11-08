@@ -16,6 +16,7 @@ import '../../../data/models/artwork.dart';
 import '../../account/providers/account_providers.dart'
     show cartProvider, customerRepositoryProvider;
 import '../../auth/providers/auth_providers.dart' show authErrorMessage;
+import '../../account/widgets/cart_action.dart';
 import '../providers/marketplace_providers.dart';
 import '../widgets/artwork_card.dart';
 import '../widgets/social_glyphs.dart';
@@ -135,6 +136,7 @@ class _DetailScaffoldState extends State<_DetailScaffold> {
                   ),
                 ),
               ),
+        actions: const [CartAction(), SizedBox(width: 4)],
       ),
       bottomNavigationBar: widget.bottomBar,
       body: NotificationListener<ScrollNotification>(

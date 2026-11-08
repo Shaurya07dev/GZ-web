@@ -28,8 +28,24 @@ def logo_on_canvas(canvas_size: int, logo_ratio: float, *, transparent: bool = F
     """Paste the brand logo onto a square canvas, scaled so its longer edge
     is `logo_ratio` of the canvas. Background is the brand black unless
     `transparent=True` (adaptive foreground needs transparency so Android
-    can composite its own background colour)."""
+    can composite its own background colour).
+
+    Source cleanup (8 Nov 2026): the supplied gz-logo.png has imperfect
+    background removal — faint white pixels (alpha 1-20) scattered across
+    the logo's bounding box from anti-aliasing against the original white
+    background. Composited onto pure black they add up to a visible
+    rectangular halo (client-reported: "u can still differentiate the
+    blacks of the logo and black bg"). Snap near-zero alpha to 0 before
+    resizing so the splash shine sweeps only the actual mark."""
     source = Image.open(SOURCE).convert("RGBA")
+    if transparent:
+        pixels = source.load()
+        w0, h0 = source.size
+        for y in range(h0):
+            for x in range(w0):
+                r, g, b, a = pixels[x, y]
+                if a < 24:
+                    pixels[x, y] = (0, 0, 0, 0)
     target_long = round(canvas_size * logo_ratio)
     w, h = source.size
     if w >= h:
@@ -62,8 +78,16 @@ def main() -> None:
     #   box — 0.40 of 288 keeps the illustration inside the circle.
     #   Older Android + iOS draw the 1024px image at 4x, in a 256dp box —
     #   0.45 of 256 ≈ the same physical width.
-    logo_on_canvas(SIZE, 0.45).save("assets/icon/splash.png")
-    logo_on_canvas(SIZE, 0.40).save("assets/icon/splash_android12.png")
+    #
+    # Transparent background (8 Nov 2026): the splash layer underneath is
+    # already brand black, and the Flutter shine sweep passes across the
+    # whole asset — a non-transparent canvas was showing up as a brighter
+    # rectangle whenever the shine hit it. Transparent keeps the shimmer
+    # on the mark itself, where it belongs.
+    logo_on_canvas(SIZE, 0.45, transparent=True).save("assets/icon/splash.png")
+    logo_on_canvas(SIZE, 0.40, transparent=True).save(
+        "assets/icon/splash_android12.png"
+    )
 
 
 if __name__ == "__main__":

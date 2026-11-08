@@ -20,6 +20,7 @@ import '../../marketing/screens/about_screen.dart';
 import '../filter_options.dart';
 import '../providers/marketplace_providers.dart';
 import '../widgets/artwork_card.dart';
+import '../../account/widgets/cart_action.dart';
 import '../widgets/halo_reel.dart';
 import 'artists_directory_screen.dart';
 import 'marketplace_filter_sheet.dart';
@@ -254,6 +255,8 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           // so without this there was no way on to their dashboard, and a visitor had no
           // way to sign in at all.
           if (!widget.inShell) const _AccountAction(),
+          // Cart is the primary ecommerce action; it belongs on the shop AppBar.
+          if (widget.inShell) const CartAction(),
           IconButton(
             onPressed: () => context.push(ArtistsDirectoryScreen.path),
             tooltip: 'Artists',

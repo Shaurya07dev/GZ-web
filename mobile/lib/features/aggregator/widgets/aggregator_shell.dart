@@ -61,11 +61,9 @@ class AggregatorShell extends ConsumerWidget {
 
     if (size.isCompact) {
       return Scaffold(
-        extendBody: true,
+        extendBody: false,
         endDrawer: drawer,
         body: body,
-        // The Builder is what puts `Scaffold.of` below this Scaffold, so the
-        // Profile destination can open the drawer this one owns.
         bottomNavigationBar: Builder(
           builder: (context) => ShellNavigationBar(
             selectedIndex: navigationShell.currentIndex,
@@ -78,17 +76,15 @@ class AggregatorShell extends ConsumerWidget {
               }
             },
             destinations: const [...aggregatorDestinations, profileDestination],
-            // Primary action for an aggregator: browse what's available to
-            // reserve. One tap from any screen.
-            floatingAction: GlassNavAction(
-              icon: LucideIcons.search,
-              tooltip: 'Browse inventory',
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                context.go('/aggregator/browse');
-              },
-            ),
           ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            context.go('/aggregator/browse');
+          },
+          tooltip: 'Browse inventory',
+          child: const Icon(LucideIcons.search),
         ),
       );
     }
