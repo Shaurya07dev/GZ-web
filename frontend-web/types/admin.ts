@@ -33,6 +33,15 @@ export interface AdminUser {
   /** GalleryZone's own 0–10 rating of the artist. Null until an admin has
    *  rated them. Never shown to buyers. */
   galleryzoneRating?: number | null;
+  /** §194-O income-tax TDS flag — once an artist's financial-year sales
+   *  cross ₹5 lakh, India requires we withhold 1% at source. Admin flips
+   *  this by hand after seeing the suggestion; the setting drives all
+   *  subsequent settlement withholdings. */
+  earningsAbove5L?: boolean;
+  /** Advisory: the backend's own estimate of whether this artist's
+   *  financial-year gross has crossed the threshold, computed off the
+   *  active rates. A human still decides. */
+  earningsAbove5LSuggested?: boolean | null;
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";

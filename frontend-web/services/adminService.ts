@@ -334,6 +334,9 @@ export const adminService = {
   setUserGalleryzoneRating: (id: string, galleryzoneRating: number | null): Promise<{ id: string; galleryzoneRating: number | null }> =>
     adminApi.setUserGalleryzoneRating(id, galleryzoneRating),
 
+  setUserEarningsAbove5L: (id: string, value: boolean): Promise<{ id: string; earningsAbove5L: boolean }> =>
+    adminApi.setUserEarningsAbove5L(id, value),
+
   getArtistPortfolio: async (userId: string): Promise<{ user: AdminUser; profile: ArtistProfile | undefined; artworks: Artwork[] } | undefined> => {
     const user = await adminApi.getUser(userId);
     if (!user || user.role !== "artist") return undefined;

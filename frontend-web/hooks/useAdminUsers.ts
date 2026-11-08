@@ -91,3 +91,21 @@ export function useSetUserGalleryzoneRatingMutation() {
   });
 }
 
+/**
+ * Toggle the §194-O TDS threshold flag — see adminApi.setUserEarningsAbove5L.
+ * The backend emits no email on this change; the first settlement after the
+ * flag flips is where the artist sees the deduction, which is the point.
+ */
+export function useSetUserEarningsAbove5LMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, value }: { userId: string; value: boolean }) =>
+      adminService.setUserEarningsAbove5L(userId, value),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-artist-portfolio", userId] });
+    },
+  });
+}
+

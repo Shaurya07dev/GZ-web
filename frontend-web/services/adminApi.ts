@@ -44,6 +44,13 @@ interface AdminUserDto {
   bankAccountMasked: string | null;
   externalArtist: boolean;
   galleryzoneRating: number | null;
+  /** From ProfileDoc on the artist. Optional because older user docs
+   *  were written before the field existed. */
+  earningsAbove5L?: boolean;
+  /** Advisory only, computed by the API on GET users/:id — the admin
+   *  still decides. Always absent on the list endpoint; only the detail
+   *  endpoint returns it. */
+  earningsAbove5LSuggested?: boolean | null;
 }
 
 interface AdminWithdrawalDto {
@@ -104,6 +111,8 @@ function toAdminUser(u: AdminUserDto): AdminUser {
     instagramHandle: u.instagram,
     externalArtist: u.externalArtist,
     galleryzoneRating: u.galleryzoneRating,
+    earningsAbove5L: u.earningsAbove5L,
+    earningsAbove5LSuggested: u.earningsAbove5LSuggested ?? null,
   };
 }
 
@@ -220,6 +229,19 @@ export const adminApi = {
   async setUserExternalArtist(id: string, externalArtist: boolean): Promise<{ id: string; externalArtist: boolean }> {
     await http.patch(`/v1/admin/users/${encodeURIComponent(id)}/external-artist`, { externalArtist });
     return { id, externalArtist };
+  },
+
+  /**
+   * §194-O income-tax TDS threshold flag. Once an artist crosses ₹5L in
+   * financial-year sales, India requires GalleryZone withholds 1% at
+   * source on subsequent settlements. Admin flips the flag by hand after
+   * reading the `earningsAbove5LSuggested` advisory — the suggestion is
+   * computed server-side but a human still confirms before any TDS
+   * withholding changes.
+   */
+  async setUserEarningsAbove5L(id: string, value: boolean): Promise<{ id: string; earningsAbove5L: boolean }> {
+    await http.patch(`/v1/admin/users/${encodeURIComponent(id)}/earnings-above-5l`, { value });
+    return { id, earningsAbove5L: value };
   },
 
   async setUserGalleryzoneRating(id: string, galleryzoneRating: number | null): Promise<{ id: string; galleryzoneRating: number | null }> {

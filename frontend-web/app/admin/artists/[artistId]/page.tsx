@@ -4,11 +4,17 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { UserDetailHeader } from "@/features/admin/people/user-detail-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { InstagramGlyph } from "@/components/social-icons";
-import { useAdminArtistPortfolio } from "@/hooks/useAdminUsers";
+import { Button } from "@/components/ui/button";
+import {
+  useAdminArtistPortfolio,
+  useSetUserEarningsAbove5LMutation,
+} from "@/hooks/useAdminUsers";
 import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
 import type { AdminUser } from "@/types/admin";
@@ -106,6 +112,8 @@ export default function AdminArtistDetailPage(
 
           <ComplianceSection user={user} />
 
+          <TdsSection user={user} />
+
           <section className="rounded-xl border border-border bg-card p-5">
             <h2 className="font-display text-base font-semibold text-foreground">
               Catalogue
@@ -183,6 +191,82 @@ export default function AdminArtistDetailPage(
 // artist's public profile page. Shown together here since they're the same
 // kind of thing: compliance detail collected from the artist, reviewed by
 // GalleryZone rather than shown to buyers.
+/**
+ * §194-O TDS flag toggle. Shown on artist-only pages (hidden for aggregators
+ * and customers). Backend's GET users/:id returns `earningsAbove5LSuggested`
+ * as an advisory — "the gross for this artist this financial year looks
+ * like it's over ₹5L" — but the admin still confirms before any TDS
+ * withholding changes on subsequent settlements. Added 9 Nov 2026 after
+ * the backend audit found the PATCH endpoint had no UI caller.
+ */
+function TdsSection({ user }: { user: AdminUser }) {
+  const mutation = useSetUserEarningsAbove5LMutation();
+  if (user.role !== "artist") return null;
+
+  const on = Boolean(user.earningsAbove5L);
+  const suggested = user.earningsAbove5LSuggested;
+  const mismatch = suggested !== null && suggested !== undefined && suggested !== on;
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-base font-semibold text-foreground">
+          TDS threshold
+        </h2>
+        <span className="text-xs text-muted-foreground">§194-O</span>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Once this artist&apos;s financial-year gross crosses ₹5 lakh, India
+        requires GalleryZone withholds 1% at source on subsequent
+        settlements. This flag drives that withholding. Flip it after
+        reading the system&apos;s suggestion, not before.
+      </p>
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">
+            {on ? "Above ₹5L — withholding 1%" : "Below threshold — no withholding"}
+          </p>
+          {suggested !== null && suggested !== undefined && (
+            <p
+              className={`mt-0.5 text-xs ${
+                mismatch ? "text-red-400" : "text-muted-foreground"
+              }`}
+            >
+              {mismatch
+                ? `System suggests ${suggested ? "above" : "below"} — review`
+                : `System agrees (${suggested ? "above" : "below"})`}
+            </p>
+          )}
+        </div>
+        <Button
+          variant={on ? "outline" : "default"}
+          disabled={mutation.isPending}
+          onClick={() =>
+            mutation.mutate(
+              { userId: user.id, value: !on },
+              {
+                onSuccess: () =>
+                  toast.success(
+                    on ? "Below-threshold set" : "Above-threshold set",
+                  ),
+                onError: (error) =>
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not update",
+                  ),
+              },
+            )
+          }
+        >
+          {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
+          {on ? "Mark below ₹5L" : "Mark above ₹5L"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function ComplianceSection({ user }: { user: AdminUser }) {
   return (
     <section className="rounded-xl border border-border bg-card p-5">
