@@ -63,3 +63,21 @@ export function useMarkSettlementPaidMutation() {
     },
   });
 }
+
+/**
+ * Issue a Razorpay refund on a paid order. Added 8 Nov 2026 — customer
+ * refund requests arrived as support tickets and admins processed them by
+ * hand in the Razorpay dashboard, with no audit trail on the order. This
+ * endpoint does both: calls Razorpay refund and marks the order cancelled
+ * with the refund id and reason stamped on the doc.
+ */
+export function useAdminRefundOrderMutation(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => adminService.refundOrder(orderId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+  });
+}

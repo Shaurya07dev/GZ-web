@@ -371,6 +371,17 @@ export const adminService = {
 
   getOrderAdmin: (id: string): Promise<Order | undefined> => adminApi.getOrder(id),
 
+  /**
+   * Admin-approved refund — issues a Razorpay refund against the captured
+   * payment, marks the order cancelled with refundedAt/providerRefundId
+   * stamped on the doc, and writes an auditLog row keyed to the admin. The
+   * backend refuses a refund on delivered / already-cancelled / pending
+   * orders and on simulated-payment orders with no captured payment id.
+   */
+  refundOrder: async (orderId: string, reason: string) => {
+    await http.post(`/v1/admin/orders/${encodeURIComponent(orderId)}/refund`, { reason });
+  },
+
   getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),
 
   getSettlementByOrder: async (orderId: string): Promise<Settlement | undefined> =>
