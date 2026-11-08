@@ -114,6 +114,17 @@ export const Collections = {
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
   /**
+   * Per-user wishlist (saved artworks). One doc per uid, same shape as
+   * carts: owned by the user, read/write only by them. Added 8 Nov 2026 —
+   * client-only wishlist on web+mobile was not syncing across devices.
+   */
+  wishlists: "wishlists",
+  /**
+   * Per-user follows (artist IDs the user subscribes to). One doc per uid.
+   * Added 8 Nov 2026 alongside wishlists for the same reason.
+   */
+  follows: "follows",
+  /**
    * Email + phone one-time passwords (OTP). Doc id is the hashed identifier
    * (email or `+91XXXXXXXXXX`), so a second request for the same identifier
    * replaces the pending code and takes its attempt count with it.
@@ -851,6 +862,37 @@ export interface CartEntry {
 export interface CartDoc {
   userId: string; // == the Firestore doc ID (users/{uid}/cart would also work; one doc per uid keeps the write path simple)
   entries: CartEntry[];
+  updatedAt: FirebaseFirestore.Timestamp;
+}
+
+/**
+ * Saved artworks (wishlist) and followed artists for the signed-in user.
+ * One doc per uid in each collection, same ownership rule as carts.
+ *
+ * Added 8 Nov 2026 — both were client-local on web and mobile, which meant
+ * a saved piece was lost on reinstall and invisible on another device. The
+ * entry shape mirrors CartEntry so the abandoned-wishlist sweep (not built
+ * yet) can read them the same way.
+ */
+export interface WishlistEntry {
+  artworkId: string;
+  addedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface WishlistDoc {
+  userId: string;
+  entries: WishlistEntry[];
+  updatedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface FollowEntry {
+  artistId: string;
+  followedAt: FirebaseFirestore.Timestamp;
+}
+
+export interface FollowsDoc {
+  userId: string;
+  entries: FollowEntry[];
   updatedAt: FirebaseFirestore.Timestamp;
 }
 

@@ -28,6 +28,7 @@ export * from "./admin-settlements.ts";
 export * from "./aggregator-sales.ts";
 export * from "./aggregator-remittances.ts";
 export * from "./cart.ts";
+export * from "./wishlist.ts";
 export * from "./otp.ts";
 export * from "./deactivation.ts";
 export * from "./order-listings.ts";

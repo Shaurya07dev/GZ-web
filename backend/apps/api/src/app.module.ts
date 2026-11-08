@@ -42,6 +42,7 @@ import { Emails } from "./mail/emails.ts";
 import { PushSender } from "./mail/push.ts";
 import { NotificationPreferencesController } from "./notification-preferences.controller.ts";
 import { CartController } from "./cart.controller.ts";
+import { FollowsController, WishlistController } from "./wishlist.controller.ts";
 import { OtpController } from "./auth/otp.controller.ts";
 import { AdminSeed } from "./admin-seed.ts";
 import { Msg91Sender } from "./sms/msg91.ts";
@@ -121,6 +122,8 @@ import { DbModule } from "./db.module.ts";
     AggregatorReservationIntentsController,
     NotificationPreferencesController,
     CartController,
+    WishlistController,
+    FollowsController,
     OtpController,
   ],
   providers: [
