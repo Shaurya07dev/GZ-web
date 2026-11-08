@@ -5,7 +5,7 @@ import {
   type ExternalSalePenalty,
   type ArtworkSummary,
 } from "@/types/artwork";
-import type { Order } from "@/types/order";
+import type { Order, OrderStatus } from "@/types/order";
 import type { ArtistProfile } from "@/types/artist";
 import type {
   AdminActivityEvent,
@@ -380,6 +380,17 @@ export const adminService = {
    */
   refundOrder: async (orderId: string, reason: string) => {
     await http.post(`/v1/admin/orders/${encodeURIComponent(orderId)}/refund`, { reason });
+  },
+
+  /**
+   * Admin moves an order one step along the fulfilment ladder — paid →
+   * confirmed → packed → transit → delivered. Backend asserts the
+   * transition against the order state machine, and sends the buyer a
+   * status email on success. 8 Nov 2026 — endpoint existed but nothing
+   * on the web called it, so dispatch was invisible to buyers.
+   */
+  advanceOrderStatus: async (orderId: string, to: OrderStatus) => {
+    await http.patch(`/v1/admin/orders/${encodeURIComponent(orderId)}/status`, { to });
   },
 
   getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),

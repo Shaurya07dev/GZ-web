@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/adminService";
+import type { OrderStatus } from "@/types/order";
 
 export function useAdminOrders() {
   return useQuery({
@@ -75,6 +76,22 @@ export function useAdminRefundOrderMutation(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (reason: string) => adminService.refundOrder(orderId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+  });
+}
+
+/**
+ * Walk an order along the fulfilment ladder. Admin-only, backend runs the
+ * state-machine assertion and emails the buyer about the new stage.
+ */
+export function useAdminAdvanceOrderStatusMutation(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (to: OrderStatus) =>
+      adminService.advanceOrderStatus(orderId, to),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-orders"] });

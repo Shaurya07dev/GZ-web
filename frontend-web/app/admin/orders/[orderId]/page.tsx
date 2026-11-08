@@ -4,6 +4,7 @@ import { use } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { AdminOrderActions } from "@/features/admin/commerce/order-actions";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import {
@@ -237,6 +238,8 @@ export default function AdminOrderDetailPage(
               </p>
             )}
           </section>
+
+          <AdminOrderActions orderId={order.id} status={order.status} />
         </div>
       </div>
     </div>
