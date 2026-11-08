@@ -25,7 +25,10 @@ export function CheckoutReviewStep({
   onBack,
   onContinue,
 }: CheckoutReviewStepProps) {
-  const { data: quote, isPending: quotePending } = useCheckoutQuote(artwork.id);
+  const { data: quote, isPending: quotePending } = useCheckoutQuote(
+    artwork.id,
+    address.id,
+  );
 
   return (
     <div className="flex flex-col gap-6">

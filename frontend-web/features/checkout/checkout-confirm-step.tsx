@@ -32,7 +32,7 @@ export function CheckoutConfirmStep({
 }: CheckoutConfirmStepProps) {
   const createOrderMutation = useCreateOrderMutation();
 
-  const { data: quote } = useCheckoutQuote(artwork.id);
+  const { data: quote } = useCheckoutQuote(artwork.id, address.id);
   const total = quote?.total ?? 0;
 
   function handlePay() {
