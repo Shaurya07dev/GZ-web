@@ -2,6 +2,7 @@ import '../models/aggregator.dart' show DeliveryAddress;
 import '../models/artwork.dart';
 import '../models/cart.dart';
 import '../models/customer.dart';
+import '../models/notification_inbox.dart';
 import '../models/notification_prefs.dart';
 import '../models/order.dart';
 
@@ -83,6 +84,13 @@ abstract class CustomerRepository {
   Future<Set<String>> getFollows();
   Future<void> followArtist(String artistId);
   Future<void> unfollowArtist(String artistId);
+
+  /// In-app notification inbox — one row per transactional event
+  /// (order shipped, payment received, settlement processed). Same list
+  /// the web polls at /v1/notifications. Added 9 Nov 2026.
+  Future<NotificationInbox> getNotifications();
+  Future<void> markNotificationRead(String id);
+  Future<void> markAllNotificationsRead();
 
   /// Opt-in notification categories — transactional email always goes out
   /// regardless. `pushEnabled` gates FCM pushes.

@@ -5,6 +5,7 @@ import '../models/aggregator.dart' show DeliveryAddress;
 import '../models/artwork.dart' show PhysicalCoaRequest;
 import '../models/cart.dart';
 import '../models/customer.dart';
+import '../models/notification_inbox.dart';
 import '../models/notification_prefs.dart';
 import '../models/order.dart';
 import '../repositories/customer_repository.dart';
@@ -334,6 +335,21 @@ class RemoteCustomerRepository implements CustomerRepository {
     await api.delete(
       '/v1/me/follows/items/${Uri.encodeComponent(artistId)}',
     );
+  }
+
+  // --- In-app notifications inbox ------------------------------------------
+  @override
+  Future<NotificationInbox> getNotifications() async =>
+      NotificationInbox.fromJson(await api.getMap('/v1/notifications'));
+
+  @override
+  Future<void> markNotificationRead(String id) async {
+    await api.post('/v1/notifications/${Uri.encodeComponent(id)}/read');
+  }
+
+  @override
+  Future<void> markAllNotificationsRead() async {
+    await api.post('/v1/notifications/read-all');
   }
 
   // --- Notification preferences --------------------------------------------

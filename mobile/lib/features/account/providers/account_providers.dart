@@ -4,6 +4,7 @@ import '../../../data/mock/mock_customer_repository.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/cart.dart';
 import '../../../data/models/customer.dart';
+import '../../../data/models/notification_inbox.dart';
 import '../../../data/models/notification_prefs.dart';
 import '../../../data/models/order.dart';
 import '../../../data/repositories/customer_repository.dart';
@@ -101,6 +102,14 @@ String initials(String name) => name
     .join();
 
 /// The signed-in user's cart — refreshed on write by the mutator below.
+/// In-app notifications inbox — the same /v1/notifications list the web
+/// polls. Refreshed on pull-to-refresh on the inbox screen; invalidated
+/// after marking rows read so the AppBar bell's unread badge updates.
+final notificationsProvider =
+    FutureProvider.autoDispose<NotificationInbox>((ref) {
+  return ref.watch(customerRepositoryProvider).getNotifications();
+});
+
 final cartProvider = FutureProvider.autoDispose<Cart>((ref) {
   return ref.watch(customerRepositoryProvider).getCart();
 });

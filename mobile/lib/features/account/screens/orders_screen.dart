@@ -17,6 +17,7 @@ import '../../checkout/providers/checkout_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../providers/account_providers.dart';
 import '../widgets/cart_action.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/order_widgets.dart';
 import '../widgets/customer_shell.dart';
 
@@ -33,7 +34,7 @@ class OrdersScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Orders'),
-        actions: const [CartAction(), SizedBox(width: 4)],
+        actions: const [NotificationBell(), CartAction(), SizedBox(width: 4)],
       ),
       body: orders.when(
         loading: () => const PageSkeleton(),

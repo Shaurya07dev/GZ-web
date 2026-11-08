@@ -23,6 +23,7 @@ import '../../features/account/screens/resale_screen.dart';
 import '../../features/account/screens/support_screen.dart';
 import '../../features/account/screens/cart_screen.dart';
 import '../../features/account/screens/notification_settings_screen.dart';
+import '../../features/account/screens/notifications_inbox_screen.dart';
 import '../../features/account/screens/wishlist_screen.dart';
 import '../../features/account/widgets/customer_shell.dart';
 import '../../features/aggregator/screens/aggregator_account_screens.dart';
@@ -410,6 +411,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: NotificationSettingsScreen.path,
                 builder: (context, state) =>
                     const NotificationSettingsScreen(),
+              ),
+              GoRoute(
+                path: NotificationsInboxScreen.path,
+                builder: (context, state) =>
+                    const NotificationsInboxScreen(),
               ),
             ],
           ),

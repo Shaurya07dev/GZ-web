@@ -3,6 +3,7 @@ import '../models/aggregator.dart' show DeliveryAddress;
 import '../models/artwork.dart';
 import '../models/cart.dart';
 import '../models/customer.dart';
+import '../models/notification_inbox.dart';
 import '../models/notification_prefs.dart';
 import '../models/order.dart';
 import '../repositories/customer_repository.dart';
@@ -568,6 +569,17 @@ class MockCustomerRepository implements CustomerRepository {
   @override
   Future<void> unfollowArtist(String artistId) =>
       mockDelay(() => _follows.remove(artistId));
+
+  // --- In-app notifications inbox (demo: static, nothing to mark) ---------
+  @override
+  Future<NotificationInbox> getNotifications() =>
+      mockDelay(() => const NotificationInbox());
+
+  @override
+  Future<void> markNotificationRead(String id) => mockDelay(() {});
+
+  @override
+  Future<void> markAllNotificationsRead() => mockDelay(() {});
 
   // --- Notification preferences (demo in-memory) ---------------------------
   NotificationPreferences _prefs = const NotificationPreferences(

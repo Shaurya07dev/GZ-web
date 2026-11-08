@@ -10,6 +10,7 @@ import '../../marketplace/providers/marketplace_providers.dart';
 import '../../marketplace/widgets/artist_avatar.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../widgets/cart_action.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/customer_shell.dart';
 
 /// Port of `app/account/wishlist/page.tsx`, widened: the collector keeps
@@ -41,7 +42,7 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved'),
-        actions: const [CartAction(), SizedBox(width: 4)],
+        actions: const [NotificationBell(), CartAction(), SizedBox(width: 4)],
       ),
       body: Column(
         children: [
