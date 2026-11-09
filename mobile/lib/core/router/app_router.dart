@@ -320,6 +320,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             PassportScreen(artworkId: state.pathParameters['artworkId']!),
       ),
+      // In-app notifications inbox — top-level so every role can push to
+      // it. 9 Nov 2026: this used to live under the customer shell only,
+      // so an artist or aggregator tapping the AppBar bell got silently
+      // bounced back to their own dashboard because the path didn't
+      // resolve inside their shell.
+      GoRoute(
+        path: NotificationsInboxScreen.path,
+        builder: (context, state) => const NotificationsInboxScreen(),
+      ),
       // The customer's real shell: five branches, each with its own
       // navigator, so switching tabs (or resizing between the bottom bar and
       // the rail) keeps each branch's scroll position and stack. Shop is the
@@ -411,11 +420,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: NotificationSettingsScreen.path,
                 builder: (context, state) =>
                     const NotificationSettingsScreen(),
-              ),
-              GoRoute(
-                path: NotificationsInboxScreen.path,
-                builder: (context, state) =>
-                    const NotificationsInboxScreen(),
               ),
             ],
           ),
