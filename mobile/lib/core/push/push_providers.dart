@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/account/providers/account_providers.dart'
     show customerRepositoryProvider, notificationsProvider;
+import '../router/app_router.dart' show routerProvider;
 import 'fcm_service.dart';
 
 /// One `FcmService` instance per app lifetime. The service itself is a
@@ -28,6 +29,40 @@ final fcmInboxRefreshProvider = Provider<void>((ref) {
   final service = ref.watch(fcmServiceProvider);
   final sub = service.onForegroundMessage.listen((_) {
     ref.invalidate(notificationsProvider);
+  });
+  ref.onDispose(sub.cancel);
+});
+
+/// Keep-alive subscription that opens the server-attached URL when the
+/// user taps a system-tray push. The backend attaches `url` to the FCM
+/// data payload (same path it writes to the in-app inbox row), so the
+/// mapping is identity: data['url'] → router.push(url).
+///
+/// Also marks the notification read in the background — the server knows
+/// the id from the data payload, and the user acted on it by tapping, so
+/// the bell unread count drops immediately on return to the inbox.
+final fcmDeepLinkProvider = Provider<void>((ref) {
+  final service = ref.watch(fcmServiceProvider);
+  final router = ref.read(routerProvider);
+  final sub = service.onNotificationTap.listen((message) async {
+    final data = message.data;
+    final url = data['url'] as String?;
+    final id = data['notificationId'] as String?;
+    if (url != null && url.isNotEmpty) {
+      // Only push paths — a full https URL would try to open externally.
+      final path = url.startsWith('http') ? Uri.parse(url).path : url;
+      if (path.isNotEmpty) router.push(path);
+    }
+    if (id != null && id.isNotEmpty) {
+      try {
+        await ref
+            .read(customerRepositoryProvider)
+            .markNotificationRead(id);
+        ref.invalidate(notificationsProvider);
+      } catch (_) {
+        // Non-fatal: the next inbox open will mark-read anyway.
+      }
+    }
   });
   ref.onDispose(sub.cancel);
 });

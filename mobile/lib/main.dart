@@ -117,6 +117,9 @@ class GalleryZoneApp extends ConsumerWidget {
     // persists every push to /v1/notifications alongside the FCM send,
     // so we only need to invalidate — no payload parsing here.
     ref.watch(fcmInboxRefreshProvider);
+    // Notification tap (cold-start or warm resume): deep-link into the
+    // payload's URL and mark the inbox row read.
+    ref.watch(fcmDeepLinkProvider);
 
     return MaterialApp.router(
       title: 'GalleryZone',
