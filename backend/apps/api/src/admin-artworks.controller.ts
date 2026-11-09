@@ -3,7 +3,7 @@ import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
 import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
-import { activeHoldingForArtwork, adminPullBackHolding, decideHoldingExtension, listAggregatorHoldings, AggregatorReadError, HoldingLifecycleError } from "@galleryzone/db";
+import { activeHoldingForArtwork, adminPullBackHolding, decideHoldingExtension, listAggregatorHoldings, listPendingExtensionRequests, AggregatorReadError, HoldingLifecycleError } from "@galleryzone/db";
 import { NfcError, adminUnlinkNfcTag, getNfcOverview, nfcStateViewOf, overrideShipmentGate, type ArtworkDoc } from "@galleryzone/db";
 import { decideHoldingExtensionInputSchema, nfcReasonInputSchema, type DecideHoldingExtensionInput, type NfcReasonInput, type NfcStateDto } from "@galleryzone/contracts";
 import { BadRequestException } from "@nestjs/common";
@@ -127,6 +127,20 @@ export class AdminArtworksController {
   @Get("artworks/:id/holding")
   async activeHolding(@Param("id") id: string) {
     return { holding: await activeHoldingForArtwork(this.db, id) };
+  }
+
+  /**
+   * The admin moderation queue for aggregator extension requests.
+   *
+   * Aggregators can POST to /v1/aggregator/holdings/:id/extension to ask
+   * for more time, and the POST already lands and sits with status=pending
+   * on the holding. But until now nothing surfaced the queue to admins —
+   * which is why requests had been piling up invisibly. 9 Nov 2026.
+   */
+  @Roles("admin")
+  @Get("holdings/extensions/pending")
+  async pendingExtensions() {
+    return { holdings: await listPendingExtensionRequests(this.db) };
   }
 
   @Roles("admin")

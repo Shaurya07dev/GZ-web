@@ -261,6 +261,27 @@ export async function getAggregatorHolding(db: Firestore, aggregatorId: string, 
   return toHoldingView(db, holdingId, h);
 }
 
+/**
+ * Pending holding-extension requests — the admin moderation queue for
+ * aggregator asks to keep a piece past its window. Backend accepted
+ * extension POSTs (POST /v1/aggregator/holdings/:id/extension) but had
+ * no "list what's waiting for me" read for admin, so requests piled up
+ * invisibly. 9 Nov 2026.
+ *
+ * Returns the holding view (which already exposes `extensionRequest`
+ * with the aggregator's assurance, previousExpiresAt, etc.) so the
+ * admin UI has the aggregator name, artwork and current window to
+ * decide against — no second lookup.
+ */
+export async function listPendingExtensionRequests(db: Firestore): Promise<AggregatorHoldingView[]> {
+  const snap = await db
+    .collection(Collections.aggregatorHoldings)
+    .where("extensionRequest.status", "==", "pending")
+    .get();
+  const views = await Promise.all(snap.docs.map((d) => toHoldingView(db, d.id, d.data() as AggregatorHoldingDoc)));
+  return views.sort((a, b) => a.assignedAt.localeCompare(b.assignedAt));
+}
+
 /** Unsold return: the advance goes back to the aggregator's wallet, the delivery deposit is forfeited, the artwork goes back on the marketplace. */
 export async function returnHolding(db: Firestore, aggregatorId: string, holdingId: string): Promise<void> {
   const ref = db.collection(Collections.aggregatorHoldings).doc(holdingId);

@@ -114,9 +114,18 @@ export function useDecideExtensionMutation() {
     }) => adminService.decideExtension(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-artwork-holding"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-extensions"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-collection"] });
       queryClient.invalidateQueries({ queryKey: ["aggregator-inventory"] });
     },
+  });
+}
+
+/** Admin moderation queue for aggregator extension requests. */
+export function useAdminPendingExtensions() {
+  return useQuery({
+    queryKey: ["admin-pending-extensions"],
+    queryFn: () => adminService.listPendingExtensions(),
   });
 }
 

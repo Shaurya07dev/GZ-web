@@ -308,6 +308,18 @@ export const adminService = {
     await http.post(`/v1/admin/holdings/${encodeURIComponent(input.holdingId)}/extension/${input.decision}`, input.note?.trim() ? { note: input.note.trim() } : {});
   },
 
+  /**
+   * The admin moderation queue for aggregator extension requests. Previously
+   * aggregators could POST a request and the backend accepted it — but
+   * nothing surfaced the queue, so decisions never happened. 9 Nov 2026.
+   */
+  listPendingExtensions: async (): Promise<Array<AggregatorHolding & { artwork: ArtworkSummary }>> => {
+    const { holdings } = await http.get<{ holdings: AdminHoldingDto[] }>(
+      "/v1/admin/holdings/extensions/pending",
+    );
+    return holdings.map(toAdminHolding);
+  },
+
   // GalleryZone ranks the work, the artist does not. The rank is written back
   // to whichever collection actually holds the piece — a work still awaiting
   // approval lives in pendingArtworksCol, and ranking it there is the point:

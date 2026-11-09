@@ -30,6 +30,7 @@ import {
   ChevronDown,
   PenTool,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { SidebarHeader } from "@/components/shared/sidebar-brand";
 import { cn } from "@/lib/utils";
@@ -135,6 +136,14 @@ const NAV_GROUPS: AdminNavGroup[] = [
         label: "Holding reports",
         href: "/admin/moderation/holding-reports",
         icon: AlertTriangle,
+      },
+      {
+        // No badge — pending extensions are low volume, same as holding
+        // reports. Backend endpoint only landed 9 Nov 2026; before that
+        // requests piled up invisibly because nothing surfaced the queue.
+        label: "Extensions",
+        href: "/admin/moderation/extensions",
+        icon: Clock,
       },
       // No badge: the pending count comes from adminService's KPI set, which
       // does not carry deactivations. Adding one there is a change to the
