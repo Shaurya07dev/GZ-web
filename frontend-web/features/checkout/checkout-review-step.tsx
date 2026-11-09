@@ -25,7 +25,7 @@ export function CheckoutReviewStep({
   onBack,
   onContinue,
 }: CheckoutReviewStepProps) {
-  const { data: quote, isPending: quotePending } = useCheckoutQuote(
+  const { data: quote, isPending: quotePending, error: quoteError } = useCheckoutQuote(
     artwork.id,
     address.id,
   );
@@ -85,7 +85,11 @@ export function CheckoutReviewStep({
         />
       ) : (
         <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-          {quotePending ? "Working out your total…" : "We couldn't price this order just now. Please try again in a moment."}
+          {quotePending
+            ? "Working out your total…"
+            : quoteError instanceof Error
+              ? quoteError.message
+              : "We couldn't price this order just now. Please try again in a moment."}
         </p>
       )}
 

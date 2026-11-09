@@ -860,8 +860,13 @@ class _ReviewStep extends ConsumerWidget {
           ),
           loading: () => _QuoteNote(text: 'Working out your total…'),
           error: (error, stack) => _QuoteNote(
-            text: "We couldn't price this order just now. Please try again in a moment.",
-            onRetry: () => ref.invalidate(checkoutQuoteProvider(artwork.id)),
+            // Surface the backend's message (e.g. "The artist's pickup
+            // address is incomplete…") instead of a generic retry prompt
+            // — the real reason is what tells the buyer what to do.
+            text: authErrorMessage(error),
+            onRetry: () => ref.invalidate(addressedCheckoutQuoteProvider(
+              AddressedQuoteKey(artworkId: artwork.id, addressId: address.id),
+            )),
           ),
         ),
         const SizedBox(height: 24),
