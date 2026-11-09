@@ -112,6 +112,12 @@ class GalleryZoneApp extends ConsumerWidget {
       });
     });
 
+    // Foreground push: refresh the inbox so the bell badge and inbox
+    // screen pick up the new row without a pull-to-refresh. The backend
+    // persists every push to /v1/notifications alongside the FCM send,
+    // so we only need to invalidate — no payload parsing here.
+    ref.watch(fcmInboxRefreshProvider);
+
     return MaterialApp.router(
       title: 'GalleryZone',
       debugShowCheckedModeBanner: false,

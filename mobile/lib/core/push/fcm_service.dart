@@ -32,6 +32,25 @@ class FcmService {
   bool _available = false;
   bool _initialized = false;
   StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _foregroundSub;
+  StreamSubscription<RemoteMessage>? _openedSub;
+
+  /// Fired when a push arrives while the app is in the foreground. The
+  /// backend sends notifications over FCM but also persists them to the
+  /// in-app inbox; a listener here re-fetches the inbox so the bell badge
+  /// and inbox screen reflect the new row immediately — without a pull-
+  /// to-refresh. Added 9 Nov 2026 alongside the inbox screen.
+  final _onForegroundController = StreamController<RemoteMessage>.broadcast();
+  Stream<RemoteMessage> get onForegroundMessage =>
+      _onForegroundController.stream;
+
+  /// Fired when the user taps a push notification (from the system tray or
+  /// the lock screen) and the app resumes. The `data` payload carries the
+  /// GalleryZone URL path so the router can push the matching screen.
+  final _onNotificationTapController =
+      StreamController<RemoteMessage>.broadcast();
+  Stream<RemoteMessage> get onNotificationTap =>
+      _onNotificationTapController.stream;
 
   /// True after a successful [initialize]. Call sites can use this to hide
   /// the "push" toggle when the device can't deliver anyway.
@@ -63,6 +82,23 @@ class FcmService {
       }
       _available = true;
       _tokenRefreshSub = messaging.onTokenRefresh.listen(_handleToken);
+      // Foreground: emit so UI providers can invalidate their caches.
+      _foregroundSub = FirebaseMessaging.onMessage.listen(
+        _onForegroundController.add,
+      );
+      // Background tap: user tapped a system-tray notification to open
+      // the app. `getInitialMessage` catches the cold-start case where
+      // the tap launched the app from scratch; `onMessageOpenedApp` is
+      // the warm resume case.
+      final initial = await messaging.getInitialMessage();
+      if (initial != null) {
+        // Delay a frame so route listeners have mounted by the time we
+        // emit the deep-link intent.
+        scheduleMicrotask(() => _onNotificationTapController.add(initial));
+      }
+      _openedSub = FirebaseMessaging.onMessageOpenedApp.listen(
+        _onNotificationTapController.add,
+      );
     } catch (error) {
       debugPrint('FCM: initialize failed — $error');
     }
@@ -125,6 +161,12 @@ class FcmService {
 
   Future<void> dispose() async {
     await _tokenRefreshSub?.cancel();
+    await _foregroundSub?.cancel();
+    await _openedSub?.cancel();
+    await _onForegroundController.close();
+    await _onNotificationTapController.close();
     _tokenRefreshSub = null;
+    _foregroundSub = null;
+    _openedSub = null;
   }
 }
