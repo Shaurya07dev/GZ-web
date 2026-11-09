@@ -247,9 +247,46 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
   );
   late bool _isDefault = widget.existing?.isDefault ?? false;
   bool _isSaving = false;
+  bool _lookingUpPincode = false;
+  String? _lookupError;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-fill city + state whenever the pincode reaches 6 digits — the
+    // address form used to ask the buyer to type all three, and typos
+    // silently broke Shiprocket serviceability queries later. India Post
+    // owns the mapping, so we proxy its free API through our backend.
+    _pincode.addListener(_onPincodeChanged);
+  }
+
+  Future<void> _onPincodeChanged() async {
+    final value = _pincode.text.trim();
+    if (value.length != 6 || !RegExp(r'^\d{6}$').hasMatch(value)) return;
+    setState(() {
+      _lookingUpPincode = true;
+      _lookupError = null;
+    });
+    try {
+      final lookup = await ref
+          .read(customerRepositoryProvider)
+          .lookupPincode(value);
+      if (!mounted) return;
+      // Overwrite only when the fields are empty — a buyer who manually
+      // corrected a known-good pincode's city (e.g. a locality name
+      // different from the district label) keeps their edit.
+      if (_city.text.trim().isEmpty) _city.text = lookup.city;
+      if (_state.text.trim().isEmpty) _state.text = lookup.state;
+    } catch (_) {
+      if (mounted) setState(() => _lookupError = 'Could not look up this pincode');
+    } finally {
+      if (mounted) setState(() => _lookingUpPincode = false);
+    }
+  }
 
   @override
   void dispose() {
+    _pincode.removeListener(_onPincodeChanged);
     for (final controller in [_line1, _line2, _city, _state, _pincode]) {
       controller.dispose();
     }
@@ -315,6 +352,24 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
               ),
               _field(_line2, 'Address line 2 (optional)', null),
               _field(
+                _pincode,
+                _lookingUpPincode ? 'Pincode (looking up…)' : 'Pincode',
+                (v) => RegExp(r'^\d{6}$').hasMatch((v ?? '').trim())
+                    ? null
+                    : 'Enter a valid 6-digit pincode',
+                keyboardType: TextInputType.number,
+              ),
+              if (_lookupError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                  child: Text(
+                    _lookupError!,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
+              _field(
                 _city,
                 'City',
                 (v) => (v ?? '').trim().length < 2 ? 'Enter the city' : null,
@@ -323,14 +378,6 @@ class _AddressFormSheetState extends ConsumerState<_AddressFormSheet> {
                 _state,
                 'State',
                 (v) => (v ?? '').trim().length < 2 ? 'Enter the state' : null,
-              ),
-              _field(
-                _pincode,
-                'Pincode',
-                (v) => RegExp(r'^\d{6}$').hasMatch((v ?? '').trim())
-                    ? null
-                    : 'Enter a valid 6-digit pincode',
-                keyboardType: TextInputType.number,
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,

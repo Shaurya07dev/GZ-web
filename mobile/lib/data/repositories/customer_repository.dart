@@ -92,6 +92,11 @@ abstract class CustomerRepository {
   Future<void> markNotificationRead(String id);
   Future<void> markAllNotificationsRead();
 
+  /// India Post lookup for a pincode — returns the city (district) and
+  /// state the pincode serves. Throws if the pincode is bad, unknown, or
+  /// the upstream is unreachable.
+  Future<PincodeLookup> lookupPincode(String pincode);
+
   /// Opt-in notification categories — transactional email always goes out
   /// regardless. `pushEnabled` gates FCM pushes.
   Future<NotificationPreferences> getNotificationPreferences();
@@ -107,4 +112,10 @@ abstract class CustomerRepository {
     String? deviceLabel,
   });
   Future<void> revokeFcmToken(String token);
+}
+
+class PincodeLookup {
+  const PincodeLookup({required this.city, required this.state});
+  final String city;
+  final String state;
 }

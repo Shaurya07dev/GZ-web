@@ -352,6 +352,20 @@ class RemoteCustomerRepository implements CustomerRepository {
     await api.post('/v1/notifications/read-all');
   }
 
+  @override
+  Future<PincodeLookup> lookupPincode(String pincode) async {
+    final json = asMap(
+      await api.getMap(
+        '/v1/pincode/${Uri.encodeComponent(pincode)}',
+        auth: false,
+      ),
+    );
+    return PincodeLookup(
+      city: json['city'] as String? ?? '',
+      state: json['state'] as String? ?? '',
+    );
+  }
+
   // --- Notification preferences --------------------------------------------
   @override
   Future<NotificationPreferences> getNotificationPreferences() async =>

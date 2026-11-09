@@ -581,6 +581,10 @@ class MockCustomerRepository implements CustomerRepository {
   @override
   Future<void> markAllNotificationsRead() => mockDelay(() {});
 
+  @override
+  Future<PincodeLookup> lookupPincode(String pincode) =>
+      mockDelay(() => const PincodeLookup(city: 'Demo City', state: 'Demo'));
+
   // --- Notification preferences (demo in-memory) ---------------------------
   NotificationPreferences _prefs = const NotificationPreferences(
     abandonedCart: true,
