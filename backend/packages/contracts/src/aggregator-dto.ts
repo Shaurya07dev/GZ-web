@@ -55,7 +55,16 @@ export const recordAggregatorSaleInputSchema = z
     buyerPhone: z.string().min(6).optional(),
     deliveryMode: z.enum(["courier", "self_pickup"]),
     paymentRoute: z.enum(["direct_to_galleryzone", "cash_at_premises"]),
+    // Legacy flat-string shape, kept for backward compatibility while the
+    // mobile build catches up.
     deliveryAddress: z.string().min(1).optional(),
+    // Structured shape — Shiprocket needs these to book the aggregator →
+    // buyer leg. 9 Nov 2026.
+    deliveryAddressLine1: z.string().min(1).optional(),
+    deliveryAddressLine2: z.string().optional(),
+    deliveryCity: z.string().min(1).optional(),
+    deliveryState: z.string().min(1).optional(),
+    deliveryPincode: z.string().regex(/^\d{6}$/).optional(),
   })
   .strict();
 

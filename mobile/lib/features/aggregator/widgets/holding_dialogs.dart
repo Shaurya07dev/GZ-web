@@ -8,6 +8,8 @@ import '../../../core/pricing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/repositories/aggregator_repository.dart';
+import '../../account/providers/account_providers.dart'
+    show customerRepositoryProvider;
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../../shell/payee_details.dart';
@@ -623,10 +625,39 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
   DeliveryMode _mode = DeliveryMode.courier;
   PaymentRoute _route = PaymentRoute.directToGalleryZone;
   bool _pending = false;
+  bool _lookingUp = false;
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-fill city + state from pincode — same pattern as the buyer
+    // address form. A typo here would silently break the Shiprocket
+    // booking that fires right after recordSale commits. 9 Nov 2026.
+    _pincode.addListener(_onPincodeChanged);
+  }
+
+  Future<void> _onPincodeChanged() async {
+    final value = _pincode.text.trim();
+    if (value.length != 6 || !RegExp(r'^\d{6}$').hasMatch(value)) return;
+    setState(() => _lookingUp = true);
+    try {
+      final lookup = await ref
+          .read(customerRepositoryProvider)
+          .lookupPincode(value);
+      if (!mounted) return;
+      if (_city.text.trim().isEmpty) _city.text = lookup.city;
+      if (_state.text.trim().isEmpty) _state.text = lookup.state;
+    } catch (_) {
+      // Non-fatal — the aggregator can type both fields manually.
+    } finally {
+      if (mounted) setState(() => _lookingUp = false);
+    }
+  }
+
+  @override
   void dispose() {
+    _pincode.removeListener(_onPincodeChanged);
     for (final controller in [
       _buyerName,
       _buyerEmail,
@@ -798,6 +829,21 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                   validator: (value) => _atLeast(value, 3, 'Enter the address'),
                 ),
                 const SizedBox(height: 12),
+                TextFormField(
+                  controller: _pincode,
+                  enabled: !_pending,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    labelText: _lookingUp ? 'Pincode (looking up…)' : 'Pincode',
+                    counterText: '',
+                  ),
+                  validator: (value) =>
+                      RegExp(r'^\d{6}$').hasMatch((value ?? '').trim())
+                      ? null
+                      : 'Enter a valid 6-digit pincode',
+                ),
+                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -821,18 +867,6 @@ class _RecordSaleSheetState extends ConsumerState<_RecordSaleSheet> {
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _pincode,
-                  enabled: !_pending,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  decoration: const InputDecoration(labelText: 'Pincode'),
-                  validator: (value) =>
-                      RegExp(r'^\d{6}$').hasMatch((value ?? '').trim())
-                      ? null
-                      : 'Enter a valid 6-digit pincode',
                 ),
                 const SizedBox(height: 4),
                 Text('Delivery mode', style: theme.textTheme.labelLarge),

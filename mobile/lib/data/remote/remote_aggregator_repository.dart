@@ -388,7 +388,21 @@ class RemoteAggregatorRepository
         'paymentRoute': input.paymentRoute == PaymentRoute.cashAtPremises
             ? 'cash_at_premises'
             : 'direct_to_galleryzone',
+        // Flat string stays for backward compat with the admin + email
+        // views that still read that field.
         'deliveryAddress': ?joinDeliveryAddress(input.deliveryAddress),
+        // Structured fields drive the Shiprocket booking server-side —
+        // see backend/apps/api/src/shiprocket-booking.ts
+        // bookOutboundAggregatorSaleShipment. Without these the drop
+        // party can't be resolved. 9 Nov 2026.
+        if (input.deliveryAddress.line1.trim().isNotEmpty)
+          'deliveryAddressLine1': input.deliveryAddress.line1.trim(),
+        if (input.deliveryAddress.city.trim().isNotEmpty)
+          'deliveryCity': input.deliveryAddress.city.trim(),
+        if (input.deliveryAddress.state.trim().isNotEmpty)
+          'deliveryState': input.deliveryAddress.state.trim(),
+        if (input.deliveryAddress.pincode.trim().isNotEmpty)
+          'deliveryPincode': input.deliveryAddress.pincode.trim(),
       },
     );
     final sale = (await _sales())

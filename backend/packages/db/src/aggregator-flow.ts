@@ -176,6 +176,16 @@ export interface RecordSaleInput {
   buyerEmail: string;
   buyerPhone?: string | undefined;
   deliveryAddress?: string | undefined;
+  /** Structured delivery address — saved alongside the flat string so
+   *  the Shiprocket booking can read line1/city/state/pincode without
+   *  parsing the comma-joined form back apart. */
+  deliveryAddressStructured?: {
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  } | undefined;
   deliveryMode: "courier" | "self_pickup";
   paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
 }
@@ -243,6 +253,15 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
     buyerEmail: input.buyerEmail,
     buyerPhone: input.buyerPhone ?? null,
     deliveryAddress: input.deliveryAddress ?? null,
+    ...(input.deliveryAddressStructured
+      ? {
+          deliveryAddressLine1: input.deliveryAddressStructured.line1,
+          deliveryAddressLine2: input.deliveryAddressStructured.line2,
+          deliveryCity: input.deliveryAddressStructured.city,
+          deliveryState: input.deliveryAddressStructured.state,
+          deliveryPincode: input.deliveryAddressStructured.pincode,
+        }
+      : {}),
     deliveryMode: input.deliveryMode,
     paymentRoute: input.paymentRoute,
     remittedAt: null,

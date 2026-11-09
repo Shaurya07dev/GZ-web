@@ -42,7 +42,7 @@ import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
-import { bookInboundShipment } from "./shiprocket-booking.ts";
+import { bookInboundShipment, bookOutboundAggregatorSaleShipment, bookReturnShipment } from "./shiprocket-booking.ts";
 
 const notFound = () => new NotFoundException({ type: "about:blank", title: "Not found", status: 404, code: "not_found" });
 
@@ -156,6 +156,13 @@ export class AggregatorController {
       await returnHolding(this.db, req.authUser.uid, id);
       this.cache.clear();
       void this.emails.holdingReturned(id).catch(this.emails.swallow("holding returned mail"));
+      // Book the aggregator → artist return leg through Shiprocket.
+      // Previously the piece was marked "returned" in the DB but nobody
+      // actually picked it up — the aggregator was left to arrange
+      // courier off-platform. 9 Nov 2026.
+      void bookReturnShipment(this.db, id).catch((error) => {
+        console.error(JSON.stringify({ event: "shiprocket.return.failed", holdingId: id, error: String(error) }));
+      });
       return getAggregatorHolding(this.db, req.authUser.uid, id);
     } catch (error) {
       rethrow(error);
@@ -168,6 +175,16 @@ export class AggregatorController {
     const mine = await getAggregatorHolding(this.db, req.authUser.uid, id);
     if (!mine) throw notFound();
     try {
+      // Fall back to joining the structured fields into the legacy single
+      // string when the client sent structured — keeps the sale doc's
+      // `deliveryAddress` field populated for the admin + email views.
+      const joinedAddress = body.deliveryAddress ?? joinAddress({
+        line1: body.deliveryAddressLine1,
+        line2: body.deliveryAddressLine2,
+        city: body.deliveryCity,
+        state: body.deliveryState,
+        pincode: body.deliveryPincode,
+      });
       const result = await recordAggregatorSale({
         db: this.db,
         holdingId: id,
@@ -175,15 +192,44 @@ export class AggregatorController {
         buyerName: body.buyerName,
         buyerEmail: body.buyerEmail,
         buyerPhone: body.buyerPhone,
-        deliveryAddress: body.deliveryAddress,
+        deliveryAddress: joinedAddress,
+        deliveryAddressStructured: body.deliveryAddressLine1 && body.deliveryCity && body.deliveryState && body.deliveryPincode
+          ? {
+              line1: body.deliveryAddressLine1,
+              line2: body.deliveryAddressLine2 ?? null,
+              city: body.deliveryCity,
+              state: body.deliveryState,
+              pincode: body.deliveryPincode,
+            }
+          : undefined,
         deliveryMode: body.deliveryMode,
         paymentRoute: body.paymentRoute,
       });
       this.cache.clear();
       void this.emails.saleRecorded(result.saleId).catch(this.emails.swallow("sale recorded mail"));
+
+      // Book the aggregator gallery → buyer Shiprocket shipment. Only
+      // courier mode — self-pickup means the buyer collects. Fire-and-
+      // forget so a Shiprocket outage doesn't fail the sale record that
+      // already committed. 9 Nov 2026.
+      if (body.deliveryMode === "courier" && body.deliveryAddressLine1 && body.deliveryCity && body.deliveryState && body.deliveryPincode) {
+        void bookOutboundAggregatorSaleShipment(this.db, result.saleId).catch((error) => {
+          console.error(JSON.stringify({ event: "shiprocket.sale.failed", saleId: result.saleId, error: String(error) }));
+        });
+      }
+
       return result;
     } catch (error) {
       rethrow(error);
     }
   }
+}
+
+/** Joins the structured address parts into the comma-separated legacy
+ *  string that the AggregatorSaleDoc.deliveryAddress field still carries. */
+function joinAddress(parts: { line1?: string | undefined; line2?: string | undefined; city?: string | undefined; state?: string | undefined; pincode?: string | undefined }): string | undefined {
+  const pieces = [parts.line1, parts.line2, parts.city, parts.state, parts.pincode]
+    .map((p) => (p ?? "").trim())
+    .filter((p) => p.length > 0);
+  return pieces.length ? pieces.join(", ") : undefined;
 }

@@ -88,6 +88,26 @@ export class ShiprocketController {
       return { received: true, matched: true, leg: "outbound", stage };
     }
 
+    if (body.order_id.startsWith("return-")) {
+      // Aggregator → artist return. Writes to the holding's return-*
+      // fields rather than overwriting the inbound tracking that still
+      // records how the piece first got to the aggregator. 9 Nov 2026.
+      const holdingId = body.order_id.slice("return-".length);
+      await this.db
+        .collection(Collections.aggregatorHoldings)
+        .doc(holdingId)
+        .set(
+          {
+            returnShiprocketStage: patch.shiprocketStage,
+            returnTrackingId: patch.trackingId,
+            returnCarrier: patch.carrier,
+            returnTrackedAt: patch.trackedAt,
+          },
+          { merge: true },
+        );
+      return { received: true, matched: true, leg: "return", stage };
+    }
+
     if (body.order_id.startsWith("order-")) {
       // Marketplace purchase (artist → buyer). Mirror the tracking row on
       // the Order doc AND advance Order.status along the fulfilment

@@ -754,6 +754,14 @@ export interface AggregatorHoldingDoc {
   inboundTrackingId?: string | null;
   inboundCarrier?: string | null;
   inboundTrackedAt?: FirebaseFirestore.Timestamp | null;
+  /** Return leg (aggregator → artist on an unsold return). Set by
+   *  bookReturnShipment and advanced by the courier webhook under the
+   *  `return-<holdingId>` reference. Absent on holdings that never
+   *  returned. 9 Nov 2026. */
+  returnShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  returnTrackingId?: string | null;
+  returnCarrier?: string | null;
+  returnTrackedAt?: FirebaseFirestore.Timestamp | null;
 }
 
 export interface HoldingExtensionRequest {
@@ -798,6 +806,14 @@ export interface AggregatorSaleDoc {
   buyerEmail: string;
   buyerPhone: string | null;
   deliveryAddress: string | null;
+  /** Structured delivery address — populated alongside the flat
+   *  `deliveryAddress` string on sales recorded after 9 Nov 2026. Used by
+   *  the Shiprocket aggregator-sale booking to resolve the drop party. */
+  deliveryAddressLine1?: string | null;
+  deliveryAddressLine2?: string | null;
+  deliveryCity?: string | null;
+  deliveryState?: string | null;
+  deliveryPincode?: string | null;
   deliveryMode: "courier" | "self_pickup";
   paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
   remittedAt: FirebaseFirestore.Timestamp | null;
