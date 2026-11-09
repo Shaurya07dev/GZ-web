@@ -317,31 +317,47 @@ class _Session {
       );
     }
     if (Ntag213.isNtag213(cc)) return;
-    if (Ntag213.isBlankCapabilityContainer(cc)) {
-      // Format the chip ourselves before the first write. The CC on a
-      // factory-fresh NTAG213 is writable; only the lock bytes are OTP.
-      try {
-        await device.transceive(
-          Ntag213.write(
-            Ntag213.capabilityContainerPage,
-            Ntag213.defaultCapabilityContainer(),
-          ),
-        );
-      } catch (_) {
-        throw const NfcFlowException(
-          NfcFailureStep.chipType,
-          "This looks like a blank NTAG213 but we couldn't format it. Try again, or use a different tag.",
-        );
-      }
-      return;
-    }
+
+    // The CC is NOT the standard NTAG213 pattern. Three real-world cases
+    // lead here and all three are recoverable on a real NTAG213 — the CC
+    // page is user-writable (only the lock bytes are OTP):
+    //
+    //   * factory-fresh chip: CC is 00 00 00 00
+    //   * chip wiped by a third-party cleaner app: CC can be any
+    //     combination — some cleaners write junk, some leave stale
+    //     NDEF-formatted bytes with the wrong size byte, some overwrite
+    //     the whole page with their own vendor tag
+    //   * genuine NTAG215/216/203 (different chip): CC byte 2 reports
+    //     the real memory size and we can refuse cleanly
+    //
+    // Client-reported 10 Nov 2026: a real NTAG213 wiped by another app
+    // was being refused as "not an NTAG213" because the CC fell through
+    // to the catch-all. Fix: only refuse when the CC SPECIFICALLY
+    // reports a different NXP chip variant (byte 0 = E1 magic AND
+    // byte 2 = a known non-213 size). Anything else is treated as a
+    // reformat candidate — if the write succeeds, it's an NTAG213
+    // (an NTAG215/216 with a non-NDEF CC is vanishingly rare; if it
+    // happens the subsequent URL write will fit).
     final variant = Ntag213.recognisedButIncompatibleChip(cc);
-    throw NfcFlowException(
-      NfcFailureStep.chipType,
-      variant != null
-          ? 'This is an $variant chip, not an NTAG213. Use a GalleryZone-supplied tag.'
-          : "This isn't an NTAG213 chip. Use a GalleryZone-supplied tag.",
-    );
+    if (variant != null) {
+      throw NfcFlowException(
+        NfcFailureStep.chipType,
+        'This is an $variant chip, not an NTAG213. Use a GalleryZone-supplied tag.',
+      );
+    }
+    try {
+      await device.transceive(
+        Ntag213.write(
+          Ntag213.capabilityContainerPage,
+          Ntag213.defaultCapabilityContainer(),
+        ),
+      );
+    } catch (_) {
+      throw const NfcFlowException(
+        NfcFailureStep.chipType,
+        "This tag couldn't be formatted. Hold it flat and steady against the back of your phone and try again, or use a different tag.",
+      );
+    }
   }
 }
 

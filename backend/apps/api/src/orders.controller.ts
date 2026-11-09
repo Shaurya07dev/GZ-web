@@ -81,7 +81,13 @@ export class OrdersController {
     }
 
     const resolution = await this.resolveShippingQuote(artworkId, addressId, req.authUser.uid).catch((err) => {
-      this.logger.warn(`ShipRocket rate quote threw: ${String(err)}`);
+      // Structured error log so Railway's log viewer can pick it out
+      // when tracing a buyer's failed quote. The exception message is
+      // the only hint we get at whether it was creds / network /
+      // upstream 500 — surface it verbatim.
+      const message = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      console.error(JSON.stringify({ event: "shiprocket.quote.failed", artworkId, addressId, message, stack }));
       return { quote: undefined, reason: "shiprocket_error" as const };
     });
     const requireRealQuote = isShiprocketConfigured();
