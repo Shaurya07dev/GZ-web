@@ -563,6 +563,14 @@ export interface OrderDoc {
   refundedAt?: FirebaseFirestore.Timestamp | null;
   providerRefundId?: string | null;
   refundReason?: string | null;
+  /** Live Shiprocket stage for the artist → buyer leg. Null until
+   *  bookOutboundOrderShipment has booked the shipment. The webhook
+   *  advances it (pickup → in_transit → out_for_delivery → delivered)
+   *  and the status machine moves Order.status in lockstep. 9 Nov 2026. */
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  shiprocketTrackingId?: string | null;
+  shiprocketCarrier?: string | null;
+  shiprocketTrackedAt?: FirebaseFirestore.Timestamp | null;
 }
 
 /** Lives on the order doc so the invoice number can't drift across reads. */

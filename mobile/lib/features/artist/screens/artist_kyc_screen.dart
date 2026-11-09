@@ -16,6 +16,8 @@ import '../../../data/mock/seed/artist_seed.dart' show currentArtistId;
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/artwork.dart'
     show ReviewStatus, SocialProofPlatform, reviewStatusLabel;
+import '../../account/providers/account_providers.dart'
+    show customerRepositoryProvider;
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart' show EmptyState;
 import '../../marketplace/widgets/social_glyphs.dart';
@@ -1216,9 +1218,39 @@ class _PickupFormState extends ConsumerState<_PickupForm> {
 
   bool _saving = false;
   bool _saved = false;
+  bool _lookingUp = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Autofill city + state from the pincode, the same way the buyer
+    // address form does — a typo here breaks every subsequent Shiprocket
+    // booking from this artist's studio.
+    _pincode.addListener(_onPincodeChanged);
+  }
+
+  Future<void> _onPincodeChanged() async {
+    final value = _pincode.text.trim();
+    if (_country != 'IN') return; // India Post lookup only
+    if (value.length != 6 || !RegExp(r'^\d{6}$').hasMatch(value)) return;
+    setState(() => _lookingUp = true);
+    try {
+      final lookup = await ref
+          .read(customerRepositoryProvider)
+          .lookupPincode(value);
+      if (!mounted) return;
+      if (_city.text.trim().isEmpty) _city.text = lookup.city;
+      if (_state.text.trim().isEmpty) _state.text = lookup.state;
+    } catch (_) {
+      // Non-fatal: artist can type both fields manually.
+    } finally {
+      if (mounted) setState(() => _lookingUp = false);
+    }
+  }
 
   @override
   void dispose() {
+    _pincode.removeListener(_onPincodeChanged);
     for (final controller in [_line1, _line2, _city, _state, _pincode]) {
       controller.dispose();
     }
@@ -1368,7 +1400,7 @@ class _PickupFormState extends ConsumerState<_PickupForm> {
               : null,
           style: const TextStyle(fontFamily: 'monospace'),
           decoration: InputDecoration(
-            labelText: _postal.label,
+            labelText: _lookingUp ? '${_postal.label} (looking up…)' : _postal.label,
             hintText: _postal.example,
             counterText: '',
             errorText: _pincodeInvalid

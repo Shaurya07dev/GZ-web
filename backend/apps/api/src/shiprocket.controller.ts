@@ -88,6 +88,40 @@ export class ShiprocketController {
       return { received: true, matched: true, leg: "outbound", stage };
     }
 
+    if (body.order_id.startsWith("order-")) {
+      // Marketplace purchase (artist → buyer). Mirror the tracking row on
+      // the Order doc AND advance Order.status along the fulfilment
+      // ladder so the buyer's order detail reflects the real courier
+      // state without admin clicking buttons. 9 Nov 2026.
+      const orderId = body.order_id.slice("order-".length);
+      const orderRef = this.db.collection(Collections.orders).doc(orderId);
+      const nextStatus = stage === "delivered"
+        ? "delivered"
+        : stage === "in_transit" || stage === "out_for_delivery"
+          ? "transit"
+          : stage === "pickup"
+            ? "packed"
+            : null;
+      await orderRef.set(
+        {
+          shiprocketStage: patch.shiprocketStage,
+          shiprocketTrackingId: patch.trackingId,
+          shiprocketCarrier: patch.carrier,
+          shiprocketTrackedAt: patch.trackedAt,
+          ...(nextStatus ? { status: nextStatus } : {}),
+        },
+        { merge: true },
+      );
+      // Also append to the order status events subcollection so the
+      // customer's order-detail timeline shows the dated step.
+      if (nextStatus) {
+        await this.db
+          .collection(`orders/${orderId}/statusHistory`)
+          .add({ status: nextStatus, changedAt: patch.trackedAt });
+      }
+      return { received: true, matched: true, leg: "order", stage, status: nextStatus };
+    }
+
     this.logger.warn(`shiprocket webhook: unknown order_id prefix: ${body.order_id}`);
     return { received: true, matched: false };
   }

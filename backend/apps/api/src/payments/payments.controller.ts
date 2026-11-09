@@ -81,7 +81,7 @@ import {
   type Db,
   type ArtworkDoc,
 } from "@galleryzone/db";
-import { bookInboundShipment } from "../shiprocket-booking.ts";
+import { bookInboundShipment, bookOutboundOrderShipment } from "../shiprocket-booking.ts";
 import { startWalletTopupInputSchema, type StartWalletTopupInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
 import { Public, Roles } from "../auth/roles.decorator.ts";
@@ -170,6 +170,15 @@ export class PaymentsController {
     void this.emails
       .orderPaid({ orderId, customerId: result.customerId, artistId: result.artistId, title: result.artworkTitle, totalPaise: result.totalPaise, artistNetPaise: result.artistNetPaise })
       .catch(this.emails.swallow("order mail"));
+    // Book the artist → buyer Shiprocket pickup. Fire-and-forget: a
+    // Shiprocket outage must never fail the payment settlement that
+    // already committed. The webhook will fill the tracking row in
+    // asynchronously when it arrives (see shipping/courier-webhook).
+    // 9 Nov 2026: before this, admin had to create the shipment by
+    // hand in the Shiprocket dashboard before clicking "Mark packed".
+    void bookOutboundOrderShipment(this.db, orderId).catch((error) => {
+      console.error(JSON.stringify({ event: "shiprocket.outbound.failed", orderId, error: String(error) }));
+    });
     return result;
   }
 
