@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { customerService } from "@/services/customerService";
 import {
   Dialog,
   DialogContent,
@@ -83,7 +84,7 @@ export function AddressFormDialog({
   const updateMutation = useUpdateAddressMutation();
   const isPending = addMutation.isPending || updateMutation.isPending;
 
-  const { control, handleSubmit, reset } = useForm<AddressFormValues>({
+  const { control, handleSubmit, reset, setValue, getValues } = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: EMPTY_VALUES,
   });
@@ -94,6 +95,32 @@ export function AddressFormDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues?.id]);
+
+  // Watch the pincode so an auto-fill query fires as soon as it is valid.
+  // useWatch, not watch(), per the project's React-Compiler pattern.
+  const pincodeValue = useWatch({ control, name: "pincode" }) ?? "";
+  const isFullPincode = /^\d{6}$/.test(pincodeValue);
+  const pincodeLookup = useQuery({
+    queryKey: ["pincode-lookup", pincodeValue],
+    queryFn: () => customerService.lookupPincode(pincodeValue),
+    enabled: isFullPincode,
+    staleTime: 86_400_000, // mapping doesn't change on the day scale
+    retry: false,
+  });
+
+  // Populate city + state when the lookup resolves. Only overwrites empty
+  // fields: a buyer who already typed a locality that disagrees with the
+  // district label keeps their edit on a re-type.
+  useEffect(() => {
+    if (!pincodeLookup.data) return;
+    const current = getValues();
+    if (!current.city.trim()) {
+      setValue("city", pincodeLookup.data.city, { shouldValidate: true });
+    }
+    if (!current.state.trim()) {
+      setValue("state", pincodeLookup.data.state, { shouldValidate: true });
+    }
+  }, [pincodeLookup.data, getValues, setValue]);
 
   // customerService.addAddress/updateAddress resolve a plausible next value
   // without persisting it into the shared mockAddresses fixture (see that
@@ -217,6 +244,37 @@ export function AddressFormDialog({
               )}
             />
 
+            <Controller
+              control={control}
+              name="pincode"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="pincode">
+                    Pincode
+                    {pincodeLookup.isFetching && isFullPincode ? (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        looking up…
+                      </span>
+                    ) : null}
+                  </FieldLabel>
+                  <Input
+                    id="pincode"
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="h-10"
+                    {...field}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {pincodeLookup.isError && isFullPincode ? (
+                    <p className="mt-1 text-xs text-destructive">
+                      Couldn&apos;t look up this pincode — type the city and state below.
+                    </p>
+                  ) : null}
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Controller
                 control={control}
@@ -251,25 +309,6 @@ export function AddressFormDialog({
                 )}
               />
             </div>
-
-            <Controller
-              control={control}
-              name="pincode"
-              render={({ field, fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="pincode">Pincode</FieldLabel>
-                  <Input
-                    id="pincode"
-                    inputMode="numeric"
-                    maxLength={6}
-                    className="h-10"
-                    {...field}
-                    aria-invalid={fieldState.invalid}
-                  />
-                  <FieldError errors={[fieldState.error]} />
-                </Field>
-              )}
-            />
 
             <Controller
               control={control}

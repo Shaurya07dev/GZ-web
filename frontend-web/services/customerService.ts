@@ -71,4 +71,14 @@ export const customerService = {
     await http.delete(`/v1/account/addresses/${encodeURIComponent(id)}`);
     return { id };
   },
+
+  /**
+   * India Post lookup for a 6-digit pincode — returns the city (district)
+   * and state. Used by the address form to auto-fill city + state as soon
+   * as the buyer types the pincode; typos there silently broke Shiprocket
+   * serviceability queries later. 9 Nov 2026.
+   */
+  lookupPincode: async (pincode: string): Promise<{ pincode: string; city: string; state: string }> => {
+    return http.get(`/v1/pincode/${encodeURIComponent(pincode)}`);
+  },
 };
