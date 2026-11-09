@@ -24,8 +24,6 @@ class SubmitArtworkInput {
     this.artworkType,
     this.paintingStyle,
     this.exclusive = false,
-    this.insuranceOpted = false,
-    this.insuranceNumber,
   });
 
   final String title;
@@ -53,15 +51,6 @@ class SubmitArtworkInput {
   /// One-way declaration: once an accepted artwork is exclusive, the backend
   /// refuses attempts to clear it.
   final bool exclusive;
-
-  /// Legacy read/test compatibility only. New clients neither ask for nor
-  /// transmit insurance details.
-  @Deprecated('Insurance was removed from artwork submission in October 2026.')
-  final bool insuranceOpted;
-
-  /// Legacy read/test compatibility only; omitted from every new API write.
-  @Deprecated('Insurance was removed from artwork submission in October 2026.')
-  final String? insuranceNumber;
 
   /// Weight, framing and packing. Required in practice once the aggregator
   /// channel is picked — see [missingForAggregator].

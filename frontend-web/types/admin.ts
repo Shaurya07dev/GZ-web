@@ -137,8 +137,6 @@ export type AuditAction =
   | "kyc.rejected"
   | "gst.approved"
   | "gst.rejected"
-  | "insurance.approved"
-  | "insurance.rejected"
   | "withdrawal.approved"
   | "withdrawal.rejected"
   | "payout.marked_paid"

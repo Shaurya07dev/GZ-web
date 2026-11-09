@@ -74,7 +74,11 @@ export const pricingRatesSchema = z
     externalSalePenaltyRate: percent(0.2),
     minWithdrawalPaise: z.number().int().min(0),
     minCustomerWithdrawalPaise: z.number().int().min(0),
-    insuranceThresholdPaise: z.number().int().min(0),
+    // Legacy: insurance was removed from the product (9 Nov 2026). The
+    // field stays on existing Firestore rate-config docs, so it is kept
+    // optional with a 0 default here rather than deleted outright — a
+    // strict schema would reject every historical doc on read.
+    insuranceThresholdPaise: z.number().int().min(0).optional().default(0),
     earningsAbove5LThresholdPaise: z.number().int().min(0),
     // Optional on the wire so a console that predates the flag can still propose
     // an unrelated change; the controller then keeps the flag as it is in force.

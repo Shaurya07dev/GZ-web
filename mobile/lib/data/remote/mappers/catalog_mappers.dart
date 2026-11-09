@@ -144,7 +144,6 @@ Artwork artworkFromApi(Map<String, dynamic> json) {
     // No photo yet reads as an empty url, which the image view draws as an
     // honest "Image coming soon" rather than a shared stock picture.
     thumbnailUrl: images.firstOrNull?.thumbnailUrl ?? '',
-    insured: json['insured'] == true,
     exclusive: json['exclusive'] == true,
     status: status,
     listingType: listingTypeFromApi(json['listingType']),
@@ -180,8 +179,6 @@ Artwork artworkFromApi(Map<String, dynamic> json) {
     productCode: _sn(json['productCode']),
     artworkType: _sn(json['artworkType']),
     paintingStyle: _sn(json['paintingStyle']),
-    insuranceNumber: _sn(json['insuranceNumber']),
-    insuranceStatus: reviewStatusFromCode(_sn(json['insuranceStatus'])),
     artistLocation: _sn(json['artistLocation']),
     sizeBand: sizeBandFromApi(json['sizeBand']),
   );
@@ -191,15 +188,12 @@ Artwork artworkFromApi(Map<String, dynamic> json) {
 /// the private price and what the artist would take home.
 ArtistArtwork ownerArtworkFromApi(Map<String, dynamic> json) {
   final net = asMap(json['artistNet']);
-  final insuranceOpted = json['insuranceOpted'] == true;
   return ArtistArtwork(
-    artwork: artworkFromApi(json)
-        .copyWith(insured: insuranceOpted || json['insured'] == true),
+    artwork: artworkFromApi(json),
     artistPrice: rupeesAt(json, 'artistPricePaise'),
     artistNetMarketplace: rupeesAt(net, 'marketplace'),
     artistNetAggregator: rupeesAt(net, 'aggregatorEstimate'),
     editableUntil: _sn(json['editableUntil']),
-    insuranceOpted: insuranceOpted,
   );
 }
 

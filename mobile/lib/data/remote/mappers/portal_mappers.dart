@@ -124,7 +124,6 @@ PricingRules? pricingRulesFromApi(Object? value) {
     nfcTagCharge: rupees('nfcTagChargePaise', 100),
     subscriptionFee: rupees('subscriptionFeePaise', 1200),
     deliveryCharge: rupees('deliveryChargePaise', 2500),
-    insuranceThreshold: rupees('insuranceThresholdPaise', 20000),
   );
 }
 
@@ -296,7 +295,6 @@ Artwork _placeholderArtwork(String id) => Artwork(
   medium: '',
   customerPrice: 0,
   thumbnailUrl: '',
-  insured: false,
   status: ArtworkStatus.marketplace,
   listingType: ListingType.marketplaceAndAggregator,
   description: '',

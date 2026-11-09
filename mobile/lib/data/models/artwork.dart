@@ -219,7 +219,6 @@ abstract class Artwork with _$Artwork {
     required String medium,
     required double customerPrice,
     required String thumbnailUrl,
-    required bool insured,
     @Default(false) bool exclusive,
     required ArtworkStatus status,
     required ListingType listingType,
@@ -256,11 +255,6 @@ abstract class Artwork with _$Artwork {
 
     /// Which of the world painting traditions this is — only for paintings.
     String? paintingStyle,
-
-    /// Policy number the artist pasted back from the insurer, and the admin's
-    /// verdict on it. Only meaningful when [insured] is true.
-    String? insuranceNumber,
-    @Default(ReviewStatus.notSubmitted) ReviewStatus insuranceStatus,
 
     /// The artist's public location; an artwork has none of its own.
     String? artistLocation,
@@ -735,9 +729,5 @@ abstract class ArtistArtwork with _$ArtistArtwork {
 
     /// When the 7-day edit window closes (ISO). Null for a draft, which has none.
     String? editableUntil,
-
-    /// Whether the artist opted into transit insurance, as opposed to it
-    /// merely being required by the channel.
-    @Default(false) bool insuranceOpted,
   }) = _ArtistArtwork;
 }

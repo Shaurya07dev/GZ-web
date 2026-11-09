@@ -17,7 +17,6 @@ class PricingRules {
     required this.nfcTagCharge,
     required this.subscriptionFee,
     required this.deliveryCharge,
-    required this.insuranceThreshold,
     this.artistTechnologyRate = 0,
     this.aggregatorPriceWarnRate = 1,
   });
@@ -50,7 +49,4 @@ class PricingRules {
 
   /// The flat fallback delivery charge.
   final double deliveryCharge;
-
-  /// Artwork price at or above which transit insurance is recommended.
-  final double insuranceThreshold;
 }

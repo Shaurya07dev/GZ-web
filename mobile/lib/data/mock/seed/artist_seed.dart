@@ -143,7 +143,7 @@ List<Artwork> _buildAll() => [
       medium: seed.medium,
       customerPrice: displayPriceOf(seed.artistPrice),
       thumbnailUrl: seed.image,
-      insured: seed.artistPrice > 20000,
+
       status: seed.status,
       listingType: ListingType.marketplaceAndAggregator,
       description:

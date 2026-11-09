@@ -82,7 +82,6 @@ _Artwork _$ArtworkFromJson(Map<String, dynamic> json) => _Artwork(
   medium: json['medium'] as String,
   customerPrice: (json['customerPrice'] as num).toDouble(),
   thumbnailUrl: json['thumbnailUrl'] as String,
-  insured: json['insured'] as bool,
   exclusive: json['exclusive'] as bool? ?? false,
   status: $enumDecode(_$ArtworkStatusEnumMap, json['status']),
   listingType: $enumDecode(_$ListingTypeEnumMap, json['listingType']),
@@ -109,10 +108,6 @@ _Artwork _$ArtworkFromJson(Map<String, dynamic> json) => _Artwork(
   productCode: json['productCode'] as String?,
   artworkType: json['artworkType'] as String?,
   paintingStyle: json['paintingStyle'] as String?,
-  insuranceNumber: json['insuranceNumber'] as String?,
-  insuranceStatus:
-      $enumDecodeNullable(_$ReviewStatusEnumMap, json['insuranceStatus']) ??
-      ReviewStatus.notSubmitted,
   artistLocation: json['artistLocation'] as String?,
   sizeBand: $enumDecodeNullable(_$ArtworkSizeBandEnumMap, json['sizeBand']),
   physical: json['physical'] == null
@@ -133,7 +128,6 @@ Map<String, dynamic> _$ArtworkToJson(_Artwork instance) => <String, dynamic>{
   'medium': instance.medium,
   'customerPrice': instance.customerPrice,
   'thumbnailUrl': instance.thumbnailUrl,
-  'insured': instance.insured,
   'exclusive': instance.exclusive,
   'status': _$ArtworkStatusEnumMap[instance.status]!,
   'listingType': _$ListingTypeEnumMap[instance.listingType]!,
@@ -152,8 +146,6 @@ Map<String, dynamic> _$ArtworkToJson(_Artwork instance) => <String, dynamic>{
   'productCode': instance.productCode,
   'artworkType': instance.artworkType,
   'paintingStyle': instance.paintingStyle,
-  'insuranceNumber': instance.insuranceNumber,
-  'insuranceStatus': _$ReviewStatusEnumMap[instance.insuranceStatus]!,
   'artistLocation': instance.artistLocation,
   'sizeBand': _$ArtworkSizeBandEnumMap[instance.sizeBand],
   'physical': instance.physical,
@@ -164,13 +156,6 @@ const _$ListingTypeEnumMap = {
   ListingType.marketplaceOnly: 'marketplace_only',
   ListingType.aggregatorOnly: 'aggregator_only',
   ListingType.marketplaceAndAggregator: 'marketplace_and_aggregator',
-};
-
-const _$ReviewStatusEnumMap = {
-  ReviewStatus.notSubmitted: 'not_submitted',
-  ReviewStatus.submitted: 'submitted',
-  ReviewStatus.approved: 'approved',
-  ReviewStatus.rejected: 'rejected',
 };
 
 const _$ArtworkSizeBandEnumMap = {

@@ -508,7 +508,6 @@ class MockArtistRepository implements ArtistRepository {
         medium: input.medium,
         customerPrice: displayPriceOf(input.artistPrice),
         thumbnailUrl: input.images.isEmpty ? '' : input.images.first.url,
-        insured: false,
         exclusive: input.exclusive,
         status: status,
         listingType: input.listingType,
@@ -524,7 +523,6 @@ class MockArtistRepository implements ArtistRepository {
         physical: input.physical,
         artworkType: input.artworkType,
         paintingStyle: input.paintingStyle,
-        insuranceNumber: input.insuranceNumber,
       );
 
       _writePrices({..._readPrices(), id: input.artistPrice});
@@ -584,11 +582,9 @@ class MockArtistRepository implements ArtistRepository {
         yearCreated: patch.yearCreated,
         customerPrice: displayPriceOf(patch.artistPrice),
         listingType: patch.listingType,
-        insured: false,
         exclusive: existing.exclusive || patch.exclusive,
         artworkType: patch.artworkType,
         paintingStyle: patch.paintingStyle,
-        insuranceNumber: patch.insuranceNumber,
         physical: patch.physical ?? existing.physical,
         images: patch.images.isEmpty ? existing.images : patch.images,
         thumbnailUrl: patch.images.isEmpty
@@ -1125,7 +1121,6 @@ class MockArtistRepository implements ArtistRepository {
       nfcTagCharge: 100,
       subscriptionFee: 1200,
       deliveryCharge: deliveryCharge,
-      insuranceThreshold: 20000,
     ),
   );
 
