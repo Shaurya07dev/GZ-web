@@ -8,6 +8,7 @@ import '../../../core/format.dart';
 import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
+import '../../account/widgets/notification_bell.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../providers/artist_providers.dart';
@@ -99,7 +100,10 @@ class _ArtistArtworksScreenState extends ConsumerState<ArtistArtworksScreen> {
     // so this screen must not add another — two FABs overlapped and raised
     // a RenderFlex overflow in the empty state (client-reported 8 Nov 2026).
     return Scaffold(
-      appBar: AppBar(title: const Text('My Artworks')),
+      appBar: AppBar(
+        title: const Text('My Artworks'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: artworks.when(
         loading: () => const PageSkeleton(),
         error: (error, stack) => Center(

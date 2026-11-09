@@ -8,6 +8,7 @@ import '../../../core/motion.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
+import '../../account/widgets/notification_bell.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../../shell/portal_widgets.dart';
 import '../providers/aggregator_providers.dart';
@@ -54,7 +55,10 @@ class _AggregatorCollectionScreenState
     final collection = ref.watch(aggregatorCollectionProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My inventory')),
+      appBar: AppBar(
+        title: const Text('My inventory'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: collection.when(
         loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(

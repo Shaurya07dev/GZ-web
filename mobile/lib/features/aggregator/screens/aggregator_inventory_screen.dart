@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/repositories/aggregator_repository.dart';
+import '../../account/widgets/notification_bell.dart';
 import '../../marketplace/widgets/artwork_card.dart';
 import '../../shell/portal_widgets.dart';
 import '../providers/aggregator_providers.dart';
@@ -105,7 +106,10 @@ class _AggregatorBrowseScreenState
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Browse GalleryZone')),
+      appBar: AppBar(
+        title: const Text('Browse GalleryZone'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: inventory.when(
         loading: () => const PageSkeleton(),
         error: (error, stack) => EmptyState(

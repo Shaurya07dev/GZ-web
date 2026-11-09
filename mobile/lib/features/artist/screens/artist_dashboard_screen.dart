@@ -10,6 +10,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/mock/seed/artist_seed.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/artwork.dart';
+import '../../account/widgets/notification_bell.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../shell/portal_menu.dart' show accountNameProvider, firstNameOf;
 import '../providers/artist_providers.dart';
@@ -61,7 +62,10 @@ class ArtistDashboardScreen extends ConsumerWidget {
     final firstName = name.isEmpty ? 'there' : firstNameOf(name);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dashboard')),
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        actions: const [NotificationBell(), SizedBox(width: 4)],
+      ),
       body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(artistKpisProvider);

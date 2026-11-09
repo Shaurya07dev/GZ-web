@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../account/widgets/notification_bell.dart';
 import 'artist_settlements_screen.dart' show ArtistSettlementsTab;
 import 'artist_orders_screen.dart' show ArtistOrdersTab;
 import 'artist_wallet_screen.dart' show ArtistWalletTab;
@@ -22,6 +23,7 @@ class ArtistSalesScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Sales & Earnings'),
+          actions: const [NotificationBell(), SizedBox(width: 4)],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Overview'),

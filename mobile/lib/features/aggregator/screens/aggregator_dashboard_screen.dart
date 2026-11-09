@@ -10,6 +10,7 @@ import '../../../data/models/aggregator.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/auth.dart';
 import '../../shell/display_clock.dart';
+import '../../account/widgets/notification_bell.dart';
 import '../../shell/portal_menu.dart';
 import '../../shell/portal_widgets.dart';
 import '../providers/aggregator_providers.dart';
@@ -42,7 +43,10 @@ class AggregatorDashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
-        actions: [PortalAvatarButton(name: name, badgeCount: unread)],
+        actions: [
+          const NotificationBell(),
+          PortalAvatarButton(name: name, badgeCount: unread),
+        ],
       ),
       // The shell carries this same drawer for its Profile tab; the copy here is what
       // the avatar above can reach, since this Scaffold sits inside the shell's.
