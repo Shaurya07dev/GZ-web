@@ -1,10 +1,10 @@
-// Admin moderation endpoints — KYC, GST, insurance approve/reject.
-// @galleryzone/db's decideGst/decideKyc/decideInsurance do the real work
-// (same-transaction audit log write, state-machine-enforced) — verified
-// directly in packages/db/moderation.check.ts against real Postgres.
+// Admin moderation endpoints — KYC, GST.
+// @galleryzone/db's decideGst/decideKyc do the real work (same-transaction
+// audit log write, state-machine-enforced) — verified directly in
+// packages/db/moderation.check.ts against real Postgres.
 
 import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
-import { decideGst, decideKyc, decideInsurance, type Db } from "@galleryzone/db";
+import { decideGst, decideKyc, type Db } from "@galleryzone/db";
 import { z } from "zod";
 import { Roles } from "./auth/roles.decorator.ts";
 import { Emails } from "./mail/emails.ts";
@@ -61,19 +61,4 @@ export class ModerationController {
     return result;
   }
 
-  @Roles("admin")
-  @Post("artworks/:artworkId/insurance/approve")
-  async approveInsurance(@Req() req: AuthenticatedRequest, @Param("artworkId") artworkId: string) {
-    const result = await decideInsurance({ db: this.db, adminId: req.authUser.uid, artworkId, decision: "approved" });
-    // No email: the product no longer offers insurance (client, 24 Oct 2026), so nothing should tell anyone a piece is covered.
-    return result;
-  }
-
-  @Roles("admin")
-  @Post("artworks/:artworkId/insurance/reject")
-  async rejectInsurance(@Req() req: AuthenticatedRequest, @Param("artworkId") artworkId: string, @Body(new ZodValidationPipe(decisionBodySchema)) body: DecisionBody) {
-    const result = await decideInsurance({ db: this.db, adminId: req.authUser.uid, artworkId, decision: "rejected", reason: body.reason });
-    // No email either, for the same reason as approveInsurance.
-    return result;
-  }
 }

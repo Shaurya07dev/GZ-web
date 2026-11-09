@@ -34,8 +34,6 @@ export interface SubmitArtworkInput {
   mode?: "draft" | "review" | undefined;
   artworkType?: string | null | undefined;
   paintingStyle?: string | null | undefined;
-  insuranceOpted?: boolean | undefined;
-  insuranceNumber?: string | null | undefined;
   physical?: ArtworkPhysical | null | undefined;
   /** Mark the piece exclusive to GalleryZone (MOU §x — one-of-a-kind, no
    *  sales elsewhere). Once accepted, the flag cannot be cleared. */
@@ -81,7 +79,7 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
     artworkType: input.artworkType ?? null,
     paintingStyle: input.paintingStyle ?? null,
     physical: input.physical ?? null,
-    insuranceOpted: input.insuranceOpted ?? false,
+    insuranceOpted: false,
     exclusive: input.exclusive ?? false,
     listingType: input.listingType,
     rarityType: null,
@@ -90,8 +88,8 @@ export async function submitArtwork(input: SubmitArtworkInput): Promise<{ artwor
     // A chip is only ever linked through nfc.ts, from the app, after it has been written.
     nfcLinkedAt: null,
     nfcLockedAt: null,
-    insuranceNumber: input.insuranceNumber ?? null,
-    insuranceStatus: input.insuranceNumber ? "submitted" : null,
+    insuranceNumber: null,
+    insuranceStatus: null,
     editableUntil: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp, // placeholder, overwritten below with a real computed value
     createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
   };
@@ -128,8 +126,6 @@ export type UpdateArtworkPatch = {
     | "yearCreated"
     | "artworkType"
     | "paintingStyle"
-    | "insuranceOpted"
-    | "insuranceNumber"
     | "physical"
     | "exclusive"
   >]?: SubmitArtworkInput[K] | undefined;
@@ -163,7 +159,6 @@ export async function updateArtwork(
   if (patch.yearCreated !== undefined) fields.yearCreated = patch.yearCreated ?? null;
   if (patch.artworkType !== undefined) fields.artworkType = patch.artworkType ?? null;
   if (patch.paintingStyle !== undefined) fields.paintingStyle = patch.paintingStyle ?? null;
-  if (patch.insuranceOpted !== undefined) fields.insuranceOpted = patch.insuranceOpted;
   if (patch.physical !== undefined) fields.physical = patch.physical ?? null;
   if (patch.exclusive !== undefined) {
     // Exclusivity is a one-way flag — once the piece is marked exclusive to
@@ -173,11 +168,6 @@ export async function updateArtwork(
       throw new ArtistArtworkError("A piece marked exclusive can't be un-marked. Contact GalleryZone if this needs to change.");
     }
     fields.exclusive = patch.exclusive;
-  }
-  if (patch.insuranceNumber !== undefined && patch.insuranceNumber !== artwork.insuranceNumber) {
-    fields.insuranceNumber = patch.insuranceNumber ?? null;
-    // A new number goes back to the admin for verification.
-    fields.insuranceStatus = patch.insuranceNumber ? "submitted" : null;
   }
   if (Object.keys(fields).length) await ref.update(fields);
 

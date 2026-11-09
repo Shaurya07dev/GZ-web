@@ -73,8 +73,6 @@ const artworkFields = {
   mode: z.enum(["draft", "review"]).optional(),
   artworkType: z.string().trim().max(80).nullable().optional(),
   paintingStyle: z.string().trim().max(80).nullable().optional(),
-  insuranceOpted: z.boolean().optional(),
-  insuranceNumber: z.string().trim().max(80).nullable().optional(),
   physical: physicalSchema.nullable().optional(),
   exclusive: z.boolean().optional(),
 };
