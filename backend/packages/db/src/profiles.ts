@@ -287,15 +287,69 @@ export async function hasApprovedKyc(db: Firestore, uid: string): Promise<boolea
 }
 
 /**
- * An artist cannot send a new listing to review until BOTH identity signals
- * are on file: PAN (tax identifier for the payout) and an admin-approved
- * Aadhaar (identity verification). Owner-reported 31 Oct 2026: artists were
- * able to submit without any identity check at all. Drafts and edits to an
- * already-listed piece are unaffected.
+ * An artist cannot send a new listing to review until EVERY piece of
+ * infrastructure the platform needs to actually sell the piece is on file.
+ * Drafts and edits to an already-listed piece are unaffected.
+ *
+ * Previously only PAN + approved Aadhaar were checked (owner-reported 31
+ * Oct 2026). Extended 9 Nov 2026 after the Shiprocket integration landed:
+ * without a pickup address the shipment booking throws and the order
+ * blocks at checkout; without bank details the eventual payout has
+ * nowhere to go. Each missing piece now tells the artist exactly what to
+ * fix — see [listingReadinessIssues].
  */
 export async function hasKycForListing(db: Firestore, uid: string): Promise<boolean> {
-  if (!uid) return false;
+  return (await listingReadinessIssues(db, uid)).length === 0;
+}
+
+export type ListingReadinessIssue =
+  | "pan_missing"
+  | "aadhaar_not_approved"
+  | "pickup_address_incomplete"
+  | "bank_account_missing";
+
+/**
+ * The specific gaps blocking a submit-to-review, in the order the profile
+ * page lists them. Empty array = ready to list. Used by the controller to
+ * render a precise error ("Add your bank account before submitting") instead
+ * of a generic "KYC incomplete" that leaves the artist guessing.
+ */
+export async function listingReadinessIssues(db: Firestore, uid: string): Promise<ListingReadinessIssue[]> {
+  if (!uid) return ["pan_missing", "aadhaar_not_approved", "pickup_address_incomplete", "bank_account_missing"];
   const snap = await db.collection(userProfileCol(uid)).doc("data").get();
   const profile = snap.data() as Partial<ProfileDoc> | undefined;
-  return Boolean(profile?.pan?.trim()) && profile?.aadhaarStatus === "approved";
+  const issues: ListingReadinessIssue[] = [];
+  if (!profile?.pan?.trim()) issues.push("pan_missing");
+  if (profile?.aadhaarStatus !== "approved") issues.push("aadhaar_not_approved");
+  // Pickup address — line1 + pincode is the minimum Shiprocket's booking
+  // API needs. City + state are handy to carry too but not strictly
+  // required because the API resolves them from the pincode anyway.
+  if (!profile?.pickupLine1?.trim() || !profile?.pickupPincode?.trim()) {
+    issues.push("pickup_address_incomplete");
+  }
+  // Bank account — without an account number + IFSC the admin has
+  // nothing to remit the artist's payout to. Catches the case where an
+  // artist clears KYC but forgets the payout setup. The ProfileDoc only
+  // carries the masked tail + IFSC (the full number lives encrypted
+  // under bankAccountEncrypted); either signal is enough to prove a
+  // bank record exists.
+  const hasBank = Boolean(profile?.bankAccountMasked?.trim()) && Boolean(profile?.ifsc?.trim());
+  if (!hasBank) {
+    issues.push("bank_account_missing");
+  }
+  return issues;
+}
+
+/** Human sentence for each readiness gap — used in the 400 error title. */
+export function listingReadinessMessage(issue: ListingReadinessIssue): string {
+  switch (issue) {
+    case "pan_missing":
+      return "Add your PAN in Profile → KYC before submitting.";
+    case "aadhaar_not_approved":
+      return "Verify your Aadhaar in Profile → KYC and wait for approval before submitting.";
+    case "pickup_address_incomplete":
+      return "Add a complete pickup address in Profile → KYC so the courier can collect the piece.";
+    case "bank_account_missing":
+      return "Add your bank account in Profile → KYC so GalleryZone can pay you when the piece sells.";
+  }
 }

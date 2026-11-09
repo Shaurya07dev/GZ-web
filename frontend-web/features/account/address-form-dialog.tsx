@@ -111,16 +111,22 @@ export function AddressFormDialog({
   // Populate city + state when the lookup resolves. Only overwrites empty
   // fields: a buyer who already typed a locality that disagrees with the
   // district label keeps their edit on a re-type.
+  //
+  // Watching city + state too (not just the lookup) because React Compiler
+  // can memoise an effect whose deps only include a query's `.data` and
+  // skip re-fires on remount (reopening the dialog for a second address).
+  const cityValue = useWatch({ control, name: "city" }) ?? "";
+  const stateValue = useWatch({ control, name: "state" }) ?? "";
   useEffect(() => {
     if (!pincodeLookup.data) return;
-    const current = getValues();
-    if (!current.city.trim()) {
+    if (!cityValue.trim() && pincodeLookup.data.city) {
       setValue("city", pincodeLookup.data.city, { shouldValidate: true });
     }
-    if (!current.state.trim()) {
+    if (!stateValue.trim() && pincodeLookup.data.state) {
       setValue("state", pincodeLookup.data.state, { shouldValidate: true });
     }
-  }, [pincodeLookup.data, getValues, setValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pincodeLookup.data?.city, pincodeLookup.data?.state]);
 
   // customerService.addAddress/updateAddress resolve a plausible next value
   // without persisting it into the shared mockAddresses fixture (see that

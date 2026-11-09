@@ -15,6 +15,8 @@ import {
   artworkRarityValues,
   getArtistArtwork,
   hasKycForListing,
+  listingReadinessIssues,
+  listingReadinessMessage,
   linkNfcTag,
   listArtistOrders,
   listArtistPenalties,
@@ -206,11 +208,13 @@ export class ArtistArtworksController {
   @Roles("artist")
   @Post("artist/artworks")
   async submit(@Req() req: AuthenticatedRequest, @Body(new ZodValidationPipe(submitArtworkSchema)) body: SubmitArtworkBody) {
-    // Review-mode submissions need KYC on file; drafts don't. Backend check
-    // mirrors the UI gate (owner-reported 31 Oct 2026: the frontend-only
-    // guard could be bypassed by hitting the API directly).
-    if (body.mode !== "draft" && !(await hasKycForListing(this.db, req.authUser.uid))) {
-      throw new BadRequestException({ type: "about:blank", title: "Finish KYC before submitting for review", status: 400, code: "kyc_incomplete" });
+    // Review-mode submissions need KYC + the parts the platform needs to
+    // actually ship + settle. Drafts don't. The backend check mirrors the
+    // UI gate (owner-reported 31 Oct 2026: the frontend-only guard could
+    // be bypassed by hitting the API directly).
+    if (body.mode !== "draft") {
+      await this.assertListingReady(req.authUser.uid);
+      this.assertWeightOnSubmit(body);
     }
     const rates = await this.rates();
     const result = await submitArtwork({ db: this.db, artistId: req.authUser.uid, ...body, rates });
@@ -220,12 +224,37 @@ export class ArtistArtworksController {
     return artwork ?? result;
   }
 
+  private async assertListingReady(uid: string): Promise<void> {
+    const issues = await listingReadinessIssues(this.db, uid);
+    if (issues.length === 0) return;
+    const first = issues[0]!;
+    throw new BadRequestException({
+      type: "about:blank",
+      title: listingReadinessMessage(first),
+      status: 400,
+      code: `listing_not_ready:${first}`,
+      issues,
+    });
+  }
+
+  private assertWeightOnSubmit(body: SubmitArtworkBody): void {
+    const weight = body.physical?.weightKg;
+    if (!weight || weight <= 0) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "Enter the artwork's weight in kg before submitting — the courier needs it to price the shipment.",
+        status: 400,
+        code: "weight_missing",
+      });
+    }
+  }
+
   @Roles("artist")
   @Patch("artist/artworks/:id")
   async update(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(updateArtworkSchema)) body: UpdateArtworkBody) {
-    // Promoting a draft to review follows the same KYC rule as submit.
-    if (body.mode === "review" && !(await hasKycForListing(this.db, req.authUser.uid))) {
-      throw new BadRequestException({ type: "about:blank", title: "Finish KYC before submitting for review", status: 400, code: "kyc_incomplete" });
+    // Promoting a draft to review follows the same readiness rules as submit.
+    if (body.mode === "review") {
+      await this.assertListingReady(req.authUser.uid);
     }
     const rates = await this.rates();
     try {
