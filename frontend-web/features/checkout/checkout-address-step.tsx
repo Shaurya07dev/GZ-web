@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, MapPin, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
   FieldGroup,
 } from "@/components/ui/field";
 import { useAddresses, useAddAddressMutation } from "@/hooks/useAddresses";
+import { customerService } from "@/services/customerService";
 import type { Address } from "@/types/customer";
 
 const addressSchema = z.object({
@@ -65,10 +67,35 @@ export function CheckoutAddressStep({
 
   const addresses = [...(fetchedAddresses ?? []), ...sessionAddresses];
 
-  const { control, handleSubmit, reset } = useForm<AddressFormValues>({
+  const { control, handleSubmit, reset, setValue } = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: EMPTY_VALUES,
   });
+
+  // Same pincode → city/state autofill as address-form-dialog. useWatch (not
+  // watch()) and primitive deps so React Compiler doesn't memoise the effect
+  // on a cached query object across re-opens of the inline form.
+  const pincodeValue = useWatch({ control, name: "pincode" }) ?? "";
+  const isFullPincode = /^\d{6}$/.test(pincodeValue);
+  const pincodeLookup = useQuery({
+    queryKey: ["pincode-lookup", pincodeValue],
+    queryFn: () => customerService.lookupPincode(pincodeValue),
+    enabled: isFullPincode,
+    staleTime: 86_400_000,
+    retry: false,
+  });
+  const cityValue = useWatch({ control, name: "city" }) ?? "";
+  const stateValue = useWatch({ control, name: "state" }) ?? "";
+  useEffect(() => {
+    if (!pincodeLookup.data) return;
+    if (!cityValue.trim() && pincodeLookup.data.city) {
+      setValue("city", pincodeLookup.data.city, { shouldValidate: true });
+    }
+    if (!stateValue.trim() && pincodeLookup.data.state) {
+      setValue("state", pincodeLookup.data.state, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pincodeLookup.data?.city, pincodeLookup.data?.state]);
 
   function onSubmit(values: AddressFormValues) {
     addAddressMutation.mutate(
@@ -207,7 +234,35 @@ export function CheckoutAddressStep({
                 </Field>
               )}
             />
+            {/* Pincode first — the India Post lookup fills city + state when
+                a 6-digit code is entered, so asking for pincode first saves
+                the buyer from typing two fields the backend can derive. */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <Controller
+                control={control}
+                name="pincode"
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="checkout-pincode">
+                      Pincode
+                      {pincodeLookup.isFetching && isFullPincode ? (
+                        <span className="ml-1.5 text-[11px] text-muted-foreground">
+                          looking up…
+                        </span>
+                      ) : null}
+                    </FieldLabel>
+                    <Input
+                      id="checkout-pincode"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="h-10"
+                      {...field}
+                      aria-invalid={fieldState.invalid}
+                    />
+                    <FieldError errors={[fieldState.error]} />
+                  </Field>
+                )}
+              />
               <Controller
                 control={control}
                 name="city"
@@ -232,24 +287,6 @@ export function CheckoutAddressStep({
                     <FieldLabel htmlFor="checkout-state">State</FieldLabel>
                     <Input
                       id="checkout-state"
-                      className="h-10"
-                      {...field}
-                      aria-invalid={fieldState.invalid}
-                    />
-                    <FieldError errors={[fieldState.error]} />
-                  </Field>
-                )}
-              />
-              <Controller
-                control={control}
-                name="pincode"
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="checkout-pincode">Pincode</FieldLabel>
-                    <Input
-                      id="checkout-pincode"
-                      inputMode="numeric"
-                      maxLength={6}
                       className="h-10"
                       {...field}
                       aria-invalid={fieldState.invalid}
