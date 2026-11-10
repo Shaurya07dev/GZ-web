@@ -14,35 +14,37 @@ const DEFAULT_SLABS: readonly { thresholdPaise: number; rate: number }[] = [
 ];
 
 function currentSlab(
-  lifetimePaise: number,
+  salesPaise: number,
   slabs: readonly { thresholdPaise: number; rate: number }[],
 ) {
   const sorted = [...slabs].sort((a, b) => b.thresholdPaise - a.thresholdPaise);
   for (const slab of sorted) {
-    if (lifetimePaise >= slab.thresholdPaise) return slab;
+    if (salesPaise >= slab.thresholdPaise) return slab;
   }
   return sorted[sorted.length - 1]!;
 }
 
 function nextSlab(
-  lifetimePaise: number,
+  salesPaise: number,
   slabs: readonly { thresholdPaise: number; rate: number }[],
 ): { thresholdPaise: number; rate: number } | null {
   const sorted = [...slabs].sort((a, b) => a.thresholdPaise - b.thresholdPaise);
-  return sorted.find((s) => s.thresholdPaise > lifetimePaise) ?? null;
+  return sorted.find((s) => s.thresholdPaise > salesPaise) ?? null;
 }
 
 export function CommissionExplainer() {
   const { data: stats } = useAggregatorStats();
   const { data: rules } = usePricingRules();
   const slabs = (rules?.aggregatorCommissionSlabs as readonly { thresholdPaise: number; rate: number }[] | undefined) ?? DEFAULT_SLABS;
-  // commissionEarned is in rupees; the slabs are in paise. We compare on the
-  // aggregator's lifetime pre-GST SALES figure, not commission earned, but
-  // that figure is a close proxy for first-paint — the backend sees the real
-  // one at sale time and bills accordingly.
-  const lifetimePaise = Math.round((stats?.commissionEarned ?? 0) * 100 * 5); // rough: commission ~20% of markup; invert.
-  const slab = currentSlab(lifetimePaise, slabs);
-  const next = nextSlab(lifetimePaise, slabs);
+  // Client directive: the rate is set from the PREVIOUS calendar month's
+  // eligible pre-GST sales total, not a lifetime figure. commissionEarned
+  // is a cumulative-ish proxy; invert to a sales-magnitude proxy for the
+  // "what slab am I in" first-paint. The backend reads the real previous
+  // month total at sale time and bills accordingly — this UI is just a
+  // hint for the aggregator.
+  const previousMonthSalesPaiseApprox = Math.round((stats?.commissionEarned ?? 0) * 100 * 5);
+  const slab = currentSlab(previousMonthSalesPaiseApprox, slabs);
+  const next = nextSlab(previousMonthSalesPaiseApprox, slabs);
   const sharePercent = Math.round(slab.rate * 100);
   const markupPercent = Math.round(((rules?.platformMarkup as number | undefined) ?? 0.3) * 100);
   const example = 100_000;
@@ -60,8 +62,9 @@ export function CommissionExplainer() {
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             On every aggregator-assisted sale, GalleryZone adds a {markupPercent}% markup on top of
-            the artist&rsquo;s price. Your share of that markup grows as your lifetime
-            sales grow — the new rate kicks in from the month after you cross a slab.
+            the artist&rsquo;s price. Your share of that markup is set each month
+            from the previous month&rsquo;s pre-GST sales total — the new rate kicks in
+            from the month after you cross a slab.
           </p>
         </div>
       </div>
@@ -89,7 +92,7 @@ export function CommissionExplainer() {
                 <span>
                   {s.thresholdPaise === 0
                     ? "Up to the first slab"
-                    : `From ${formatINR(s.thresholdPaise / 100)} lifetime sales`}
+                    : `From ${formatINR(s.thresholdPaise / 100)} in a month`}
                 </span>
                 <span className="font-mono tabular-nums">{Math.round(s.rate * 100)}%</span>
               </li>
@@ -99,8 +102,9 @@ export function CommissionExplainer() {
 
       {next && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          At {formatINR(next.thresholdPaise / 100)} in lifetime pre-GST sales, your rate
-          moves to {Math.round(next.rate * 100)}% — effective from the following month.
+          Cross {formatINR(next.thresholdPaise / 100)} in pre-GST sales within a
+          single month and your rate moves to {Math.round(next.rate * 100)}% —
+          effective from the following month.
         </p>
       )}
     </div>

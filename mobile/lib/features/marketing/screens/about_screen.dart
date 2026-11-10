@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/adaptive.dart';
 import '../../../core/launch.dart';
+import '../../../data/models/auth.dart';
 import '../../../data/models/artwork.dart' show SocialProofPlatform;
+import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/social_glyphs.dart';
 import '../../legal/screens/faq_screen.dart';
 import '../../legal/screens/legal_document_screen.dart';
@@ -22,7 +25,7 @@ import '../../shell/portal_widgets.dart';
 /// The marketing pages — the landing page, About, Contact, the artist survey
 /// — still open the website, because they change on the web team's schedule
 /// and nothing in the app depends on their text.
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
 
   static const path = '/about';
@@ -30,18 +33,11 @@ class AboutScreen extends StatelessWidget {
   @visibleForTesting
   static const companyLinks =
       <({IconData icon, String label, String subtitle, String path})>[
-        (
-          icon: LucideIcons.building2,
-          label: 'About GalleryZone',
-          subtitle: 'Who we are and how the platform works',
-          path: '/about',
-        ),
-        (
-          icon: LucideIcons.mail,
-          label: 'Contact us',
-          subtitle: 'Reach the artist or collector support desk',
-          path: '/contact',
-        ),
+        // "About GalleryZone" and "Contact us" removed on 10 Nov 2026 —
+        // this screen itself IS the About page (brand card + legal +
+        // email contact further down), so external links to the same
+        // content were redundant and confusing. Artist survey stays
+        // because the web form captures different state.
         (
           icon: LucideIcons.clipboardList,
           label: 'Artist survey',
@@ -80,8 +76,21 @@ class AboutScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    // Role-filter the terms: artists see only artist terms, aggregators
+    // see only aggregator terms, others see neither (they don't apply).
+    // Client-reported 10 Nov 2026 — an artist was seeing aggregator
+    // terms because the list carried both.
+    final role = ref.watch(sessionProvider);
+    final legalDocsForRole = [
+      for (final item in legalDocs)
+        if (!_isRoleTerms(item.doc) ||
+            (item.doc == LegalDoc.artistTerms && role == Role.artist) ||
+            (item.doc == LegalDoc.aggregatorTerms &&
+                role == Role.aggregator))
+          item,
+    ];
 
     return Scaffold(
       appBar: AppBar(title: const Text('About')),
@@ -138,14 +147,6 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text('Company', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 4),
-                Text(
-                  'These pages open galleryzone.in in your browser, so you '
-                  'always get the current version.',
-                  style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
-                ),
-                const SizedBox(height: 8),
                 for (final item in companyLinks) _LinkRow(item: item),
                 const SizedBox(height: 20),
                 Text('Discover', style: theme.textTheme.titleLarge),
@@ -213,7 +214,7 @@ class AboutScreen extends StatelessWidget {
                   style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
                 ),
                 const SizedBox(height: 8),
-                for (final item in legalDocs)
+                for (final item in legalDocsForRole)
                   LegalDocRow(
                     doc: item.doc,
                     icon: item.icon,
@@ -254,6 +255,11 @@ class AboutScreen extends StatelessWidget {
     );
   }
 }
+
+/// Terms that only apply to one specific role; the About screen hides the
+/// one that doesn't belong to the viewer.
+bool _isRoleTerms(LegalDoc doc) =>
+    doc == LegalDoc.artistTerms || doc == LegalDoc.aggregatorTerms;
 
 class _LinkRow extends StatelessWidget {
   const _LinkRow({required this.item});

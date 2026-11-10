@@ -217,12 +217,9 @@ final artistMenu = <PortalMenuSection>[
         subtitle: 'Your signed agreement with GalleryZone',
         route: '/dashboard/mou',
       ),
-      PortalMenuItem(
-        icon: LucideIcons.scale,
-        label: 'Artist Terms & Conditions',
-        subtitle: 'Listing, verification, pricing and settlement',
-        route: '/legal/artist-terms',
-      ),
+      // Artist Terms & Conditions removed on 10 Nov 2026 — the same
+      // document was already reachable from the "About & legal" row
+      // under Help & legal, so the artist saw the same link twice.
     ],
   ),
   PortalMenuSection(
@@ -307,17 +304,9 @@ final aggregatorMenu = <PortalMenuSection>[
       ),
     ],
   ),
-  const PortalMenuSection(
-    title: 'Agreements',
-    items: [
-      PortalMenuItem(
-        icon: LucideIcons.scale,
-        label: 'Aggregator Terms & Conditions',
-        subtitle: 'Display, custody, commission and returns',
-        route: '/legal/aggregator-terms',
-      ),
-    ],
-  ),
+  // Aggregator Terms & Conditions removed on 10 Nov 2026 — same reason
+  // as the artist menu above: it was also reachable from "About & legal",
+  // so aggregators saw the same link twice.
   PortalMenuSection(
     title: 'Help & legal',
     items: _helpSection('/aggregator/dashboard/support'),

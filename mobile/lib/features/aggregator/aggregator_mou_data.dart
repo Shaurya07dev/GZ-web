@@ -678,8 +678,10 @@ const aggregatorMou = MouDocument(
     MouField('Signature', MouFieldKey.companySignature),
     MouField('Date', MouFieldKey.companyDate),
     MouSigner('FOR AUTHORIZED ART PARTNER / AGGREGATOR'),
-    MouField('Name', MouFieldKey.partyName),
-    MouField('Business Name', MouFieldKey.partyBusinessName),
+    // Aggregator name + business name are already declared in the
+    // parties block at the top of the MOU; repeating them here read
+    // as "copy paste" to the client (10 Nov 2026). Only the signature
+    // + date belong on the signing line.
     MouField('Signature', MouFieldKey.partySignature),
     MouField('Date', MouFieldKey.partyDate),
   ],

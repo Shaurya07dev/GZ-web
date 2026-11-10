@@ -1153,7 +1153,10 @@ const artistMou = MouDocument(
     MouField('Signature', MouFieldKey.companySignature),
     MouField('Date', MouFieldKey.companyDate),
     MouSigner('ARTIST'),
-    MouField('Artist Name', MouFieldKey.partyName),
+    // Artist name is already declared in the parties block at the top
+    // of the MOU; repeating it here read as "copy paste" to the client
+    // (10 Nov 2026). Signature + date are the only fields needed on
+    // the signing line.
     MouField('Signature', MouFieldKey.partySignature),
     MouField('Date', MouFieldKey.partyDate),
   ],
