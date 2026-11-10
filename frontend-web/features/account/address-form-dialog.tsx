@@ -5,7 +5,7 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { customerService } from "@/services/customerService";
 import {
   Dialog,
@@ -79,7 +79,6 @@ export function AddressFormDialog({
   initialValues,
 }: AddressFormDialogProps) {
   const isEditing = Boolean(initialValues);
-  const queryClient = useQueryClient();
   const addMutation = useAddAddressMutation();
   const updateMutation = useUpdateAddressMutation();
   const isPending = addMutation.isPending || updateMutation.isPending;
@@ -150,21 +149,12 @@ export function AddressFormDialog({
       updateMutation.mutate(
         { id: initialValues.id, patch: payload },
         {
-          // Only one address can be default at a time -- if this edit set
-          // isDefault, every other address in the cache loses it, same
-          // one-default invariant the Addresses page's delete-reassignment
-          // rule maintains.
-          onSuccess: (updated) => {
-            queryClient.setQueryData<Address[]>(["addresses"], (prev) => {
-              const base = prev ?? [];
-              return base.map((a) =>
-                a.id === updated.id
-                  ? updated
-                  : updated.isDefault
-                    ? { ...a, isDefault: false }
-                    : a,
-              );
-            });
+          // Same reason as the add path's onSuccess below — let the
+          // hook's invalidate drive the list rather than racing with a
+          // manual setQueryData. The addresses GET is cheap and the
+          // flash (old default briefly showing, duplicate appearing)
+          // is what the client flagged on 10 Nov 2026.
+          onSuccess: () => {
             toast.success("Address updated");
             onOpenChange(false);
           },
@@ -173,14 +163,14 @@ export function AddressFormDialog({
       );
     } else {
       addMutation.mutate(payload, {
-        onSuccess: (created) => {
-          queryClient.setQueryData<Address[]>(["addresses"], (prev) => {
-            const base = prev ?? [];
-            const cleared = created.isDefault
-              ? base.map((a) => ({ ...a, isDefault: false }))
-              : base;
-            return [...cleared, created];
-          });
+        // 10 Nov 2026: client reported the same address appearing twice
+        // on the list right after save. Root cause was this onSuccess
+        // pushing the fresh address into the cache AND the hook's own
+        // onSuccess invalidating the addresses query — when the
+        // invalidate's refetch arrived after the manual push, the UI
+        // briefly showed both. Server was always correct. Drop the
+        // manual push and let the invalidate drive the list.
+        onSuccess: () => {
           toast.success("Address added");
           onOpenChange(false);
         },
