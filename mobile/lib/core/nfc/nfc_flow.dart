@@ -118,35 +118,49 @@ class NfcFlow {
       final chip = await session.poll();
       await session.requireNtag213(chip);
 
-      session.step = NfcFailureStep.uidMismatch;
-      onProgress?.call(NfcProgress.checking);
-      final action = await repository.check(
-        artworkId,
-        chip.uid,
-        NfcIntent.lock,
-      );
+      // Physical-state shortcut (client-reported 10 Nov 2026 — a lock that
+      // played the "lock click" sound but kept the UI on "Lock now").
+      //
+      // When a lock sequence partially completes and the chip loses contact
+      // before confirmLocked lands on the server, the chip is permanently
+      // locked in the world but the server still thinks "linked, pending
+      // lock". The next tap used to re-run repository.check() first — which
+      // sometimes failed, which killed the whole retry — then re-read the
+      // URL, then probed lock bytes. Too many chip round-trips for a tap
+      // that is just trying to catch the record up.
+      //
+      // So: if the chip in hand is ALREADY fully locked AND carries this
+      // artwork's /verify/<id> path, trust the chip as source of truth and
+      // skip straight to recording. Backend's decideLock is idempotent for
+      // the same (artworkId, tagUid), so calling confirmLocked repeatedly
+      // on an already-locked artwork is a no-op that returns the current
+      // state — which is what we want the UI to pick up.
+      final chipUrl = await device.readUrl();
+      final chipAlreadyFullyLocked = _pathPointsTo(chipUrl, artworkId) &&
+          await _isLocked();
 
-      if (action != NfcCheckAction.noop) {
-        // Permanent means permanent: never lock a chip that doesn't point here.
-        // Match the URL by its `/verify/<id>` path, not the full string: the
-        // site domain has moved (galleryzone.art → galleryzone.in, 7 Nov 2026)
-        // and chips written against the old host must still lock.
+      if (!chipAlreadyFullyLocked) {
         session.step = NfcFailureStep.uidMismatch;
-        final chipUrl = await device.readUrl();
-        if (!_pathPointsTo(chipUrl, artworkId)) {
-          throw const NfcFlowException(
-            NfcFailureStep.uidMismatch,
-            "This chip doesn't hold this artwork's link, so it was not locked. Link it to this piece first.",
-          );
-        }
+        onProgress?.call(NfcProgress.checking);
+        final action = await repository.check(
+          artworkId,
+          chip.uid,
+          NfcIntent.lock,
+        );
 
-        // Prior lock attempt partially succeeded (chip is fully locked
-        // already, server didn't get the confirm): skip straight to the
-        // record step rather than retrying writes the chip is going to
-        // refuse. Running the whole lock sequence again on a locked chip
-        // was giving transient "chip lost contact" errors to buyers who
-        // just needed the record caught up (client-reported 8 Nov 2026).
-        if (!await _isLocked()) {
+        if (action != NfcCheckAction.noop) {
+          // Permanent means permanent: never lock a chip that doesn't point here.
+          // Match the URL by its `/verify/<id>` path, not the full string: the
+          // site domain has moved (galleryzone.art → galleryzone.in, 7 Nov 2026)
+          // and chips written against the old host must still lock.
+          session.step = NfcFailureStep.uidMismatch;
+          if (!_pathPointsTo(chipUrl, artworkId)) {
+            throw const NfcFlowException(
+              NfcFailureStep.uidMismatch,
+              "This chip doesn't hold this artwork's link, so it was not locked. Link it to this piece first.",
+            );
+          }
+
           onProgress?.call(NfcProgress.locking);
           await _lockChip(session);
           onProgress?.call(NfcProgress.verifyingLock);
