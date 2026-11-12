@@ -33,7 +33,6 @@ Artwork fixtureArtwork({
     medium: medium,
     customerPrice: price,
     thumbnailUrl: thumbnail,
-    insured: true,
     status: status,
     listingType: ListingType.marketplaceOnly,
     description: 'A study in rain light.',

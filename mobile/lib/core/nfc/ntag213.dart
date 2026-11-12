@@ -114,13 +114,32 @@ class Ntag213 {
   static Uint8List lockedStaticPage(Uint8List current) =>
       Uint8List.fromList([current[0], current[1], 0xFF, 0xFF]);
 
-  /// Dynamic lock bytes: pages 16–39 read-only. The fourth byte is reserved and
-  /// kept as the chip reported it (0xBD from the factory).
+  /// Dynamic lock bytes: pages 16–39 read-only. On NTAG213 only bits that
+  /// correspond to real page-pairs or real block-lock controls are writable;
+  /// the rest are RFUI and the chip refuses to flip them. Byte layout:
+  ///
+  ///   byte 0  bits 0-7  LOCK_16-17, LOCK_18-19, …, LOCK_30-31  (all writable)
+  ///   byte 1  bits 0-3  LOCK_32-33, LOCK_34-35, LOCK_36-37, LOCK_38-39
+  ///   byte 1  bits 4-7  block-lock + RFUI (chip refuses our bits in RFUI
+  ///                     positions, so we only ask for the low nibble)
+  ///   byte 2            block-lock bits (bits 0-5) + RFUI (bits 6-7)
+  ///   byte 3            RFUI (kept as the chip reported)
+  ///
+  /// The chip caps any over-set bits silently — writing 0xFF to byte 1 ends
+  /// up as 0x0F stored, which was being read as "didn't lock" even though
+  /// the chip was in fact fully locked (client-reported 12 Nov 2026).
   static Uint8List lockedDynamicPage(Uint8List current) =>
-      Uint8List.fromList([0xFF, 0xFF, 0xFF, current[3]]);
+      Uint8List.fromList([
+        0xFF,
+        (current[1] & 0xF0) | 0x0F,
+        current[2],
+        current[3],
+      ]);
 
   /// Has the whole chip been locked? The three regions, read back, are the proof
   /// — not a status code from a write, which the OS does not always surface.
+  /// For dynamic lock, only the writable lock bits count: byte 0 all-set means
+  /// pages 16-31 are locked, and the low nibble of byte 1 covers pages 32-39.
   static bool isFullyLocked({
     required Uint8List capabilityContainer,
     required Uint8List staticPage,
@@ -133,8 +152,7 @@ class Ntag213 {
       staticPage[3] == 0xFF &&
       dynamicPage.length >= 4 &&
       dynamicPage[0] == 0xFF &&
-      dynamicPage[1] == 0xFF &&
-      dynamicPage[2] == 0xFF;
+      (dynamicPage[1] & 0x0F) == 0x0F;
 }
 
 /// Hex <-> bytes, as the OS hands a chip's id over as hex text.

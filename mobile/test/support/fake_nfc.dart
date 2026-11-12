@@ -56,8 +56,12 @@ class FakeNtagDevice implements NfcDevice {
 
   bool get capabilityLocked => (pages[3][3] & 0x0F) == 0x0F;
   bool get staticLocked => pages[2][2] == 0xFF && pages[2][3] == 0xFF;
+  // NTAG213 dynamic lock: byte 0 locks pages 16-31, low nibble of byte 1 locks
+  // 32-39. Upper nibble of byte 1 and bytes 2-3 are block-lock/RFUI which a
+  // real chip refuses to flip, so the production check ignores them too
+  // (client-reported 12 Nov 2026 — the old `== 0xFF` demand never matched).
   bool get dynamicLocked =>
-      pages[40][0] == 0xFF && pages[40][1] == 0xFF && pages[40][2] == 0xFF;
+      pages[40][0] == 0xFF && (pages[40][1] & 0x0F) == 0x0F;
   bool get fullyLocked => capabilityLocked && staticLocked && dynamicLocked;
 
   @override

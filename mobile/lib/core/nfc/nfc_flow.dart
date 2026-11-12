@@ -209,6 +209,7 @@ class NfcFlow {
 
     session.step = NfcFailureStep.lockCc;
     await _writeLockPage(
+      session: session,
       page: Ntag213.capabilityContainerPage,
       pageLabel: 'CC',
       readAndBuildPayload: (bytes) => Ntag213.lockedCapabilityContainer(bytes),
@@ -218,6 +219,7 @@ class NfcFlow {
 
     session.step = NfcFailureStep.lockStatic;
     await _writeLockPage(
+      session: session,
       page: Ntag213.staticLockPage,
       pageLabel: 'static-lock',
       readAndBuildPayload: (bytes) => Ntag213.lockedStaticPage(bytes),
@@ -226,11 +228,15 @@ class NfcFlow {
 
     session.step = NfcFailureStep.lockDynamic;
     await _writeLockPage(
+      session: session,
       page: Ntag213.dynamicLockPage,
       pageLabel: 'dynamic-lock',
       readAndBuildPayload: (bytes) => Ntag213.lockedDynamicPage(bytes),
+      // See Ntag213.lockedDynamicPage docs: byte 0 all-set + low nibble of
+      // byte 1 locks every user page from 16-39. Byte 2's RFUI bits are
+      // deliberately not required — the chip refuses to flip them.
       isAlreadyLocked: (bytes) =>
-          bytes[0] == 0xFF && bytes[1] == 0xFF && bytes[2] == 0xFF,
+          bytes[0] == 0xFF && (bytes[1] & 0x0F) == 0x0F,
     );
   }
 
@@ -244,6 +250,7 @@ class NfcFlow {
   /// silently NAKs lock writes shows up here very differently from a phone
   /// that lost coupling.
   Future<void> _writeLockPage({
+    required _Session session,
     required int page,
     required String pageLabel,
     required Uint8List Function(Uint8List current) readAndBuildPayload,
@@ -282,8 +289,12 @@ class NfcFlow {
     final diag = lastReadAfter != null
         ? 'page $pageLabel reads ${_hex(lastReadAfter)} after write'
         : 'page $pageLabel write failed: ${_textOf(lastError ?? "unknown")}';
+    // Use session.step (set by the caller before invoking us) rather than
+    // hard-coding verifyLock — it lets the server-side failure log attribute
+    // the failure to the specific lock step (lockCc / lockStatic / lockDynamic)
+    // that gave up.
     throw NfcFlowException(
-      NfcFailureStep.verifyLock,
+      session.step,
       "One of the tag's lock bytes didn't take even after a retry. "
       "Hold the tag against the phone for a few seconds and try again. "
       "If this keeps happening on the same chip, it may be defective or a "

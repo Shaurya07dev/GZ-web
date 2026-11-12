@@ -73,14 +73,23 @@ void main() {
       );
     });
 
-    test('the static lock keeps the two internal bytes, the dynamic lock keeps the reserved one', () {
+    test('the static lock keeps the two internal bytes, the dynamic lock sets only writable bits', () {
       expect(
         Ntag213.lockedStaticPage(Uint8List.fromList([0xA1, 0x48, 0x00, 0x00])),
         [0xA1, 0x48, 0xFF, 0xFF],
       );
+      // NTAG213: byte 0 = 0xFF locks pages 16-31, low nibble of byte 1 locks
+      // 32-39. Upper nibble of byte 1 and bytes 2-3 are block-lock/RFUI; the
+      // chip refuses the RFUI bits so we leave them alone.
       expect(
         Ntag213.lockedDynamicPage(Uint8List.fromList([0x00, 0x00, 0x00, 0xBD])),
-        [0xFF, 0xFF, 0xFF, 0xBD],
+        [0xFF, 0x0F, 0x00, 0xBD],
+      );
+      // Pre-existing block-lock / RFUI bits are preserved in byte 1's upper
+      // nibble on top of the fresh lock bits we add.
+      expect(
+        Ntag213.lockedDynamicPage(Uint8List.fromList([0x00, 0x20, 0x00, 0xBD])),
+        [0xFF, 0x2F, 0x00, 0xBD],
       );
     });
 
@@ -105,12 +114,26 @@ void main() {
       Uint8List b(List<int> v) => Uint8List.fromList(v);
       final cc = b([0xE1, 0x10, 0x12, 0x0F]);
       final staticOk = b([0xA1, 0x48, 0xFF, 0xFF]);
-      final dynamicOk = b([0xFF, 0xFF, 0xFF, 0xBD]);
+      // Real NTAG213 read-back after a full lock: byte 0 all set, byte 1
+      // low nibble set, bytes 2-3 are RFUI and the chip refuses to flip
+      // them from 0. See client report 12 Nov 2026 — the old check demanded
+      // byte[1] == 0xFF and byte[2] == 0xFF, which the chip won't give.
+      final dynamicOk = b([0xFF, 0x0F, 0x00, 0xBD]);
       expect(
         Ntag213.isFullyLocked(
           capabilityContainer: cc,
           staticPage: staticOk,
           dynamicPage: dynamicOk,
+        ),
+        isTrue,
+      );
+      // Chip may also report block-lock bits set in byte 1's upper nibble
+      // (0x0F -> 0x2F), still fully locked.
+      expect(
+        Ntag213.isFullyLocked(
+          capabilityContainer: cc,
+          staticPage: staticOk,
+          dynamicPage: b([0xFF, 0x2F, 0x3F, 0xBD]),
         ),
         isTrue,
       );
@@ -130,11 +153,12 @@ void main() {
         ),
         isFalse,
       );
+      // Pages 32-39 not locked: byte 1 low nibble missing.
       expect(
         Ntag213.isFullyLocked(
           capabilityContainer: cc,
           staticPage: staticOk,
-          dynamicPage: b([0xFF, 0xFF, 0x00, 0xBD]),
+          dynamicPage: b([0xFF, 0x00, 0x00, 0xBD]),
         ),
         isFalse,
       );
@@ -347,7 +371,10 @@ void main() {
         0xFF,
         0xFF,
       ], reason: 'the chip\'s own bytes are kept');
-      expect(device.pages[40], [0xFF, 0xFF, 0xFF, 0xBD]);
+      // Dynamic lock: byte 0 fully set, low nibble of byte 1 set. The upper
+      // nibble + bytes 2-3 are RFUI positions a real NTAG213 refuses to flip,
+      // so we deliberately stop writing them (see Ntag213.lockedDynamicPage).
+      expect(device.pages[40], [0xFF, 0x0F, 0x00, 0xBD]);
       expect(rig.repository.calls, ['check:lock:$_uid', 'confirmLocked:$_uid']);
       expect(state.lockedAt, isNotNull);
       expect(device.url, _url, reason: 'locking never changes the address');
@@ -402,8 +429,13 @@ void main() {
       final rig = _rig(device: device);
       final failure = await _failure(rig.flow.lock('aw-1'));
 
-      expect(failure.step, NfcFailureStep.verifyLock);
-      expect(failure.message, contains("didn't lock completely"));
+      // Per-byte retry attributes the failure to the specific lock step that
+      // gave up — CC in this case because ignoreCapabilityWrites silently
+      // NAKs the CC write. Server-side log now gets the specific step
+      // instead of a generic verifyLock.
+      expect(failure.step, NfcFailureStep.lockCc);
+      expect(failure.message, contains("didn't take even after a retry"));
+      expect(failure.message, contains('page CC'));
       expect(
         rig.repository.calls,
         isNot(contains('confirmLocked:$_uid')),
@@ -427,10 +459,12 @@ void main() {
           isEmpty,
           reason: 'every step already shows done, so none is repeated',
         );
-        expect(rig.repository.calls, [
-          'check:lock:$_uid',
-          'confirmLocked:$_uid',
-        ]);
+        // Physical-state shortcut (10 Nov 2026): if the chip in hand is
+        // already fully locked with our URL, skip repository.check() and
+        // go straight to confirmLocked. One server call instead of two,
+        // and the recovery survives a flaky coupling that would have made
+        // the extra check() round-trip fail.
+        expect(rig.repository.calls, ['confirmLocked:$_uid']);
         expect(state.lockedAt, isNotNull);
       },
     );
