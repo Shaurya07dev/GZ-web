@@ -18,7 +18,11 @@ import '../providers/account_providers.dart';
 class NotificationsInboxScreen extends ConsumerWidget {
   const NotificationsInboxScreen({super.key});
 
-  static const path = '/account/notifications/inbox';
+  // Top-level path (not under /account) because every logged-in role uses
+  // this screen from their AppBar bell. The /account/ prefix was running
+  // into the customer-only role guard and bouncing artists + aggregators
+  // back to their own dashboard (client report 12 Nov 2026).
+  static const path = '/notifications';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
