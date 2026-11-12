@@ -119,7 +119,30 @@ export function formatRate(key: string, value: unknown): string {
     if (unit === "days") return `${value} days`;
     return String(value);
   }
-  if (Array.isArray(value)) return value.map((v) => (typeof v === "number" ? `${+(v * 100).toFixed(2)}%` : String(v))).join(", ");
+  if (Array.isArray(value)) {
+    // Arrays of primitives render inline (comma-separated, with % on numeric
+    // ratios). Arrays of objects were previously String()-ed into a wall of
+    // "[object Object]" — client-flagged 12 Nov 2026. Commission slabs are
+    // the main case here: `[{thresholdPaise, rate}, …]`. Render each slab
+    // as "≥₹X at Y%". Any other object shape falls back to a compact JSON
+    // dump so nothing silently becomes "[object Object]" again.
+    return value
+      .map((v) => {
+        if (typeof v === "number") return `${+(v * 100).toFixed(2)}%`;
+        if (v && typeof v === "object") {
+          const slab = v as { thresholdPaise?: unknown; rate?: unknown };
+          if (typeof slab.thresholdPaise === "number" && typeof slab.rate === "number") {
+            const threshold = slab.thresholdPaise === 0
+              ? "0"
+              : `₹${(slab.thresholdPaise / 100).toLocaleString("en-IN")}`;
+            return `≥${threshold} @ ${+(slab.rate * 100).toFixed(1)}%`;
+          }
+          return JSON.stringify(v);
+        }
+        return String(v);
+      })
+      .join(", ");
+  }
   if (value && typeof value === "object") return `${Object.keys(value).length} zones`;
   return String(value);
 }
