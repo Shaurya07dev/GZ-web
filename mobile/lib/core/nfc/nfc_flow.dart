@@ -199,40 +199,79 @@ class NfcFlow {
       Ntag213.firstPage(await device.transceive(Ntag213.read(page)));
 
   Future<void> _lockChip(_Session session) async {
+    // Each of the three lock pages is written independently, in order, with
+    // a per-page write-verify-retry loop. The chip's coupling to the phone
+    // antenna can flicker for a single command and then recover — client
+    // report 10 Nov 2026 was retries hitting the same "didn't lock
+    // completely" error on a chip already partially locked. A short retry
+    // on just the failing byte catches the flicker without re-pushing
+    // commands the chip would refuse (an already-locked page would error).
+
     session.step = NfcFailureStep.lockCc;
-    final cc = await _readPage(Ntag213.capabilityContainerPage);
-    if ((cc[3] & Ntag213.readOnlyAccess) != Ntag213.readOnlyAccess) {
-      await device.transceive(
-        Ntag213.write(
-          Ntag213.capabilityContainerPage,
-          Ntag213.lockedCapabilityContainer(cc),
-        ),
-      );
-    }
+    await _writeLockPage(
+      page: Ntag213.capabilityContainerPage,
+      readAndBuildPayload: (bytes) => Ntag213.lockedCapabilityContainer(bytes),
+      isAlreadyLocked: (bytes) =>
+          (bytes[3] & Ntag213.readOnlyAccess) == Ntag213.readOnlyAccess,
+    );
 
     session.step = NfcFailureStep.lockStatic;
-    final staticPage = await _readPage(Ntag213.staticLockPage);
-    if (staticPage[2] != 0xFF || staticPage[3] != 0xFF) {
-      await device.transceive(
-        Ntag213.write(
-          Ntag213.staticLockPage,
-          Ntag213.lockedStaticPage(staticPage),
-        ),
-      );
-    }
+    await _writeLockPage(
+      page: Ntag213.staticLockPage,
+      readAndBuildPayload: (bytes) => Ntag213.lockedStaticPage(bytes),
+      isAlreadyLocked: (bytes) => bytes[2] == 0xFF && bytes[3] == 0xFF,
+    );
 
     session.step = NfcFailureStep.lockDynamic;
-    final dynamicPage = await _readPage(Ntag213.dynamicLockPage);
-    if (dynamicPage[0] != 0xFF ||
-        dynamicPage[1] != 0xFF ||
-        dynamicPage[2] != 0xFF) {
-      await device.transceive(
-        Ntag213.write(
-          Ntag213.dynamicLockPage,
-          Ntag213.lockedDynamicPage(dynamicPage),
-        ),
-      );
+    await _writeLockPage(
+      page: Ntag213.dynamicLockPage,
+      readAndBuildPayload: (bytes) => Ntag213.lockedDynamicPage(bytes),
+      isAlreadyLocked: (bytes) =>
+          bytes[0] == 0xFF && bytes[1] == 0xFF && bytes[2] == 0xFF,
+    );
+  }
+
+  /// Write a single lock page, verify it took, and retry up to 3 times on a
+  /// flicker. Skips the write entirely if the page already reads as locked —
+  /// a chip won't accept a write to a locked page, so attempting it on a
+  /// retry would be the thing that failed the whole sequence.
+  Future<void> _writeLockPage({
+    required int page,
+    required Uint8List Function(Uint8List current) readAndBuildPayload,
+    required bool Function(Uint8List current) isAlreadyLocked,
+  }) async {
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      final current = await _readPage(page);
+      if (isAlreadyLocked(current)) return;
+      try {
+        await device.transceive(
+          Ntag213.write(page, readAndBuildPayload(current)),
+        );
+      } catch (_) {
+        if (attempt == maxAttempts) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+        continue;
+      }
+      // Give the chip a breath before we read back — some phones issue the
+      // read so quickly after a write that the EEPROM write hasn't settled.
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      final after = await _readPage(page);
+      if (isAlreadyLocked(after)) return;
+      // Write command "succeeded" (no exception) but the bits didn't take —
+      // chip was likely out of field during the actual commit. Try again.
+      if (attempt < maxAttempts) {
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+      }
     }
+    // Fell through all attempts without the page reading locked. The
+    // session.step is already set by the caller, so _session will convert
+    // whatever bubbles here into a step-specific message; throw a plain
+    // marker so the catch block gets the chance.
+    throw const NfcFlowException(
+      NfcFailureStep.verifyLock,
+      "One of the tag's lock bytes didn't take even after a retry. Hold the tag against the phone for a few seconds and try again.",
+    );
   }
 
   Future<bool> _isLocked() async => Ntag213.isFullyLocked(
