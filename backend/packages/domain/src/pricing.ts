@@ -308,13 +308,21 @@ export interface CheckoutTotal {
 // appreciation) with 5% GST inside it, then the convenience fee, then 18%
 // GST on that fee, then delivery. Never add gstIncluded to the total — it is
 // already part of displayPrice.
+//
+// Convenience-fee base includes delivery (client flag 12 Nov 2026). Razorpay
+// deducts their 2% from the full transaction value they process — displayed
+// artwork price + delivery — not just the artwork portion. Taking the fee
+// only on artwork meant we under-recovered 2% × delivery on every order and
+// slowly bled it on the delivery leg. The base uses displayPrice as-is (GST
+// included) because that is the number Razorpay actually processes; stripping
+// GST here would under-count the base by the GST portion too.
 export function checkoutTotal(
   displayPrice: number,
   rates: PricingRates,
   deliveryChargePaise?: number,
 ): CheckoutTotal {
   const delivery = deliveryChargePaise ?? rates.deliveryChargePaise;
-  const convenienceFee = Math.round(exGst(displayPrice, rates) * rates.customerConvenienceRate);
+  const convenienceFee = Math.round((displayPrice + delivery) * rates.customerConvenienceRate);
   const convenienceGst = Math.round(convenienceFee * rates.serviceGstRate);
   return {
     displayPrice,

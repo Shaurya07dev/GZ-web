@@ -90,7 +90,9 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   }
   // An aggregator-only piece is sold through galleries; the artist chose that, and the public
   // marketplace already hides it. The id is still guessable, so refuse it here as well.
-  const artworkDoc = (await db.collection(Collections.artworks).doc(artworkId).get()).data() as { listingType?: string } | undefined;
+  const artworkDoc = (await db.collection(Collections.artworks).doc(artworkId).get()).data() as
+    | { listingType?: string; displayPricePaise?: number }
+    | undefined;
   if (artworkDoc?.listingType === "aggregator_only") {
     throw new CheckoutError("This artwork is not available to buy");
   }
@@ -111,7 +113,15 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   }
   const rates: PricingRates = activeVersion.rates;
 
-  const displayPrice = displayPriceOf(pricing.artistPricePaise, rates);
+  // Single source of truth: the artwork doc's stored displayPricePaise is
+  // what the buyer saw on the marketplace card AND what the quote endpoint
+  // returned — using displayPriceOf(artistPrice, currentRates) here would
+  // drift the moment an admin edits platformMarkup, and charge a total
+  // different from what the review step just quoted the buyer (client
+  // flag 12 Nov 2026: "on one painting the Razorpay amount differed from
+  // the review screen, on others it matched"). Fall back to the derived
+  // value only if the artwork doc somehow lacks the field.
+  const displayPrice = artworkDoc?.displayPricePaise ?? displayPriceOf(pricing.artistPricePaise, rates);
   // When the caller supplied a live ShipRocket quote, override the flat
   // rates.deliveryChargePaise with that courier's actual rate for this
   // pickup→drop + weight. When absent, the fallback kicks in (checkoutTotal's
