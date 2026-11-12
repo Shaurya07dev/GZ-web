@@ -210,6 +210,7 @@ class NfcFlow {
     session.step = NfcFailureStep.lockCc;
     await _writeLockPage(
       page: Ntag213.capabilityContainerPage,
+      pageLabel: 'CC',
       readAndBuildPayload: (bytes) => Ntag213.lockedCapabilityContainer(bytes),
       isAlreadyLocked: (bytes) =>
           (bytes[3] & Ntag213.readOnlyAccess) == Ntag213.readOnlyAccess,
@@ -218,6 +219,7 @@ class NfcFlow {
     session.step = NfcFailureStep.lockStatic;
     await _writeLockPage(
       page: Ntag213.staticLockPage,
+      pageLabel: 'static-lock',
       readAndBuildPayload: (bytes) => Ntag213.lockedStaticPage(bytes),
       isAlreadyLocked: (bytes) => bytes[2] == 0xFF && bytes[3] == 0xFF,
     );
@@ -225,6 +227,7 @@ class NfcFlow {
     session.step = NfcFailureStep.lockDynamic;
     await _writeLockPage(
       page: Ntag213.dynamicLockPage,
+      pageLabel: 'dynamic-lock',
       readAndBuildPayload: (bytes) => Ntag213.lockedDynamicPage(bytes),
       isAlreadyLocked: (bytes) =>
           bytes[0] == 0xFF && bytes[1] == 0xFF && bytes[2] == 0xFF,
@@ -235,12 +238,20 @@ class NfcFlow {
   /// flicker. Skips the write entirely if the page already reads as locked —
   /// a chip won't accept a write to a locked page, so attempting it on a
   /// retry would be the thing that failed the whole sequence.
+  ///
+  /// [pageLabel] is used purely in the diagnostic message so support can tell
+  /// WHICH lock byte refused on a reported chip — a counterfeit NTAG213 that
+  /// silently NAKs lock writes shows up here very differently from a phone
+  /// that lost coupling.
   Future<void> _writeLockPage({
     required int page,
+    required String pageLabel,
     required Uint8List Function(Uint8List current) readAndBuildPayload,
     required bool Function(Uint8List current) isAlreadyLocked,
   }) async {
     const maxAttempts = 3;
+    Object? lastError;
+    Uint8List? lastReadAfter;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       final current = await _readPage(page);
       if (isAlreadyLocked(current)) return;
@@ -248,31 +259,40 @@ class NfcFlow {
         await device.transceive(
           Ntag213.write(page, readAndBuildPayload(current)),
         );
-      } catch (_) {
-        if (attempt == maxAttempts) rethrow;
+      } catch (error) {
+        lastError = error;
+        if (attempt == maxAttempts) break;
         await Future<void>.delayed(const Duration(milliseconds: 60));
         continue;
       }
       // Give the chip a breath before we read back — some phones issue the
       // read so quickly after a write that the EEPROM write hasn't settled.
       await Future<void>.delayed(const Duration(milliseconds: 40));
-      final after = await _readPage(page);
-      if (isAlreadyLocked(after)) return;
-      // Write command "succeeded" (no exception) but the bits didn't take —
-      // chip was likely out of field during the actual commit. Try again.
+      lastReadAfter = await _readPage(page);
+      if (isAlreadyLocked(lastReadAfter)) return;
       if (attempt < maxAttempts) {
         await Future<void>.delayed(const Duration(milliseconds: 60));
       }
     }
-    // Fell through all attempts without the page reading locked. The
-    // session.step is already set by the caller, so _session will convert
-    // whatever bubbles here into a step-specific message; throw a plain
-    // marker so the catch block gets the chance.
-    throw const NfcFlowException(
+    // Diagnostic: tell support WHICH page and what the chip says. A healthy
+    // phone + healthy chip that just needs steady contact looks like "write
+    // threw, retried, same error". A counterfeit or physically damaged chip
+    // looks like "write didn't throw, read-back shows the same pre-write
+    // bytes" — the chip NAK'd silently.
+    final diag = lastReadAfter != null
+        ? 'page $pageLabel reads ${_hex(lastReadAfter)} after write'
+        : 'page $pageLabel write failed: ${_textOf(lastError ?? "unknown")}';
+    throw NfcFlowException(
       NfcFailureStep.verifyLock,
-      "One of the tag's lock bytes didn't take even after a retry. Hold the tag against the phone for a few seconds and try again.",
+      "One of the tag's lock bytes didn't take even after a retry. "
+      "Hold the tag against the phone for a few seconds and try again. "
+      "If this keeps happening on the same chip, it may be defective or a "
+      "non-genuine NTAG213 — contact support with this detail: $diag.",
     );
   }
+
+  static String _hex(Uint8List bytes) =>
+      bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
 
   Future<bool> _isLocked() async => Ntag213.isFullyLocked(
     capabilityContainer: await _readPage(Ntag213.capabilityContainerPage),
