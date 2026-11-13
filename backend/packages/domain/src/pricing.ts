@@ -321,18 +321,18 @@ export function checkoutTotal(
   rates: PricingRates,
   deliveryChargePaise?: number,
 ): CheckoutTotal {
-  // Round every line to whole rupees so the UI's per-row display and the
-  // total agree without the ₹1 off-by-one the buyer used to see — client
-  // flag 13 Nov 2026: "total is wrong, 137 + 6 + 1 + 142 = 286 but the card
-  // shows ₹285". Shiprocket in particular quotes fractional rupees (e.g.
-  // ₹141.57) which looked like ₹142 in its row but contributed only ₹141.57
-  // to the actual total — the receipt stopped adding up to the sum of its
-  // own rows. Whole-rupee rounding moves at most ±₹0.50 per line, a trivial
-  // cost for a receipt that adds up by hand.
-  const roundPaiseToRupee = (paise: number): number => Math.round(paise / 100) * 100;
-  const delivery = roundPaiseToRupee(deliveryChargePaise ?? rates.deliveryChargePaise);
-  const convenienceFee = roundPaiseToRupee((displayPrice + delivery) * rates.customerConvenienceRate);
-  const convenienceGst = roundPaiseToRupee(convenienceFee * rates.serviceGstRate);
+  // Exact paise through and through — no whole-rupee rounding. Client flag
+  // 13 Nov 2026 (second iteration): the UI should display .XX and the buyer
+  // should pay the EXACT fee that Razorpay processes, not a rounded version
+  // that drifts up to ₹0.50 per order into our margin. Honest money.
+  //
+  // The earlier "row sum doesn't match total" bug the client saw is still
+  // fixed — but by displaying every line with two decimals rather than by
+  // smashing the paise into whole rupees. formatINR on the client (and the
+  // mobile counterpart) now always renders .XX.
+  const delivery = deliveryChargePaise ?? rates.deliveryChargePaise;
+  const convenienceFee = Math.round((displayPrice + delivery) * rates.customerConvenienceRate);
+  const convenienceGst = Math.round(convenienceFee * rates.serviceGstRate);
   return {
     displayPrice,
     gstIncluded: gstIncludedIn(displayPrice, rates),

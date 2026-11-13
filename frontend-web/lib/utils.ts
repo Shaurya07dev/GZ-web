@@ -17,9 +17,17 @@ export function humanize(slug: string): string {
 }
 
 export function formatINR(amount: number): string {
+  // Smart decimals: whole rupees stay whole (marketplace cards, settlements
+  // read cleanly as "₹137"); anything with real paise renders two decimals
+  // ("₹285.58") so the invoice adds up by hand. Client flag 13 Nov 2026 —
+  // Razorpay charges the exact paise amount, so the breakdown must show the
+  // exact paise too; but forcing .00 everywhere would clutter listings that
+  // never have fractional prices.
+  const hasPaise = Math.abs(amount - Math.round(amount)) > 0.0049;
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: hasPaise ? 2 : 0,
+    maximumFractionDigits: hasPaise ? 2 : 0,
   }).format(amount);
 }

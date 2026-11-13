@@ -61,6 +61,14 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   // (double-tap, React-retry after a flaky network, mobile tap+touch).
   // Returns the existing pending order rather than creating a new one —
   // the customer continues the exact checkout they started.
+  //
+  // CRITICAL (client flag 13 Nov 2026): when a stale pending order is
+  // returned, re-price it with the CURRENT delivery quote and pricing rules
+  // BEFORE handing back. Otherwise the review step the customer just saw
+  // (fresh quote, fresh rates) disagrees with the totalPaise the confirm
+  // step then sends to Razorpay — one artwork kept opening Razorpay at
+  // ₹165.50 while the review said ₹286. The re-price call snaps the stale
+  // order to the number the buyer is looking at right now.
   const existing = await db
     .collection(Collections.orders)
     .where("customerId", "==", customerId)
@@ -70,8 +78,12 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     .get();
   if (!existing.empty) {
     const doc = existing.docs[0]!;
-    const data = doc.data() as OrderDoc;
-    return { orderId: doc.id, totalPaise: data.totalPaise };
+    const { totalPaise } = await repricePendingOrder({
+      db,
+      orderId: doc.id,
+      ...(deliveryQuote ? { deliveryQuote, overrideStoredQuote: true } : {}),
+    });
+    return { orderId: doc.id, totalPaise };
   }
 
   const pricingSnap = await db.collection(artworkPricingCol(artworkId)).doc("data").get();
@@ -198,12 +210,24 @@ export interface RepricePendingOrderInput {
     courierCompanyId: number;
     estimatedDeliveryDays: number | null;
   };
+  /**
+   * `true`  → overwrite the order's stored shippingQuote with the fresh one.
+   *            Used by createOrder when a stale pending order is returned —
+   *            the customer just saw a new quote on review, that quote now
+   *            becomes the contract.
+   * `false` (default) → trust the order's stored shippingQuote if present,
+   *            only use the fresh one when there is no snapshot at all.
+   *            Used by /payment/session on RESUME so Shiprocket's minute-to-
+   *            minute volatility doesn't move the amount under the buyer.
+   */
+  overrideStoredQuote?: boolean;
 }
 
 export async function repricePendingOrder({
   db,
   orderId,
   deliveryQuote,
+  overrideStoredQuote = false,
 }: RepricePendingOrderInput): Promise<{ totalPaise: number; changed: boolean }> {
   const orderRef = db.collection(Collections.orders).doc(orderId);
   const orderSnap = await orderRef.get();
@@ -225,23 +249,20 @@ export async function repricePendingOrder({
     artworkDoc?.displayPricePaise ??
     (pricing ? displayPriceOf(pricing.artistPricePaise, activeVersion.rates) : order.displayPricePaise);
 
-  // Prefer the delivery quote already LOCKED on the order over a fresh
-  // Shiprocket call. Shiprocket's serviceability answer is volatile — the
-  // same (pickup, drop, weight, value) can return ₹142 one minute and ₹24.50
-  // the next, which under the earlier always-refresh logic made the Razorpay
-  // modal charge a wildly different amount than the review screen a few
-  // seconds before (client flag 13 Nov 2026).
-  //
-  // The quote the buyer saw on review IS what gets locked onto the order at
-  // creation time, so trusting the stored snapshot keeps review and Razorpay
-  // in sync even if Shiprocket's rate drifts. We only re-fetch when the
-  // order has NO stored snapshot — truly ancient orders from before
-  // Shiprocket was wired, where the frozen total was a ₹25 flat fallback
-  // that is no longer honest.
+  // Which shipping quote wins:
+  //   - overrideStoredQuote=true + fresh deliveryQuote → the fresh quote
+  //     replaces the stored one. Used by createOrder on a repeat attempt
+  //     for the same (customer, artwork): the buyer just confirmed a new
+  //     review screen, that becomes the contract.
+  //   - otherwise → trust the order's stored snapshot if it has one; fall
+  //     back to the passed-in fresh quote only when the stored one is null.
+  //     Used by /payment/session RESUME so Shiprocket's volatile per-call
+  //     drift doesn't move the amount under the buyer between review and
+  //     Razorpay.
   const storedQuote = order.shippingQuote;
-  const effectiveDeliveryPaise =
-    storedQuote?.ratePaise ?? deliveryQuote?.ratePaise;
-  const effectiveQuote = storedQuote ?? deliveryQuote ?? null;
+  const useFreshQuote = overrideStoredQuote && deliveryQuote;
+  const effectiveQuote = useFreshQuote ? deliveryQuote : (storedQuote ?? deliveryQuote ?? null);
+  const effectiveDeliveryPaise = effectiveQuote?.ratePaise;
 
   const checkout = checkoutTotal(displayPrice, activeVersion.rates, effectiveDeliveryPaise);
   if (checkout.total === order.totalPaise) {

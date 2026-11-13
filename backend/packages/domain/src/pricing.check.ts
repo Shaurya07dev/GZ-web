@@ -60,16 +60,16 @@ const R = (rupees: number) => Math.round(rupees * 100);
   // the 2% on the GST portion and on the delivery leg every order.
   //
   // New base: R(136_500) + R(2_500) delivery = R(139_000).
-  // 2% × R(139_000) = R(2_780). 18% service GST on R(2_780) = 50_040 paise.
-  // Both lines then rounded to whole rupees so the UI's per-row total matches
-  // the final total (client flag 13 Nov 2026): R(2_780) stays as-is (already
-  // whole), 50_040 rounds down to R(500).
+  // 2% × R(139_000) = R(2_780). 18% service GST on R(2_780) = 50_040 paise
+  // (₹500.40). We deliberately keep the paise precision — client reversed the
+  // rounding decision 13 Nov 2026 so the buyer pays the exact fee Razorpay
+  // deducts rather than us absorbing a few paise into margin.
   assert.equal(checkout.convenienceFee, R(2_780), "Razorpay fee: 2% of (displayPrice + delivery)");
-  assert.equal(checkout.convenienceGst, R(500), "18% service GST on the Razorpay fee, whole-rupee");
+  assert.equal(checkout.convenienceGst, 50_040, "18% service GST on the Razorpay fee, exact paise");
   assert.equal(
     checkout.total,
-    R(139_000) + R(2_780) + R(500),
-    "display + flat delivery + Razorpay fee + its GST",
+    R(139_000) + R(2_780) + 50_040,
+    "display + flat delivery + Razorpay fee + its GST, exact paise",
   );
 
   // Payout sheet, marketplace column: nothing comes off but TDS, and TDS only
@@ -147,17 +147,19 @@ const R = (rupees: number) => Math.round(rupees * 100);
   const live = checkoutTotal(withAggregator, rates);
   assert.equal(live.gstIncluded, R(7_500), "5% GST on the goods");
   // Razorpay fee: 2% × (displayPrice + delivery) = 2% × R(160_000) = R(3_200).
-  // 18% service GST on R(3_200) = R(576). See note on marketplace example.
+  // 18% service GST on R(3_200) = R(576). Clean whole-rupee numbers at this
+  // scale, but still computed in exact paise (no rounding function applied).
   assert.equal(live.convenienceFee, R(3_200), "2% Razorpay fee on (₹1,57,500 + ₹2,500 delivery)");
   assert.equal(live.convenienceGst, R(576), "18% service GST on the Razorpay fee");
   assert.equal(live.total, R(160_000) + R(3_200) + R(576), "157,500 + 2,500 delivery + 3,776 Razorpay");
 
-  // The marketplace-only path has a smaller base and so a smaller fee.
+  // The marketplace-only path has a smaller base and ends up with sub-rupee
+  // paise in the service-GST line — kept precise, UI displays .XX.
   const marketplaceInvoice = checkoutTotal(marketplaceOnly, rates);
   assert.equal(marketplaceInvoice.gstIncluded, R(6_500));
   assert.equal(marketplaceInvoice.convenienceFee, R(2_780), "2% of (₹1,36,500 + ₹2,500 delivery)");
-  assert.equal(marketplaceInvoice.convenienceGst, R(500), "18% of 2,780 = 500.40 → rounded to R(500)");
-  assert.equal(marketplaceInvoice.total, R(139_000) + R(2_780) + R(500));
+  assert.equal(marketplaceInvoice.convenienceGst, 50_040, "18% of 2,780 = 500.40, kept as 50,040 paise");
+  assert.equal(marketplaceInvoice.total, R(139_000) + R(2_780) + 50_040);
 }
 
 // --- Service-charge sheet: everything GalleryZone bills carries 18% GST ----
