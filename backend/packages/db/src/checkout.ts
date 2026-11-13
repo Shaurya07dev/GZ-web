@@ -225,7 +225,25 @@ export async function repricePendingOrder({
     artworkDoc?.displayPricePaise ??
     (pricing ? displayPriceOf(pricing.artistPricePaise, activeVersion.rates) : order.displayPricePaise);
 
-  const checkout = checkoutTotal(displayPrice, activeVersion.rates, deliveryQuote?.ratePaise);
+  // Prefer the delivery quote already LOCKED on the order over a fresh
+  // Shiprocket call. Shiprocket's serviceability answer is volatile — the
+  // same (pickup, drop, weight, value) can return ₹142 one minute and ₹24.50
+  // the next, which under the earlier always-refresh logic made the Razorpay
+  // modal charge a wildly different amount than the review screen a few
+  // seconds before (client flag 13 Nov 2026).
+  //
+  // The quote the buyer saw on review IS what gets locked onto the order at
+  // creation time, so trusting the stored snapshot keeps review and Razorpay
+  // in sync even if Shiprocket's rate drifts. We only re-fetch when the
+  // order has NO stored snapshot — truly ancient orders from before
+  // Shiprocket was wired, where the frozen total was a ₹25 flat fallback
+  // that is no longer honest.
+  const storedQuote = order.shippingQuote;
+  const effectiveDeliveryPaise =
+    storedQuote?.ratePaise ?? deliveryQuote?.ratePaise;
+  const effectiveQuote = storedQuote ?? deliveryQuote ?? null;
+
+  const checkout = checkoutTotal(displayPrice, activeVersion.rates, effectiveDeliveryPaise);
   if (checkout.total === order.totalPaise) {
     return { totalPaise: order.totalPaise, changed: false };
   }
@@ -239,7 +257,7 @@ export async function repricePendingOrder({
     convenienceGstPaise: checkout.convenienceGst,
     totalPaise: checkout.total,
     rateConfigVersionId: activeVersion.id,
-    shippingQuote: deliveryQuote ?? null,
+    shippingQuote: effectiveQuote,
   });
   return { totalPaise: checkout.total, changed: true };
 }
