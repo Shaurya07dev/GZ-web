@@ -11,12 +11,7 @@ import {
   getOrder,
   getPublicArtwork,
   CheckoutError,
-  Collections,
   type Db,
-  type ArtworkDoc,
-  type AddressDoc,
-  type ProfileDoc,
-  type ShippingQuoteSnapshot,
 } from "@galleryzone/db";
 import { createOrderInputSchema, type CreateOrderInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
@@ -27,7 +22,8 @@ import { DB, ENV } from "./db.module.ts";
 import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 import { Emails } from "./mail/emails.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
-import { getShippingRate, isShiprocketConfigured } from "./shiprocket.ts";
+import { isShiprocketConfigured } from "./shiprocket.ts";
+import { resolveShippingQuote } from "./shipping-quote.ts";
 
 @Controller("v1/orders")
 export class OrdersController {
@@ -80,7 +76,7 @@ export class OrdersController {
       throw new NotFoundException({ type: "about:blank", title: "Pricing rules are not configured yet", status: 404, code: "no_active_rates" });
     }
 
-    const resolution = await this.resolveShippingQuote(artworkId, addressId, req.authUser.uid).catch((err) => {
+    const resolution = await resolveShippingQuote(this.db, { artworkId, addressId, customerId: req.authUser.uid }).catch((err) => {
       // Structured error log so Railway's log viewer can pick it out
       // when tracing a buyer's failed quote. The exception message is
       // the only hint we get at whether it was creds / network /
@@ -136,11 +132,11 @@ export class OrdersController {
     // all (local demo, offline dev); production always has it configured,
     // so the only path through on live is the real quote.
     const requireRealQuote = isShiprocketConfigured();
-    const resolution = await this.resolveShippingQuote(
-      body.artworkId,
-      body.addressId,
-      req.authUser.uid,
-    ).catch((err) => {
+    const resolution = await resolveShippingQuote(this.db, {
+      artworkId: body.artworkId,
+      addressId: body.addressId,
+      customerId: req.authUser.uid,
+    }).catch((err) => {
       this.logger.warn(`ShipRocket rate quote threw: ${String(err)}`);
       return { quote: undefined, reason: "shiprocket_error" as const };
     });
@@ -188,75 +184,6 @@ export class OrdersController {
       default:
         return "We couldn't get a delivery rate for this order. Try again in a minute; if it keeps failing, contact support.";
     }
-  }
-
-  /**
-   * Resolve the four inputs ShipRocket's serviceability endpoint needs:
-   * pickup pincode (artist's studio), drop pincode (buyer's address),
-   * parcel weight, and declared value. Returns the quote and a specific
-   * `reason` on failure so the caller can tell the buyer which half of
-   * the trip is wrong.
-   *
-   * Deliberately bails on the first missing piece rather than guessing a
-   * default: a wrong pincode would return a plausible-looking but wrong
-   * rate, and a wrong rate silently debits the wrong amount.
-   */
-  private async resolveShippingQuote(
-    artworkId: string,
-    addressId: string,
-    customerId: string,
-  ): Promise<{
-    quote: ShippingQuoteSnapshot | undefined;
-    reason:
-      | "no_pickup_pincode"
-      | "no_drop_pincode"
-      | "not_serviceable"
-      | "shiprocket_error"
-      | undefined;
-  }> {
-    if (!isShiprocketConfigured()) {
-      // Local/offline dev: let createOrder's flat fallback kick in. On live
-      // the caller refuses before reaching this.
-      return { quote: undefined, reason: undefined };
-    }
-    const [artworkSnap, addressSnap] = await Promise.all([
-      this.db.collection(Collections.artworks).doc(artworkId).get(),
-      this.db.collection(Collections.addresses).doc(addressId).get(),
-    ]);
-    const artwork = artworkSnap.data() as ArtworkDoc | undefined;
-    const address = addressSnap.data() as (AddressDoc & { userId?: string }) | undefined;
-    if (!artwork || !address || address.userId !== customerId) {
-      // Downstream createOrder throws its own 404 for these; no delivery
-      // rate decision applies.
-      return { quote: undefined, reason: undefined };
-    }
-
-    const artistProfileSnap = await this.db
-      .collection(`users/${artwork.artistId}/profile`)
-      .doc("data")
-      .get();
-    const artistProfile = artistProfileSnap.data() as ProfileDoc | undefined;
-    const pickupPincode = artistProfile?.pickupPincode?.trim();
-    const dropPincode = address.pincode?.trim();
-    if (!pickupPincode) return { quote: undefined, reason: "no_pickup_pincode" };
-    if (!dropPincode) return { quote: undefined, reason: "no_drop_pincode" };
-
-    const weightKg = artwork.physical?.weightKg ?? 2;
-    const valueInr = artwork.listing?.displayPricePaise
-      ? Math.max(1, Math.round(artwork.listing.displayPricePaise / 100))
-      : 1;
-
-    const quote = await getShippingRate({ pickupPincode, dropPincode, weightKg, valueInr });
-    if (!quote) return { quote: undefined, reason: "not_serviceable" };
-    return {
-      quote: {
-        carrier: quote.carrier,
-        ratePaise: quote.ratePaise,
-        courierCompanyId: quote.courierCompanyId,
-        estimatedDeliveryDays: quote.estimatedDeliveryDays,
-      },
-      reason: undefined,
-    };
   }
 
   // Simulated mode only — see checkout.ts's own warning. This is a stand-in

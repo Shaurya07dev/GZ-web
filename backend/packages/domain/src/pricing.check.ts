@@ -61,11 +61,14 @@ const R = (rupees: number) => Math.round(rupees * 100);
   //
   // New base: R(136_500) + R(2_500) delivery = R(139_000).
   // 2% × R(139_000) = R(2_780). 18% service GST on R(2_780) = 50_040 paise.
+  // Both lines then rounded to whole rupees so the UI's per-row total matches
+  // the final total (client flag 13 Nov 2026): R(2_780) stays as-is (already
+  // whole), 50_040 rounds down to R(500).
   assert.equal(checkout.convenienceFee, R(2_780), "Razorpay fee: 2% of (displayPrice + delivery)");
-  assert.equal(checkout.convenienceGst, 50_040, "18% service GST on the Razorpay fee");
+  assert.equal(checkout.convenienceGst, R(500), "18% service GST on the Razorpay fee, whole-rupee");
   assert.equal(
     checkout.total,
-    R(139_000) + R(2_780) + 50_040,
+    R(139_000) + R(2_780) + R(500),
     "display + flat delivery + Razorpay fee + its GST",
   );
 
@@ -153,8 +156,8 @@ const R = (rupees: number) => Math.round(rupees * 100);
   const marketplaceInvoice = checkoutTotal(marketplaceOnly, rates);
   assert.equal(marketplaceInvoice.gstIncluded, R(6_500));
   assert.equal(marketplaceInvoice.convenienceFee, R(2_780), "2% of (₹1,36,500 + ₹2,500 delivery)");
-  assert.equal(marketplaceInvoice.convenienceGst, 50_040, "18% of 2,780 = 500.40");
-  assert.equal(marketplaceInvoice.total, R(139_000) + R(2_780) + 50_040);
+  assert.equal(marketplaceInvoice.convenienceGst, R(500), "18% of 2,780 = 500.40 → rounded to R(500)");
+  assert.equal(marketplaceInvoice.total, R(139_000) + R(2_780) + R(500));
 }
 
 // --- Service-charge sheet: everything GalleryZone bills carries 18% GST ----

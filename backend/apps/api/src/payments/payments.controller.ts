@@ -52,6 +52,7 @@ import {
   attachProviderOrder,
   attachRemittanceProviderOrder,
   attachTopupProviderOrder,
+  repricePendingOrder,
   markTransferFeePaid,
   transferIdForProviderOrder,
   OwnershipConflictError,
@@ -82,6 +83,7 @@ import {
   type ArtworkDoc,
 } from "@galleryzone/db";
 import { bookInboundShipment, bookOutboundOrderShipment } from "../shiprocket-booking.ts";
+import { resolveShippingQuote } from "../shipping-quote.ts";
 import { startWalletTopupInputSchema, type StartWalletTopupInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
 import { Public, Roles } from "../auth/roles.decorator.ts";
@@ -191,12 +193,32 @@ export class PaymentsController {
     }
     if (this.env.paymentsMode !== "razorpay") return { mode: "simulated" as const };
 
+    // Re-price before opening a fresh Razorpay order. Pending orders that
+    // lingered through a pricing-rule change (e.g. the 12 Nov fee-includes-
+    // delivery rewrite, or a day when Shiprocket was returning the flat
+    // fallback) carry a frozen totalPaise that no longer matches what the
+    // review step would quote today. Paying such a stale amount — which
+    // Razorpay would show as e.g. ₹164 while the review screen showed ₹286 —
+    // is exactly the "silly reason" the client flagged on 13 Nov 2026.
+    // repricePendingOrder is idempotent: same total in, same total out,
+    // no-op write. Only touches the order doc when the number actually moved.
+    const quote = await resolveShippingQuote(this.db, {
+      artworkId: order.artworkId,
+      addressId: order.addressId,
+      customerId: req.authUser.uid,
+    }).catch(() => ({ quote: undefined, reason: undefined }));
+    const { totalPaise } = await repricePendingOrder({
+      db: this.db,
+      orderId: id,
+      ...(quote.quote ? { deliveryQuote: quote.quote } : {}),
+    });
+
     const [user, artworkSnap] = await Promise.all([
       getCurrentUser(this.db, req.authUser.uid, { touchLogin: false }),
       this.db.collection(Collections.artworks).doc(order.artworkId).get(),
     ]);
     const artwork = artworkSnap.data() as ArtworkDoc | undefined;
-    const gateway = await this.razorpay.createOrder({ orderId: id, amountPaise: order.totalPaise, customerId: req.authUser.uid });
+    const gateway = await this.razorpay.createOrder({ orderId: id, amountPaise: totalPaise, customerId: req.authUser.uid });
     await attachProviderOrder(this.db, id, gateway.id);
     // The key id is public by design — it identifies the merchant to
     // Checkout.js. The secret never leaves this process.
@@ -204,7 +226,7 @@ export class PaymentsController {
       mode: "razorpay" as const,
       keyId: this.razorpay.keyId,
       razorpayOrderId: gateway.id,
-      amountPaise: order.totalPaise,
+      amountPaise: totalPaise,
       currency: "INR",
       name: "GalleryZone",
       description: artwork ? `${artwork.title} (${artwork.productCode})` : `Order ${id}`,

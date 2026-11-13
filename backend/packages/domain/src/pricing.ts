@@ -322,8 +322,15 @@ export function checkoutTotal(
   deliveryChargePaise?: number,
 ): CheckoutTotal {
   const delivery = deliveryChargePaise ?? rates.deliveryChargePaise;
-  const convenienceFee = Math.round((displayPrice + delivery) * rates.customerConvenienceRate);
-  const convenienceGst = Math.round(convenienceFee * rates.serviceGstRate);
+  // Round each fee line to whole rupees so the UI's per-row display and the
+  // total agree without the ₹1 off-by-one the buyer used to see — client
+  // flag 13 Nov 2026: "total is wrong, 137 + 6 + 1 + 142 = 286 but the card
+  // shows ₹285". Whole-rupee rounding moves at most ±₹0.50 per fee line
+  // (delivery and display price are already whole rupees), a trivial cost
+  // for a receipt that adds up by hand.
+  const roundPaiseToRupee = (paise: number): number => Math.round(paise / 100) * 100;
+  const convenienceFee = roundPaiseToRupee((displayPrice + delivery) * rates.customerConvenienceRate);
+  const convenienceGst = roundPaiseToRupee(convenienceFee * rates.serviceGstRate);
   return {
     displayPrice,
     gstIncluded: gstIncludedIn(displayPrice, rates),

@@ -173,6 +173,77 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   return { orderId: orderRef.id, totalPaise: checkout.total };
 }
 
+/**
+ * Re-price a pending order against the currently-active pricing rules and a
+ * freshly-resolved shipping quote. Used by the Razorpay session endpoint so
+ * a pending order resumed days later charges the CURRENT rate, not whatever
+ * was frozen the day it was placed.
+ *
+ * Client-flagged 13 Nov 2026 — a pending order stored a stale snapshot
+ * (flat ₹25 delivery, pre-GST fee base) from before Shiprocket was live and
+ * before the "fee includes delivery" fix. The review step showed ₹286 (fresh
+ * quote) but the Razorpay modal opened at the frozen ₹164 — because the
+ * session endpoint was dutifully passing order.totalPaise straight through.
+ *
+ * Returns the (possibly updated) totalPaise; callers pass it to Razorpay.
+ * No-ops if the recomputed total matches the stored one — cheap and
+ * idempotent.
+ */
+export interface RepricePendingOrderInput {
+  db: Firestore;
+  orderId: string;
+  deliveryQuote?: {
+    carrier: string;
+    ratePaise: number;
+    courierCompanyId: number;
+    estimatedDeliveryDays: number | null;
+  };
+}
+
+export async function repricePendingOrder({
+  db,
+  orderId,
+  deliveryQuote,
+}: RepricePendingOrderInput): Promise<{ totalPaise: number; changed: boolean }> {
+  const orderRef = db.collection(Collections.orders).doc(orderId);
+  const orderSnap = await orderRef.get();
+  if (!orderSnap.exists) throw new CheckoutError(`No order ${orderId}`);
+  const order = orderSnap.data() as OrderDoc;
+  if (order.status !== "pending") {
+    return { totalPaise: order.totalPaise, changed: false };
+  }
+
+  const artworkDoc = (await db.collection(Collections.artworks).doc(order.artworkId).get()).data() as
+    | { displayPricePaise?: number }
+    | undefined;
+  const pricingSnap = await db.collection(artworkPricingCol(order.artworkId)).doc("data").get();
+  const pricing = pricingSnap.exists ? (pricingSnap.data() as ArtworkPricingDoc) : undefined;
+  const activeVersion = await new FirestoreRateConfigStore(db).getActiveVersion(new Date());
+  if (!activeVersion) throw new CheckoutError("No active rate config");
+
+  const displayPrice =
+    artworkDoc?.displayPricePaise ??
+    (pricing ? displayPriceOf(pricing.artistPricePaise, activeVersion.rates) : order.displayPricePaise);
+
+  const checkout = checkoutTotal(displayPrice, activeVersion.rates, deliveryQuote?.ratePaise);
+  if (checkout.total === order.totalPaise) {
+    return { totalPaise: order.totalPaise, changed: false };
+  }
+
+  const gstPaise = gstIncludedIn(displayPrice, activeVersion.rates);
+  await orderRef.update({
+    displayPricePaise: checkout.displayPrice,
+    gstPaise,
+    deliveryChargePaise: checkout.deliveryCharge,
+    convenienceFeePaise: checkout.convenienceFee,
+    convenienceGstPaise: checkout.convenienceGst,
+    totalPaise: checkout.total,
+    rateConfigVersionId: activeVersion.id,
+    shippingQuote: deliveryQuote ?? null,
+  });
+  return { totalPaise: checkout.total, changed: true };
+}
+
 export interface PaymentCapture {
   method: string;
   providerPaymentId: string | null;
