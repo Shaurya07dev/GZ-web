@@ -93,19 +93,34 @@ class RemoteCheckoutRepository implements CheckoutRepository {
   Future<Order> _runPayment(String orderId) async {
     final base = '/v1/orders/${Uri.encodeComponent(orderId)}';
     final session = asMap(await api.post('$base/payment/session'));
-    if (session['mode'] == 'razorpay') {
-      // Closing the sheet leaves the order pending; the exception says so.
-      final paid = await gateway.pay(GatewaySession.fromApi(session));
-      await api.post(
-        '$base/payment/verify',
-        body: {
-          'razorpayOrderId': paid.orderId,
-          'razorpayPaymentId': paid.paymentId,
-          'signature': paid.signature,
-        },
-      );
-    } else {
-      await api.post('$base/simulate-payment');
+    try {
+      if (session['mode'] == 'razorpay') {
+        // Closing the sheet leaves the order pending; the exception says so.
+        final paid = await gateway.pay(GatewaySession.fromApi(session));
+        await api.post(
+          '$base/payment/verify',
+          body: {
+            'razorpayOrderId': paid.orderId,
+            'razorpayPaymentId': paid.paymentId,
+            'signature': paid.signature,
+          },
+        );
+      } else {
+        await api.post('$base/simulate-payment');
+      }
+    } catch (error) {
+      // The buyer cancelled or the gateway reported failure. Abandon the
+      // pending order so the artwork bounces back to their cart instead of
+      // sitting in orders history as a stale "pending" (client flag
+      // 14 Nov 2026). If a late UPI capture still lands, the Razorpay
+      // webhook settles the order direct from abandoned.
+      try {
+        await api.post('$base/abandon');
+      } catch (_) {
+        // Best-effort: if the abandon call also fails, the lazy sweep on
+        // the next orders list fetch will catch it.
+      }
+      rethrow;
     }
 
     final order = await getOrder(orderId);

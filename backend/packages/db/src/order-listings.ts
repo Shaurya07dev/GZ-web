@@ -2,6 +2,7 @@
 
 import type { Firestore } from "firebase-admin/firestore";
 import { artistSalesByOrder } from "./artist-sales.ts";
+import { sweepStalePendingOrders } from "./checkout.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkDoc, type ArtworkPricingDoc, type OrderDoc, type OrderStatusEventDoc, type PaymentDoc } from "./collections.ts";
 
 export interface OrderView extends OrderDoc {
@@ -42,8 +43,20 @@ export async function decorate(db: Firestore, id: string, order: OrderDoc): Prom
 }
 
 export async function listCustomerOrders(db: Firestore, customerId: string): Promise<OrderView[]> {
+  // Lazy cleanup: sweep stale pending orders into abandoned+back-to-cart on
+  // every list fetch. Client flag 14 Nov 2026 — buyers had a growing wall
+  // of "pending" orders that they could never finish cleanly (stale prices,
+  // deleted addresses). Pending is a transient state, not something to
+  // surface in the customer's orders history.
+  await sweepStalePendingOrders(db, customerId).catch(() => undefined);
+
   const snap = await db.collection(Collections.orders).where("customerId", "==", customerId).orderBy("createdAt", "desc").get();
-  return Promise.all(snap.docs.map((d) => decorate(db, d.id, d.data() as OrderDoc)));
+  const all = await Promise.all(snap.docs.map((d) => decorate(db, d.id, d.data() as OrderDoc)));
+  // Hide pending orders entirely — they belong in the checkout flow, not the
+  // orders history. A buyer who abandoned payment will find the artwork back
+  // in their cart; the invisible pending doc either completes next time or
+  // the sweep above abandons it.
+  return all.filter((o) => o.status !== "pending");
 }
 
 /** Orders for artworks this artist made, newest first. */

@@ -1,5 +1,5 @@
-import { Controller, Get, Inject, NotFoundException, Param, Req } from "@nestjs/common";
-import { listCustomerOrders, getOrder, repricePendingOrder, type Db } from "@galleryzone/db";
+import { Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
+import { abandonPendingOrder, listCustomerOrders, getOrder, repricePendingOrder, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
@@ -39,6 +39,11 @@ export class OrderListingsController {
     // trusts the order's stored shippingQuote when present. For old
     // orders with a null snapshot (pre-Shiprocket), we pass a fresh
     // quote so the displayed number reflects live reality.
+    // NOTE: pending orders are no longer visible in the orders list (see
+    // listCustomerOrders filter). But a direct link to the detail page still
+    // works for the checkout retry UX — if the buyer somehow lands here with
+    // a pending order, the re-price below ensures the number they see is
+    // the number /payment/session will charge.
     if (order.status === "pending") {
       const fresh = order.shippingQuote
         ? { quote: undefined, reason: undefined }
@@ -58,5 +63,19 @@ export class OrderListingsController {
       return refreshed ?? order;
     }
     return order;
+  }
+
+  /**
+   * Called by the web + mobile clients when the buyer closes Razorpay
+   * without paying. Cancels the pending order and drops the artwork back
+   * into the buyer's cart, so the orders history stays a list of real
+   * purchases rather than a graveyard of abandoned checkouts (client flag
+   * 14 Nov 2026). Idempotent + silent on non-pending orders.
+   */
+  @Roles("customer")
+  @HttpCode(204)
+  @Post("orders/:id/abandon")
+  async abandon(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    await abandonPendingOrder(this.db, id, req.authUser.uid);
   }
 }

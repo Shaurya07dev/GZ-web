@@ -373,6 +373,86 @@ export async function markOrderRefunded(
   });
 }
 
+/**
+ * Cancel a pending order and return the artwork to the buyer's cart. Used
+ * when the buyer closes Razorpay without paying, or by the stale-cleanup
+ * sweep. Only works on orders in "pending" — paid orders stay paid.
+ *
+ * Client flag 14 Nov 2026: pending orders are confusing dead weight in the
+ * UI (frozen prices, stale addresses, no way to continue cleanly). This
+ * replaces the "Complete payment" flow — abandoned attempts simply bounce
+ * the artwork back to cart where the buyer started.
+ *
+ * Idempotent: a second call on an already-abandoned order is a no-op.
+ * Silent on non-existent orders.
+ */
+export async function abandonPendingOrder(
+  db: Firestore,
+  orderId: string,
+  customerId: string,
+): Promise<{ abandoned: boolean }> {
+  const orderRef = db.collection(Collections.orders).doc(orderId);
+  const snap = await orderRef.get();
+  if (!snap.exists) return { abandoned: false };
+  const order = snap.data() as OrderDoc;
+  if (order.customerId !== customerId) return { abandoned: false };
+  if (order.status !== "pending") return { abandoned: false };
+
+  // Mark it abandoned + put the artwork back in the customer's cart so the
+  // buyer lands on their cart next time they open the app, not on a stale
+  // order they can't finish.
+  await orderRef.update({
+    status: "cancelled",
+    refundReason: "abandoned_at_payment",
+  });
+  await db.collection(orderStatusEventsCol(orderId)).add({
+    status: "cancelled",
+    changedAt: FieldValue.serverTimestamp(),
+  });
+  const cartRef = db.collection(Collections.carts).doc(customerId);
+  const cartSnap = await cartRef.get();
+  const existing = (cartSnap.data()?.artworkIds as string[] | undefined) ?? [];
+  if (!existing.includes(order.artworkId)) {
+    await cartRef.set(
+      {
+        artworkIds: [...existing, order.artworkId],
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  }
+  return { abandoned: true };
+}
+
+/**
+ * Sweep pending orders older than [staleMinutes] into abandoned+back-to-cart.
+ * Called lazily from listCustomerOrders so a user who never completed a
+ * checkout doesn't see a growing wall of "pending" clutter in their orders
+ * list. Shared implementation with explicit abandonPendingOrder so there is
+ * one place where the pending → cancelled transition is written.
+ */
+export async function sweepStalePendingOrders(
+  db: Firestore,
+  customerId: string,
+  staleMinutes = 30,
+): Promise<number> {
+  const cutoff = Date.now() - staleMinutes * 60 * 1000;
+  const snap = await db
+    .collection(Collections.orders)
+    .where("customerId", "==", customerId)
+    .where("status", "==", "pending")
+    .get();
+  let count = 0;
+  for (const doc of snap.docs) {
+    const order = doc.data() as OrderDoc;
+    const createdMs = order.createdAt?.toMillis?.() ?? 0;
+    if (createdMs > cutoff) continue;
+    const { abandoned } = await abandonPendingOrder(db, doc.id, customerId);
+    if (abandoned) count += 1;
+  }
+  return count;
+}
+
 export async function markPaymentFailed(db: Firestore, orderId: string, detail: { providerPaymentId: string | null; rawWebhookPayload: unknown }): Promise<void> {
   const snap = await db.collection(Collections.payments).where("orderId", "==", orderId).limit(1).get();
   if (snap.empty) return;

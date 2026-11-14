@@ -54,9 +54,13 @@ export const orderService = {
       // and the API's answer comes from Razorpay rather than from this browser.
       const confirmed = await http.post<{ status: string }>(`${base}/payment/verify`, outcome.success ?? undefined);
       if (confirmed.status !== "paid") {
-        // Not paid, and the gateway said so. If the buyer simply closed the
-        // window this is the quiet "nothing was charged" path; otherwise the
-        // webhook will still settle it if a late capture arrives.
+        // Not paid, and the gateway said so. Abandon the pending order (so
+        // the artwork bounces back to the buyer's cart instead of lingering
+        // in their orders history) and raise PaymentDismissed. Client flag
+        // 14 Nov 2026: pending orders are confusing dead weight. If a late
+        // capture does land, the Razorpay webhook will still settle the
+        // order — it just goes paid directly from the abandoned state.
+        await http.post(`${base}/abandon`).catch(() => undefined);
         if (outcome.dismissed) throw new PaymentDismissedError();
         throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was charged.");
       }
@@ -65,13 +69,8 @@ export const orderService = {
     }
     const order = await orderService.get(orderId);
     if (!order) throw new Error("Order was created but could not be read back");
-    // Belt-and-suspenders: never claim success if the ORDER itself isn't
-    // paid. This catches the "verify returned OK, but the re-read came
-    // before the write landed" race AND any case where the backend is
-    // mis-configured (PAYMENTS_MODE=simulated on prod, webhook secret
-    // missing, etc). A pending order here means the payment did not
-    // actually move money — treat it as a cancellation.
     if (order.status !== "paid") {
+      await http.post(`${base}/abandon`).catch(() => undefined);
       throw new PaymentDismissedError();
     }
     return order;
@@ -91,6 +90,7 @@ export const orderService = {
       const outcome = await openRazorpayCheckout(session);
       const confirmed = await http.post<{ status: string }>(`${base}/payment/verify`, outcome.success ?? undefined);
       if (confirmed.status !== "paid") {
+        await http.post(`${base}/abandon`).catch(() => undefined);
         if (outcome.dismissed) throw new PaymentDismissedError();
         throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was charged.");
       }
@@ -99,7 +99,10 @@ export const orderService = {
     }
     const order = await orderService.get(orderId);
     if (!order) throw new Error("Order could not be re-read after payment");
-    if (order.status !== "paid") throw new PaymentDismissedError();
+    if (order.status !== "paid") {
+      await http.post(`${base}/abandon`).catch(() => undefined);
+      throw new PaymentDismissedError();
+    }
     return order;
   },
 };
