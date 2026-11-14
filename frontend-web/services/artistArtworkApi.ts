@@ -19,6 +19,7 @@ export interface OwnerArtworkDto extends ArtworkDto {
     reason: string | null;
     changedBy?: string | null;
     changedByName?: string | null;
+    changedByRole?: string | null;
   }[];
   exclusive: boolean;
   /** The chip's own ID: for the owning artist and admins only, never public. */
@@ -59,6 +60,7 @@ export function toOwnerArtwork(dto: OwnerArtworkDto): OwnerArtwork {
           reason: e.reason ?? undefined,
           changedBy: e.changedBy ?? null,
           changedByName: e.changedByName ?? null,
+          changedByRole: e.changedByRole ?? null,
         }))
       : base.statusHistory,
     editableUntil: dto.editableUntil,

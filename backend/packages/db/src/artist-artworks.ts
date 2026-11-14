@@ -201,7 +201,7 @@ export interface OwnerArtworkView extends PublicArtworkView, NfcOwnerFields {
     breakdown: { marketplace: ArtistSettlement; aggregator: ArtistSettlement };
   };
   images: ArtworkImage[];
-  statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null; changedBy: string | null; changedByName: string | null }[];
+  statusHistory: { status: ArtworkStatus; changedAt: string; reason: string | null; changedBy: string | null; changedByName: string | null; changedByRole: string | null }[];
   insuranceOpted: boolean;
   exclusive: boolean;
   insuranceNumber: string | null;
@@ -296,15 +296,18 @@ const createdMillis = (doc: ArtworkDoc): number => doc.createdAt?.toMillis?.() ?
 async function resolveStatusHistory(
   db: Firestore,
   docs: FirebaseFirestore.QueryDocumentSnapshot[],
-): Promise<{ status: ArtworkStatus; changedAt: string; reason: string | null; changedBy: string | null; changedByName: string | null }[]> {
+): Promise<{ status: ArtworkStatus; changedAt: string; reason: string | null; changedBy: string | null; changedByName: string | null; changedByRole: string | null }[]> {
   const events = docs.map((d) => d.data() as ArtworkStatusEventDoc);
   const uids = [...new Set(events.map((e) => e.changedBy).filter((v): v is string => Boolean(v)))];
   const nameByUid = new Map<string, string>();
+  // Who moved the piece: an admin deciding a review is not the same as an artist or an aggregator moving it.
+  const roleByUid = new Map<string, string>();
   if (uids.length > 0) {
     const snaps = await db.getAll(...uids.map((uid) => db.collection(Collections.users).doc(uid)));
     for (const snap of snaps) {
-      const data = snap.data() as { name?: string } | undefined;
+      const data = snap.data() as { name?: string; role?: string } | undefined;
       if (data?.name) nameByUid.set(snap.id, data.name);
+      if (data?.role) roleByUid.set(snap.id, data.role);
     }
   }
   return events.map((e) => ({
@@ -313,6 +316,7 @@ async function resolveStatusHistory(
     reason: e.reason,
     changedBy: e.changedBy ?? null,
     changedByName: e.changedBy ? (nameByUid.get(e.changedBy) ?? null) : null,
+    changedByRole: e.changedBy ? (roleByUid.get(e.changedBy) ?? null) : null,
   }));
 }
 

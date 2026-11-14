@@ -74,6 +74,8 @@ export interface ArtworkStatusEvent {
   /** Display name for `changedBy`, joined server-side so admin UIs don't
    *  need a separate user lookup. */
   changedByName?: string | null;
+  /** The role of `changedBy` ("admin", "artist", "aggregator"), so a review decision can be told from other moves. */
+  changedByRole?: string | null;
   /** The reviewer's reason, when the transition was a rejection. */
   reason?: string | null;
 }
@@ -431,6 +433,8 @@ export interface ExternalSalePenalty {
   decidedAt?: string | null;
   /** The admin's note, shown back to the artist. */
   decisionNote?: string | null;
+  /** The admin who approved or waived it. Null while it waits. */
+  decidedByName?: string | null;
 }
 
 export function penaltyStatus(penalty: ExternalSalePenalty): PenaltyStatus {

@@ -26,6 +26,7 @@ import {
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import type { AdminUser } from "@/types/admin";
+import { QueueViewSwitch, ReviewedBy, type QueueView } from "./queue-view";
 
 const REJECT_PRESETS = [
   "GSTIN does not match the registered business name",
@@ -34,7 +35,8 @@ const REJECT_PRESETS = [
 ];
 
 export function GstQueueTable() {
-  const { data: queue, isPending } = useAdminGstQueue();
+  const [view, setView] = useState<QueueView>("waiting");
+  const { data: queue, isPending } = useAdminGstQueue(view);
   const [active, setActive] = useState<AdminUser | null>(null);
 
   const columns: AdminDataTableColumn<AdminUser>[] = [
@@ -72,29 +74,38 @@ export function GstQueueTable() {
       sortValue: (row) => row.gstStatus ?? "",
     },
     {
+      key: "reviewedBy",
+      header: "Reviewed by",
+      render: (row) => <ReviewedBy name={row.review?.adminName} decision={row.review?.decision} at={row.review?.at} />,
+      sortable: true,
+      sortValue: (row) => row.review?.at ?? "",
+    },
+    {
       key: "action",
       header: "",
-      render: (row) => (
-        <Button size="sm" variant="outline" onClick={() => setActive(row)}>
-          Review
-        </Button>
-      ),
+      render: (row) =>
+        view === "waiting" ? (
+          <Button size="sm" variant="outline" onClick={() => setActive(row)}>
+            Review
+          </Button>
+        ) : null,
       className: "text-right",
     },
   ];
 
   return (
     <>
+      <QueueViewSwitch value={view} onChange={setView} />
       <AdminDataTable
         rows={queue ?? []}
         columns={columns}
         isLoading={isPending}
         getRowKey={(row) => row.id}
-        onRowClick={(row) => setActive(row)}
+        onRowClick={view === "waiting" ? (row) => setActive(row) : undefined}
         searchPlaceholder="Search by name or email"
         searchValue={(row) => `${row.name} ${row.email}`}
-        emptyTitle="No GST applications waiting"
-        emptyDescription="Every submitted GSTIN has been reviewed."
+        emptyTitle={view === "waiting" ? "No GST applications waiting" : "No GST reviews yet"}
+        emptyDescription={view === "waiting" ? "Every submitted GSTIN has been reviewed." : "Approved and rejected GSTINs will be listed here."}
         emptyIcon={Receipt}
       />
 

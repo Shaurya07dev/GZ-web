@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import {
   AdminDataTable,
   type AdminDataTableColumn,
 } from "@/features/admin/admin-data-table";
-import { useAdminPendingArtworks } from "@/hooks/useAdminModeration";
+import { useAdminPendingArtworks, useAdminReviewedArtworks } from "@/hooks/useAdminModeration";
+import { artworkReview } from "@/lib/artwork-review";
+import { QueueViewSwitch, ReviewedBy, type QueueView } from "./queue-view";
 
 import { LISTING_TYPE_LABEL, type Artwork } from "@/types/artwork";
 
@@ -18,7 +21,10 @@ function waitingDays(artwork: Artwork): number {
 }
 
 export function ArtworkQueueTable() {
-  const { data: artworks, isPending } = useAdminPendingArtworks();
+  const [view, setView] = useState<QueueView>("waiting");
+  const waiting = useAdminPendingArtworks();
+  const reviewed = useAdminReviewedArtworks(view === "reviewed");
+  const { data: artworks, isPending } = view === "waiting" ? waiting : reviewed;
 
   const columns: AdminDataTableColumn<Artwork>[] = [
     {
@@ -98,6 +104,16 @@ export function ArtworkQueueTable() {
       sortValue: (row) => waitingDays(row),
       className: "text-right",
     },
+    {
+      key: "reviewedBy",
+      header: "Reviewed by",
+      render: (row) => {
+        const review = artworkReview(row.statusHistory);
+        return <ReviewedBy name={review?.adminName} decision={review?.decision} at={review?.at} />;
+      },
+      sortable: true,
+      sortValue: (row) => artworkReview(row.statusHistory)?.at ?? "",
+    },
   ];
 
   const categories = Array.from(
@@ -105,13 +121,15 @@ export function ArtworkQueueTable() {
   ).sort();
 
   return (
+    <>
+    <QueueViewSwitch value={view} onChange={setView} />
     <AdminDataTable
       rows={artworks ?? []}
-      columns={columns}
+      columns={view === "waiting" ? columns : columns.filter((column) => column.key !== "waiting")}
       isLoading={isPending}
       getRowKey={(row) => row.id}
-      getRowHref={(row) => `/admin/moderation/artworks/${row.id}`}
-      getRowLabel={(row) => `Review ${row.title}`}
+      getRowHref={(row) => (view === "waiting" ? `/admin/moderation/artworks/${row.id}` : `/admin/artworks/${row.id}`)}
+      getRowLabel={(row) => `${view === "waiting" ? "Review" : "Open"} ${row.title}`}
       searchPlaceholder="Search by title or artist"
       searchValue={(row) => `${row.title} ${row.artistName} ${row.medium}`}
       filters={[
@@ -122,9 +140,10 @@ export function ArtworkQueueTable() {
           matches: (row, value) => row.category === value,
         },
       ]}
-      emptyTitle="Queue is clear"
-      emptyDescription="No artwork is waiting for review right now."
+      emptyTitle={view === "waiting" ? "Queue is clear" : "No artworks reviewed yet"}
+      emptyDescription={view === "waiting" ? "No artwork is waiting for review right now." : "Artworks you approve or reject will be listed here."}
       emptyIcon={ImageIcon}
     />
+    </>
   );
 }

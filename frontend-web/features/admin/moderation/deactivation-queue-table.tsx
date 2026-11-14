@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { QueueViewSwitch, ReviewedBy, type QueueView } from "./queue-view";
 import { toast } from "sonner";
 import { Check, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,8 @@ export function DeactivationQueueTable() {
   const decide = useDecideDeactivationMutation();
   const [rejecting, setRejecting] = useState<DeactivationRequest | null>(null);
 
-  const rows = requests ?? [];
+  const [view, setView] = useState<QueueView>("waiting");
+  const rows = (requests ?? []).filter((request) => (request.status === "pending") === (view === "waiting"));
 
   function approve(row: DeactivationRequest) {
     decide.mutate(
@@ -124,6 +126,13 @@ export function DeactivationQueueTable() {
       sortValue: (row) => row.status,
     },
     {
+      key: "reviewedBy",
+      header: "Reviewed by",
+      render: (row) => <ReviewedBy name={row.decidedByName} decision={row.status} at={row.decidedAt} />,
+      sortable: true,
+      sortValue: (row) => row.decidedAt ?? "",
+    },
+    {
       key: "actions",
       header: "",
       render: (row) =>
@@ -154,9 +163,10 @@ export function DeactivationQueueTable() {
 
   return (
     <>
+      <QueueViewSwitch value={view} onChange={setView} />
       <AdminDataTable
         rows={rows}
-        columns={columns}
+        columns={view === "reviewed" ? columns : columns.filter((column) => column.key !== "reviewedBy")}
         isLoading={isPending}
         getRowKey={(row) => row.id}
         searchPlaceholder="Search requests"
@@ -172,8 +182,8 @@ export function DeactivationQueueTable() {
             matches: (row, value) => row.status === value,
           },
         ]}
-        emptyTitle="No deactivation requests"
-        emptyDescription="Nobody has asked to close their account."
+        emptyTitle={view === "waiting" ? "No deactivation requests waiting" : "No deactivation requests reviewed yet"}
+        emptyDescription={view === "waiting" ? "Nobody is waiting for their account to be closed." : "Requests you approve or refuse will be listed here."}
         emptyIcon={UserMinus}
       />
 

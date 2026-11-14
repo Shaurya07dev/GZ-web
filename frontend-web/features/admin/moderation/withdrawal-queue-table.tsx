@@ -3,6 +3,7 @@
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { useState } from "react";
+import { QueueViewSwitch, ReviewedBy, type QueueView } from "./queue-view";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Banknote, Check, TriangleAlert, X } from "lucide-react";
@@ -60,6 +61,8 @@ export function WithdrawalQueueTable() {
   const minWithdrawal = useAdminSettings().data?.minWithdrawalAmount ?? 1000;
   const { data: withdrawals, isPending } = useAdminWithdrawals();
   const [active, setActive] = useState<WithdrawalRequest | null>(null);
+  const [view, setView] = useState<QueueView>("waiting");
+  const rows = (withdrawals ?? []).filter((w) => (w.status === "pending") === (view === "waiting"));
 
   const columns: AdminDataTableColumn<WithdrawalRequest>[] = [
     {
@@ -136,6 +139,13 @@ export function WithdrawalQueueTable() {
       sortValue: (row) => waitingDays(row),
     },
     {
+      key: "reviewedBy",
+      header: "Reviewed by",
+      render: (row) => <ReviewedBy name={row.processedByName} decision={row.status === "completed" ? "approved" : row.status} at={row.processedAt} />,
+      sortable: true,
+      sortValue: (row) => row.processedAt ?? "",
+    },
+    {
       key: "action",
       header: "",
       render: (row) =>
@@ -150,9 +160,10 @@ export function WithdrawalQueueTable() {
 
   return (
     <>
+      <QueueViewSwitch value={view} onChange={setView} />
       <AdminDataTable
-        rows={withdrawals ?? []}
-        columns={columns}
+        rows={rows}
+        columns={view === "reviewed" ? columns : columns.filter((column) => column.key !== "reviewedBy")}
         isLoading={isPending}
         getRowKey={(row) => row.id}
         onRowClick={(row) => row.status === "pending" && setActive(row)}
@@ -167,12 +178,10 @@ export function WithdrawalQueueTable() {
               label: adminStatusLabel(s),
             })),
             matches: (row, value) => row.status === value,
-            // Opens on the work that needs doing, while still offering the full list.
-            defaultValue: "pending",
           },
         ]}
-        emptyTitle="No withdrawals waiting"
-        emptyDescription="Every payout request in this view has been handled."
+        emptyTitle={view === "waiting" ? "No withdrawals waiting" : "No withdrawals reviewed yet"}
+        emptyDescription={view === "waiting" ? "Every payout request has been handled." : "Payouts you approve or reject will be listed here."}
         emptyIcon={Banknote}
       />
 

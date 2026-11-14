@@ -26,6 +26,7 @@ import {
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
 import type { AdminUser } from "@/types/admin";
+import { QueueViewSwitch, ReviewedBy, type QueueView } from "./queue-view";
 
 const REJECT_PRESETS = [
   "Document image unreadable",
@@ -44,7 +45,8 @@ function waitingDays(user: AdminUser): number {
 }
 
 export function KycQueueTable() {
-  const { data: queue, isPending } = useAdminKycQueue();
+  const [view, setView] = useState<QueueView>("waiting");
+  const { data: queue, isPending } = useAdminKycQueue(view);
   const [active, setActive] = useState<AdminUser | null>(null);
 
   const columns: AdminDataTableColumn<AdminUser>[] = [
@@ -98,29 +100,38 @@ export function KycQueueTable() {
       sortValue: (row) => waitingDays(row),
     },
     {
+      key: "reviewedBy",
+      header: "Reviewed by",
+      render: (row) => <ReviewedBy name={row.review?.adminName} decision={row.review?.decision} at={row.review?.at} />,
+      sortable: true,
+      sortValue: (row) => row.review?.at ?? "",
+    },
+    {
       key: "action",
       header: "",
-      render: (row) => (
-        <Button size="sm" variant="outline" onClick={() => setActive(row)}>
-          Review
-        </Button>
-      ),
+      render: (row) =>
+        view === "waiting" ? (
+          <Button size="sm" variant="outline" onClick={() => setActive(row)}>
+            Review
+          </Button>
+        ) : null,
       className: "text-right",
     },
   ];
 
   return (
     <>
+      <QueueViewSwitch value={view} onChange={setView} />
       <AdminDataTable
         rows={queue ?? []}
         columns={columns}
         isLoading={isPending}
         getRowKey={(row) => row.id}
-        onRowClick={(row) => setActive(row)}
+        onRowClick={view === "waiting" ? (row) => setActive(row) : undefined}
         searchPlaceholder="Search by name or email"
         searchValue={(row) => `${row.name} ${row.email}`}
-        emptyTitle="No KYC waiting"
-        emptyDescription="Every submitted identity check has been reviewed."
+        emptyTitle={view === "waiting" ? "No KYC waiting" : "No KYC reviews yet"}
+        emptyDescription={view === "waiting" ? "Every submitted identity check has been reviewed." : "Approved and rejected identity checks will be listed here."}
         emptyIcon={BadgeCheck}
       />
 

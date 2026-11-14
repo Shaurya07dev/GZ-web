@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/adminService";
+import type { QueueView } from "@/types/admin";
 import type { ArtworkRarity } from "@/types/artwork";
 
 // ---------------------------------------------------------------------------
@@ -14,6 +15,15 @@ import type { ArtworkRarity } from "@/types/artwork";
 // ---------------------------------------------------------------------------
 
 // --- artwork moderation ----------------------------------------------------
+
+/** Pieces an admin has already approved or rejected. Only fetched once the Reviewed view is opened. */
+export function useAdminReviewedArtworks(enabled: boolean) {
+  return useQuery({
+    queryKey: ["admin-reviewed-artworks"],
+    queryFn: () => adminService.listReviewedArtworks(),
+    enabled,
+  });
+}
 
 export function useAdminPendingArtworks() {
   return useQuery({
@@ -63,10 +73,10 @@ export function useRejectArtworkMutation() {
 
 // --- KYC -------------------------------------------------------------------
 
-export function useAdminKycQueue() {
+export function useAdminKycQueue(view: QueueView = "waiting") {
   return useQuery({
-    queryKey: ["admin-kyc-queue"],
-    queryFn: () => adminService.listKycQueue(),
+    queryKey: ["admin-kyc-queue", view],
+    queryFn: () => adminService.listKycQueue(view),
   });
 }
 
@@ -99,10 +109,10 @@ export function useRejectKycMutation() {
 
 // --- GST -------------------------------------------------------------------
 
-export function useAdminGstQueue() {
+export function useAdminGstQueue(view: QueueView = "waiting") {
   return useQuery({
-    queryKey: ["admin-gst-queue"],
-    queryFn: () => adminService.listGstQueue(),
+    queryKey: ["admin-gst-queue", view],
+    queryFn: () => adminService.listGstQueue(view),
   });
 }
 
