@@ -263,7 +263,8 @@ export function InventoryBrowser() {
             </Accordion>
           </div>
 
-          <div className="flex items-center gap-3 border-t border-border bg-background p-4">
+          {/* pr-24: the floating help button sits over the bottom-right corner of the screen, so the buttons stop short of it. */}
+          <div className="flex items-center gap-3 border-t border-border bg-background p-4 pr-24">
             <button
               type="button"
               onClick={clearPanel}
