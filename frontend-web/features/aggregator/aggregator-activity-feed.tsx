@@ -1,6 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+import { useReservableInventory } from "@/hooks/useAggregatorInventory";
+import { PriceTag } from "@/components/shared/price-tag";
 import type { AggregatorHolding } from "@/types/aggregator";
 import type { ArtworkSummary } from "@/types/artwork";
 import Link from "next/link";
@@ -43,6 +46,48 @@ function activityItemsFrom(holdings: Array<AggregatorHolding & { artwork: Artwor
   .slice(0, 5);
 }
 
+// Before the first reservation there is no activity to show, so the card shows where to start: the pieces
+// most recently opened for reservation (the API sends newest first).
+function NewestToReserve() {
+  const { data } = useReservableInventory();
+  const pieces = (data ?? []).slice(0, 4);
+  return (
+    <div className="mt-4 flex flex-col gap-5">
+      <p className="text-sm text-muted-foreground">
+        No activity yet. These are the newest pieces you can reserve.
+      </p>
+      {pieces.length > 0 && (
+        <ul className="grid grid-cols-2 gap-4">
+          {pieces.map((artwork) => (
+            <li key={artwork.id} className="min-w-0">
+              <Link
+                href={`/aggregator/inventory/${artwork.id}/reserve`}
+                className="group flex flex-col gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              >
+                <span className="relative block aspect-[4/5] overflow-hidden rounded-md border border-border bg-muted">
+                  <Image
+                    src={artwork.thumbnailUrl}
+                    alt={artwork.title}
+                    fill
+                    sizes="(min-width: 1024px) 18vw, 45vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                </span>
+                <span className="line-clamp-1 text-sm font-medium text-foreground group-hover:text-gold-bright">{artwork.title}</span>
+                <span className="line-clamp-1 text-xs text-muted-foreground">{artwork.artistName}</span>
+                <PriceTag amount={artwork.offer.offerPrice} className="text-sm" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Button nativeButton={false} render={<Link href="/aggregator/inventory" />} variant="outline" size="sm" className="w-fit">
+        Browse Inventory
+      </Button>
+    </div>
+  );
+}
+
 export function AggregatorActivityFeed() {
   const { data: holdings } = useAggregatorCollection();
   const activityItems = activityItemsFrom(holdings ?? []);
@@ -53,14 +98,7 @@ export function AggregatorActivityFeed() {
       </h2>
 
       {activityItems.length === 0 ? (
-        <div className="mt-4 flex flex-col items-start gap-4">
-          <p className="text-sm text-muted-foreground">
-            No activity yet. Reserve an artwork from Inventory to get started.
-          </p>
-          <Button nativeButton={false} render={<Link href="/aggregator/inventory" />} variant="outline" size="sm">
-            Browse Inventory
-          </Button>
-        </div>
+        <NewestToReserve />
       ) : (
         <ul className="mt-4 flex flex-col gap-4">
           {activityItems.map((item) => (

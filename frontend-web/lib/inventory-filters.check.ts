@@ -53,6 +53,12 @@ assert.deepEqual(run("", { verifiedOnly: true }), ["a"], "verified artists only"
 assert.deepEqual(run("", { exclusiveOnly: true }), ["b"], "exclusive only");
 assert.deepEqual(run("asha", { size: "large" }), ["a"], "search and filters together");
 assert.deepEqual(run("", { price: 1 }), [], "a band nothing is in");
+const savedIds = new Set(["b", "d"]);
+const runSaved = (query: string, f: Partial<InventoryFilters> = {}) => ids(applyInventory(shelf, query, { ...NO_FILTERS, ...f }, "newest", savedIds));
+assert.deepEqual(runSaved("", { savedOnly: true }), ["b", "d"], "Saved shows only hearted pieces");
+assert.deepEqual(runSaved("", { savedOnly: true, category: "drawing" }), ["d"], "Saved and a category chip together");
+assert.deepEqual(run("", { savedOnly: true }), [], "nothing is saved when no ids are given");
+assert.deepEqual(runSaved(""), ["a", "b", "c", "d"], "without the chip, saving changes nothing");
 
 // Sort never changes the shelf it was given.
 assert.deepEqual(run("", {}, "price_asc"), ["b", "c", "a", "d"]);
@@ -67,6 +73,8 @@ assert.equal(isFiltering("", NO_FILTERS), false);
 assert.equal(isFiltering("  ", NO_FILTERS), false);
 assert.equal(isFiltering("a", NO_FILTERS), true);
 assert.equal(isFiltering("", { ...NO_FILTERS, category: "painting" }), true);
+assert.equal(isFiltering("", { ...NO_FILTERS, savedOnly: true }), true);
+assert.equal(activeFilterCount({ ...NO_FILTERS, savedOnly: true }), 0, "the Saved chip is not in the panel");
 
 // Facets count what is there.
 const facets = inventoryFacets(shelf);

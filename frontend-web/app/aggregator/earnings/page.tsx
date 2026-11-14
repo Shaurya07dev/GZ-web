@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   title: "Earnings | GalleryZone Aggregator Portal",
 };
 
-export default function AggregatorWalletPage() {
+export default function AggregatorEarningsPage() {
   return <WalletOverview />;
 }

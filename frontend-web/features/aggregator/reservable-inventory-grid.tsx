@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { PackageSearch, Heart, LayoutGrid, List, SearchX } from "lucide-react";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
 import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+import { useWishlistStore } from "@/store/useWishlistStore";
 import {
   NO_FILTERS,
   applyInventory,
@@ -56,6 +58,29 @@ function monthLine(offer: ReservableArtwork["offer"]): string {
     : month;
 }
 
+// The heart saves a piece to the aggregator's wishlist (the account's own, kept on the server). It sits
+// inside the card's link, so it must not let the click through to it.
+function SaveHeart({ artworkId, className }: { artworkId: string; className?: string }) {
+  const saved = useWishlistStore((state) => state.has(artworkId));
+  const toggle = useWishlistStore((state) => state.toggle);
+  return (
+    <button
+      type="button"
+      aria-label={saved ? "Remove from saved" : "Save for later"}
+      aria-pressed={saved}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // The store types toggle as void, but it returns the request's promise.
+        Promise.resolve(toggle(artworkId)).catch(() => toast.error("Couldn't update your saved pieces. Try again in a moment."));
+      }}
+      className={cn("flex items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50", className)}
+    >
+      <Heart className={cn("size-4.5 transition-colors", saved && "fill-gold-bright text-gold-bright")} strokeWidth={1.75} />
+    </button>
+  );
+}
+
 export function ReservableInventoryGrid({
   query = "",
   filters = NO_FILTERS,
@@ -73,7 +98,10 @@ export function ReservableInventoryGrid({
   const { blockedReason } = useReserveRequirements();
   const onBlocked = blockedReason === undefined ? undefined : () => setBlockedOpen(true);
   const { data, isPending, isError } = useReservableInventory();
-  const shown = useMemo(() => applyInventory(data ?? [], query, filters, sort), [data, query, filters, sort]);
+  const savedIds = useWishlistStore((state) => state.ids);
+  const saved = useMemo(() => new Set(savedIds), [savedIds]);
+  const shown = useMemo(() => applyInventory(data ?? [], query, filters, sort, saved), [data, query, filters, sort, saved]);
+  const nothingSaved = filters.savedOnly && !(data ?? []).some((a) => saved.has(a.id));
   const filtering = isFiltering(query, filters);
   // What this aggregator holds or has sold is what "more like these" is
   // measured against. A returned piece wasn't theirs to show, so it doesn't count.
@@ -195,9 +223,13 @@ export function ReservableInventoryGrid({
 
       {shown.length === 0 && (
         <EmptyState
-          icon={SearchX}
-          title="No artworks match"
-          description="Try a shorter search, or remove some filters."
+          icon={nothingSaved ? Heart : SearchX}
+          title={nothingSaved ? "Nothing saved yet" : "No artworks match"}
+          description={
+            nothingSaved
+              ? "Tap the heart on a piece to keep it here for later."
+              : "Try a shorter search, or remove some filters."
+          }
           action={
             onClear ? (
               <Button variant="outline" onClick={onClear}>
@@ -264,10 +296,11 @@ function InventoryArtworkCard({
           />
         </div>
         
-        {/* Wishlist Heart Icon */}
-        <button className="absolute top-2 right-2 z-10 flex size-10 items-center justify-center rounded-full border border-border/50 bg-background/90 text-foreground/75 backdrop-blur-sm transition-colors hover:text-foreground hover:border-border">
-          <Heart className="size-4.5 transition-colors" strokeWidth={1.75} />
-        </button>
+        {/* Wishlist heart */}
+        <SaveHeart
+          artworkId={artwork.id}
+          className="absolute top-2 right-2 z-10 size-10 border border-border/50 bg-background/90 text-foreground/75 backdrop-blur-sm hover:border-border hover:text-foreground"
+        />
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
@@ -361,9 +394,7 @@ function InventoryArtworkListRow({
           >
             {artwork.title}
           </Link>
-          <button className="flex shrink-0 items-center justify-center rounded-full text-foreground/75 transition-colors hover:text-foreground">
-            <Heart className="size-4.5 transition-colors" strokeWidth={1.75} />
-          </button>
+          <SaveHeart artworkId={artwork.id} className="size-8 shrink-0 text-foreground/75 hover:text-foreground" />
         </div>
 
         <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">

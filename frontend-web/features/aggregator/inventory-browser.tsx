@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
+import { Heart, RotateCcw, Search, SlidersHorizontal, X } from "lucide-react";
 import { Accordion } from "@/components/ui/accordion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
 import { STAMP_TONE } from "@/components/shared/rarity-badge";
 import { FilterGroup, OptionRow } from "@/features/marketplace/marketplace-filters";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
+import { useWishlistStore } from "@/store/useWishlistStore";
 import {
   INVENTORY_PRICE_BANDS,
   NO_FILTERS,
@@ -43,9 +44,12 @@ export function InventoryBrowser() {
   const [filters, setFilters] = useState<InventoryFilters>(NO_FILTERS);
   const [panelOpen, setPanelOpen] = useState(false);
   const { data } = useReservableInventory();
+  const savedIds = useWishlistStore((s) => s.ids);
+  const saved = useMemo(() => new Set(savedIds), [savedIds]);
+  const savedOnShelf = useMemo(() => (data ?? []).filter((a) => saved.has(a.id)).length, [data, saved]);
 
   const facets = useMemo(() => inventoryFacets(data ?? []), [data]);
-  const matching = useMemo(() => applyInventory(data ?? [], query, filters, "newest").length, [data, query, filters]);
+  const matching = useMemo(() => applyInventory(data ?? [], query, filters, "newest", saved).length, [data, query, filters, saved]);
   const badge = activeFilterCount(filters);
 
   const update = (patch: Partial<InventoryFilters>) => setFilters((f) => ({ ...f, ...patch }));
@@ -53,7 +57,7 @@ export function InventoryBrowser() {
     setQuery("");
     setFilters(NO_FILTERS);
   };
-  const clearPanel = () => setFilters((f) => ({ ...NO_FILTERS, category: f.category }));
+  const clearPanel = () => setFilters((f) => ({ ...NO_FILTERS, category: f.category, savedOnly: f.savedOnly }));
 
   const chips: { value: string | null; label: string }[] = [
     { value: null, label: "All" },
@@ -129,6 +133,21 @@ export function InventoryBrowser() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              aria-pressed={filters.savedOnly}
+              onClick={() => update({ savedOnly: !filters.savedOnly })}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                filters.savedOnly
+                  ? "border-gold bg-gold/90 text-gold-950"
+                  : "border-border bg-muted/20 text-foreground hover:bg-muted/50",
+              )}
+            >
+              <Heart className={cn("size-3.5", filters.savedOnly && "fill-current")} strokeWidth={1.75} />
+              Saved
+              <span className="tabular-nums opacity-70">{savedOnShelf}</span>
+            </button>
           </div>
           <div
             aria-hidden="true"

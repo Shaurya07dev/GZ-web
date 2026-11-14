@@ -99,7 +99,7 @@ test('the artist Profile offers the GST guide beside the GSTIN field', async ({ 
 });
 
 test('the artist Earnings page carries the same GST guide on its GST card', async ({ page, baseURL }) => {
-  await open(page, baseURL!, 'artist', '/dashboard/wallet');
+  await open(page, baseURL!, 'artist', '/dashboard/earnings');
   await expect(guideButton(page, GUIDES.gstRegistration.title)).toBeVisible();
 });
 

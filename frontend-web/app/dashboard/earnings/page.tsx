@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   title: "Earnings | GalleryZone",
 };
 
-export default function DashboardWalletPage() {
+export default function DashboardEarningsPage() {
   return <WalletOverview />;
 }

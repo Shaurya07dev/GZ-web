@@ -31,6 +31,8 @@ export interface InventoryFilters {
   price: number | null;
   verifiedOnly: boolean;
   exclusiveOnly: boolean;
+  /** The "Saved" chip: only pieces the aggregator has hearted. */
+  savedOnly: boolean;
 }
 
 export const NO_FILTERS: InventoryFilters = {
@@ -41,6 +43,7 @@ export const NO_FILTERS: InventoryFilters = {
   price: null,
   verifiedOnly: false,
   exclusiveOnly: false,
+  savedOnly: false,
 };
 
 /** Slugs ("acrylic-on-canvas") and words ("Acrylic on Canvas") should find each other. */
@@ -61,7 +64,7 @@ export function inBand(price: number, { min, max }: PriceBand): boolean {
   return (min === undefined || price >= min) && (max === undefined || price < max);
 }
 
-function matchesFilters(artwork: ReservableArtwork, f: InventoryFilters): boolean {
+function matchesFilters(artwork: ReservableArtwork, f: InventoryFilters, saved: ReadonlySet<string>): boolean {
   if (f.category !== null && artwork.category !== f.category) return false;
   if (f.mediums.length > 0 && !f.mediums.includes(artwork.medium)) return false;
   if (f.ranks.length > 0 && !(artwork.rarityType && f.ranks.includes(artwork.rarityType))) return false;
@@ -69,6 +72,7 @@ function matchesFilters(artwork: ReservableArtwork, f: InventoryFilters): boolea
   if (f.price !== null && !inBand(artwork.offer.offerPrice, INVENTORY_PRICE_BANDS[f.price] ?? {})) return false;
   if (f.verifiedOnly && !artwork.verifiedArtist) return false;
   if (f.exclusiveOnly && !artwork.exclusive) return false;
+  if (f.savedOnly && !saved.has(artwork.id)) return false;
   return true;
 }
 
@@ -78,20 +82,22 @@ export function applyInventory(
   query: string,
   filters: InventoryFilters,
   sort: InventorySort,
+  /** Ids on the aggregator's wishlist, for the Saved chip. */
+  saved: ReadonlySet<string> = new Set(),
 ): ReservableArtwork[] {
-  const kept = items.filter((artwork) => matchesQuery(artwork, query) && matchesFilters(artwork, filters));
+  const kept = items.filter((artwork) => matchesQuery(artwork, query) && matchesFilters(artwork, filters, saved));
   if (sort === "price_asc") return kept.sort((a, b) => a.offer.offerPrice - b.offer.offerPrice);
   if (sort === "price_desc") return kept.sort((a, b) => b.offer.offerPrice - a.offer.offerPrice);
   return kept;
 }
 
-/** The Filters button's badge: everything set in the panel. The category chip shows its own state. */
+/** The Filters button's badge: everything set in the panel. The category and Saved chips show their own state. */
 export function activeFilterCount(f: InventoryFilters): number {
   return f.mediums.length + f.ranks.length + (f.size ? 1 : 0) + (f.price !== null ? 1 : 0) + Number(f.verifiedOnly) + Number(f.exclusiveOnly);
 }
 
 export function isFiltering(query: string, f: InventoryFilters): boolean {
-  return query.trim() !== "" || f.category !== null || activeFilterCount(f) > 0;
+  return query.trim() !== "" || f.category !== null || f.savedOnly || activeFilterCount(f) > 0;
 }
 
 export interface InventoryFacets {
