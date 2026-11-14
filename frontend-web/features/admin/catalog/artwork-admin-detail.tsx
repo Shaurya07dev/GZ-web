@@ -23,7 +23,7 @@ import { PullBackHoldingDialog } from "./pull-back-holding-dialog";
 import { HoldingExtensionPanel } from "./holding-extension-panel";
 import { NfcAdminPanel } from "./nfc-admin-panel";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { formatINR } from "@/lib/utils";
+import { formatINR, humanize } from "@/lib/utils";
 import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import {
   ARTWORK_RARITY_LABEL,
@@ -230,7 +230,7 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
               value={artwork.category}
               className="capitalize"
             />
-            <Detail label="Medium" value={artwork.medium} />
+            <Detail label="Medium" value={humanize(artwork.medium)} />
             <Detail label="Type" value={artwork.artworkType ?? "Not set"} />
             {artwork.category === "painting" && (
               <Detail

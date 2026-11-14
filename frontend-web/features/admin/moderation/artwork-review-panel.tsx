@@ -26,7 +26,7 @@ import {
   useRejectArtworkMutation,
 } from "@/hooks/useAdminModeration";
 import { useAdminAuditStore } from "@/store/useAdminAuditStore";
-import { formatINR } from "@/lib/utils";
+import { formatINR, humanize } from "@/lib/utils";
 import {
   ARTWORK_RARITY_LABEL,
   ARTWORK_RARITY_OPTIONS,
@@ -209,7 +209,7 @@ export function ArtworkReviewPanel({ artwork }: { artwork: Artwork }) {
               value={artwork.category}
               className="capitalize"
             />
-            <Detail label="Medium" value={artwork.medium} />
+            <Detail label="Medium" value={humanize(artwork.medium)} />
             <Detail
               label="Dimensions"
               value={artwork.dimensions ?? "Not set"}

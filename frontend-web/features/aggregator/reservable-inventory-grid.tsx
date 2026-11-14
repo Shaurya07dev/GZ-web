@@ -19,7 +19,7 @@ import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
 import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
 import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
-import { formatINR, cn } from "@/lib/utils";
+import { formatINR, cn, humanize } from "@/lib/utils";
 import type { ReservableArtwork } from "@/services/aggregatorService";
 import { CycleStepper } from "./cycle-stepper";
 import {
@@ -253,7 +253,7 @@ function InventoryArtworkCard({
           )}
         </div>
         <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-          {artwork.medium}
+          {humanize(artwork.medium)}
         </p>
 
         <PriceTag amount={offer.offerPrice} className="mt-4 text-lg font-bold text-foreground" />
@@ -342,7 +342,7 @@ function InventoryArtworkListRow({
         </div>
 
         <p className="mt-1 line-clamp-1 text-xs text-muted-foreground/80">
-          {artwork.medium}
+          {humanize(artwork.medium)}
         </p>
 
         <PriceTag amount={offer.offerPrice} className="mt-2 text-sm font-semibold" />

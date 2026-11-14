@@ -17,7 +17,7 @@ export function PriceTag({ amount, className, showGstNote = false }: PriceTagPro
   const tag = (
     <span
       className={cn(
-        "font-display text-lg font-semibold tabular-nums text-foreground",
+        "font-display text-lg font-semibold lining-nums tabular-nums text-foreground",
         className,
       )}
     >

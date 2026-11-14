@@ -79,6 +79,10 @@ export const ARTWORK_FORMATS = [
 
 export const MAX_ARTWORK_IMAGES = 8;
 
+// Client (14 Nov 2026): at least three photos are recommended, not required. A listing can still be
+// saved with fewer, so this only drives the guidance on the form.
+export const RECOMMENDED_ARTWORK_IMAGES = 3;
+
 // Stock photos pre-filling every image slot so the upload form is always
 // submittable with zero clicks (there's no backend to actually store a
 // photo either way) — picking a real file swaps a slot's placeholder for a

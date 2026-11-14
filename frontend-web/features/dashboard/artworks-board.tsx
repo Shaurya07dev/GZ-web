@@ -15,7 +15,8 @@ import {
   type Artwork,
   type ArtworkStatus,
 } from "@/types/artwork";
-import { formatINR } from "@/lib/utils";
+import { formatINR, humanize } from "@/lib/utils";
+import { HAS_PUBLIC_PAGE } from "@/types/artwork";
 import {
   useArtistDashboardArtworks,
   useMarkSoldElsewhereMutation,
@@ -214,7 +215,7 @@ function ArtworkCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: index * 0.04, ease: "easeOut" }}
-      className="group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-gold/30"
+      className="group relative flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-gold/30"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image
@@ -234,10 +235,19 @@ function ArtworkCard({
 
       <div className="flex flex-1 flex-col p-4">
         <h3 className="truncate font-display text-base font-semibold text-foreground">
-          {artwork.title}
+          {HAS_PUBLIC_PAGE.has(artwork.status) ? (
+            <Link
+              href={`/marketplace/${artwork.id}`}
+              className="after:absolute after:inset-0 after:content-[''] hover:text-gold-bright focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              {artwork.title}
+            </Link>
+          ) : (
+            artwork.title
+          )}
         </h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          {artwork.medium}
+          {humanize(artwork.medium)}
           {artwork.yearCreated ? ` · ${artwork.yearCreated}` : ""}
         </p>
 
@@ -263,7 +273,7 @@ function ArtworkCard({
           {LISTING_TYPE_LABEL[artwork.listingType]}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
+        <div className="relative z-10 mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
           {editState.editable ? (
             <Link
               href={`/dashboard/artworks/${artwork.id}/edit`}

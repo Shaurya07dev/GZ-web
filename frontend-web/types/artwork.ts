@@ -1,3 +1,15 @@
+// Statuses whose piece has a public detail page worth opening from the artist's own lists.
+// The public artwork endpoint serves any status, but a draft or a rejected piece has nothing to show.
+export const HAS_PUBLIC_PAGE: ReadonlySet<string> = new Set([
+  "marketplace",
+  "reserved",
+  "with_aggregator",
+  "sold",
+  "settlement_complete",
+  "delivered",
+  "completed",
+]);
+
 export type ArtworkStatus =
   | "draft"
   | "pending_approval"
