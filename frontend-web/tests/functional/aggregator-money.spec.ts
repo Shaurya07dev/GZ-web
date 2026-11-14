@@ -534,3 +534,52 @@ test('ticking specific sales pays only those through Razorpay', async ({ page, b
   await expect(page.getByText(/Remittance paid/)).toBeVisible();
   expect(startBody).toEqual({ saleIds: ['s1'] });
 });
+
+test('Browse GalleryZone: search, the category chips, the Filters panel and Sort narrow the grid', async ({ page, baseURL }) => {
+  await open(page, baseURL!, {
+    inventory: [
+      listed('a1', monthOne, { title: 'Monsoon Window', artistName: 'Asha Rao', medium: 'oil-on-canvas', category: 'painting' }),
+      listed('a2', monthTwo, { title: 'Lotus Pond', artistName: 'Ravi Menon', medium: 'watercolor', category: 'painting', sizeBand: 'small' }),
+      listed('a3', monthOne, { title: 'Quiet Field', artistName: 'Asha Rao', medium: 'charcoal', category: 'drawing' }),
+    ],
+  });
+  await page.goto('/aggregator/inventory');
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+  const cards = page.locator('a[href^="/marketplace/"]');
+
+  // Search: by artist, then by something that is not there.
+  const search = page.getByRole('searchbox', { name: /Search artworks/ });
+  await search.fill('asha');
+  await expect(page.getByText('2 of 3 artworks')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lotus Pond' })).toHaveCount(0);
+  await search.fill('nothing like this');
+  await expect(page.getByText('No artworks match')).toBeVisible();
+  await page.getByRole('button', { name: 'Clear search and filters' }).click();
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+
+  // Category chips come from what is on the shelf.
+  await page.getByRole('button', { name: 'Drawing', exact: true }).click();
+  await expect(page.getByText('1 of 3 artworks')).toBeVisible();
+  await expect(cards.first()).toHaveAttribute('href', '/marketplace/a3');
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+
+  // The Filters panel: pick a medium, see the count on the button, reset.
+  await page.getByRole('button', { name: /Filters/ }).click();
+  const panel = page.getByRole('dialog');
+  await panel.getByText('Watercolor').click();
+  await panel.getByRole('button', { name: 'Show 1 artwork' }).click();
+  await expect(page.getByText('1 of 3 artworks')).toBeVisible();
+  await expect(cards.first()).toHaveAttribute('href', '/marketplace/a2');
+  await expect(page.getByRole('button', { name: /Filters/ })).toContainText('1');
+  await page.getByRole('button', { name: /Filters/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^Show 3 artworks$/ }).click();
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+
+  // Sort: month 2's price is lower, so it leads low to high.
+  await page.getByRole('combobox', { name: 'Sort artworks' }).click();
+  await page.getByRole('option', { name: 'Price: Low to High' }).click();
+  await expect(cards.first()).toHaveAttribute('href', '/marketplace/a2');
+});
+

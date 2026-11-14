@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { PackageSearch, Heart, LayoutGrid, List } from "lucide-react";
+import { PackageSearch, Heart, LayoutGrid, List, SearchX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,13 @@ import { PriceTag } from "@/components/shared/price-tag";
 import { VerifiedBadge } from "@/components/shared/verified-badge";
 import { useReservableInventory } from "@/hooks/useAggregatorInventory";
 import { useAggregatorCollection } from "@/hooks/useAggregatorCollection";
+import {
+  NO_FILTERS,
+  applyInventory,
+  isFiltering,
+  type InventoryFilters,
+  type InventorySort,
+} from "@/lib/inventory-filters";
 import { AGGREGATOR_CYCLE_MONTHS } from "@/lib/pricing";
 import { formatINR, cn, humanize } from "@/lib/utils";
 import type { ReservableArtwork } from "@/services/aggregatorService";
@@ -49,12 +56,25 @@ function monthLine(offer: ReservableArtwork["offer"]): string {
     : month;
 }
 
-export function ReservableInventoryGrid() {
+export function ReservableInventoryGrid({
+  query = "",
+  filters = NO_FILTERS,
+  onClear,
+}: {
+  /** What the search box and the Filters panel above have set. */
+  query?: string;
+  filters?: InventoryFilters;
+  /** Clears both, for the empty state. */
+  onClear?: () => void;
+}) {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sort, setSort] = useState<InventorySort>("newest");
   const [blockedOpen, setBlockedOpen] = useState(false);
   const { blockedReason } = useReserveRequirements();
   const onBlocked = blockedReason === undefined ? undefined : () => setBlockedOpen(true);
   const { data, isPending, isError } = useReservableInventory();
+  const shown = useMemo(() => applyInventory(data ?? [], query, filters, sort), [data, query, filters, sort]);
+  const filtering = isFiltering(query, filters);
   // What this aggregator holds or has sold is what "more like these" is
   // measured against. A returned piece wasn't theirs to show, so it doesn't count.
   const { data: holdings } = useAggregatorCollection();
@@ -119,10 +139,10 @@ export function ReservableInventoryGrid() {
       {/* Artworks count and Sort control */}
       <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-sm font-medium text-foreground">
-          {data.length} artworks available
+          {filtering ? `${shown.length} of ${data.length} artworks` : `${data.length} artworks available`}
         </p>
         <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-          <Select defaultValue="newest">
+          <Select value={sort} onValueChange={(value) => value && setSort(value as InventorySort)}>
             <SelectTrigger
               aria-label="Sort artworks"
               className="h-9 flex-1 gap-2 border-border bg-muted/20 px-3 text-[13px] font-medium shadow-none hover:bg-muted focus:ring-0 sm:w-auto sm:min-w-[170px] sm:flex-none"
@@ -173,6 +193,21 @@ export function ReservableInventoryGrid() {
         </div>
       </div>
 
+      {shown.length === 0 && (
+        <EmptyState
+          icon={SearchX}
+          title="No artworks match"
+          description="Try a shorter search, or remove some filters."
+          action={
+            onClear ? (
+              <Button variant="outline" onClick={onClear}>
+                Clear search and filters
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+
       <div
         className={
           viewMode === "grid"
@@ -180,7 +215,7 @@ export function ReservableInventoryGrid() {
             : "flex flex-col gap-4"
         }
       >
-        {data.map((artwork) =>
+        {shown.map((artwork) =>
           viewMode === "grid" ? (
             <InventoryArtworkCard
               key={artwork.id}

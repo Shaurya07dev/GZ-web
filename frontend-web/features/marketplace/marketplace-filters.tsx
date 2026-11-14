@@ -302,7 +302,7 @@ export function MarketplaceFilters({
   );
 }
 
-function FilterGroup({
+export function FilterGroup({
   value,
   label,
   children,
@@ -321,7 +321,7 @@ function FilterGroup({
   );
 }
 
-function OptionRow({
+export function OptionRow({
   label,
   count,
   checked,
