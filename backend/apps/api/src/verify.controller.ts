@@ -5,12 +5,19 @@
 // name snapshots. Never a price, never an email, never an address.
 // packages/contracts/artwork-dto.check.ts's price-leak regex is applied to
 // this DTO too (verify-dto.check.ts).
+//
+// The certificate itself (number, issue date, the artist's signature) is NOT
+// public (client, 14 Nov 2026): a stranger who taps a tag gets the Display
+// card's facts, and only the piece's current owner, its artist or an admin,
+// calling with their own sign-in token, gets the certificate fields.
 
-import { Controller, Get, Header, Inject, NotFoundException, Param } from "@nestjs/common";
-import { getCurrentOwner, getLatestMouAcceptance, getPublicArtwork, listOwnershipEvents, loadPassportExtras, OwnershipNotFoundError, type Db, type OwnershipEvent } from "@galleryzone/db";
+import { Controller, Get, Inject, NotFoundException, Param, Req, Res } from "@nestjs/common";
+import type { Request, Response } from "express";
+import { Collections, getCurrentOwner, getLatestMouAcceptance, getPublicArtwork, listOwnershipEvents, loadPassportExtras, OwnershipNotFoundError, verifyIdToken, type Db, type OwnershipEvent, type UserDoc } from "@galleryzone/db";
 import type { VerifyPassportDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
 import { DB } from "./db.module.ts";
+import { withoutCertificate } from "./verify-view.ts";
 import { CacheKeys, ReadCache, TTL } from "./read-cache.ts";
 
 const iso = (t: FirebaseFirestore.Timestamp | null | undefined) => t?.toDate().toISOString() ?? null;
@@ -98,10 +105,42 @@ export class VerifyController {
     private readonly cache: ReadCache,
   ) {}
 
+  /**
+   * Public, but the guard skips tokens on public routes, so the certificate gate reads the optional
+   * Bearer token here. No token, a bad token or someone else's token is not an error: they get the
+   * passport without the certificate.
+   */
+  private async mayReadCertificate(req: Request, passport: VerifyPassportDto): Promise<boolean> {
+    const header = req.header("Authorization");
+    const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : null;
+    if (!token) return false;
+    const verified = await verifyIdToken(token).catch(() => null);
+    if (!verified) return false;
+    if (verified.uid === passport.artistId) return true;
+    const userSnap = await this.db.collection(Collections.users).doc(verified.uid).get();
+    if (!userSnap.exists) return false;
+    const user = userSnap.data() as UserDoc;
+    if (user.status === "suspended" || user.status === "blocked") return false;
+    if (user.role === "admin" || (user.roleGrants ?? []).includes("platform_admin")) return true;
+    const owner = await getCurrentOwner(this.db, passport.artworkId).catch(() => null);
+    return owner?.userId === verified.uid;
+  }
+
   @Public()
   @Get(":artworkId")
-  @Header("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=60")
-  passport(@Param("artworkId") artworkId: string): Promise<VerifyPassportDto> {
-    return passportFor(this.db, this.cache, artworkId);
+  async passport(
+    @Param("artworkId") artworkId: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<VerifyPassportDto> {
+    const full = await passportFor(this.db, this.cache, artworkId);
+    // The answer now depends on who asks, so shared caches must key on the token and never keep a certificate.
+    res.vary("Authorization");
+    if (req.header("Authorization")) {
+      res.setHeader("Cache-Control", "private, no-store");
+      return (await this.mayReadCertificate(req, full)) ? full : withoutCertificate(full);
+    }
+    res.setHeader("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=60");
+    return withoutCertificate(full);
   }
 }

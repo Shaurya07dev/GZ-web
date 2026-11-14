@@ -1,6 +1,6 @@
 // The public artwork passport — what GET /v1/verify/:artworkId (the QR /
 // NFC target) returns to ANYONE. plan.md §12: title, artist, product id,
-// ownership status, certificate. Never a price of any kind, never an
+// ownership status. The certificate only goes to the owner, the artist and admins. Never a price of any kind, never an
 // email, phone or address, never a user id of a collector.
 // verify-dto.check.ts enforces the forbidden-field list on this interface.
 
@@ -14,13 +14,12 @@ export interface VerifyPassportDto {
    * The artist's drawn signature, as captured once when they signed the MOU,
    * so the Certificate of Authenticity carries it rather than a blank line.
    *
-   * This is deliberately on the PUBLIC passport (owner's decision, 10 Oct
-   * 2026): the certificate downloads from the public /verify page too, and a
-   * certificate with an empty signature area is not a certificate. The
-   * consequence, stated plainly because the rest of this DTO is built to
-   * avoid exactly this: it is a handwritten signature served unauthenticated,
-   * one request per artwork. Null for artists who signed before the pad
-   * existed.
+   * The certificate fields (this, coaCertificateNumber, coaIssuedAt) are filled
+   * only for the piece's current owner, its artist and admins, who call with
+   * their own sign-in token. Everyone else (a stranger who taps the tag) gets
+   * null, so a handwritten signature is no longer served unauthenticated
+   * (client, 14 Nov 2026; this replaces the owner's 10 Oct 2026 decision to
+   * serve it publicly). Null for artists who signed before the pad existed.
    */
   artistSignatureDataUrl: string | null;
   category: string;
