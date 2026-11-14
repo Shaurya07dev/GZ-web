@@ -262,3 +262,35 @@ test('admin: hiding a product sends only active:false, and removing asks first',
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect.poll(() => deleted).toBe(true);
 });
+
+test('"Must buy" is a segment at the very top in the client\'s order, and "Newest" lists the latest first', async ({ page }) => {
+  await openShelf(page, [
+    product(1, { title: 'Brustro Tabletop Easel', createdAt: '2026-10-01T00:00:00.000Z' }),
+    product(2, { title: 'Bubble Wrap Roll', category: 'Must buy', createdAt: '2026-10-02T00:00:00.000Z' }),
+    product(3, { title: 'NFC Tag Pack', category: 'Must buy', createdAt: '2026-10-03T00:00:00.000Z' }),
+    product(4, { title: 'Newest Brush Set', category: 'Brushes', createdAt: '2026-11-01T00:00:00.000Z' }),
+  ]);
+
+  // NFC comes before bubble wrap whatever order they were added in, and the rest follows under its own heading.
+  const segment = page.getByRole('region', { name: 'Must buy' });
+  await expect(segment).toBeVisible();
+  await expect(segment.getByRole('heading', { level: 3 })).toHaveText(['NFC Tag Pack', 'Bubble Wrap Roll']);
+  await expect(page.getByRole('heading', { name: 'All supplies' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bubble Wrap Roll' })).toHaveCount(1);
+
+  // Searching or choosing a pill drops the segment: the matching products are just listed.
+  await page.getByRole('searchbox', { name: 'Search art supplies' }).fill('bubble');
+  await expect(page.getByRole('region', { name: 'Must buy' })).toHaveCount(0);
+  await page.getByRole('searchbox', { name: 'Search art supplies' }).fill('');
+
+  await page.getByRole('button', { name: 'Newest', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Must buy' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 3 }).first()).toHaveText('Newest Brush Set');
+});
+
+test('with no "Must buy" products there is no empty segment', async ({ page }) => {
+  await openShelf(page);
+  await expect(page.getByText('4 products')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Must buy' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'All supplies' })).toHaveCount(0);
+});

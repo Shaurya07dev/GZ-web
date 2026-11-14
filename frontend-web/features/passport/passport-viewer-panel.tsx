@@ -194,6 +194,8 @@ function PieceRow({ entry, topic }: { entry: MyPassport; topic: PassportTopicSlu
         : topic === "legacy"
           ? [
               { label: "On the record since", value: formatDate(passport.listedAt) },
+              { label: "Certificate", value: passport.coaCertificateNumber ?? "Issued when approved" },
+              { label: "Certificate issued", value: formatDate(passport.coaIssuedAt) },
               { label: "Hand-overs recorded", value: String(handovers) },
             ]
           : [
