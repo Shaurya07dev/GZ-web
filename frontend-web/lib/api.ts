@@ -93,3 +93,33 @@ export const http = {
   put: <T>(url: string, body?: unknown, config?: AxiosRequestConfig) => api.put<T>(url, body, config).then((r) => r.data),
   delete: <T>(url: string, config?: AxiosRequestConfig) => api.delete<T>(url, config).then((r) => r.data),
 };
+
+/**
+ * Fetch an authenticated binary endpoint (currently used for the admin
+ * Excel-export routes at /v1/admin/export/*.xlsx) and trigger a browser
+ * download. Uses the main `api` instance so the auth header interceptor
+ * fires — a direct window.open('/v1/admin/export/orders.xlsx') would 401.
+ *
+ * `filenameFallback` is used only when the server doesn't include a
+ * Content-Disposition header for some reason; the backend always does.
+ */
+export async function downloadAuthenticatedFile(
+  path: string,
+  filenameFallback: string,
+): Promise<void> {
+  const response = await api.get<Blob>(path, { responseType: "blob" });
+  const disposition = response.headers?.["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? filenameFallback;
+
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Release the blob URL on the next tick so the browser has time to
+  // start the download first.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}

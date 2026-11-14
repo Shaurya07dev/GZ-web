@@ -22,6 +22,25 @@ import {
   useGenerateReportMutation,
 } from "@/hooks/useAdminSystem";
 import type { GeneratedReport, ReportType } from "@/types/admin";
+import { downloadAuthenticatedFile } from "@/lib/api";
+
+/**
+ * The five frontend report types map onto the two backend Excel endpoints
+ * we actually ship (`/v1/admin/export/orders.xlsx` and
+ * `/v1/admin/export/settlements.xlsx`). The data is the same for the
+ * narrower cuts — artist payouts and aggregator commission are just
+ * settlements with different columns in focus; GST summary is orders
+ * with the GST column surfaced. Admin filters inside Excel. Pre-launch
+ * audit flagged the disabled "Demo (no file)" button; this mapping is
+ * what turns the Download into a working file download.
+ */
+const EXPORT_ENDPOINT: Record<ReportType, { path: string; filename: string }> = {
+  sales: { path: "/v1/admin/export/orders.xlsx", filename: "orders.xlsx" },
+  gst: { path: "/v1/admin/export/orders.xlsx", filename: "orders.xlsx" },
+  settlements: { path: "/v1/admin/export/settlements.xlsx", filename: "settlements.xlsx" },
+  artist_payouts: { path: "/v1/admin/export/settlements.xlsx", filename: "settlements.xlsx" },
+  aggregator_commission: { path: "/v1/admin/export/settlements.xlsx", filename: "settlements.xlsx" },
+};
 
 const REPORT_TYPES: Array<{ value: ReportType; label: string }> = [
   { value: "sales", label: "Sales" },
@@ -55,6 +74,23 @@ export function ReportGenerator() {
   const generateMutation = useGenerateReportMutation();
   const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  async function onDownload(report: GeneratedReport) {
+    const endpoint = EXPORT_ENDPOINT[report.type];
+    setDownloadingId(report.id);
+    try {
+      await downloadAuthenticatedFile(endpoint.path, endpoint.filename);
+      toast.success("Download started");
+    } catch (error) {
+      toast.error("Download failed", {
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
   const { control, handleSubmit } = useForm<ReportInput>({
     resolver: zodResolver(reportSchema),
@@ -202,17 +238,19 @@ export function ReportGenerator() {
                     })}
                   </p>
                 </div>
-                {/* Honest about being inert: there is no file behind this in a
-                    mock build, so it is labelled and disabled rather than
-                    dressed up as a working link that silently does nothing. */}
+                {/* Wired to /v1/admin/export/*.xlsx — the backend already
+                    streams xlsx files; the EXPORT_ENDPOINT map above routes
+                    each report type to its matching endpoint. Pre-launch
+                    audit 14 Nov 2026 flagged the earlier "Demo (no file)"
+                    stub; this is the honest working version. */}
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled
-                  title="Downloads are not available in this demo build"
+                  onClick={() => onDownload(report)}
+                  disabled={downloadingId === report.id}
                 >
                   <Download className="size-3.5" />
-                  Demo (no file)
+                  {downloadingId === report.id ? "Downloading…" : "Download"}
                 </Button>
               </li>
             ))}
