@@ -1,4 +1,5 @@
 export * from "./errors.ts";
+export * from "./field-encryption.ts";
 export * from "./collections.ts";
 export * from "./client.ts";
 export * from "./auth.ts";

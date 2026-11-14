@@ -17,7 +17,6 @@
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   HttpCode,
   Inject,
@@ -134,7 +133,15 @@ export class OtpController {
     }
     const record = await userRecordByEmail(body.email);
     if (body.purpose === "signup" && record?.emailVerified) {
-      throw new ConflictException(problem(409, "An account with this email already exists", "email_taken"));
+      // Silent accept — same shape as success — so the response does not
+      // reveal whether an account exists for this email. Pre-launch audit
+      // 14 Nov 2026: at 20 sends/hour this was a usable email-enumeration
+      // oracle (an attacker could iterate a list of emails and see which
+      // ones returned 409 vs 202). The buyer can discover the existing
+      // account on the sign-in screen when their OTP never arrives; the
+      // existing account owner receives no spurious email because we skip
+      // the issue+send below.
+      return { accepted: true };
     }
     if (body.purpose === "password_reset" && !record) {
       // Silent accept — same shape as success.

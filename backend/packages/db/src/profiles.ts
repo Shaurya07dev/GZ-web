@@ -22,6 +22,7 @@ import {
   type UserDoc,
 } from "./collections.ts";
 import { DbError } from "./errors.ts";
+import { encryptField } from "./field-encryption.ts";
 
 export class ProfileUpdateError extends DbError {}
 
@@ -203,7 +204,13 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
     if (acct && (/^(\d)\1+$/.test(acct) || "01234567890123456789".includes(acct) || "98765432109876543210".includes(acct))) {
       throw new ProfileUpdateError("That doesn't look like a real account number");
     }
-    financialUpdate = { bankAccountEncrypted: acct };
+    // AES-256-GCM at rest — client-flagged pre-launch audit 14 Nov 2026:
+    // the field was named "Encrypted" but the raw digits were being
+    // written. Encrypt here so a Firestore export / misconfigured backup /
+    // admin-SDK log dump doesn't expose cleartext bank numbers. The masked
+    // tail is still stored unencrypted on the profile doc (that's what the
+    // UI shows — "•••• 4521" is safe public-facing info).
+    financialUpdate = { bankAccountEncrypted: encryptField(acct) };
     set("bankAccountMasked", acct ? `•••• ${acct.slice(-4)}` : null);
   }
 

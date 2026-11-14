@@ -194,9 +194,58 @@ function paymentsModeOf(value: string | undefined, nodeEnv: AppEnv["nodeEnv"]): 
   );
 }
 
+/**
+ * Launch-day safety assertions that look at the already-loaded env and
+ * throw if something would cause a visibly broken production — pre-launch
+ * audit 14 Nov 2026 caught a few env traps a Railway misconfig would have
+ * silently accepted. Called from loadEnv() right before the return, so a
+ * misconfigured prod boot refuses rather than ending up with:
+ *
+ *   * tax invoices rendered without a GSTIN (not a valid tax invoice under
+ *     GST law — HSN+GSTIN are both mandatory per section 31 of the CGST
+ *     Act); earlier code fell back to a placeholder address + null GSTIN
+ *     so a dev PDF would still render, which is desirable for dev and
+ *     dangerous for prod.
+ *   * the FINANCIAL_ENC_KEY missing, which would throw deep inside a
+ *     profile-save handler the first time an artist saved their bank
+ *     account; a buyer-facing timeout is worse than a boot-time refusal.
+ *
+ * Only runs when NODE_ENV=production so local dev keeps working without
+ * every Railway secret being present on your laptop.
+ */
+function assertProductionReady(env: AppEnv, source: NodeJS.ProcessEnv): void {
+  if (env.nodeEnv !== "production") return;
+  const missing: string[] = [];
+
+  if (!env.invoiceSeller.gstin) missing.push("INVOICE_SELLER_GSTIN (every tax invoice must carry it)");
+  if (!env.invoiceSeller.cin) missing.push("INVOICE_SELLER_CIN (Companies Act requires it on every invoice)");
+
+  const encKey = source.FINANCIAL_ENC_KEY?.trim();
+  if (!encKey) missing.push("FINANCIAL_ENC_KEY (bank account numbers are encrypted at rest; required for writes)");
+  else if (Buffer.from(encKey, "hex").length !== 32) {
+    missing.push("FINANCIAL_ENC_KEY must be 32 bytes hex-encoded (64 hex chars); generate with `openssl rand -hex 32`");
+  }
+
+  // Simulated-payment mode lets the ORDER's own customer mark it paid for
+  // free. In prod this is never deliberate; refuse the boot rather than
+  // let one Railway typo = free-orders day.
+  if (env.paymentsMode === "simulated") {
+    missing.push("PAYMENTS_MODE must be \"razorpay\" in production (simulated lets customers mark their own orders paid)");
+  }
+
+  if (missing.length) {
+    throw new Error(
+      `Production boot refused — the following env vars are missing or malformed:\n  * ${missing.join("\n  * ")}\n` +
+        `This is a safety gate added 14 Nov 2026 pre-launch — a missing GSTIN would silently issue invalid tax invoices, ` +
+        `and a missing FINANCIAL_ENC_KEY would blow up the first bank-account save with a stack trace. ` +
+        `Fix the Railway variables and redeploy.`,
+    );
+  }
+}
+
 /** Reads process.env once at boot. Call this exactly once per process. */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
-  return {
+  const env: AppEnv = {
     nodeEnv: nodeEnvOf(source.NODE_ENV),
     port: Number(source.PORT ?? 8080),
     redisUrl: optional(source.REDIS_URL),
@@ -264,4 +313,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
           }
         : null,
   };
+  assertProductionReady(env, source);
+  return env;
 }
