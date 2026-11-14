@@ -35,7 +35,6 @@
 import { initializeApp, cert, applicationDefault, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { parseArgs } from "node:util";
-import { markOrderPaid, type PaymentCapture } from "../packages/db/src/index.ts";
 
 interface RazorpayPayment {
   id: string;
@@ -50,11 +49,16 @@ function parse() {
   const { values } = parseArgs({
     options: {
       id: { type: "string" },
+      "provider-order-id": { type: "string" },
       "i-understand": { type: "boolean", default: false },
     },
   });
   if (!values.id) throw new Error("--id <orderId> is required");
-  return { id: values.id, confirmed: Boolean(values["i-understand"]) };
+  return {
+    id: values.id,
+    providerOrderIdOverride: values["provider-order-id"] ?? null,
+    confirmed: Boolean(values["i-understand"]),
+  };
 }
 
 function bootstrapFirebase() {
@@ -111,9 +115,17 @@ async function main() {
   const paySnap = await db.collection("payments").where("orderId", "==", args.id).limit(1).get();
   if (paySnap.empty) throw new Error("No payment doc for this order");
   const payment = paySnap.docs[0]!.data();
-  const providerOrderId = payment.providerOrderId as string | undefined;
+  // Override lets the operator paste the actual providerOrderId from
+  // Razorpay dashboard when our DB has a stale/wrong one. Happens when
+  // /payment/session was hit multiple times — each call creates a new
+  // Razorpay order and overwrites our attached id; the buyer may have
+  // paid against an earlier one. Razorpay's notes.gzOrderId still points
+  // back to our order id, so routing on their side was fine; our local
+  // record just lost which Razorpay order held the captured payment.
+  const providerOrderId =
+    args.providerOrderIdOverride ?? (payment.providerOrderId as string | undefined);
   if (!providerOrderId) throw new Error("Payment doc has no providerOrderId — the buyer never opened Razorpay for this order");
-  console.log(`Razorpay providerOrderId: ${providerOrderId}`);
+  console.log(`Razorpay providerOrderId: ${providerOrderId}${args.providerOrderIdOverride ? " (overridden via --provider-order-id)" : ""}`);
 
   // 3. Razorpay confirmation
   const payments = await fetchRazorpayPayments(providerOrderId);
@@ -136,7 +148,12 @@ async function main() {
     return;
   }
 
-  const capture: PaymentCapture = {
+  // Dynamic import AFTER Firebase is initialised; importing packages/db at
+  // the top of the file triggers a Firestore client instantiation before
+  // initializeApp finishes, giving "Client is not yet ready to issue
+  // requests". Loading lazily sidesteps that.
+  const { markOrderPaid } = await import("../packages/db/src/index.ts");
+  const capture = {
     method: captured.method ? `razorpay_${captured.method}` : "razorpay",
     providerPaymentId: captured.id,
     rawWebhookPayload: null,
