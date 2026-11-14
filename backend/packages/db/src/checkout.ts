@@ -484,11 +484,32 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   if (!orderSnap.exists) throw new CheckoutError(`No order ${orderId}`);
   const order = orderSnap.data() as OrderDoc;
 
-  if (order.status !== "pending") {
-    if (order.status === "cancelled") throw new CheckoutError(`Order ${orderId} was cancelled`);
+  if (order.status === "paid" || order.status === "confirmed" || order.status === "packed" || order.status === "transit" || order.status === "delivered") {
+    // Already settled — idempotent re-entry (webhook arrived after verify).
     return confirmationFor(db, orderId, order, null);
   }
+  // Both pending AND cancelled are valid entry points. Cancelled means the
+  // client-driven /abandon ran faster than Razorpay's capture-webhook and
+  // marked the row cancelled while Razorpay had actually already captured
+  // the money (client incident 14 Nov 2026 pm). When the real webhook
+  // arrives, un-cancel and settle — the state machine's cancelled → paid
+  // transition only exists for this recovery path.
   orderStateMachine.assertTransition(order.status, "paid");
+  if (order.status === "cancelled") {
+    // Clear the abandon marker so the record doesn't keep claiming it was
+    // cancelled. The subsequent paid status event is appended below, so
+    // the history reads: ... → cancelled (abandoned_at_payment) → paid.
+    await orderRef.update({
+      refundReason: null,
+    });
+    console.warn(
+      JSON.stringify({
+        event: "orders.paid.revived_from_cancelled",
+        orderId,
+        providerPaymentId: capture.providerPaymentId,
+      }),
+    );
+  }
 
   const pricingSnap = await db.collection(artworkPricingCol(order.artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new CheckoutError(`No artwork ${order.artworkId}`);

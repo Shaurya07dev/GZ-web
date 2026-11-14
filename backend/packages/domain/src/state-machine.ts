@@ -89,7 +89,15 @@ export const orderStateMachine = createStateMachine<OrderStatus>("Order", {
   packed: ["transit"],
   transit: ["delivered"],
   delivered: [],
-  cancelled: [],
+  // "cancelled → paid" exists as a recovery path only. Client-flagged
+  // 14 Nov 2026: a real payment was captured on Razorpay's side but our
+  // client-driven abandon fired faster than the webhook, so we ended up
+  // with a cancelled order holding captured money. When the webhook
+  // then arrives for that order, markOrderPaid must be able to un-cancel
+  // the row and settle properly — the alternative is unreconciled money.
+  // The transition is intentionally only valid in the paid direction; a
+  // cancelled order cannot slide back to pending or any other mid-state.
+  cancelled: ["paid"],
 });
 
 // --- Aggregator holding ------------------------------------------------------
