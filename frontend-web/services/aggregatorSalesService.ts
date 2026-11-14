@@ -140,7 +140,7 @@ async function sales(): Promise<AggregatorSale[]> {
 
 // What each ledger entry on the wallet is called. The API sends the reason.
 const WALLET_ENTRY: Record<string, { label: string; type: WalletTransaction["type"] }> = {
-  wallet_topup: { label: "Added to wallet", type: "adjustment" },
+  wallet_topup: { label: "Payment received", type: "adjustment" },
   reservation_hold: { label: "Held for reservation", type: "adjustment" },
   advance_returned_to_wallet: { label: "Advance returned", type: "refund" },
   hold_returned_to_wallet: { label: "Held amount returned after sale", type: "refund" },
@@ -210,7 +210,7 @@ export const aggregatorSalesService = {
     const titleOf = new Map(holdings.map((h) => [h.id, h.artwork.title]));
     return transactions
       .map((t): WalletTransaction => {
-        const kind = WALLET_ENTRY[t.reason] ?? { label: "Wallet adjustment", type: "adjustment" as const };
+        const kind = WALLET_ENTRY[t.reason] ?? { label: "Adjustment", type: "adjustment" as const };
         const title = t.holdingId ? titleOf.get(t.holdingId) : undefined;
         return { id: t.id, type: kind.type, label: title ? `${kind.label} · ${title}` : kind.label, amount: paiseToRupees(t.amountPaise), date: t.at, status: "completed" };
       })
@@ -234,7 +234,7 @@ export const aggregatorSalesService = {
       const confirmed = await http.post<{ status: string }>(`${base}/verify`, outcome.success ?? undefined);
       if (confirmed.status !== "paid") {
         if (outcome.dismissed) throw new PaymentDismissedError();
-        throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was added to your wallet.");
+        throw new Error(outcome.failureMessage ?? "The payment did not go through. Nothing was charged.");
       }
     } else {
       await http.post(`${base}/simulate`);
@@ -243,7 +243,7 @@ export const aggregatorSalesService = {
 
   // Aggregators are agents, not principals: no withdrawal route by design (plan §3.4).
   requestWithdrawal: async (_amount: number): Promise<WalletTransaction> => {
-    throw new Error("Withdrawals from the wallet aren't open yet. Contact GalleryZone to have unused money returned to your bank account.");
+    throw new Error("Refunds to your bank account aren't self-serve yet. Contact GalleryZone to have unused money returned.");
   },
 
   listRemittancesDue: async (): Promise<AggregatorSale[]> => {

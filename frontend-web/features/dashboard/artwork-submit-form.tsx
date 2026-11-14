@@ -54,6 +54,7 @@ import {
   DIMENSION_UNITS,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
+  RECOMMENDED_ARTWORK_IMAGES,
   ARTWORK_FORMATS,
 
 } from "./artwork-submit-data";
@@ -579,7 +580,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 You marked artwork as sold on another platform and GalleryZone
-                approved the fee. It is charged to your wallet when you submit
+                approved the fee. It is collected when you submit
                 this piece for review. Saving a draft doesn&rsquo;t trigger it.
               </p>
             </div>
@@ -622,6 +623,11 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             Up to {MAX_ARTWORK_IMAGES} photos, cover image first. JPEG, PNG or
             WebP, 15 MB each. Photos upload when you save.
           </p>
+          <p className="mt-2 text-xs text-foreground/80">
+            We recommend at least {RECOMMENDED_ARTWORK_IMAGES} photos: the full
+            piece, a close-up of the detail, and the signature or back.
+            Listings with more photos earn more trust from buyers.
+          </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
             {images.map((img) => (
@@ -662,8 +668,17 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </label>
             )}
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p
+            className={cn(
+              "mt-3 text-xs",
+              images.length < RECOMMENDED_ARTWORK_IMAGES
+                ? "text-gold-bright"
+                : "text-muted-foreground",
+            )}
+          >
             {images.length} / {MAX_ARTWORK_IMAGES} uploaded
+            {images.length < RECOMMENDED_ARTWORK_IMAGES &&
+              ` · add ${RECOMMENDED_ARTWORK_IMAGES - images.length} more (recommended)`}
           </p>
         </section>
 

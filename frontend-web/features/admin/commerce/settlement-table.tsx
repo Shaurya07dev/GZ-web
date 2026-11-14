@@ -414,7 +414,7 @@ function SettlementDetailDrawer({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Retry this settlement?"
-        description="Reprocessing is safe to repeat. The platform guards against double-crediting a wallet."
+        description="Reprocessing is safe to repeat. The platform guards against paying an artist twice."
         confirmLabel="Retry"
         isPending={retryMutation.isPending}
         onConfirm={handleRetry}

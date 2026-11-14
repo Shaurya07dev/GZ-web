@@ -382,7 +382,7 @@ export function externalSaleFeeDecided(i: { title: string; amountPaise: number; 
       heading: i.waived ? "We've waived this fee" : "Your external-sale fee is confirmed",
       paragraphs: [i.waived ? rich`The ${strong(inr(i.amountPaise))} fee on ${q(i.title)} has been waived. Nothing is owed.` : rich`The fee for selling ${q(i.title)} away from GalleryZone is ${strong(inr(i.amountPaise))}. It comes off your next settlement.`],
       ...(i.note ? { note: { label: "Note from the reviewer", text: i.note } } : {}),
-      cta: { label: "View my wallet", url: `${c.site}/dashboard/wallet` },
+      cta: { label: "View my earnings", url: `${c.site}/dashboard/wallet` },
     },
   };
 }
@@ -414,7 +414,7 @@ export function orderPaidArtist(i: { title: string; artistNetPaise: number }, c:
     layout: {
       audience: "artist",
       heading: "Congratulations, your artwork sold",
-      paragraphs: [rich`${q(i.title)} has been purchased. Your payout of ${strong(inr(i.artistNetPaise))} will be released to your wallet once the piece is delivered.`, "Please pack the artwork to the shipping standard in your agreement and wait for pickup instructions."],
+      paragraphs: [rich`${q(i.title)} has been purchased. Your payout of ${strong(inr(i.artistNetPaise))} will be released to you once the piece is delivered.`, "Please pack the artwork to the shipping standard in your agreement and wait for pickup instructions."],
       details: [
         ["Artwork", i.title],
         ["Your payout", inr(i.artistNetPaise)],
@@ -472,7 +472,7 @@ export function orderStatusArtist(i: OrderStatusInput, c: Ctx): Content | null {
     case "transit":
       return { subject: `${q(short(i.title))} is on its way, your sale`, category: "transactional", layout: { audience, heading: "Your artwork is in transit", paragraphs: ["The piece you sold is in transit to its new owner."], details: [piece], cta } };
     case "delivered":
-      return { subject: `${q(short(i.title))} was delivered, your sale`, category: "transactional", layout: { audience, heading: "Delivered", paragraphs: ["The piece has been delivered. Your settlement is released to your wallet after the return window closes."], details: [piece], cta } };
+      return { subject: `${q(short(i.title))} was delivered, your sale`, category: "transactional", layout: { audience, heading: "Delivered", paragraphs: ["The piece has been delivered. Your settlement is released to you after the return window closes."], details: [piece], cta } };
     case "cancelled":
       return { subject: `Order cancelled: ${q(short(i.title))}, your sale`, category: "transactional", layout: { audience, heading: "Your order was cancelled", paragraphs: ["This order was cancelled, so the piece returns to the marketplace."], details: [piece], cta } };
     default:
@@ -610,7 +610,7 @@ export function transferDeclined(i: { artworkId: string; title: string; toName: 
 export function complianceDecided(i: { kind: "gst" | "kyc"; approved: boolean; reason?: string | undefined; role: string }, c: Ctx): Content {
   const aggregator = i.role === "aggregator";
   const label = i.kind === "gst" ? "GSTIN" : "KYC";
-  const approvedBody = i.kind === "gst" ? (aggregator ? "Your GSTIN is verified. You can now reserve artwork." : "Your GSTIN is verified. Invoices now carry it.") : "Your KYC is verified. Withdrawals from your wallet are now open.";
+  const approvedBody = i.kind === "gst" ? (aggregator ? "Your GSTIN is verified. You can now reserve artwork." : "Your GSTIN is verified. Invoices now carry it.") : "Your KYC is verified. You can now receive payouts.";
   const rejectedBody =
     i.kind === "gst"
       ? `We couldn't verify your GSTIN. Correct the details in your profile and resubmit${aggregator ? ". You can't reserve artwork until it is approved." : ". Selling and settlements carry on in the meantime."}`
@@ -740,12 +740,12 @@ export function holdingPeriodEnded(i: { title: string; advancePaise: number }, c
     layout: {
       audience: "aggregator",
       heading: "Your display period has ended",
-      paragraphs: [`Your period for ${q(i.title)} has ended and it is now available to another aggregator.`, "The advance has been released to your wallet. The delivery deposit is not refunded on an unsold piece."],
+      paragraphs: [`Your period for ${q(i.title)} has ended and it is now available to another aggregator.`, "The advance has been credited back to your account. The delivery deposit is not refunded on an unsold piece."],
       details: [
         ["Artwork", i.title],
         ["Advance released", inr(i.advancePaise)],
       ],
-      cta: { label: "See my wallet", url: `${c.site}/aggregator/wallet` },
+      cta: { label: "See my earnings", url: `${c.site}/aggregator/wallet` },
     },
   };
 }
@@ -758,12 +758,12 @@ export function holdingReturnedAggregator(i: { title: string; advancePaise: numb
     layout: {
       audience: "aggregator",
       heading: "Your return is recorded",
-      paragraphs: [`${q(i.title)} is back on the marketplace and open to other aggregators. The advance has gone back to your wallet; the delivery deposit is not refunded on an unsold piece.`],
+      paragraphs: [`${q(i.title)} is back on the marketplace and open to other aggregators. The advance has been credited back to your account; the delivery deposit is not refunded on an unsold piece.`],
       details: [
         ["Artwork", i.title],
         ["Advance returned", inr(i.advancePaise)],
       ],
-      cta: { label: "See my wallet", url: `${c.site}/aggregator/wallet` },
+      cta: { label: "See my earnings", url: `${c.site}/aggregator/wallet` },
     },
   };
 }
@@ -830,14 +830,14 @@ export function walletTopupReceived(i: { amountPaise: number; paidAt: Date; meth
   ];
   if (i.method) rows.push(["Paid by", methodLabel(i.method)]);
   return {
-    subject: `Wallet top-up received: ${inr(i.amountPaise)}`,
+    subject: `Payment received: ${inr(i.amountPaise)}`,
     category: "transactional",
     layout: {
       audience: "aggregator",
-      heading: "Money added to your wallet",
-      paragraphs: [`We've received your payment and added ${inr(i.amountPaise)} to your wallet.`],
+      heading: "Payment received",
+      paragraphs: [`We've received your payment of ${inr(i.amountPaise)}.`],
       details: rows,
-      cta: { label: "See my wallet", url: `${c.site}/aggregator/wallet` },
+      cta: { label: "See my earnings", url: `${c.site}/aggregator/wallet` },
     },
   };
 }
@@ -947,7 +947,7 @@ export function withdrawalRequested(i: { amountPaise: number; role: string }, c:
         ["Amount", inr(i.amountPaise)],
         ["Goes to", "The bank account on your profile"],
       ],
-      cta: { label: "View my wallet", url: `${c.site}${walletPath(i.role)}` },
+      cta: { label: "View my earnings", url: `${c.site}${walletPath(i.role)}` },
     },
   };
 }
@@ -972,9 +972,9 @@ export function withdrawalDecided(i: { amountPaise: number; approved: boolean; r
     layout: {
       audience: audienceOf(i.role),
       heading: i.approved ? "Your payout has been sent" : "Your withdrawal wasn't approved",
-      paragraphs: [i.approved ? "The money has been transferred to the bank account on your profile. Allow 1 to 2 working days for it to appear." : "The amount is back in your wallet. Reply to this email if you'd like to know why."],
+      paragraphs: [i.approved ? "The money has been transferred to the bank account on your profile. Allow 1 to 2 working days for it to appear." : "The amount is back in your earnings. Reply to this email if you'd like to know why."],
       details: [["Amount", inr(i.amountPaise)]],
-      cta: { label: "View my wallet", url: `${c.site}${walletPath(i.role)}` },
+      cta: { label: "View my earnings", url: `${c.site}${walletPath(i.role)}` },
     },
   };
 }
@@ -1088,7 +1088,7 @@ export const catalogue: CatalogueEntry[] = [
   { id: "holding-period-ended", who: "Aggregator", when: "A placement window runs out", make: (c) => holdingPeriodEnded({ title: T, advancePaise: 370_000 }, c) },
   { id: "holding-returned-aggregator", who: "Aggregator", when: "They return an unsold piece", make: (c) => holdingReturnedAggregator({ title: T, advancePaise: 370_000 }, c) },
   { id: "sale-recorded-aggregator", who: "Aggregator", when: "They record a sale", make: (c) => saleRecordedAggregator({ title: T, soldPricePaise: 2_100_000, buyerName: "Rohan Kapoor", cash: true, remitBy: D }, c) },
-  { id: "wallet-topup", who: "Aggregator", when: "A wallet top-up is paid", make: (c) => walletTopupReceived({ amountPaise: 5_000_000, paidAt: D, method: "razorpay_upi" }, c) },
+  { id: "wallet-topup", who: "Aggregator", when: "A payment is received", make: (c) => walletTopupReceived({ amountPaise: 5_000_000, paidAt: D, method: "razorpay_upi" }, c) },
   { id: "remittance-received", who: "Aggregator", when: "A cash remittance is paid", make: (c) => remittanceReceived({ amountPaise: 2_100_000, paidAt: D, saleCount: 1, method: "razorpay_netbanking" }, c) },
   { id: "reservation-refunded", who: "Aggregator", when: "A paid reservation can't be completed and is refunded", make: (c) => reservationRefunded({ title: T, amountPaise: 370_000 }, c) },
   { id: "holding-report-resolved", who: "Aggregator", when: "An admin resolves their problem report", make: (c) => holdingReportResolved({ title: T, resolutionNote: "We've asked the artist to send a replacement frame." }, c) },

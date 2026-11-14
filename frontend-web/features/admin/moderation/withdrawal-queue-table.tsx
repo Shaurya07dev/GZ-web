@@ -260,7 +260,7 @@ function WithdrawalReviewDialog({
       });
       setRejectOpen(false);
       toast.success("Withdrawal rejected", {
-        description: "The funds stay in the wallet.",
+        description: "The request is closed and no money moves.",
       });
       onClose();
     } catch {
@@ -372,7 +372,7 @@ function WithdrawalReviewDialog({
         open={rejectOpen}
         onOpenChange={setRejectOpen}
         title="Reject this withdrawal?"
-        description="The requester sees this reason. Funds stay in their wallet."
+        description="The requester sees this reason. No money moves."
         presets={REJECT_PRESETS}
         isPending={rejectMutation.isPending}
         onSubmit={handleReject}
