@@ -3,7 +3,7 @@ import { useMounted } from "@/hooks/useMounted";
 import { useSessionRole } from "@/hooks/useSessionRole";
 import { verifyService } from "@/services/verifyService";
 
-// ['verify', artworkId, viewer] — the passport. Separate key from
+// ['verify', artworkId, viewer] is the passport. Separate key from
 // ['artwork', id] because it changes on every ownership event, not just
 // when the listing does. The answer depends on who asks: only the piece's
 // owner, its artist or an admin get the certificate fields, everyone else gets
