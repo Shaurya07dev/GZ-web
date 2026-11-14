@@ -430,12 +430,29 @@ export async function abandonPendingOrder(
  * checkout doesn't see a growing wall of "pending" clutter in their orders
  * list. Shared implementation with explicit abandonPendingOrder so there is
  * one place where the pending → cancelled transition is written.
+ *
+ * CRITICAL (14 Nov 2026 pm incident): the sweep used to abandon any pending
+ * order >staleMinutes old without checking whether Razorpay had actually
+ * captured the money. That is how buyer yatashivakumar16@gmail.com's order
+ * fZSH5H5jc16HmhJOx9p0 ended up cancelled 41 minutes after their ₹260.21
+ * UPI payment was successfully captured by Razorpay — the webhook hadn't
+ * propagated yet, we saw a stale "pending" row and abandoned it.
+ *
+ * The `hasCapturedPayment` callback is passed in by the controller that
+ * knows how to talk to Razorpay. When set, we ask it per-order before
+ * abandoning; when it returns true we SKIP that order and let the webhook
+ * catch up. Omitted means dev/test mode (no live Razorpay to talk to), in
+ * which case the old behaviour applies.
  */
 export async function sweepStalePendingOrders(
   db: Firestore,
   customerId: string,
-  staleMinutes = 30,
+  options: {
+    staleMinutes?: number;
+    hasCapturedPayment?: (providerOrderId: string) => Promise<boolean>;
+  } = {},
 ): Promise<number> {
+  const staleMinutes = options.staleMinutes ?? 30;
   const cutoff = Date.now() - staleMinutes * 60 * 1000;
   const snap = await db
     .collection(Collections.orders)
@@ -447,6 +464,47 @@ export async function sweepStalePendingOrders(
     const order = doc.data() as OrderDoc;
     const createdMs = order.createdAt?.toMillis?.() ?? 0;
     if (createdMs > cutoff) continue;
+
+    // Before abandoning, double-check with Razorpay that the money wasn't
+    // actually captured. If the capture is real, the webhook will settle
+    // the order within seconds — do NOT race it to cancellation.
+    if (options.hasCapturedPayment) {
+      const paymentDocSnap = await db
+        .collection(Collections.payments)
+        .where("orderId", "==", doc.id)
+        .limit(1)
+        .get();
+      const providerOrderId = paymentDocSnap.docs[0]?.get("providerOrderId") as
+        | string
+        | undefined;
+      if (providerOrderId) {
+        try {
+          const captured = await options.hasCapturedPayment(providerOrderId);
+          if (captured) {
+            console.warn(
+              JSON.stringify({
+                event: "orders.sweep.refused_payment_captured",
+                orderId: doc.id,
+                providerOrderId,
+              }),
+            );
+            continue;
+          }
+        } catch (error) {
+          // Razorpay unreachable — same conservative stance as the manual
+          // /abandon endpoint: do NOT cancel. Try again next sweep.
+          console.error(
+            JSON.stringify({
+              event: "orders.sweep.razorpay_check_failed",
+              orderId: doc.id,
+              error: String(error),
+            }),
+          );
+          continue;
+        }
+      }
+    }
+
     const { abandoned } = await abandonPendingOrder(db, doc.id, customerId);
     if (abandoned) count += 1;
   }

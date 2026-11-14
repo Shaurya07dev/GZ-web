@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
-import { abandonPendingOrder, listCustomerOrders, getOrder, providerOrderIdForOrder, repricePendingOrder, type Db } from "@galleryzone/db";
+import { abandonPendingOrder, listCustomerOrders, getOrder, providerOrderIdForOrder, repricePendingOrder, sweepStalePendingOrders, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
@@ -15,7 +15,18 @@ export class OrderListingsController {
 
   @Roles("customer")
   @Get("orders")
-  listMine(@Req() req: AuthenticatedRequest) {
+  async listMine(@Req() req: AuthenticatedRequest) {
+    // Lazy cleanup: sweep stale pending orders into abandoned+back-to-cart
+    // on every list fetch. Pre-check each order with Razorpay before
+    // abandoning — client incident 14 Nov 2026 pm had a stale pending row
+    // whose money was already captured on Razorpay's side; the old sweep
+    // raced the webhook and cancelled the order while the money sat.
+    await sweepStalePendingOrders(this.db, req.authUser.uid, {
+      hasCapturedPayment: async (providerOrderId: string) => {
+        const payments = await this.razorpay.fetchPayments(providerOrderId);
+        return payments.some((p) => p.status === "captured");
+      },
+    }).catch(() => undefined);
     return listCustomerOrders(this.db, req.authUser.uid);
   }
 
