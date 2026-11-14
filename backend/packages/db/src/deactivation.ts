@@ -7,6 +7,7 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import { deactivationStateMachine, penaltyStateMachine, type DeactivationStatus, type PenaltyStatus } from "@galleryzone/domain";
 import { Collections, type AuditLogDoc, type ExternalSalePenaltyDoc } from "./collections.ts";
 import { DbError } from "./errors.ts";
+import { adminNames, loadReviews } from "./reviews.ts";
 
 export class DeactivationError extends DbError {}
 
@@ -69,11 +70,14 @@ export interface ExternalSaleFeeView {
   decidedAt: string | null;
   decisionNote: string | null;
   settledAt: string | null;
+  /** The admin who approved or waived it. Null while pending. */
+  decidedByName: string | null;
 }
 
 /** Every external-sale fee, pending first, with artwork + artist names joined. */
 export async function listExternalSaleFees(db: Firestore): Promise<ExternalSaleFeeView[]> {
   const snap = await db.collection(Collections.externalSalePenalties).get();
+  const reviews = await loadReviews(db, ["external_sale_fee.approved", "external_sale_fee.waived"]);
   const rows = await Promise.all(
     snap.docs.map(async (d) => {
       const p = d.data() as ExternalSalePenaltyDoc;
@@ -90,6 +94,7 @@ export async function listExternalSaleFees(db: Firestore): Promise<ExternalSaleF
         decidedAt: p.decidedAt?.toDate().toISOString() ?? null,
         decisionNote: p.decisionNote,
         settledAt: p.settledAt?.toDate().toISOString() ?? null,
+        decidedByName: p.status === "pending_review" ? null : (reviews.get(d.id)?.adminName ?? null),
       };
     }),
   );
@@ -127,6 +132,10 @@ export interface DeactivationRequestView {
   requestedAt: string;
   decidedAt: string | null;
   decisionNote: string | null;
+  /** The admin who decided. Null while pending. */
+  decidedByName: string | null;
+  /** Internal: the deciding admin's uid, turned into decidedByName before the view leaves this file. */
+  decidedBy: string | null;
 }
 
 /** Folds a user's deactivation audit rows into one request record (the latest cycle). */
@@ -147,7 +156,15 @@ function foldDeactivation(userId: string, userName: string, rows: (AuditLogDoc &
     requestedAt: request.createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
     decidedAt: decision?.createdAt?.toDate().toISOString() ?? null,
     decisionNote: note.note ?? null,
+    decidedByName: null,
+    decidedBy: decision?.adminId ?? null,
   };
+}
+
+/** Puts the deciding admin's name on each view and drops the uid. */
+async function withDeciders(db: Firestore, views: DeactivationRequestView[]): Promise<DeactivationRequestView[]> {
+  const names = await adminNames(db, views.map((v) => v.decidedBy ?? ""));
+  return views.map((v) => ({ ...v, decidedBy: null, decidedByName: v.decidedBy ? (names.get(v.decidedBy) ?? "An admin") : null }));
 }
 
 export async function getDeactivationRequest(db: Firestore, userId: string): Promise<DeactivationRequestView | null> {
@@ -156,7 +173,8 @@ export async function getDeactivationRequest(db: Firestore, userId: string): Pro
     db.collection(Collections.users).doc(userId).get(),
   ]);
   const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as AuditLogDoc) }));
-  return foldDeactivation(userId, (userSnap.data() as { name?: string } | undefined)?.name ?? userId, rows);
+  const view = foldDeactivation(userId, (userSnap.data() as { name?: string } | undefined)?.name ?? userId, rows);
+  return view ? (await withDeciders(db, [view]))[0]! : null;
 }
 
 /** Every user with a deactivation cycle on record, pending first. */
@@ -171,5 +189,5 @@ export async function listDeactivationRequests(db: Firestore): Promise<Deactivat
     if (v) out.push(v);
   });
   const rank = (s: string) => (s === "pending" ? 0 : 1);
-  return out.sort((a, b) => rank(a.status) - rank(b.status) || b.requestedAt.localeCompare(a.requestedAt));
+  return (await withDeciders(db, out)).sort((a, b) => rank(a.status) - rank(b.status) || b.requestedAt.localeCompare(a.requestedAt));
 }

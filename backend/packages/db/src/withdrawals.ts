@@ -108,7 +108,7 @@ export async function listWithdrawalRequests(db: Firestore, userId: string): Pro
     .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
 }
 
-export async function approveWithdrawal(db: Firestore, withdrawalId: string, accountType: WithdrawableAccountType): Promise<{ transactionId: string }> {
+export async function approveWithdrawal(db: Firestore, withdrawalId: string, accountType: WithdrawableAccountType, adminId?: string): Promise<{ transactionId: string }> {
   const ref = db.collection(Collections.withdrawalRequests).doc(withdrawalId);
   const snap = await ref.get();
   if (!snap.exists) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
@@ -129,15 +129,15 @@ export async function approveWithdrawal(db: Firestore, withdrawalId: string, acc
   const postings = withdrawalPayoutPostings({ accountType, ownerId: request.userId, amountPaise: request.amountPaise });
   const { transactionId } = await postLedgerEntries(db, { postings, idempotencyPrefix: `withdrawal:${withdrawalId}` });
 
-  await ref.update({ status: "completed", processedAt: FieldValue.serverTimestamp() });
+  await ref.update({ status: "completed", processedAt: FieldValue.serverTimestamp(), processedBy: adminId ?? null });
   return { transactionId };
 }
 
-export async function rejectWithdrawal(db: Firestore, withdrawalId: string): Promise<void> {
+export async function rejectWithdrawal(db: Firestore, withdrawalId: string, adminId?: string): Promise<void> {
   const ref = db.collection(Collections.withdrawalRequests).doc(withdrawalId);
   const snap = await ref.get();
   if (!snap.exists) throw new WithdrawalError(`No withdrawal request ${withdrawalId}`);
   const request = snap.data() as WithdrawalRequestDoc;
   withdrawalStateMachine.assertTransition(request.status, "rejected");
-  await ref.update({ status: "rejected", processedAt: FieldValue.serverTimestamp() });
+  await ref.update({ status: "rejected", processedAt: FieldValue.serverTimestamp(), processedBy: adminId ?? null });
 }

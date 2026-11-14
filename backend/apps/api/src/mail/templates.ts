@@ -56,8 +56,8 @@ function collectionPath(role: string): string {
 function profilePath(role: string): string {
   return role === "aggregator" ? "/aggregator/profile" : "/dashboard/profile";
 }
-function walletPath(role: string): string {
-  return role === "aggregator" ? "/aggregator/wallet" : "/dashboard/wallet";
+function earningsPath(role: string): string {
+  return role === "aggregator" ? "/aggregator/earnings" : "/dashboard/earnings";
 }
 
 // ── Account and security ────────────────────────────────────────────────
@@ -382,7 +382,7 @@ export function externalSaleFeeDecided(i: { title: string; amountPaise: number; 
       heading: i.waived ? "We've waived this fee" : "Your external-sale fee is confirmed",
       paragraphs: [i.waived ? rich`The ${strong(inr(i.amountPaise))} fee on ${q(i.title)} has been waived. Nothing is owed.` : rich`The fee for selling ${q(i.title)} away from GalleryZone is ${strong(inr(i.amountPaise))}. It comes off your next settlement.`],
       ...(i.note ? { note: { label: "Note from the reviewer", text: i.note } } : {}),
-      cta: { label: "View my earnings", url: `${c.site}/dashboard/wallet` },
+      cta: { label: "View my earnings", url: `${c.site}/dashboard/earnings` },
     },
   };
 }
@@ -745,7 +745,7 @@ export function holdingPeriodEnded(i: { title: string; advancePaise: number }, c
         ["Artwork", i.title],
         ["Advance released", inr(i.advancePaise)],
       ],
-      cta: { label: "See my earnings", url: `${c.site}/aggregator/wallet` },
+      cta: { label: "See my earnings", url: `${c.site}/aggregator/earnings` },
     },
   };
 }
@@ -763,7 +763,7 @@ export function holdingReturnedAggregator(i: { title: string; advancePaise: numb
         ["Artwork", i.title],
         ["Advance returned", inr(i.advancePaise)],
       ],
-      cta: { label: "See my earnings", url: `${c.site}/aggregator/wallet` },
+      cta: { label: "See my earnings", url: `${c.site}/aggregator/earnings` },
     },
   };
 }
@@ -837,7 +837,7 @@ export function walletTopupReceived(i: { amountPaise: number; paidAt: Date; meth
       heading: "Payment received",
       paragraphs: [`We've received your payment of ${inr(i.amountPaise)}.`],
       details: rows,
-      cta: { label: "See my earnings", url: `${c.site}/aggregator/wallet` },
+      cta: { label: "See my earnings", url: `${c.site}/aggregator/earnings` },
     },
   };
 }
@@ -947,7 +947,7 @@ export function withdrawalRequested(i: { amountPaise: number; role: string }, c:
         ["Amount", inr(i.amountPaise)],
         ["Goes to", "The bank account on your profile"],
       ],
-      cta: { label: "View my earnings", url: `${c.site}${walletPath(i.role)}` },
+      cta: { label: "View my earnings", url: `${c.site}${earningsPath(i.role)}` },
     },
   };
 }
@@ -974,7 +974,7 @@ export function withdrawalDecided(i: { amountPaise: number; approved: boolean; r
       heading: i.approved ? "Your payout has been sent" : "Your withdrawal wasn't approved",
       paragraphs: [i.approved ? "The money has been transferred to the bank account on your profile. Allow 1 to 2 working days for it to appear." : "The amount is back in your earnings. Reply to this email if you'd like to know why."],
       details: [["Amount", inr(i.amountPaise)]],
-      cta: { label: "View my earnings", url: `${c.site}${walletPath(i.role)}` },
+      cta: { label: "View my earnings", url: `${c.site}${earningsPath(i.role)}` },
     },
   };
 }

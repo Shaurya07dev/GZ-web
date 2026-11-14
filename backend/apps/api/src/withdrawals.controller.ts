@@ -64,13 +64,13 @@ export class AdminWithdrawalsController {
 
   @Roles("admin")
   @Post(":id/approve")
-  async approve(@Param("id") id: string) {
+  async approve(@Param("id") id: string, @Req() req: AuthenticatedRequest) {
     // Only artists can request withdrawals today (aggregators are agents,
     // customers' wallets are store credit), so the account type is fixed.
     const request = await this.withdrawalOf(id);
     let result: { transactionId: string };
     try {
-      result = await approveWithdrawal(this.db, id, "artist_payable");
+      result = await approveWithdrawal(this.db, id, "artist_payable", req.authUser.uid);
     } catch (error) {
       rethrow(error);
     }
@@ -80,10 +80,10 @@ export class AdminWithdrawalsController {
 
   @Roles("admin")
   @Post(":id/reject")
-  async reject(@Param("id") id: string) {
+  async reject(@Param("id") id: string, @Req() req: AuthenticatedRequest) {
     const request = await this.withdrawalOf(id);
     try {
-      await rejectWithdrawal(this.db, id);
+      await rejectWithdrawal(this.db, id, req.authUser.uid);
     } catch (error) {
       rethrow(error);
     }
