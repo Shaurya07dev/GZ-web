@@ -57,6 +57,14 @@ export function isApiError(error: unknown, status?: number): error is ApiError {
   return error instanceof ApiError && (status === undefined || error.status === status);
 }
 
+// Audit N3 (14 Nov 2026): in a production build, refuse to start with the
+// localhost fallback — a misconfigured Vercel deploy would silently point the
+// web app at nothing. Harmless default in dev; failure in prod is immediate.
+if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_API_URL) {
+  throw new Error(
+    "NEXT_PUBLIC_API_URL is not set on this production build. Set it in Vercel environment variables to the Railway API URL.",
+  );
+}
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
 export const api = axios.create({ baseURL: API_URL, timeout: 20_000 });

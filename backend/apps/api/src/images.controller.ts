@@ -154,6 +154,14 @@ export class ImagesController {
       await this.storage.delete(body.key).catch(() => undefined);
       throw new BadRequestException({ type: "about:blank", title: "Uploaded object is not an accepted image", status: 400, code: "image_rejected" });
     }
+    // TODO (post-launch, audit M5): the key is still writable via the
+    // presigned URL after confirm (presign TTL is 10 min). An attacker
+    // compromising an artist account could race a second PUT to show
+    // different content under the same key. Practical harm is low
+    // (same-artist, same-artwork) but if we want hard protection, copy
+    // the object to a confirmed/<uuid> key on confirm success and point
+    // the DB at that key — the old presigned URL then overwrites a
+    // key the artwork no longer references.
     try {
       const image = await confirmImage(this.db, {
         artworkId,

@@ -15,16 +15,14 @@ import {
 } from "@/types/artist-rating";
 
 // The artist's own rating, on their dashboard. Buyers leave a rating after a
-// delivered order; this is the read side of that — there is no backend yet, so
-// the reviews are seeded rather than collected (see lib/mock-data/
-// artist-rating.ts). Admin sees the same numbers for every artist in the
-// Artists table.
+// delivered order; the backend returns 0 for averages until rows exist (see
+// services/artistRatingService.ts), so a brand-new artist sees a "No reviews
+// yet" state instead of a fake seeded score. Admin sees the same numbers in
+// the Artists table.
 //
 // This card shows the 0-10 composite score (see scoreArtist() in
 // types/artist-rating.ts, PLACEHOLDER weights pending client sign-off) —
-// customer ratings, profile completion and artwork count combined. Latest
-// Reviews was removed from this card per the client's note; the review text
-// itself is untouched in mock data, just not surfaced here.
+// customer ratings, profile completion and artwork count combined.
 
 export function RatingCard() {
   const artistId = useCurrentUser().data?.uid ?? "";

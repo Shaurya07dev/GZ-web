@@ -78,9 +78,13 @@ export function ReportGenerator() {
 
   async function onDownload(report: GeneratedReport) {
     const endpoint = EXPORT_ENDPOINT[report.type];
+    // Pass the date range the admin chose on the generator form so the file
+    // contains only rows from that window. Backend parses YYYY-MM-DD and
+    // falls back to full-dataset if either side is malformed.
+    const qs = new URLSearchParams({ from: report.from, to: report.to }).toString();
     setDownloadingId(report.id);
     try {
-      await downloadAuthenticatedFile(endpoint.path, endpoint.filename);
+      await downloadAuthenticatedFile(`${endpoint.path}?${qs}`, endpoint.filename);
       toast.success("Download started");
     } catch (error) {
       toast.error("Download failed", {

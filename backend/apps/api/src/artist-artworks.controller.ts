@@ -284,7 +284,12 @@ export class ArtistArtworksController {
 
   /** Before the app writes or locks a chip: is that allowed for this chip? Changes nothing. Saves overwriting another piece's unlocked chip, or locking the wrong one. */
   @Roles("artist", "aggregator")
-  @Throttle({ sustained: { limit: 20, ttl: 60_000 } })
+  // Pre-launch audit M2 (14 Nov 2026) — lowered from 20/min. NTAG213 UIDs
+  // are not uniformly random; an authenticated artist could at the higher
+  // rate probe tag-already-bound collisions across many artworks. A real
+  // artist locking real pieces hits this endpoint 1-2 times per piece,
+  // nowhere near 5/min.
+  @Throttle({ sustained: { limit: 5, ttl: 60_000 } })
   @HttpCode(200)
   @Post("artist/artworks/:id/nfc/check")
   nfcCheck(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(checkNfcInputSchema)) body: CheckNfcInput): Promise<NfcCheckDto> {
@@ -293,7 +298,10 @@ export class ArtistArtworksController {
 
   /** The app wrote the URL to a chip and read this UID off it. Same chip again is a no-op; a different one replaces it until the lock. */
   @Roles("artist", "aggregator")
-  @Throttle({ sustained: { limit: 10, ttl: 60_000 } }) // §9.2: the one-chip-one-artwork check is a query
+  // Linking is the actual bind — same argument as nfcCheck above but even
+  // more aggressive because a successful link is irreversible without an
+  // admin unlink. Audit M2 (14 Nov 2026).
+  @Throttle({ sustained: { limit: 3, ttl: 60_000 } })
   @HttpCode(200)
   @Post("artist/artworks/:id/nfc/link")
   async nfcLink(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(tagUidInputSchema)) body: TagUidInput): Promise<NfcStateDto> {

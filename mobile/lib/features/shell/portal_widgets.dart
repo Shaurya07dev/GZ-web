@@ -246,42 +246,8 @@ class SupportFaqPanel extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        // Placeholder for the walkthrough videos: everything beyond the
-        // aggregator-terms explainer is hosted on YouTube and linked from
-        // here — drop the links in when the channel is ready.
-        PortalCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                LucideIcons.circlePlay,
-                size: 16,
-                color: theme.colorScheme.tertiary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Video walkthroughs',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Short videos explaining listing, aggregator display and '
-                      'settlement will be linked here. Coming soon.',
-                      style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        // "Video walkthroughs · Coming soon" card removed pre-launch
+        // (audit N1, 14 Nov 2026). Re-add when the YouTube channel is live.
       ],
     );
   }
