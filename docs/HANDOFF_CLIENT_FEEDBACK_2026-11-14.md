@@ -28,8 +28,10 @@ Then either open the pull request from the compare link above, or push the branc
   website. The new website without the new backend would leave the certificate public on the tag page and give
   the Broadcasts page nothing to call.
 - No new environment variables, no database migration, no Firestore index was needed (see 4.3).
-- PR #40 (`fix/error-messages-and-cart-ux`) is open upstream and also edits `frontend-web/services/adminService.ts`
-  (a comment). Expect, at most, a trivial conflict there.
+- The branch merges cleanly into `main` (checked with `git merge-tree` against `f38ec99`).
+- Related, not part of this branch: PR #40 (`fix/error-messages-and-cart-ux`) is merged, but two later commits on that
+  branch are not in `main`: `eda3c82` (the artist password change form was a client-only mock) and `a8f0e21` (the
+  public contact form sent nothing, and the mobile aggregator settings toggles were not saved). Worth landing separately.
 - Line endings: the repo is CRLF on Windows (`core.autocrlf=true`). Git warnings about LF/CRLF are harmless.
 
 ## 2. What the branch contains
