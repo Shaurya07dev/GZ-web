@@ -14,6 +14,19 @@ import { SupplyQuickView } from "./supply-quick-view";
 
 const GRID = "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
+// The things every artist needs to send a piece out, pinned to the top (client, 14 Nov 2026). An admin puts a
+// product here by giving it the category "Must buy"; they then show in the client's order, whatever the
+// products' titles say. A product whose title matches none of these still sits in the group, after the rest.
+const MUST_BUY = "Must buy";
+const MUST_BUY_ORDER = ["nfc", "hanger", "nylon thread", "sticky nail", "rolling paper", "bubble", "cardboard", "corrugated"];
+
+function mustBuyRank(product: AffiliateProduct): number {
+  if (product.category !== MUST_BUY) return Number.POSITIVE_INFINITY;
+  const title = product.title.toLowerCase();
+  const at = MUST_BUY_ORDER.findIndex((word) => title.includes(word));
+  return at === -1 ? MUST_BUY_ORDER.length : at;
+}
+
 function matches(product: AffiliateProduct, query: string): boolean {
   const haystack = `${product.title} ${product.brand ?? ""} ${product.category}`.toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every((word) => haystack.includes(word));
@@ -25,16 +38,22 @@ export function SuppliesShelf() {
   const [category, setCategory] = useState<string | null>(null);
   const [quickView, setQuickView] = useState<AffiliateProduct | null>(null);
 
-  // Largest category first, so the pills lead with what the shelf holds most of.
+  // "Must buy" first, then largest category first, so the pills lead with what the shelf holds most of.
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
     for (const p of products ?? []) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
-    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return [...counts].sort(
+      (a, b) => Number(b[0] === MUST_BUY) - Number(a[0] === MUST_BUY) || b[1] - a[1] || a[0].localeCompare(b[0]),
+    );
   }, [products]);
 
-  const visible = (products ?? []).filter(
-    (p) => (!category || p.category === category) && (!query.trim() || matches(p, query)),
-  );
+  // Array.sort is stable, so everything that is not a must-buy keeps the shelf's own order after them.
+  const visible = (products ?? [])
+    .filter((p) => (!category || p.category === category) && (!query.trim() || matches(p, query)))
+    .sort((a, b) => {
+      const [ra, rb] = [mustBuyRank(a), mustBuyRank(b)];
+      return ra === rb ? 0 : ra < rb ? -1 : 1;
+    });
 
   return (
     <>
