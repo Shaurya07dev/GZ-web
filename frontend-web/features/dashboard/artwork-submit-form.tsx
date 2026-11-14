@@ -51,6 +51,7 @@ import {
   ARTWORK_CATEGORIES,
   ARTWORK_MEDIUMS,
   ARTWORK_TYPES,
+  ARTWORK_TYPE_GROUPS,
   DIMENSION_UNITS,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
@@ -795,41 +796,45 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 </PopoverTrigger>
                 <PopoverContent className="w-[min(360px,calc(100vw-2rem))] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search state or tradition…" />
+                    <CommandInput placeholder="Search art form, state or country…" />
                     <CommandList>
                       <CommandEmpty>No matching type.</CommandEmpty>
-                      <CommandGroup>
-                        {ARTWORK_TYPES.map((t) => (
-                          <CommandItem
-                            key={t.value}
-                            value={t.label}
-                            onSelect={() => {
-                              updateField(
-                                "artworkType",
-                                form.artworkType === t.value ? "" : t.value,
-                              );
-                              setOpenStyleCombo(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4 shrink-0",
-                                form.artworkType === t.value
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            <span className="truncate">{t.label}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                      {ARTWORK_TYPE_GROUPS.map(({ group, heading }) => (
+                        <CommandGroup key={group} heading={heading}>
+                          {ARTWORK_TYPES.filter((t) => t.group === group).map((t) => (
+                            <CommandItem
+                              key={t.value}
+                              value={t.label}
+                              keywords={t.keywords ? [t.keywords] : undefined}
+                              onSelect={() => {
+                                updateField(
+                                  "artworkType",
+                                  form.artworkType === t.value ? "" : t.value,
+                                );
+                                setOpenStyleCombo(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 size-4 shrink-0",
+                                  form.artworkType === t.value
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span className="truncate">{t.label}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      ))}
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
               <p className="text-xs text-muted-foreground">
-                One of 28 regional Indian art traditions &mdash; or pick
-                &ldquo;Other&rdquo; and name your own.
+                One of {ARTWORK_TYPES.length - 1} art forms, Indian and from
+                around the world &mdash; or pick &ldquo;Other&rdquo; and name
+                your own.
               </p>
               {form.artworkType === "other" && (
                 <Input
