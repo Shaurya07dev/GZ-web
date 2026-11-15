@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RejectReasonDialog } from "@/features/admin/reject-reason-dialog";
 import {
   useAdminAdvanceOrderStatusMutation,
+  useAdminFinishRevivedOrderMutation,
   useAdminRefundOrderMutation,
 } from "@/hooks/useAdminCommerce";
 import type { OrderStatus } from "@/types/order";
@@ -52,6 +53,12 @@ function advanceLabel(next: OrderStatus): string {
 const canRefund = (s: OrderStatus) =>
   s === "paid" || s === "confirmed" || s === "packed";
 
+// "Finish revived" only makes sense on paid orders — it runs settlement,
+// Shiprocket booking, and buyer+artist notifications that normally fire
+// automatically from markOrderPaid, but may have been skipped when an
+// order was recovered via the direct-write revive script.
+const canFinishRevived = (s: OrderStatus) => s === "paid";
+
 /**
  * The "what admin can do about this order" strip, dropped into the admin
  * order detail page. One block per available action. Shows nothing when
@@ -72,9 +79,10 @@ export function AdminOrderActions({
   const [refundOpen, setRefundOpen] = useState(false);
   const refund = useAdminRefundOrderMutation(orderId);
   const advance = useAdminAdvanceOrderStatusMutation(orderId);
+  const finishRevived = useAdminFinishRevivedOrderMutation(orderId);
   const next = nextStatus(status);
 
-  if (!next && !canRefund(status)) return null;
+  if (!next && !canRefund(status) && !canFinishRevived(status)) return null;
 
   return (
     <>
@@ -112,7 +120,46 @@ export function AdminOrderActions({
               Refund order
             </Button>
           )}
+          {canFinishRevived(status) && (
+            <Button
+              variant="outline"
+              onClick={() =>
+                finishRevived.mutate(undefined, {
+                  onSuccess: (data) => {
+                    const parts = [
+                      `settlement: ${data.settlement ?? "?"}`,
+                      `shiprocket: ${data.shiprocket ?? "?"}`,
+                      `notifications: ${data.notifications ?? "?"}`,
+                    ];
+                    toast.success("Finish-revived completed", {
+                      description: parts.join("\n"),
+                      duration: 10_000,
+                    });
+                  },
+                  onError: (error) =>
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Finish-revived failed",
+                    ),
+                })
+              }
+              disabled={finishRevived.isPending}
+              title="Fires settlement + Shiprocket booking + buyer/artist notifications. Safe to run multiple times — each sub-step is idempotent."
+            >
+              {finishRevived.isPending && <Loader2 className="size-4 animate-spin" />}
+              Finish revived
+            </Button>
+          )}
         </div>
+        {canFinishRevived(status) && (
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Use &quot;Finish revived&quot; only on orders that were manually recovered
+            via the backend revive script — it re-fires settlement, Shiprocket
+            booking, and buyer + artist notifications. Normal paid orders have
+            these already done and &quot;Finish revived&quot; will no-op on them.
+          </p>
+        )}
       </section>
 
       <RejectReasonDialog

@@ -408,6 +408,16 @@ export const adminService = {
     await http.patch(`/v1/admin/orders/${encodeURIComponent(orderId)}/status`, { to });
   },
 
+  /**
+   * Runs the paid-side effects (settlement, Shiprocket booking, buyer +
+   * artist emails + in-app notifications) on an order that is already in
+   * "paid" state. Used after scripts/revive-order-direct.ts wrote the
+   * paid state to Firestore directly and deliberately skipped these
+   * downstream effects. Added 16 Nov 2026 for the ₹260.21 revival.
+   */
+  finishRevivedOrder: async (orderId: string): Promise<Record<string, string>> =>
+    http.post(`/v1/admin/orders/${encodeURIComponent(orderId)}/finish-revived`),
+
   getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),
 
   getSettlementByOrder: async (orderId: string): Promise<Settlement | undefined> =>

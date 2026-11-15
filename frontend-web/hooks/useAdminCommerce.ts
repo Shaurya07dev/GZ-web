@@ -84,6 +84,23 @@ export function useAdminRefundOrderMutation(orderId: string) {
 }
 
 /**
+ * Re-run paid-side effects on an order that was manually revived via
+ * scripts/revive-order-direct.ts. Settlement, Shiprocket booking, and
+ * buyer+artist notifications. Added 16 Nov 2026 after the ₹260.21
+ * recovery left those three jobs undone.
+ */
+export function useAdminFinishRevivedOrderMutation(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => adminService.finishRevivedOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+  });
+}
+
+/**
  * Walk an order along the fulfilment ladder. Admin-only, backend runs the
  * state-machine assertion and emails the buyer about the new stage.
  */
