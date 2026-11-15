@@ -269,7 +269,17 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`ShipRocket order create failed (${res.status})`);
+  if (!res.ok) {
+    // Pre-launch audit: 422 responses carry the specific field that was
+    // rejected. Surface Shiprocket's message so operators don't have to
+    // tail Railway logs to debug missing fields / unknown pickup location
+    // nicknames / invalid pincodes. Capped at 500 chars so a malicious
+    // reflected response can't blow up our own error trail.
+    const detail = await res.text().catch(() => "");
+    throw new Error(
+      `ShipRocket order create failed (${res.status})${detail ? `: ${detail.slice(0, 500)}` : ""}`,
+    );
+  }
   const data = (await res.json()) as { awb_code?: string | null; courier_name?: string | null; shipment_id?: number };
   return {
     trackingId: data.awb_code ?? String(data.shipment_id ?? input.orderReference),
