@@ -53,6 +53,18 @@ export const artworkService = {
     }
   },
 
+  // Live concurrent-buyer reservation state for one artwork — polled
+  // from the detail page every few seconds so the Buy Now disabled
+  // state is fresh. Returns `reserved: false` when nothing is held.
+  async reservation(id: string): Promise<{
+    reserved: boolean;
+    heldByCustomerId: string | null;
+    expiresAt: string | null;
+    secondsRemaining: number;
+  }> {
+    return http.get(`/v1/artworks/${encodeURIComponent(id)}/reservation`);
+  },
+
   // "More from this artist" rail + the Artist Public Profile's listings
   // grid — the public summary shape, never full Artwork records.
   async listByArtist(artistId: string): Promise<ArtworkSummary[]> {
