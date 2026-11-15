@@ -9,7 +9,21 @@
 
 import { Timestamp } from "firebase-admin/firestore";
 import { Collections, type AddressDoc, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type Db, type OrderDoc, type ProfileDoc, type UserDoc } from "@galleryzone/db";
+import { invoiceUrlForShiprocket } from "./invoices.controller.ts";
 import { bookShipment, isShiprocketConfigured } from "./shiprocket.ts";
+
+/**
+ * Build the signed public invoice URL for Shiprocket to fetch and print
+ * onto the parcel label. Returns undefined if the env isn't configured —
+ * shipment still books, just without the invoice attached, which is the
+ * old behaviour.
+ */
+function outboundInvoiceUrl(orderId: string): string | undefined {
+  const publicApiUrl = process.env.PUBLIC_API_URL?.trim();
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
+  if (!publicApiUrl || !secret) return undefined;
+  return invoiceUrlForShiprocket({ publicApiUrl, orderId, secret });
+}
 
 export async function bookInboundShipment(db: Db, holdingId: string, artworkId: string, aggregatorId: string): Promise<void> {
   // Without credentials there is nothing to book (the wrapper no longer fakes a
@@ -140,6 +154,12 @@ export async function bookOutboundOrderShipment(db: Db, orderId: string): Promis
     weightKg: artwork.physical?.weightKg ?? 2,
     artworkTitle: artwork.title,
     valueInr: Math.max(1, Math.round(order.totalPaise / 100)),
+    // Tax invoice URL — Shiprocket fetches + prints it onto the label
+    // sheet so the courier attaches it to the box. Optional: if PUBLIC_API_URL
+    // or the webhook secret isn't set, the shipment books without an
+    // invoice attached (legacy behaviour — admin can download and attach
+    // manually).
+    ...(outboundInvoiceUrl(orderId) ? { invoiceUrl: outboundInvoiceUrl(orderId)! } : {}),
   });
 
   // Same mirror pattern as the inbound booking — the webhook will push

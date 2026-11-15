@@ -72,6 +72,13 @@ export interface ShipmentBookingInput {
   weightKg: number;
   artworkTitle: string;
   valueInr: number;
+  /**
+   * Public URL Shiprocket fetches to print the GST tax invoice onto the
+   * parcel. Only set when the leg actually carries a tax invoice (marketplace
+   * outbound = yes; artist→aggregator inbound = no, there's no sale yet).
+   * HMAC-token-protected so a stranger can't enumerate invoices via the URL.
+   */
+  invoiceUrl?: string;
 }
 
 export interface ShipmentParty {
@@ -288,6 +295,11 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     breadth: 30,
     height: 10,
     weight: Math.max(0.5, input.weightKg),
+    // Shiprocket fetches this URL and prints the invoice onto the label
+    // sheet so the courier attaches it to the parcel (B2C GST-compliant
+    // shipment). Only sent when provided — inbound-only legs that carry
+    // no sale skip it.
+    ...(input.invoiceUrl ? { invoice_url: input.invoiceUrl } : {}),
   };
   const res = await fetch(`${CONFIG!.baseUrl}/orders/create/adhoc`, {
     method: "POST",
