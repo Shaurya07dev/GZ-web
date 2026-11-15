@@ -114,6 +114,15 @@ export const Collections = {
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
   /**
+   * Short-lived hold on a one-of-a-kind artwork while a buyer walks to
+   * Razorpay. One doc per artworkId. Added 16 Nov 2026 to prevent two
+   * buyers racing to pay for the same original: whoever reserves first
+   * has ~10 minutes to complete payment, everyone else sees a "reserved
+   * by another collector" notice. Expired docs get cleared lazily by
+   * createOrder's own transaction.
+   */
+  artworkReservations: "artworkReservations",
+  /**
    * Per-user wishlist (saved artworks). One doc per uid, same shape as
    * carts: owned by the user, read/write only by them. Added 8 Nov 2026 —
    * client-only wishlist on web+mobile was not syncing across devices.

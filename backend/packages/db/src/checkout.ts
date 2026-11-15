@@ -18,6 +18,7 @@ import {
   type PricingRates, artistSettlementOf } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { getArtistSale, postArtistSale } from "./artist-sales.ts";
+import { claimReservation, clearReservation } from "./artwork-reservations.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 import { recordSaleTransfer } from "./ownership.ts";
@@ -107,6 +108,21 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     | undefined;
   if (artworkDoc?.listingType === "aggregator_only") {
     throw new CheckoutError("This artwork is not available to buy");
+  }
+
+  // Concurrent-buyer protection: claim the reservation atomically. Any
+  // other buyer trying to hit createOrder for the same artwork in the
+  // next 10 minutes will get a 409 and see "another collector is
+  // completing checkout". Idempotent for the same (artwork, customer)
+  // pair — a buyer re-opening their own checkout renews their hold.
+  // Added 16 Nov 2026 after the "two buyers one painting" scenario was
+  // flagged as the last pre-launch open risk. ReservationError is caught
+  // and re-wrapped as a CheckoutError so the controller can surface its
+  // 409 the same way it does for other race conditions.
+  try {
+    await claimReservation(db, artworkId, customerId);
+  } catch (error) {
+    throw new CheckoutError(error instanceof Error ? error.message : "This artwork is reserved by another collector");
   }
 
   // Buyer must have a verified mobile number on file. Shiprocket's booking
@@ -437,6 +453,12 @@ export async function abandonPendingOrder(
       { merge: true },
     );
   }
+
+  // Release the reservation so other collectors can checkout the same
+  // piece immediately. Otherwise they'd have to wait out the 10-minute
+  // window even though this buyer has given up. Idempotent + silent.
+  await clearReservation(db, order.artworkId);
+
   return { abandoned: true };
 }
 
@@ -610,6 +632,11 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   await db.collection(orderStatusEventsCol(orderId)).add({ status: "paid", changedAt: FieldValue.serverTimestamp() });
 
   // Title passes on payment (user decision 2026-09-13; plan.md §3.2 said
+  // Clear the reservation now that the sale is settled — defensive, since
+  // the artwork is also about to flip to "sold" which hides it from the
+  // marketplace anyway. Idempotent; silent on a missing doc.
+  await clearReservation(db, order.artworkId);
+
   // delivery). Idempotent on orderId. The artwork leaves the marketplace
   // at the same moment — a one-of-a-kind original can't be bought twice.
   await recordSaleTransfer(db, { artworkId: order.artworkId, orderId, buyerId: order.customerId });
