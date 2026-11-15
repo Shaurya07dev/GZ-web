@@ -47,7 +47,14 @@ export function ArtistAnalyticsView() {
   const { data: orders } = useArtistOrders();
 
   const rows = artworks ?? [];
-  const soldRows = orders ?? [];
+  // Only count orders that actually represent revenue — a pending order
+  // is an unpaid checkout attempt, a cancelled one is a buyer-abandoned
+  // attempt. Including them double-counted "sales" and inflated the
+  // revenue figure the artist sees on their dashboard (client flag 16
+  // Nov 2026, same root cause as the Sales table filter).
+  const soldRows = (orders ?? []).filter(
+    (o) => o.status !== "pending" && o.status !== "cancelled",
+  );
 
   const totalRevenue = soldRows.reduce((sum, o) => sum + o.artistPayout, 0);
   const salesCount = soldRows.length;

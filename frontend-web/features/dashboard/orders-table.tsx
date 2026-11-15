@@ -15,18 +15,23 @@ import type { Order, OrderStatus } from "@/types/order";
 
 type ArtistOrderRow = Order & { artistPayout: number };
 
+// Artist-side filter: pending is a transient checkout state that the
+// customer sees in their own cart flow; cancelled is a buyer-abandoned
+// attempt. Neither is a sale the artist made — showing them on the Sales
+// table is confusing dead weight. Client flag 16 Nov 2026.
 const STATUSES: OrderStatus[] = [
-  "pending",
   "paid",
   "confirmed",
   "packed",
   "transit",
   "delivered",
-  "cancelled",
 ];
 
+const VISIBLE_TO_ARTIST = new Set<OrderStatus>(STATUSES);
+
 export function OrdersTable() {
-  const { data: orders, isPending } = useArtistOrders();
+  const { data: raw, isPending } = useArtistOrders();
+  const orders = raw?.filter((o) => VISIBLE_TO_ARTIST.has(o.status));
 
   const columns: AdminDataTableColumn<ArtistOrderRow>[] = [
     {
