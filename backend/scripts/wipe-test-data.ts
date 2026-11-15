@@ -116,6 +116,12 @@ async function main() {
   bootstrapFirebase();
   const db = getFirestore();
 
+  // Force the Firestore client to complete initialisation BEFORE we touch
+  // anything else. Without this warm-up the next line can throw "Client
+  // is not yet ready to issue requests" on some node + google-auth-library
+  // version combos (hit on apple@Apples-MacBook-Air-4, 16 Nov 2026).
+  await db.collection("users").limit(1).get();
+
   const projectId = (db as unknown as { projectId?: string }).projectId;
   if (projectId && projectId.startsWith("demo-")) {
     throw new Error(`refusing to run against emulator project ${projectId}`);
