@@ -3,7 +3,7 @@ import { signInAs } from '../support/auth';
 import { dismissCookieConsent } from '../support/settle';
 import { GUIDES, GUIDES_FOR } from '../../lib/guides';
 
-// The five explainers in public/guides/ and the five places that offer them:
+// The six explainers in public/guides/ and the places that offer them: the artist COA & NFC page,
 // artist Orders, the upload form under the aggregator terms, the artist
 // Profile's GSTIN field, the GST card on Earnings, and Support -> FAQs for each
 // portal. The API is stubbed.
@@ -68,6 +68,25 @@ test('artist Orders offers the fulfilment guide, which plays in a dialog and end
   await expect(frame.getByRole('heading', { name: 'Artwork Order Fulfilment' })).toBeVisible();
 
   // Focus is inside the guide now, so Escape would go to it, not to the dialog.
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('iframe')).toHaveCount(0);
+});
+
+test('the artist COA & NFC page offers the link-NFC guide, which plays its steps in a dialog', async ({ page, baseURL }) => {
+  await open(page, baseURL!, 'artist', '/dashboard/coa-nfc');
+
+  await guideButton(page, GUIDES.linkNfc.title).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: GUIDES.linkNfc.title })).toBeVisible();
+
+  // The guide ran its own script: ten steps listed, and Next moves from the intro to step one.
+  const frame = dialog.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'How to link NFC to your artwork' })).toBeVisible();
+  await expect(frame.locator('#steps button')).toHaveCount(11);
+  await frame.getByRole('button', { name: 'Next step' }).click();
+  await expect(frame.locator('#cap')).toContainText('Step one');
+
   await dialog.getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('iframe')).toHaveCount(0);

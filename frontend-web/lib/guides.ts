@@ -20,6 +20,13 @@ export const GUIDES = {
     meta: "10 steps · हिन्दी / English",
     src: "/guides/order-fulfilment.html",
   },
+  linkNfc: {
+    title: "How to link NFC to your artwork",
+    blurb:
+      "Buy an NTAG 213 tag, write it, check it, lock it and stick it behind the signature, with a voiceover.",
+    meta: "10 steps · English",
+    src: "/guides/link-nfc.html",
+  },
   aggregatorProcess: {
     title: "The aggregator process",
     blurb:
@@ -53,6 +60,7 @@ export const GUIDES = {
 export const GUIDES_FOR = {
   artists: [
     GUIDES.orderFulfilment,
+    GUIDES.linkNfc,
     GUIDES.aggregatorProcess,
     GUIDES.gstRegistration,
   ],
