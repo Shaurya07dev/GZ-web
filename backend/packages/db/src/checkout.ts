@@ -109,6 +109,22 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     throw new CheckoutError("This artwork is not available to buy");
   }
 
+  // Buyer must have a verified mobile number on file. Shiprocket's booking
+  // API rejects without billing_phone, so without this gate the order
+  // would charge the card AND then fail to book the courier — buyer
+  // stranded with no artwork and a pending refund. Checked here so the
+  // error happens BEFORE Razorpay opens, not after. 16 Nov 2026.
+  const buyerSnap = await db.collection(Collections.users).doc(customerId).get();
+  const buyer = buyerSnap.data() as { phone?: string; name?: string } | undefined;
+  if (!buyer?.phone?.trim()) {
+    throw new CheckoutError(
+      "Please add and verify your mobile number in Profile → Account before checking out — the courier needs it to call about delivery.",
+    );
+  }
+  if (!buyer?.name?.trim()) {
+    throw new CheckoutError("Please add your name in Profile → Account before checking out.");
+  }
+
   // An addressId belonging to somebody else would ship the piece to a
   // stranger and leak their address onto this order.
   const addressSnap = await db.collection(Collections.addresses).doc(addressId).get();

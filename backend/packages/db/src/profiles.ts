@@ -313,7 +313,8 @@ export type ListingReadinessIssue =
   | "pan_missing"
   | "aadhaar_not_approved"
   | "pickup_address_incomplete"
-  | "bank_account_missing";
+  | "bank_account_missing"
+  | "phone_missing";
 
 /**
  * The specific gaps blocking a submit-to-review, in the order the profile
@@ -322,28 +323,37 @@ export type ListingReadinessIssue =
  * of a generic "KYC incomplete" that leaves the artist guessing.
  */
 export async function listingReadinessIssues(db: Firestore, uid: string): Promise<ListingReadinessIssue[]> {
-  if (!uid) return ["pan_missing", "aadhaar_not_approved", "pickup_address_incomplete", "bank_account_missing"];
-  const snap = await db.collection(userProfileCol(uid)).doc("data").get();
-  const profile = snap.data() as Partial<ProfileDoc> | undefined;
+  if (!uid) return ["pan_missing", "aadhaar_not_approved", "pickup_address_incomplete", "bank_account_missing", "phone_missing"];
+  const [profileSnap, userSnap] = await Promise.all([
+    db.collection(userProfileCol(uid)).doc("data").get(),
+    db.collection(Collections.users).doc(uid).get(),
+  ]);
+  const profile = profileSnap.data() as Partial<ProfileDoc> | undefined;
+  const user = userSnap.data() as Partial<UserDoc> | undefined;
   const issues: ListingReadinessIssue[] = [];
   if (!profile?.pan?.trim()) issues.push("pan_missing");
   if (profile?.aadhaarStatus !== "approved") issues.push("aadhaar_not_approved");
-  // Pickup address — line1 + pincode is the minimum Shiprocket's booking
-  // API needs. City + state are handy to carry too but not strictly
-  // required because the API resolves them from the pincode anyway.
-  if (!profile?.pickupLine1?.trim() || !profile?.pickupPincode?.trim()) {
-    issues.push("pickup_address_incomplete");
-  }
+  // Pickup address — line1 + city + state + pincode are ALL required by
+  // Shiprocket's /orders/create/adhoc. Tightened 16 Nov 2026 after a live
+  // order's shipment booking 422ed on an artist who had only filled
+  // line1 + pincode; the Shiprocket API does NOT in fact resolve city +
+  // state from pincode at booking time (contrary to the comment the
+  // earlier version of this file carried).
+  const hasPickup =
+    Boolean(profile?.pickupLine1?.trim()) &&
+    Boolean(profile?.pickupCity?.trim()) &&
+    Boolean(profile?.pickupState?.trim()) &&
+    Boolean(profile?.pickupPincode?.trim());
+  if (!hasPickup) issues.push("pickup_address_incomplete");
+  // Phone — Shiprocket uses pickup_phone to SMS the artist about the
+  // courier pickup window. Without it, the artist won't know when to be
+  // ready. Enforced at listing time so the first sale doesn't fail to
+  // book at the worst possible moment.
+  if (!user?.phone?.trim()) issues.push("phone_missing");
   // Bank account — without an account number + IFSC the admin has
-  // nothing to remit the artist's payout to. Catches the case where an
-  // artist clears KYC but forgets the payout setup. The ProfileDoc only
-  // carries the masked tail + IFSC (the full number lives encrypted
-  // under bankAccountEncrypted); either signal is enough to prove a
-  // bank record exists.
+  // nothing to remit the artist's payout to.
   const hasBank = Boolean(profile?.bankAccountMasked?.trim()) && Boolean(profile?.ifsc?.trim());
-  if (!hasBank) {
-    issues.push("bank_account_missing");
-  }
+  if (!hasBank) issues.push("bank_account_missing");
   return issues;
 }
 
@@ -358,5 +368,7 @@ export function listingReadinessMessage(issue: ListingReadinessIssue): string {
       return "Add a complete pickup address in Profile → KYC so the courier can collect the piece.";
     case "bank_account_missing":
       return "Add your bank account in Profile → KYC so GalleryZone can pay you when the piece sells.";
+    case "phone_missing":
+      return "Add and verify your mobile number in Profile → Account — the courier needs it to arrange pickup.";
   }
 }
