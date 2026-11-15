@@ -16,7 +16,6 @@ import {
   Inject,
   NotFoundException,
   Param,
-  Query,
   Req,
   Res,
 } from "@nestjs/common";
@@ -53,10 +52,17 @@ function verifyOrderToken(orderId: string, token: string, secret: string): boole
 
 /** Build the public URL Shiprocket will fetch to print the invoice. Called
  *  by shiprocket-booking when creating the shipment. Exported so tests can
- *  reproduce it. */
+ *  reproduce it.
+ *
+ *  Path shape: /v1/orders/public/<orderId>/<token>/invoice.pdf
+ *  The token sits in the PATH (not the querystring) so Shiprocket's naive
+ *  extension check — which looks at the end of the URL — sees ".pdf" and
+ *  accepts the upload. A ?token=... URL was rejected with
+ *  'Unsupported file extension' even though the server-side handler is
+ *  identical. Discovered 16 Nov 2026. */
 export function invoiceUrlForShiprocket(args: { publicApiUrl: string; orderId: string; secret: string }): string {
   const token = signOrderId(args.orderId, args.secret);
-  return `${args.publicApiUrl}/v1/orders/${encodeURIComponent(args.orderId)}/invoice.pdf/public?token=${token}`;
+  return `${args.publicApiUrl}/v1/orders/public/${encodeURIComponent(args.orderId)}/${token}/invoice.pdf`;
 }
 
 @Controller("v1/orders")
@@ -148,15 +154,17 @@ export class InvoicesController {
    * variable) because a) it's already set in every env, and b) the risk
    * profile is the same — both protect server-to-server fetches.
    *
-   * Same body as the authenticated endpoint above; just the auth
-   * mechanism differs.
+   * Path shape .../public/<orderId>/<token>/invoice.pdf — with the
+   * extension at the end so Shiprocket's URL-extension sniffer accepts
+   * it (16 Nov 2026 field finding). Token in the query string gets
+   * rejected with "Unsupported file extension".
    */
   @Public()
-  @Get(":id/invoice.pdf/public")
+  @Get("public/:id/:token/invoice.pdf")
   @Header("Content-Type", "application/pdf")
   async downloadPublic(
     @Param("id") id: string,
-    @Query("token") token: string | undefined,
+    @Param("token") token: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
     const secret = this.env.razorpayWebhookSecret;
