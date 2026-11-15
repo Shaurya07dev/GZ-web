@@ -103,7 +103,8 @@ export async function downloadMouPdf(document_: MouDocument, fill: MouFill) {
     const x = MARGIN + labelWidth;
 
     if (value.kind === "signature") {
-      const imageHeight = 14;
+      // The company's stamp has two lines of printed text around the signature, so it gets a taller box to stay readable.
+      const imageHeight = value.image === COMPANY_SIGNATURE_URL ? 26 : 14;
       ensureSpace(imageHeight + lineHeight(size) * 2);
       doc.text(label, MARGIN, y + imageHeight - lineHeight(size), { baseline: "top" });
       const image = value.image === COMPANY_SIGNATURE_URL ? companySignature : value.image;

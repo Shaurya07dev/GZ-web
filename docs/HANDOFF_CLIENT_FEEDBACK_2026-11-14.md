@@ -44,7 +44,7 @@ Then either open the pull request from the compare link above, or push the branc
 | 3 Photos | Form recommends at least 3 photos (guidance only) | `artwork-submit-form.tsx` |
 | 7 Certificate | Tag page shows the Display card to strangers. Only the current owner, the artist and admins get the certificate (number, issue date, artist signature) from `GET /v1/verify/:id`, using an optional Bearer token. Public answer is cached, authorised answer is `private, no-store`, `Vary: Authorization` | `backend/apps/api/src/verify.controller.ts`, `verify-view.ts`, `frontend-web/features/verify/nfc-artwork-passport-view.tsx`, `hooks/useVerify.ts` |
 | 8 Profile photo | Visible "Upload photo" button (the old camera icon was hover-only) | `features/dashboard/profile-kyc-form.tsx` |
-| 9 MOU signatory | Designation default "Director & COO"; signature image drawn on signed MOUs (screen and PDF), both artist and aggregator. Name stays "GalleryZone Private Limited" | `features/mou/mou-document.ts`, `mou-pdf.ts`, `public/brand/mou-signatory-signature.png`, `backend/packages/config/src/env.ts` |
+| 9 MOU signatory | Designation default "Director & COO"; company stamp ("For GALLERYZONE PRIVATE LIMITED", the signature, "Authorized signatory") drawn on signed MOUs (screen and PDF), both artist and aggregator. Name stays "GalleryZone Private Limited" | `features/mou/mou-document.ts`, `mou-pdf.ts`, `public/brand/mou-company-stamp.png`, `backend/packages/config/src/env.ts` |
 | 10 Reviewed by | See section 3 | `features/admin/moderation/*`, `backend/packages/db/src/reviews.ts` |
 | 11 Messages | Admin Broadcasts (section 3b) | `backend/packages/db/src/broadcasts.ts`, `features/admin/broadcasts/` |
 | 12 Landing cards | Whole card clickable. Certificate opens `/dashboard/coa-nfc` (artist) or `/account/coa-nfc` (collector); others keep the explainers. Legacy shows certificate number and date | `features/landing/identity-section.tsx`, `features/passport/passport-viewer-panel.tsx` |
@@ -115,11 +115,11 @@ history list shows what was sent, by whom, to how many.
      certificate. Then as another collector: Display card.
    - Admin, Broadcasts: send one to a single test account first (tick one audience that holds it), then check
      its Messages page and bell.
-   - Open a signed artist MOU and a signed aggregator MOU: "Director & COO" and the signature image show,
+   - Open a signed artist MOU and a signed aggregator MOU: "Director & COO" and the company stamp with the signature shows,
      and the downloaded PDF has the image.
    - Admin queues: switch to Reviewed on each of the six and check the names.
    - `/dashboard/wallet` and `/aggregator/wallet` redirect to `/earnings`.
-6. The signature image is a **public file** in the repository and on the website (the owner chose that,
+6. The stamp-and-signature image is a **public file** in the repository and on the website (the owner chose that,
    knowing the repository is public).
 
 ## 5. Still open (for you to pick up, or to put to the client)
