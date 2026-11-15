@@ -48,7 +48,7 @@ Then either open the pull request from the compare link above, or push the branc
 | 10 Reviewed by | See section 3 | `features/admin/moderation/*`, `backend/packages/db/src/reviews.ts` |
 | 11 Messages | Admin Broadcasts (section 3b) | `backend/packages/db/src/broadcasts.ts`, `features/admin/broadcasts/` |
 | 12 Landing cards | Whole card clickable. Certificate opens `/dashboard/coa-nfc` (artist) or `/account/coa-nfc` (collector); others keep the explainers. Legacy shows certificate number and date | `features/landing/identity-section.tsx`, `features/passport/passport-viewer-panel.tsx` |
-| 13 Must buy | "Must buy" category is a top segment on `/art-supplies`, ordered NFC, hangers, nylon thread, sticky nail, rolling paper, bubble wrap, cardboard. Draws nothing when empty. "Newest" pill added; Trending was dropped by decision | `features/art-supplies/supplies-shelf.tsx` |
+| 13 Important buys | Category "Important buys" (renamed from "Must buy" on 15 Nov) is a top segment on `/art-supplies`, ordered NFC, hanger, nylon thread, sticky nail, paper roll, bubble wrap, packaging tube. Every card except the NFC tag says "You can purchase them locally to save time". Draws nothing when empty. "Newest" pill added; Trending was dropped by decision | `features/art-supplies/supplies-shelf.tsx`, `supply-card.tsx`, `supply-quick-view.tsx`, `backend/scripts/affiliate-products.seed.json` |
 | 14 Click-through | Live artwork cards open their page (My artworks, Portfolio) | `features/dashboard/artworks-board.tsx`, `portfolio-board.tsx`, `types/artwork.ts` (`HAS_PUBLIC_PAGE`) |
 | Aggregator Browse | Search, Filters sheet, category chips, Sort, Saved chip, working heart (server wishlist) | `features/aggregator/inventory-browser.tsx`, `reservable-inventory-grid.tsx`, `lib/inventory-filters.ts` |
 | Aggregator UI | Dashboard "Recent activity" empty card now shows the newest pieces; profile form GST row full width | `features/aggregator/aggregator-activity-feed.tsx`, `profile-form.tsx` |
@@ -102,13 +102,23 @@ history list shows what was sent, by whom, to how many.
    `where role in [...]`, `where userId ==`), so no composite index should be needed. If Firestore does ask
    for one in the logs, deploy it with `backend/scripts/deploy-indexes.mjs`.
 4. **Art supplies, `/admin/art-supplies`:**
-   - Give the category `Must buy` to the existing bubble wrap and cardboard products. Candidates from the seed
-     file (production may differ; the client should confirm): bubble wrap `B0FNNFVQ9R`, `B07QPJK2GS`,
-     `B0CQD1MKKF`; cardboard and corrugated `B0BWNCPBYT`, `B0DVQ4RHPB`, `B0HL6Z42T1`, `B0GVJ8C469`,
-     `B0CCW3V66W`.
-   - Add the one new product from the client's chat: `https://link.amazon/B01M2lDtc` (ASIN `B0BMGM1R35`).
-     Use "Fill in from Amazon"; Amazon blocked the automated lookup from the author's machine, so fill title
-     and photo by hand if it blocks you too. Keep the link exactly as given (the affiliate tag is in it).
+   - The client sent the six "important buys" on 15 Nov. They are in `backend/scripts/affiliate-products.seed.json`
+     with title, brand and photos already filled in (read off the Amazon pages) and category `Important buys`.
+     Run `npm run seed:affiliate` from `backend/` with the production credentials (`-- --dry` first to see
+     what it adds). It adds only what is missing and leaves products already on the shelf as they are.
+     Or add them by hand in `/admin/art-supplies` with the category spelled exactly `Important buys`.
+
+     | What | Short link (keep as given) | ASIN |
+     |---|---|---|
+     | NFC tag | `https://link.amazon/B0eLNJD8H` | `B0FWG3531Z` |
+     | T hanger | `https://link.amazon/B07nD0WL0` | `B0GX9TPS51` |
+     | Sticky nail | `https://link.amazon/B0gcHCWC8` | `B08X2R1HM5` |
+     | Paper roll | `https://link.amazon/B08uALG0J` | `B0GSBBBGSY` |
+     | Bubble wrap | `https://link.amazon/B02UPFiUv` | `B0DR3D9DMN` |
+     | Packaging tube | `https://link.amazon/B017l4PKf` | `B0BJZW9GLJ` |
+   - Do NOT recategorise the older bubble wrap and cardboard products (the 14 Nov plan): these six replace them.
+   - Still open from the 14 Nov chat: `https://link.amazon/B01M2lDtc` (ASIN `B0BMGM1R35`) is not on the shelf.
+     Use "Fill in from Amazon" or fill title and photo by hand. Keep the link exactly as given (the affiliate tag is in it).
    - The other 141 links in the client's chat are already on the shelf.
 5. **Smoke test after deploy** (a phone is best for the first one):
    - Tap or scan a tag **signed out**: Display card, no certificate. Then as the owner, the artist and an admin:
@@ -128,7 +138,7 @@ history list shows what was sent, by whom, to how many.
 |---|---|---|
 | Q1 | NFC video in the artist's NFC steps | **Done 15 Nov.** The client's 10-step animated guide with voiceover is `public/guides/link-nfc.html`, registered in `lib/guides.ts` as `GUIDES.linkNfc`. It opens in a dialog from a launcher on the artist COA & NFC page (`features/dashboard/coa-nfc-board.tsx`) and is listed on the artist Support page. Test: `tests/functional/guides.spec.ts`. Two small layout fixes were made to the client's file (two columns in the dialog, no overflow on a phone, step numbers match the "Step n" captions, the maker's screen-record note removed). One wording point for the client: step 8 says the lock option is "beside Link Tag", but on the website the lock is finished in the app ("Open in the app to lock"). Not touched: the mobile app |
 | Q2 | Admin sees where an artwork is, from NFC scans | Not built. A scan stores no place today. Recommended: GPS if the scanner allows it, else city from the request's IP; a record on each scan; an admin screen with the last known place and history; a line in the privacy policy. Needs the client's decision on GPS vs IP only |
-| Q3 | Must buy: the five missing products | Client to send Amazon affiliate links for NFC tags, hangers, nylon thread, sticky nail, rolling paper. Add them via the admin screen with category `Must buy` |
+| Q3 | Important buys: nylon thread | The client sent NFC, hanger, sticky nail, paper roll, bubble wrap and packaging tube on 15 Nov (in the seed file). Nylon thread was on the 14 Nov list and has no link yet; send it and add it with category `Important buys`. The shelf already has a slot for it in the order |
 | Q4 | MOU wallet wording | Left as signed on purpose (client decision). Clauses: artist 11.2, 11.3, 11.4, 20.6, 35.3 and all of 36; aggregator 9.9, 24.3 and all of 25. Texts: `docs/legal/`, `frontend-web/features/dashboard/mou-data.ts`, `features/aggregator/aggregator-mou-data.ts`, `mobile/lib/features/*/mou_data.dart`. Any change needs the lawyer and a new MOU version (everyone signs again). Clause 9.9 of the aggregator MOU contains a broken character ("Aggregator�s") |
 | Q5 | Should a broadcast also be emailed? | Currently Messages inbox and bell only. Email needs real sending switched on (`docs/EMAIL_GO_LIVE.md`) |
 | Q6 | Landing "Identity" card | Unchanged (client did not mention it) |
@@ -180,7 +190,7 @@ New or changed specs: `admin-reviewed-by`, `admin-broadcast`, `landing-cards`, `
 > `docs/HANDOFF_CLIENT_FEEDBACK_2026-11-14.md` on that branch. Could you:
 > 1) pull it and read that file, 2) review the code and run the checks in section 6, 3) open the PR into main
 > (compare link is at the top of the file), 4) deploy backend first, then web, 5) do the production tasks in
-> section 4 (Railway MOU setting, the Must buy products in /admin/art-supplies, a smoke test), and 6) pick up
+> section 4 (Railway MOU setting, the Important buys products in /admin/art-supplies, a smoke test), and 6) pick up
 > the open items in section 5. The three older failing tests listed in section 6 also fail on main, so ignore them.
 
 ## 9. Prompt for an AI coding assistant (optional)

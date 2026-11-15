@@ -263,34 +263,52 @@ test('admin: hiding a product sends only active:false, and removing asks first',
   await expect.poll(() => deleted).toBe(true);
 });
 
-test('"Must buy" is a segment at the very top in the client\'s order, and "Newest" lists the latest first', async ({ page }) => {
+// The client's six, in the titles Amazon gives them, added here in the wrong order on purpose.
+const IMPORTANT = [
+  'SEJASCOLLECTIONS Pack of 2 Premium, 23 Inch Length, Cardboard Mailing Tube, Ideal for Shipping, Art and Craft',
+  'Bubble Wrap Roll, Heavy Duty 40 GSM, Clear, Packaging Cushioning for Fragile Items (1, 1FTx10FT)',
+  'White Paper Roll 24 Inch X 5 Meter (80GSM) for Painting & Drawing Papers',
+  'JIALTO 10 Pcs Stainless Steel, PVC, ABS Nail Free Seamless Adhesive Non-Trace No Drilling Installation Hanging, Waterproof Screws Wall Hook (Transparent)',
+  'A. Y .S Metal Hooks for MDF Board, Pack of 24',
+  'Pack of 10 - Anti-Metal NFC Tags (NTAG213) — 25 mm Round NFC Stickers with Ferrite Backing',
+];
+const LOCAL_NOTE = 'You can purchase them locally to save time';
+
+test("\"Important buys\" is a segment at the very top in the client's order, and \"Newest\" lists the latest first", async ({ page }) => {
   await openShelf(page, [
     product(1, { title: 'Brustro Tabletop Easel', createdAt: '2026-10-01T00:00:00.000Z' }),
-    product(2, { title: 'Bubble Wrap Roll', category: 'Must buy', createdAt: '2026-10-02T00:00:00.000Z' }),
-    product(3, { title: 'NFC Tag Pack', category: 'Must buy', createdAt: '2026-10-03T00:00:00.000Z' }),
-    product(4, { title: 'Newest Brush Set', category: 'Brushes', createdAt: '2026-11-01T00:00:00.000Z' }),
+    ...IMPORTANT.map((title, i) => product(i + 2, { title, category: 'Important buys', createdAt: `2026-10-0${i + 2}T00:00:00.000Z` })),
+    product(9, { title: 'Newest Brush Set', category: 'Brushes', createdAt: '2026-11-01T00:00:00.000Z' }),
   ]);
 
-  // NFC comes before bubble wrap whatever order they were added in, and the rest follows under its own heading.
-  const segment = page.getByRole('region', { name: 'Must buy' });
+  // NFC, hanger, sticky nail, paper roll, bubble wrap, packaging tube, whatever order they were added in; the rest follows under its own heading.
+  const segment = page.getByRole('region', { name: 'Important buys' });
   await expect(segment).toBeVisible();
-  await expect(segment.getByRole('heading', { level: 3 })).toHaveText(['NFC Tag Pack', 'Bubble Wrap Roll']);
+  await expect(segment.getByRole('heading', { level: 3 })).toHaveText([
+    IMPORTANT[5], IMPORTANT[4], IMPORTANT[3], IMPORTANT[2], IMPORTANT[1], IMPORTANT[0],
+  ]);
   await expect(page.getByRole('heading', { name: 'All supplies' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Bubble Wrap Roll' })).toHaveCount(1);
+  await expect(page.getByRole('heading', { name: IMPORTANT[1] })).toHaveCount(1);
 
-  // Searching or choosing a pill drops the segment: the matching products are just listed.
+  // Everything but the NFC tag says it can be bought in a local shop.
+  await expect(segment.getByText(LOCAL_NOTE, { exact: true })).toHaveCount(5);
+  await expect(segment.locator('article', { hasText: 'NFC Tags' }).getByText(LOCAL_NOTE)).toHaveCount(0);
+  await expect(segment.locator('article', { hasText: 'Bubble Wrap Roll' }).getByText(LOCAL_NOTE)).toHaveCount(1);
+
+  // Searching or choosing a pill drops the segment: the matching products are just listed, notes and all.
   await page.getByRole('searchbox', { name: 'Search art supplies' }).fill('bubble');
-  await expect(page.getByRole('region', { name: 'Must buy' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Important buys' })).toHaveCount(0);
+  await expect(page.getByText(LOCAL_NOTE, { exact: true })).toHaveCount(1);
   await page.getByRole('searchbox', { name: 'Search art supplies' }).fill('');
 
   await page.getByRole('button', { name: 'Newest', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Must buy' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Important buys' })).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 3 }).first()).toHaveText('Newest Brush Set');
 });
 
-test('with no "Must buy" products there is no empty segment', async ({ page }) => {
+test('with no "Important buys" products there is no empty segment', async ({ page }) => {
   await openShelf(page);
   await expect(page.getByText('4 products')).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Must buy' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Important buys' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'All supplies' })).toHaveCount(0);
 });
