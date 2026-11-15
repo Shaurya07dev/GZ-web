@@ -90,6 +90,39 @@ async function main() {
     console.log(`  createdAt        : ${iso(pay.createdAt)}`);
   }
 
+  // 3b. Shipping readiness — artist pickup + buyer delivery. The common
+  //     reason Shiprocket /orders/create/adhoc 422s is a missing field on
+  //     one of these (artist's phone, pickup line1, drop pincode, etc).
+  if (order.artistId) {
+    const artistSnap = await db.collection("users").doc(order.artistId).get();
+    const artistProfileSnap = await db
+      .collection(`users/${order.artistId}/profile`)
+      .doc("data")
+      .get();
+    const artistUser = artistSnap.data() ?? {};
+    const artistProfile = artistProfileSnap.data() ?? {};
+    console.log("\nARTIST (for Shiprocket pickup):");
+    console.log(`  name           : ${artistUser.name ?? "⚠️ MISSING"}`);
+    console.log(`  phone          : ${artistUser.phone ?? "⚠️ MISSING"}`);
+    console.log(`  pickupLine1    : ${artistProfile.pickupLine1 ?? "⚠️ MISSING"}`);
+    console.log(`  pickupCity     : ${artistProfile.pickupCity ?? "⚠️ MISSING"}`);
+    console.log(`  pickupState    : ${artistProfile.pickupState ?? "⚠️ MISSING"}`);
+    console.log(`  pickupPincode  : ${artistProfile.pickupPincode ?? "⚠️ MISSING"}`);
+  }
+  if (order.addressId) {
+    const addrSnap = await db.collection("addresses").doc(order.addressId).get();
+    const addr = addrSnap.data() ?? {};
+    const buyerSnap = await db.collection("users").doc(order.customerId).get();
+    const buyer = buyerSnap.data() ?? {};
+    console.log("\nBUYER (for Shiprocket delivery):");
+    console.log(`  name           : ${buyer.name ?? "⚠️ MISSING"}`);
+    console.log(`  phone          : ${buyer.phone ?? "⚠️ MISSING"}`);
+    console.log(`  addressLine1   : ${addr.line1 ?? "⚠️ MISSING"}`);
+    console.log(`  addressCity    : ${addr.city ?? "⚠️ MISSING"}`);
+    console.log(`  addressState   : ${addr.state ?? "⚠️ MISSING"}`);
+    console.log(`  addressPincode : ${addr.pincode ?? "⚠️ MISSING"}`);
+  }
+
   // 4. Artwork — is it still on the marketplace?
   const artSnap = await db.collection("artworks").doc(order.artworkId).get();
   if (artSnap.exists) {
