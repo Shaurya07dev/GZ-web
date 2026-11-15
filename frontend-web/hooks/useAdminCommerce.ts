@@ -84,6 +84,20 @@ export function useAdminRefundOrderMutation(orderId: string) {
 }
 
 /**
+ * Look up any user (buyer / artist / admin) by uid. Used by the admin
+ * order-detail page to show the real buyer rather than the signed-in
+ * admin (which was the previous bug: every order looked like it was
+ * bought by the admin because the page called useCustomerProfile()).
+ */
+export function useAdminUser(uid: string | undefined) {
+  return useQuery({
+    queryKey: ["admin-user", uid],
+    queryFn: () => adminService.getUserById(uid!),
+    enabled: Boolean(uid),
+  });
+}
+
+/**
  * Re-run paid-side effects on an order that was manually revived via
  * scripts/revive-order-direct.ts. Settlement, Shiprocket booking, and
  * buyer+artist notifications. Added 16 Nov 2026 after the ₹260.21

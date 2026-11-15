@@ -11,9 +11,9 @@ import {
   useAdminOrder,
   useAdminAddress,
   useAdminSettlementByOrder,
+  useAdminUser,
 } from "@/hooks/useAdminCommerce";
 import { useArtwork } from "@/hooks/useArtwork";
-import { useCustomerProfile } from "@/hooks/useCustomerProfile";
 import { Lock } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import type { OrderStatus } from "@/types/order";
@@ -36,7 +36,11 @@ export default function AdminOrderDetailPage(
   const { data: artwork } = useArtwork(order?.artworkId ?? "");
   const { data: address } = useAdminAddress(order?.addressId ?? "");
   const { data: settlement } = useAdminSettlementByOrder(orderId);
-  const { data: buyer } = useCustomerProfile();
+  // Look up the REAL buyer by the order's customerId, not the signed-in
+  // admin. Previous call to useCustomerProfile() returned whoever was
+  // signed in, so every order page showed the admin's own profile as the
+  // buyer (client-reported 16 Nov 2026).
+  const { data: buyer } = useAdminUser(order?.customerId);
 
   if (isLoading) return null;
   if (!order) notFound();

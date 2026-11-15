@@ -27,7 +27,7 @@ import type { Address } from "@/types/customer";
 import type { AggregatorHolding, HoldingExtensionRequest } from "@/types/aggregator";
 import { adminApi } from "@/services/adminApi";
 import { artistService } from "@/services/artworkService";
-import { http } from "@/lib/api";
+import { http, isApiError } from "@/lib/api";
 import { paiseToRupees, toArtworkSummary, type ArtworkDto } from "@/lib/api-mappers";
 import { aggregatorService } from "@/services/aggregatorService";
 
@@ -417,6 +417,28 @@ export const adminService = {
    */
   finishRevivedOrder: async (orderId: string): Promise<Record<string, string>> =>
     http.post(`/v1/admin/orders/${encodeURIComponent(orderId)}/finish-revived`),
+
+  /**
+   * Look up any user (buyer / artist / aggregator / admin) by uid. Admin-only.
+   * Used by the admin order-detail page to render the real buyer, not the
+   * signed-in admin — the previous page was mistakenly calling
+   * useCustomerProfile() which returns the current session's user, so every
+   * order looked like it was bought by the admin (fixed 16 Nov 2026).
+   */
+  getUserById: async (uid: string): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+  } | null> => {
+    try {
+      return await http.get(`/v1/admin/users/${encodeURIComponent(uid)}`);
+    } catch (error) {
+      if (isApiError(error, 404)) return null;
+      throw error;
+    }
+  },
 
   getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),
 
