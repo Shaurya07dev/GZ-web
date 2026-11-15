@@ -41,6 +41,7 @@ interface Args {
   dryRun: boolean;
   confirmed: boolean;
   keepOrderIds: Set<string>;
+  allArtworks: boolean;
 }
 
 function parse(): Args {
@@ -49,12 +50,14 @@ function parse(): Args {
       "dry-run": { type: "boolean", default: false },
       "i-understand": { type: "boolean", default: false },
       "keep-order": { type: "string", multiple: true },
+      "all-artworks": { type: "boolean", default: false },
     },
   });
   return {
     dryRun: Boolean(values["dry-run"]),
     confirmed: Boolean(values["i-understand"]),
     keepOrderIds: new Set(((values["keep-order"] as string[] | undefined) ?? []).filter(Boolean)),
+    allArtworks: Boolean(values["all-artworks"]),
   };
 }
 
@@ -129,7 +132,8 @@ async function main() {
 
   console.log(`\nTarget project: ${projectId ?? "(default)"}`);
   console.log(`Mode: ${args.dryRun ? "DRY-RUN" : args.confirmed ? "WILL DELETE" : "REFUSING"}`);
-  console.log(`Keep orders: ${[...args.keepOrderIds].join(", ") || "(none)"}\n`);
+  console.log(`Keep orders: ${[...args.keepOrderIds].join(", ") || "(none)"}`);
+  console.log(`Artwork scope: ${args.allArtworks ? "ALL (except those attached to kept orders)" : "demo-only"}\n`);
 
   // -------------------------------------------------------------------------
   // Step 1: identify demo users (by email)
@@ -145,28 +149,55 @@ async function main() {
   console.log(`Users: ${demoUserIds.size} demo (@example.com et al) / ${nonDemoUserIds.size} real`);
 
   // -------------------------------------------------------------------------
-  // Step 2: identify demo artworks (by title OR by owner)
+  // Step 2: list ALL orders first, so we know which artworks are tied to
+  //         orders we're keeping (those artworks must survive even under
+  //         --all-artworks).
+  // -------------------------------------------------------------------------
+  const ordersSnap = await db.collection("orders").get();
+  const keptArtworkIds = new Set<string>();
+  for (const doc of ordersSnap.docs) {
+    if (args.keepOrderIds.has(doc.id)) {
+      const a = doc.data().artworkId as string | undefined;
+      if (a) keptArtworkIds.add(a);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Step 3: decide which artworks to delete.
+  //   --all-artworks → every artwork EXCEPT those protecting a kept order
+  //   default        → only the demo-tagged ones
   // -------------------------------------------------------------------------
   const artworksSnap = await db.collection("artworks").get();
   const demoArtworkIds = new Set<string>();
   for (const doc of artworksSnap.docs) {
+    if (keptArtworkIds.has(doc.id)) continue;
     const a = doc.data();
-    if (isDemoTitle(a.title as string | undefined)) demoArtworkIds.add(doc.id);
-    if (demoUserIds.has(a.artistId as string)) demoArtworkIds.add(doc.id);
+    if (args.allArtworks) {
+      demoArtworkIds.add(doc.id);
+    } else {
+      if (isDemoTitle(a.title as string | undefined)) demoArtworkIds.add(doc.id);
+      if (demoUserIds.has(a.artistId as string)) demoArtworkIds.add(doc.id);
+    }
   }
-  console.log(`Artworks: ${demoArtworkIds.size} demo / ${artworksSnap.size - demoArtworkIds.size} real`);
+  console.log(
+    `Artworks: ${demoArtworkIds.size} to delete / ${artworksSnap.size - demoArtworkIds.size} to keep${keptArtworkIds.size ? ` (incl. ${keptArtworkIds.size} tied to kept orders)` : ""}`,
+  );
 
   // -------------------------------------------------------------------------
-  // Step 3: identify orders to wipe
+  // Step 4: identify orders to wipe.
   // -------------------------------------------------------------------------
-  const ordersSnap = await db.collection("orders").get();
   const demoOrderIds = new Set<string>();
   for (const doc of ordersSnap.docs) {
     if (args.keepOrderIds.has(doc.id)) continue;
     const o = doc.data();
     const customerIsDemo = demoUserIds.has(o.customerId as string);
     const artworkIsDemo = demoArtworkIds.has(o.artworkId as string);
-    if (customerIsDemo || artworkIsDemo) demoOrderIds.add(doc.id);
+    // Default: delete the order only if its customer OR artwork is demo.
+    // --all-artworks: delete every non-kept order too, because we're
+    // starting from a truly clean slate.
+    if (customerIsDemo || artworkIsDemo || args.allArtworks) {
+      demoOrderIds.add(doc.id);
+    }
   }
   console.log(`Orders: ${demoOrderIds.size} to delete / ${ordersSnap.size - demoOrderIds.size} to keep`);
 
