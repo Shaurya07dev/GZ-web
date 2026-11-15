@@ -214,6 +214,24 @@ export async function getShippingRate(input: ShippingRateInput): Promise<Shippin
   };
 }
 
+/**
+ * Shiprocket's /orders/create/adhoc requires separate first-name and
+ * last-name fields (billing_customer_name / billing_last_name, same for
+ * pickup side on some accounts). Our data model carries a single `name`
+ * string, so split on first whitespace. An empty last name passes
+ * validation (the validator checks "present", not "non-empty").
+ */
+function splitName(full: string | null | undefined, prefix: "billing" | "shipping"): Record<string, string> {
+  const safe = (full ?? "").trim();
+  const space = safe.indexOf(" ");
+  const first = space === -1 ? safe : safe.slice(0, space);
+  const last = space === -1 ? "" : safe.slice(space + 1).trim();
+  return {
+    [`${prefix}_customer_name`]: first || "Customer",
+    [`${prefix}_last_name`]: last,
+  };
+}
+
 export async function bookShipment(input: ShipmentBookingInput): Promise<BookedShipment> {
   if (!isShiprocketConfigured()) {
     throw new Error("ShipRocket is not configured; no shipment was booked");
@@ -244,7 +262,14 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     pickup_pincode: input.pickup.pincode,
     pickup_country: "India",
 
-    billing_customer_name: input.dropoff.name,
+    // Shiprocket's /orders/create/adhoc validates billing_last_name as
+    // required-present (empty string ok, undefined not). Our data model
+    // stores the buyer's name as a single field, so we split on the
+    // first space — "Yata Shiva Kumar" → first="Yata", last="Shiva Kumar".
+    // Single-name buyers get first=name, last="" which also passes.
+    // Discovered 16 Nov 2026 — 422 'billing_last_name: validation.present'
+    // when reviving a real order's shipment booking.
+    ...splitName(input.dropoff.name, "billing"),
     billing_phone: input.dropoff.phone,
     billing_address: input.dropoff.line1,
     billing_address_2: input.dropoff.line2 ?? "",

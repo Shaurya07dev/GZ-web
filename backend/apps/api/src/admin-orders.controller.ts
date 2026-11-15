@@ -227,7 +227,16 @@ export class AdminOrdersController {
       });
       results.settlement = `ok:${transactionId}`;
     } catch (error) {
-      results.settlement = `skipped: ${error instanceof Error ? error.message : String(error)}`;
+      const msg = error instanceof Error ? error.message : String(error);
+      // ALREADY_EXISTS on the artistSales doc means the settlement was
+      // already posted by a previous Finish-revived run. That's the
+      // desired idempotent outcome, not an error — surface it as such so
+      // the admin toast doesn't look like a half-failure.
+      if (msg.includes("ALREADY_EXISTS")) {
+        results.settlement = "already posted (idempotent)";
+      } else {
+        results.settlement = `skipped: ${msg}`;
+      }
     }
 
     // 2. Shiprocket outbound booking
