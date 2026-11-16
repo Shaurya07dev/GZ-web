@@ -242,6 +242,16 @@ export interface ProfileDoc {
   /** ISO 3166-1 alpha-2 country code. Null on profiles written before
    *  the field existed — those are all Indian and read as "IN". */
   pickupCountry: string | null;
+  /**
+   * The Shiprocket pickup-location nickname registered for this artist.
+   * Each artist is their own Shiprocket warehouse so the courier is
+   * routed to THEIR studio, not GalleryZone HQ. Lazy-created on first
+   * sale inside `ensureArtistPickupNickname` (apps/api/src/shiprocket-
+   * booking.ts). Null until their first order's booking runs. Clear
+   * this field + re-register if the artist's pickup address changes.
+   * Added 16 Nov 2026 after a live order went out routed to HQ.
+   */
+  shiprocketPickupNickname?: string | null;
   earningsAbove5L: boolean;
   socialProofVideoUrl: string | null;
   companyName: string | null;

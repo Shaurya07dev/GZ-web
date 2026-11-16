@@ -79,6 +79,15 @@ export interface ShipmentBookingInput {
    * HMAC-token-protected so a stranger can't enumerate invoices via the URL.
    */
   invoiceUrl?: string;
+  /**
+   * Shiprocket pickup-location nickname for this specific pickup. When
+   * provided, Shiprocket uses the registered warehouse matching that
+   * nickname as the pickup address. When omitted, falls back to the
+   * account-level default (SHIPROCKET_PICKUP_LOCATION_NAME = GalleryZone
+   * HQ), which is almost never what we want — see the comment on
+   * registerPickupLocation for the full history.
+   */
+  pickupLocationNickname?: string;
 }
 
 export interface ShipmentParty {
@@ -102,6 +111,86 @@ let authCache: AuthCache | null = null;
 
 export function isShiprocketConfigured(): boolean {
   return CONFIG !== null;
+}
+
+/**
+ * Registers a new pickup location on the Shiprocket account so a specific
+ * artist's address becomes a valid `pickup_location` nickname. Called once
+ * per artist when they complete KYC, or lazily on first sale.
+ *
+ * CRITICAL (client bug 16 Nov 2026): without this, every order books
+ * against the single account-level pickup nickname (SHIPROCKET_PICKUP_
+ * LOCATION_NAME), which means the courier shows up at GalleryZone HQ
+ * instead of the artist's studio. The per-order pickup_customer_name /
+ * _phone / _address fields we send in bookShipment are IGNORED by
+ * Shiprocket when pickup_location is set — their validator only honours
+ * the account-registered warehouse that matches the nickname.
+ *
+ * So each artist needs their own warehouse on the account. We generate
+ * a stable, unique nickname like "artist-{first 8 chars of uid}" so the
+ * same artist always maps to the same warehouse (idempotent) and we can
+ * spot-check in Shiprocket's dashboard.
+ *
+ * Returns the nickname (caller should persist it on the artist profile).
+ * Throws if Shiprocket rejects — usually a duplicate nickname (already
+ * registered, safe to use as-is) or a bad pincode / missing phone.
+ */
+export interface PickupLocationInput {
+  nickname: string;
+  name: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+export async function registerPickupLocation(input: PickupLocationInput): Promise<{ nickname: string; alreadyExisted: boolean }> {
+  if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured");
+  const token = await getToken();
+  const res = await fetch(`${CONFIG!.baseUrl}/settings/company/addpickup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      pickup_location: input.nickname,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      address: input.addressLine1,
+      address_2: input.addressLine2 ?? "",
+      city: input.city,
+      state: input.state,
+      country: "India",
+      pin_code: input.pincode,
+    }),
+  });
+  if (res.ok) {
+    return { nickname: input.nickname, alreadyExisted: false };
+  }
+  const bodyText = await res.text().catch(() => "");
+  // Shiprocket's duplicate-nickname error has a few shapes depending on
+  // which deployment is live. Any 4xx mentioning "exists" / "already" /
+  // "duplicate" means the warehouse is on file and the nickname is
+  // reusable — not an error we should propagate.
+  const existsLike = /already|exists|duplicate/i.test(bodyText);
+  if (existsLike) return { nickname: input.nickname, alreadyExisted: true };
+  throw new Error(
+    `ShipRocket addpickup failed (${res.status}): ${bodyText.slice(0, 500)}`,
+  );
+}
+
+/**
+ * Build a stable per-artist pickup nickname. Short enough to pass
+ * Shiprocket's length rules (max ~36 chars observed); stable so the
+ * same artist always maps to the same warehouse on repeat registrations.
+ */
+export function artistPickupNickname(artistId: string): string {
+  return `artist-${artistId.slice(0, 20)}`;
 }
 
 async function getToken(): Promise<string> {
@@ -244,14 +333,19 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     throw new Error("ShipRocket is not configured; no shipment was booked");
   }
   const token = await getToken();
-  // `pickup_location` is the ACCOUNT-level nickname ShipRocket uses as a
-  // billing anchor. The actual pickup street address comes from the
-  // per-order `pickup_customer_name` / `pickup_address` fields below — this
-  // is how multi-vendor marketplaces (Meesho, Flipkart, Etsy-style) handle
-  // "pickup from the artist's studio" without registering each artist as a
-  // separate warehouse. The nickname is configurable via env in case the
-  // ShipRocket account uses a non-default one.
-  const pickupLocationNickname = CONFIG!.pickupLocationName;
+  // `pickup_location` MUST reference a Shiprocket-registered warehouse
+  // on the account — Shiprocket's /orders/create/adhoc validator ignores
+  // the per-order pickup_customer_name / _phone / _address fields when a
+  // nickname is set, and uses the warehouse's registered address as the
+  // true pickup point. (Earlier comment on this file claimed the opposite;
+  // it was wrong, and a live order on 16 Nov 2026 shipped against the
+  // wrong HQ address because of it.)
+  //
+  // Per-artist pickup nicknames are now registered via registerPickupLocation
+  // and passed in via `input.pickupLocationNickname`. The env-level default
+  // stays as a fallback for legs where there is no per-vendor nickname
+  // (e.g., an aggregator return to GalleryZone HQ).
+  const pickupLocationNickname = input.pickupLocationNickname ?? CONFIG!.pickupLocationName;
   const payload = {
     order_id: input.orderReference,
     order_date: new Date().toISOString(),

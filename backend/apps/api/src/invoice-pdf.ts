@@ -11,8 +11,20 @@
 //   - totals in words + amount payable,
 //   - footer: support email + computer-generated-invoice disclaimer.
 
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import PDFDocument from "pdfkit";
 import type { InvoiceSnapshot, OrderDoc } from "@galleryzone/db";
+
+/**
+ * Black-on-white GalleryZone logo for the invoice header. Copied from
+ * the web public/brand folder at build time so the PDF renderer doesn't
+ * need network access. The file is checked in; if it's missing (dev
+ * sandbox / stripped build), the header falls back to the all-caps text
+ * treatment.
+ */
+const LOGO_PATH = resolve(import.meta.dirname, "..", "assets", "invoice-logo.png");
+const LOGO_EXISTS = existsSync(LOGO_PATH);
 
 export interface InvoiceLineInput {
   /** Order being invoiced. */
@@ -46,10 +58,22 @@ function drawInvoice(doc: PDFKit.PDFDocument, input: InvoiceLineInput): void {
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
   // --- Header ---------------------------------------------------------------
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(18)
-    .text(invoice.seller.legalName.toUpperCase(), { align: "left" });
+  // Logo first, then the seller legal name underneath in smaller type. If
+  // the logo asset isn't on disk (dev / stripped build), fall back to the
+  // all-caps text-only treatment the earlier version used.
+  if (LOGO_EXISTS) {
+    doc.image(LOGO_PATH, doc.page.margins.left, doc.y, { height: 36 });
+    doc.moveDown(2.4);
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text(invoice.seller.legalName.toUpperCase(), { align: "left" });
+  } else {
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(18)
+      .text(invoice.seller.legalName.toUpperCase(), { align: "left" });
+  }
   doc.moveDown(0.2);
   doc
     .font("Helvetica")
@@ -168,7 +192,11 @@ function drawInvoice(doc: PDFKit.PDFDocument, input: InvoiceLineInput): void {
 
   if (order.convenienceFeePaise > 0) {
     const y = doc.y;
-    doc.text("Convenience fee", col.desc, y, { width: col.hsn - col.desc - 4 });
+    // Labelled "Payment gateway charge" (not "Convenience fee") per client
+    // direction 16 Nov 2026 — this line is the Razorpay processing fee
+    // GalleryZone passes through to the buyer, not an internal convenience
+    // markup. The wording matters on a tax invoice.
+    doc.text("Payment gateway charge", col.desc, y, { width: col.hsn - col.desc - 4 });
     doc.text("998599", col.hsn, y, { width: col.qty - col.hsn - 4 });
     doc.text("1", col.qty, y, { width: col.amount - col.qty - 4 });
     doc.text(formatPaise(order.convenienceFeePaise), col.amount, y, {

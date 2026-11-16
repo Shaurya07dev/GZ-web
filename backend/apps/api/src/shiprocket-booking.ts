@@ -10,7 +10,51 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { Collections, type AddressDoc, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type Db, type OrderDoc, type ProfileDoc, type UserDoc } from "@galleryzone/db";
 import { invoiceUrlForShiprocket } from "./invoices.controller.ts";
-import { bookShipment, isShiprocketConfigured } from "./shiprocket.ts";
+import { artistPickupNickname, bookShipment, isShiprocketConfigured, registerPickupLocation } from "./shiprocket.ts";
+
+/**
+ * Lazily register the artist's address as a Shiprocket pickup location
+ * if we haven't already. Stores the resulting nickname on the artist
+ * profile so subsequent orders don't re-register. The pickup_location
+ * nickname is what Shiprocket actually uses to decide the pickup
+ * address; without this each artist would default to the GalleryZone
+ * HQ warehouse and the courier would show up at the wrong place.
+ */
+async function ensureArtistPickupNickname(
+  db: Db,
+  artistId: string,
+  artistUser: UserDoc | undefined,
+  artistProfile: ProfileDoc | undefined,
+): Promise<string> {
+  // If we already registered them, trust it — the nickname is idempotent
+  // on Shiprocket's side anyway.
+  const existing = artistProfile?.shiprocketPickupNickname;
+  if (existing) return existing;
+  if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
+    throw new Error(`artist ${artistId} has no pickup address`);
+  }
+  if (!artistUser?.phone) {
+    throw new Error(`artist ${artistId} has no phone on file`);
+  }
+  const nickname = artistPickupNickname(artistId);
+  await registerPickupLocation({
+    nickname,
+    name: artistUser?.name ?? "GalleryZone Artist",
+    email: artistUser?.email ?? "support@galleryzone.in",
+    phone: artistUser.phone,
+    addressLine1: artistProfile.pickupLine1,
+    addressLine2: artistProfile.pickupLine2 ?? "",
+    city: artistProfile.pickupCity ?? "",
+    state: artistProfile.pickupState ?? "",
+    pincode: artistProfile.pickupPincode,
+  });
+  // Persist so next time we skip the API call.
+  await db
+    .collection(`users/${artistId}/profile`)
+    .doc("data")
+    .set({ shiprocketPickupNickname: nickname }, { merge: true });
+  return nickname;
+}
 
 /**
  * Build the signed public invoice URL for Shiprocket to fetch and print
@@ -131,8 +175,18 @@ export async function bookOutboundOrderShipment(db: Db, orderId: string): Promis
     throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
   }
 
+  // Lazy-register the artist as a Shiprocket pickup location if we haven't
+  // already. Without this the courier would be routed to GalleryZone HQ.
+  const pickupNickname = await ensureArtistPickupNickname(
+    db,
+    artwork.artistId,
+    artistUser,
+    artistProfile,
+  );
+
   const booked = await bookShipment({
     orderReference: `order-${orderId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
       name: artistUser?.name ?? "GalleryZone Artist",
       phone: artistUser?.phone ?? "0000000000",
