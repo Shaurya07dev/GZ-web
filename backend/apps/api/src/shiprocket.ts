@@ -88,6 +88,17 @@ export interface ShipmentBookingInput {
    * registerPickupLocation for the full history.
    */
   pickupLocationNickname?: string;
+  /**
+   * The courier company id from the serviceability quote that fed the
+   * buyer's displayed delivery charge. When passed, we force Shiprocket
+   * to assign THIS courier on the courier/assign/awb step so the billed
+   * rate matches what the buyer saw within Shiprocket's own slot-level
+   * variance (±₹5 typically). When omitted, Shiprocket picks the
+   * cheapest serviceable courier at book time — which can drift
+   * materially from the quote if a courier dropped out of serviceability
+   * in between.
+   */
+  preferredCourierId?: number;
 }
 
 export interface ShipmentParty {
@@ -418,13 +429,113 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
       `ShipRocket order create failed (${res.status})${detail ? `: ${detail.slice(0, 500)}` : ""}`,
     );
   }
-  const data = (await res.json()) as { awb_code?: string | null; courier_name?: string | null; shipment_id?: number };
+  const data = (await res.json()) as {
+    awb_code?: string | null;
+    courier_name?: string | null;
+    shipment_id?: number;
+    order_id?: number;
+  };
+
+  // Shiprocket's /orders/create/adhoc only creates the order record.
+  // Without the two steps below, the shipment stays "NEW" in their
+  // dashboard and nobody picks it up. Client-flagged 16 Nov 2026 as a
+  // critical gap: the operator should NOT have to click Ship Now
+  // manually. Assigning + requesting pickup is what actually dispatches
+  // a courier.
+  //
+  // Both failures below are LOGGED and SWALLOWED — the Shiprocket order
+  // exists on their side and can be rescued by hand; a hard throw here
+  // would strand an otherwise-booked shipment with no tracking row on
+  // our side.
+  let awb = data.awb_code ?? null;
+  let carrier = data.courier_name ?? null;
+  if (data.shipment_id) {
+    try {
+      // Courier assignment picks a specific courier and generates the AWB
+      // barcode. `courier_id` optional; omitting lets Shiprocket pick the
+      // cheapest serviceable courier. We pass the one from the quote when
+      // available (input.preferredCourierId) so the actual billed rate
+      // matches what the buyer saw at checkout within Shiprocket's own
+      // slot-availability variance (which is typically ±₹5).
+      const assigned = await assignCourier({
+        shipmentId: data.shipment_id,
+        ...(input.preferredCourierId ? { courierId: input.preferredCourierId } : {}),
+        token,
+      });
+      awb = assigned.awb ?? awb;
+      carrier = assigned.courierName ?? carrier;
+      // Request pickup: tells the assigned courier to come. Without this
+      // the AWB is generated but no one shows up.
+      await requestPickup({ shipmentId: data.shipment_id, token });
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          event: "shiprocket.auto_ship.failed",
+          orderReference: input.orderReference,
+          shipmentId: data.shipment_id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+
   return {
-    trackingId: data.awb_code ?? String(data.shipment_id ?? input.orderReference),
-    carrier: data.courier_name ?? null,
+    trackingId: awb ?? String(data.shipment_id ?? input.orderReference),
+    carrier,
     stage: "pickup",
     real: true,
   };
+}
+
+interface AssignCourierResult {
+  awb: string | null;
+  courierName: string | null;
+}
+
+async function assignCourier(input: {
+  shipmentId: number;
+  courierId?: number;
+  token: string;
+}): Promise<AssignCourierResult> {
+  const body: Record<string, unknown> = { shipment_id: input.shipmentId };
+  if (input.courierId) body.courier_id = input.courierId;
+  const res = await fetch(`${CONFIG!.baseUrl}/courier/assign/awb`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${input.token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`courier/assign/awb failed (${res.status})${detail ? `: ${detail.slice(0, 400)}` : ""}`);
+  }
+  const data = (await res.json()) as {
+    awb_assign_status?: number;
+    response?: {
+      data?: { awb_code?: string | null; courier_name?: string | null };
+    };
+  };
+  return {
+    awb: data.response?.data?.awb_code ?? null,
+    courierName: data.response?.data?.courier_name ?? null,
+  };
+}
+
+async function requestPickup(input: { shipmentId: number; token: string }): Promise<void> {
+  const res = await fetch(`${CONFIG!.baseUrl}/courier/generate/pickup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${input.token}`,
+    },
+    body: JSON.stringify({ shipment_id: [input.shipmentId] }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`courier/generate/pickup failed (${res.status})${detail ? `: ${detail.slice(0, 400)}` : ""}`);
+  }
 }
 
 // ShipRocket's webhook body carries a `current_status` string we map onto

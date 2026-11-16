@@ -206,6 +206,13 @@ export async function bookOutboundOrderShipment(db: Db, orderId: string): Promis
   const booked = await bookShipment({
     orderReference: `order-${orderId}`,
     pickupLocationNickname: pickupNickname,
+    // Price-drift mitigation: use the exact courier from the quote the
+    // buyer paid against. Within a few seconds of settlement this courier
+    // is almost always still available at the same rate; passing the id
+    // forces Shiprocket to use it rather than re-picking cheapest.
+    ...(order.shippingQuote?.courierCompanyId
+      ? { preferredCourierId: order.shippingQuote.courierCompanyId }
+      : {}),
     pickup: {
       name: artistUser?.name ?? "GalleryZone Artist",
       phone: artistUser?.phone ?? "0000000000",
