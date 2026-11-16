@@ -10,47 +10,54 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { Collections, type AddressDoc, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type Db, type OrderDoc, type ProfileDoc, type UserDoc } from "@galleryzone/db";
 import { invoiceUrlForShiprocket } from "./invoices.controller.ts";
-import { artistPickupNickname, bookShipment, isShiprocketConfigured, registerPickupLocation } from "./shiprocket.ts";
+import { bookShipment, isShiprocketConfigured, pickupNicknameFor, registerPickupLocation } from "./shiprocket.ts";
 
 /**
- * Lazily register the artist's address as a Shiprocket pickup location
- * if we haven't already. Stores the resulting nickname on the artist
- * profile so subsequent orders don't re-register. The pickup_location
- * nickname is what Shiprocket actually uses to decide the pickup
- * address; without this each artist would default to the GalleryZone
- * HQ warehouse and the courier would show up at the wrong place.
+ * Lazily register a vendor's (artist or aggregator) address as a
+ * Shiprocket pickup location if we haven't already. Stores the resulting
+ * nickname on their profile so subsequent orders don't re-register.
+ *
+ * The pickup_location nickname is what Shiprocket actually uses to decide
+ * the pickup address; without this every pickup would default to the
+ * account-level nickname (GalleryZone HQ) and the courier would go to
+ * the wrong place.
+ *
+ * Works for both roles because the ProfileDoc shape is the same for
+ * artists and aggregators (both carry pickup* fields + the
+ * shiprocketPickupNickname stash). Called from every outbound booking
+ * (inbound uses the artist as pickup; aggregator sale + return use the
+ * aggregator as pickup; outbound order uses the artist as pickup).
  */
-async function ensureArtistPickupNickname(
+async function ensurePickupNickname(
   db: Db,
-  artistId: string,
-  artistUser: UserDoc | undefined,
-  artistProfile: ProfileDoc | undefined,
+  role: "artist" | "aggregator",
+  userId: string,
+  user: UserDoc | undefined,
+  profile: ProfileDoc | undefined,
 ): Promise<string> {
-  // If we already registered them, trust it — the nickname is idempotent
-  // on Shiprocket's side anyway.
-  const existing = artistProfile?.shiprocketPickupNickname;
+  const existing = profile?.shiprocketPickupNickname;
   if (existing) return existing;
-  if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
-    throw new Error(`artist ${artistId} has no pickup address`);
+  if (!profile?.pickupLine1 || !profile.pickupPincode) {
+    throw new Error(`${role} ${userId} has no pickup address`);
   }
-  if (!artistUser?.phone) {
-    throw new Error(`artist ${artistId} has no phone on file`);
+  if (!user?.phone) {
+    throw new Error(`${role} ${userId} has no phone on file`);
   }
-  const nickname = artistPickupNickname(artistId);
+  const nickname = pickupNicknameFor(role, userId);
   await registerPickupLocation({
     nickname,
-    name: artistUser?.name ?? "GalleryZone Artist",
-    email: artistUser?.email ?? "support@galleryzone.in",
-    phone: artistUser.phone,
-    addressLine1: artistProfile.pickupLine1,
-    addressLine2: artistProfile.pickupLine2 ?? "",
-    city: artistProfile.pickupCity ?? "",
-    state: artistProfile.pickupState ?? "",
-    pincode: artistProfile.pickupPincode,
+    name: profile.companyName ?? user?.name ?? `GalleryZone ${role}`,
+    email: user?.email ?? "support@galleryzone.in",
+    phone: user.phone,
+    addressLine1: profile.pickupLine1,
+    addressLine2: profile.pickupLine2 ?? "",
+    city: profile.pickupCity ?? "",
+    state: profile.pickupState ?? "",
+    pincode: profile.pickupPincode,
   });
   // Persist so next time we skip the API call.
   await db
-    .collection(`users/${artistId}/profile`)
+    .collection(`users/${userId}/profile`)
     .doc("data")
     .set({ shiprocketPickupNickname: nickname }, { merge: true });
   return nickname;
@@ -94,8 +101,19 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
   if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
     throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
   }
+  // Pickup is the artist's studio — register them as a Shiprocket pickup
+  // warehouse if we haven't already. Without this the courier is routed
+  // to GalleryZone HQ instead.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    "artist",
+    artwork.artistId,
+    artistUser,
+    artistProfile,
+  );
   const booked = await bookShipment({
     orderReference: `holding-${holdingId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
       name: artistUser?.name ?? "GalleryZone Artist",
       phone: artistUser?.phone ?? "0000000000",
@@ -177,8 +195,9 @@ export async function bookOutboundOrderShipment(db: Db, orderId: string): Promis
 
   // Lazy-register the artist as a Shiprocket pickup location if we haven't
   // already. Without this the courier would be routed to GalleryZone HQ.
-  const pickupNickname = await ensureArtistPickupNickname(
+  const pickupNickname = await ensurePickupNickname(
     db,
+    "artist",
     artwork.artistId,
     artistUser,
     artistProfile,
@@ -265,9 +284,19 @@ export async function bookOutboundAggregatorSaleShipment(db: Db, saleId: string)
   if (!aggProfile?.pickupLine1 || !aggProfile.pickupPincode) {
     throw new Error(`booking: aggregator ${holding.aggregatorId} has no pickup address`);
   }
+  // Pickup is the aggregator's gallery — register them as a Shiprocket
+  // pickup warehouse if we haven't already.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    "aggregator",
+    holding.aggregatorId,
+    aggUser,
+    aggProfile,
+  );
 
   const booked = await bookShipment({
     orderReference: `sale-${saleId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
       name: aggProfile.companyName ?? aggUser?.name ?? "GalleryZone Aggregator",
       phone: aggUser?.phone ?? "0000000000",
@@ -340,14 +369,22 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
   if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
     throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
   }
+  // Pickup is the aggregator's gallery (they're returning the piece).
+  // Register them as a Shiprocket pickup warehouse if we haven't already.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    "aggregator",
+    holding.aggregatorId,
+    aggUser,
+    aggProfile,
+  );
 
   // Keyed `return-<holdingId>` so the webhook controller can distinguish
-  // it from the inbound and advance a return-specific state if we add
-  // one later. For now it won't match any existing prefix and the
-  // controller falls through — the AWB is still issued, the artist has
-  // tracking in their inbox via email. Worth hardening later.
+  // it from the inbound and advance the return-specific state field on
+  // the holding (handled in shiprocket.controller.ts).
   const booked = await bookShipment({
     orderReference: `return-${holdingId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
       name: aggProfile.companyName ?? aggUser?.name ?? "GalleryZone Aggregator",
       phone: aggUser?.phone ?? "0000000000",

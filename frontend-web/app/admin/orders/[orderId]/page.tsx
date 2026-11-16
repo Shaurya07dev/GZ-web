@@ -7,6 +7,7 @@ import Link from "next/link";
 import { AdminOrderActions } from "@/features/admin/commerce/order-actions";
 import { AdminPageHeader } from "@/features/admin/admin-page-header";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
+import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import {
   useAdminOrder,
   useAdminAddress,
@@ -124,6 +125,40 @@ export default function AdminOrderDetailPage(
               </div>
             </div>
           </section>
+
+          {/* Shipping — admin needs the same visibility the buyer has so
+              they can look up pickup status when supporting a ticket.
+              Added 16 Nov 2026 after client flagged the admin console
+              had zero shipping signal. */}
+          {(order.shiprocketStage ||
+            order.status === "transit" ||
+            order.status === "packed") && (
+            <section className="rounded-xl border border-border bg-card p-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-base font-semibold text-foreground">
+                  Shipment
+                </h2>
+                {order.estimatedDeliveryDays != null && order.shiprocketTrackedAt ? (
+                  <span className="text-xs text-muted-foreground">
+                    Expected by{" "}
+                    <span className="text-foreground">
+                      {formatEtaDate(
+                        order.shiprocketTrackedAt,
+                        order.estimatedDeliveryDays,
+                      )}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3">
+                <ShipmentTracker
+                  stage={order.shiprocketStage ?? null}
+                  trackingId={order.trackingId}
+                  carrier={order.carrier}
+                />
+              </div>
+            </section>
+          )}
 
           <section className="rounded-xl border border-border bg-card">
             <div className="border-b border-border px-5 py-4">
@@ -257,4 +292,16 @@ function Line({ label, value }: { label: string; value: string }) {
       <dd className="text-sm tabular-nums text-foreground">{value}</dd>
     </div>
   );
+}
+
+/** "Mon, 24 Nov" — ETA from Shiprocket's day-count estimate. */
+function formatEtaDate(trackedAt: string, estimatedDays: number): string {
+  const booked = new Date(trackedAt);
+  if (Number.isNaN(booked.getTime())) return "";
+  const eta = new Date(booked.getTime() + estimatedDays * 24 * 60 * 60 * 1000);
+  return eta.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }

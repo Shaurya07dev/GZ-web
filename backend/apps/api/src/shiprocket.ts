@@ -185,12 +185,19 @@ export async function registerPickupLocation(input: PickupLocationInput): Promis
 }
 
 /**
- * Build a stable per-artist pickup nickname. Short enough to pass
+ * Build a stable per-vendor pickup nickname. Short enough to pass
  * Shiprocket's length rules (max ~36 chars observed); stable so the
- * same artist always maps to the same warehouse on repeat registrations.
+ * same user always maps to the same warehouse on repeat registrations.
+ * Role prefix distinguishes artist warehouses from aggregator warehouses
+ * in the Shiprocket dashboard (which otherwise is an unstructured list).
  */
+export function pickupNicknameFor(role: "artist" | "aggregator", userId: string): string {
+  return `${role}-${userId.slice(0, 20)}`;
+}
+
+/** @deprecated use pickupNicknameFor(...) — kept for any legacy callers. */
 export function artistPickupNickname(artistId: string): string {
-  return `artist-${artistId.slice(0, 20)}`;
+  return pickupNicknameFor("artist", artistId);
 }
 
 async function getToken(): Promise<string> {
