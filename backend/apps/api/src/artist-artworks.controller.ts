@@ -155,24 +155,47 @@ export class ArtistArtworksController {
   @Roles("artist")
   @Get("artist/gallery-spaces")
   async myGallerySpaces(@Req() req: AuthenticatedRequest) {
-    return { holdings: await listHoldingsForArtist(this.db, req.authUser.uid) };
+    return { holdings: await listHoldingsForArtist(this.db, req.authUser.uid, await this.rates()) };
   }
 
   /**
-   * Artist-initiated return. Once an artist's 6-month listing period winds
-   * down (or whenever they decide they want the piece back), they POST
-   * here with an artwork id. Backend identifies the current aggregator,
-   * books the Shiprocket return pickup from gallery → artist studio, and
-   * records the artist as the payer of return shipping.
+   * Artist-initiated return at the end of the 6-month listing period.
+   * Gate (requestArtistReturn) refuses with HTTP 400 code=too_early if the
+   * window hasn't elapsed; the UI only renders the button when the gate
+   * would pass, so this is a belt-and-braces check for direct calls.
    *
-   * MVP: no payment gating here. Artist pays return shipping manually or
-   * we invoice them later — production would wire a Razorpay intent first.
-   * Added 16 Nov 2026 for the end-of-listing-period flow.
+   * Fee: the holding is stamped with artistReturnShippingDuePaise so the
+   * next settlement subtracts it from the artist's payout (operations
+   * owns reconciliation until we wire a Razorpay intent). Nominal fee
+   * from rates for now — a per-route quote via Shiprocket serviceability
+   * is a follow-up.
    */
   @Roles("artist")
   @Post("artist/artworks/:id/request-return")
   async requestReturn(@Req() req: AuthenticatedRequest, @Param("id") artworkId: string) {
-    const target = await requestArtistReturn(this.db, req.authUser.uid, artworkId);
+    const rates = await this.rates();
+    let target: Awaited<ReturnType<typeof requestArtistReturn>>;
+    try {
+      target = await requestArtistReturn(
+        this.db,
+        req.authUser.uid,
+        artworkId,
+        rates,
+        rates.artistReturnShippingPaise,
+      );
+    } catch (error) {
+      const asAny = error as Error & { code?: string; eligibleAt?: string };
+      if (asAny?.code === "too_early") {
+        throw new BadRequestException({
+          type: "about:blank",
+          title: asAny.message,
+          status: 400,
+          code: "too_early",
+          eligibleAt: asAny.eligibleAt,
+        });
+      }
+      throw error;
+    }
     if (!target) {
       throw new BadRequestException({
         type: "about:blank",
@@ -182,7 +205,7 @@ export class ArtistArtworksController {
       });
     }
     // Fire-and-forget: a Shiprocket outage shouldn't fail the artist's
-    // request — the holding mark is already in place and admin can
+    // request — the stamp is already on the holding and admin can
     // manually rebook from the admin console.
     void bookReturnShipment(this.db, target.holdingId).catch((error) => {
       console.error(
@@ -193,7 +216,11 @@ export class ArtistArtworksController {
         }),
       );
     });
-    return { requested: true, holdingId: target.holdingId };
+    return {
+      requested: true,
+      holdingId: target.holdingId,
+      returnShippingDuePaise: rates.artistReturnShippingPaise,
+    };
   }
 
   /**

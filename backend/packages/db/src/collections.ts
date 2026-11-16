@@ -781,6 +781,15 @@ export interface AggregatorHoldingDoc {
   returnTrackingId?: string | null;
   returnCarrier?: string | null;
   returnTrackedAt?: FirebaseFirestore.Timestamp | null;
+  /** Artist asked for the piece back (end-of-6-month-listing path). Stamp
+   *  so the UI can hide the button while the return is being arranged and
+   *  admin can see artist-initiated vs system-return cases in the audit
+   *  log. 16 Nov 2026. */
+  artistReturnRequestedAt?: FirebaseFirestore.Timestamp | null;
+  /** The return-shipping fee the artist still owes GalleryZone for this
+   *  pickup. Set when the artist raises the return; cleared when the
+   *  next settlement subtracts it from their payout. Paise. */
+  artistReturnShippingDuePaise?: number | null;
 }
 
 export interface HoldingExtensionRequest {

@@ -418,6 +418,22 @@ export const artistDashboardService = {
     return holdings.map(toArtistHolding);
   },
 
+  // Artist asks for a piece back from whichever aggregator holds it, at
+  // the end of the 6-month listing window. Backend gates the request on
+  // cycleStartedAt + aggregatorListingDays, so this is called only from
+  // UI that already knows the holding is eligible — a stray call still
+  // comes back as a 400 { code: "too_early" }.
+  requestArtworkReturn: async (
+    artworkId: string,
+  ): Promise<{ holdingId: string; returnShippingDuePaise: number }> => {
+    const res = await http.post<{
+      requested: true;
+      holdingId: string;
+      returnShippingDuePaise: number;
+    }>(`/v1/artist/artworks/${encodeURIComponent(artworkId)}/request-return`, {});
+    return { holdingId: res.holdingId, returnShippingDuePaise: res.returnShippingDuePaise };
+  },
+
   // --- Account deactivation ------------------------------------------------
   // Asking is all the artist can do. An admin decides, because a closing
   // account may still owe a settlement, hold a piece with an aggregator, or

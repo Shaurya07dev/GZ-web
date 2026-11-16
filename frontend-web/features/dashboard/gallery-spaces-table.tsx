@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import {
   BookmarkCheck,
@@ -7,13 +8,27 @@ import {
   Undo2,
   GalleryVerticalEnd,
   CalendarRange,
+  Loader2,
 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
 import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import { ExpiryCountdown } from "@/features/aggregator/expiry-countdown";
 import { useArtistGallerySpaces } from "@/hooks/useArtistGallerySpaces";
+import { artistDashboardService } from "@/services/artistDashboardService";
+import { formatINR } from "@/lib/utils";
 import type { AggregatorHolding } from "@/types/aggregator";
 
 const STATUS_CONFIG: Record<
@@ -37,8 +52,35 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// ₹200 default — same as the backend rate (artistReturnShippingPaise).
+// Displayed in the dialog so the artist knows what's getting deducted; the
+// authoritative amount still comes from the POST response.
+const DEFAULT_RETURN_SHIPPING_FEE = 200;
+
 export function GallerySpacesTable() {
   const { data, isPending, isError } = useArtistGallerySpaces();
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState<string | null>(null);
+
+  const requestReturn = useMutation({
+    mutationFn: (artworkId: string) =>
+      artistDashboardService.requestArtworkReturn(artworkId),
+    onSuccess: ({ returnShippingDuePaise }) => {
+      toast.success(
+        `Return requested. ${formatINR(returnShippingDuePaise / 100)} return shipping will be deducted from your next payout.`,
+      );
+      setConfirming(null);
+      queryClient.invalidateQueries({ queryKey: ["artist-gallery-spaces"] });
+    },
+    onError: (e) => {
+      // Backend's too_early / no_active_holding codes land here as an
+      // Error whose message is the problem+json title. The server already
+      // sent a human-readable message; relay it directly.
+      toast.error(e instanceof Error ? e.message : "Couldn't raise the return");
+    },
+  });
+
+  const confirmingHolding = confirming ? data?.find((h) => h.id === confirming) : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,6 +143,10 @@ export function GallerySpacesTable() {
                 <th className="px-4 py-3 font-medium">Shipping</th>
                 <th className="px-4 py-3 font-medium">At this location until</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                {/* Only visible once any holding on the page is past its
+                    6-month listing window — avoids a column of em-dashes
+                    on fresh placements. */}
+                <th className="px-4 py-3 font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -162,6 +208,26 @@ export function GallerySpacesTable() {
                         {status.label}
                       </span>
                     </td>
+
+                    <td className="px-4 py-3.5">
+                      {holding.artistReturnRequestedAt ? (
+                        <span className="text-xs text-muted-foreground">
+                          Return requested
+                        </span>
+                      ) : holding.canRequestArtistReturn ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setConfirming(holding.id)}
+                        >
+                          Request return
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          &mdash;
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -169,6 +235,52 @@ export function GallerySpacesTable() {
           </table>
         </div>
       )}
+
+      <Dialog
+        open={confirming !== null}
+        onOpenChange={(open) => {
+          if (!open && !requestReturn.isPending) setConfirming(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request your piece back?</DialogTitle>
+            <DialogDescription>
+              The current aggregator will be asked to hand &ldquo;
+              {confirmingHolding?.artwork?.title ?? "this piece"}&rdquo; back to
+              you. GalleryZone books the return pickup; the return-shipping fee
+              (about {formatINR(DEFAULT_RETURN_SHIPPING_FEE)}) is deducted from
+              your next payout.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirming(null)}
+              disabled={requestReturn.isPending}
+            >
+              Not yet
+            </Button>
+            <Button
+              onClick={() => {
+                if (confirmingHolding) {
+                  requestReturn.mutate(confirmingHolding.artworkId);
+                }
+              }}
+              disabled={requestReturn.isPending}
+            >
+              {requestReturn.isPending ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Requesting
+                </>
+              ) : (
+                "Request return"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
