@@ -784,8 +784,36 @@ export interface AggregatorHoldingDoc {
   /** Artist asked for the piece back (end-of-6-month-listing path). Stamp
    *  so the UI can hide the button while the return is being arranged and
    *  admin can see artist-initiated vs system-return cases in the audit
-   *  log. 16 Nov 2026. */
+   *  log. Stamped only AFTER the Razorpay payment is captured (not when
+   *  the quote is created) — until then the artist can walk away without
+   *  leaving dangling state. 16 Nov 2026. */
   artistReturnRequestedAt?: FirebaseFirestore.Timestamp | null;
+  /** The last return-shipping quote we created for this holding. Kept
+   *  so the UI can resume a half-paid attempt without re-quoting, and
+   *  so the verify endpoint can tell which order it's verifying. */
+  returnRazorpayOrderId?: string | null;
+  /** Captured once the artist pays. Audit record for the reverse leg. */
+  returnRazorpayPaymentId?: string | null;
+  /** The Shiprocket quote this order was priced against. Paise. */
+  returnShippingBasePaise?: number | null;
+  /** 2% Razorpay gateway fee on the base. */
+  returnConvenienceFeePaise?: number | null;
+  /** 18% service GST on the convenience fee. */
+  returnConvenienceGstPaise?: number | null;
+  /** base + convenience + GST — what we charged Razorpay to collect. */
+  returnShippingTotalPaise?: number | null;
+  /** Where the artist asked to have the piece delivered. Mirrors the
+   *  pickup-address shape the system uses elsewhere so the Shiprocket
+   *  booking can lift it unchanged. */
+  returnDropAddress?: {
+    name: string;
+    phone: string | null;
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  } | null;
 }
 
 export interface HoldingExtensionRequest {

@@ -33,15 +33,42 @@ import {
   type Db,
 } from "@galleryzone/db";
 import { checkNfcInputSchema, reportNfcFailureInputSchema, tagUidInputSchema, type CheckNfcInput, type NfcCheckDto, type NfcStateDto, type ReportNfcFailureInput, type TagUidInput } from "@galleryzone/contracts";
-import { IllegalTransitionError } from "@galleryzone/domain";
+import { IllegalTransitionError, returnShippingTotal } from "@galleryzone/domain";
 import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
 import { Emails } from "./mail/emails.ts";
-import { Collections, type ArtworkDoc } from "@galleryzone/db";
+import { Collections, type AggregatorHoldingDoc, type ArtworkDoc, type ProfileDoc, type UserDoc, requestArtistReturn } from "@galleryzone/db";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
+import { Razorpay } from "./payments/razorpay.ts";
+import { getShippingRate, isShiprocketConfigured } from "./shiprocket.ts";
+import { bookReturnShipment } from "./shiprocket-booking.ts";
+import { FieldValue } from "firebase-admin/firestore";
+
+const returnDropAddressSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    phone: z.string().trim().min(10).max(16).nullable().optional(),
+    line1: z.string().trim().min(1).max(160),
+    line2: z.string().trim().max(160).nullable().optional(),
+    city: z.string().trim().min(1).max(80),
+    state: z.string().trim().min(1).max(80),
+    pincode: z.string().trim().regex(/^\d{6}$/, "A 6-digit Indian pincode is required"),
+  })
+  .strict();
+type ReturnDropAddressInput = z.infer<typeof returnDropAddressSchema>;
+
+const returnVerifySchema = z
+  .object({
+    holdingId: z.string().trim().min(1).max(200),
+    razorpayOrderId: z.string().trim().min(1).max(200),
+    razorpayPaymentId: z.string().trim().min(1).max(200),
+    razorpaySignature: z.string().trim().min(1).max(256),
+  })
+  .strict();
+type ReturnVerifyInput = z.infer<typeof returnVerifySchema>;
 
 const physicalSchema = z
   .object({
@@ -112,6 +139,7 @@ export class ArtistArtworksController {
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
     private readonly emails: Emails,
+    private readonly razorpay: Razorpay,
   ) {}
 
   private async artworkOf(id: string): Promise<(ArtworkDoc & { id: string }) | null> {
@@ -157,24 +185,232 @@ export class ArtistArtworksController {
   }
 
   /**
-   * Artist-initiated return at the end of the 6-month listing period.
+   * Artist-initiated return at the end of the 6-month listing period —
+   * STEP 1 (quote).
    *
-   * STUB — the real flow is being rebuilt in a follow-up commit as a
-   * two-step Razorpay-first path (quote → pay → Shiprocket books the
-   * pickup). The earlier version booked Shiprocket WITHOUT taking the
-   * artist's payment first, which would have had GalleryZone fronting
-   * the courier bill — wrong per the business model. Returning 501
-   * here so clients get a clear error instead of a silent nothing.
+   * Validates the gate, resolves pickup (current aggregator's gallery)
+   * and drop (artist's chosen address), asks Shiprocket for the reverse-
+   * leg rate, applies the same 2% + 18% GST pass-through every other
+   * checkout here uses, creates a Razorpay order, and stamps the quote
+   * on the holding so step 2's verify endpoint knows what it's checking.
+   *
+   * Nothing is booked with Shiprocket yet — that happens only AFTER
+   * verify() confirms Razorpay captured the payment. The artist can
+   * walk away at this stage and nothing is left in a half-done state;
+   * stamping the quote is pure bookkeeping.
    */
   @Roles("artist")
   @Post("artist/artworks/:id/request-return")
-  async requestReturn(@Req() _req: AuthenticatedRequest, @Param("id") _artworkId: string) {
-    throw new BadRequestException({
-      type: "about:blank",
-      title: "Return-request flow is being rebuilt to take payment up front. Please check back shortly.",
-      status: 501,
-      code: "not_implemented",
+  async requestReturn(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") artworkId: string,
+    @Body(new ZodValidationPipe(returnDropAddressSchema)) body: ReturnDropAddressInput,
+  ) {
+    if (!isShiprocketConfigured()) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "Return shipping isn't available right now — Shiprocket isn't configured.",
+        status: 503,
+        code: "shipping_unavailable",
+      });
+    }
+    const rates = await this.rates();
+    let target: { holdingId: string; aggregatorId: string; returnEligibleAt: Date };
+    try {
+      target = await requestArtistReturn(this.db, req.authUser.uid, artworkId, rates);
+    } catch (error) {
+      const asAny = error as Error & { code?: string; eligibleAt?: string };
+      if (asAny?.code === "too_early") {
+        throw new BadRequestException({
+          type: "about:blank",
+          title: asAny.message,
+          status: 400,
+          code: "too_early",
+          eligibleAt: asAny.eligibleAt,
+        });
+      }
+      throw error;
+    }
+
+    // Load everyone the quote and the eventual Shiprocket call need.
+    const [aggProfileSnap, aggUserSnap, artworkSnap] = await Promise.all([
+      this.db.collection(`users/${target.aggregatorId}/profile`).doc("data").get(),
+      this.db.collection(Collections.users).doc(target.aggregatorId).get(),
+      this.db.collection(Collections.artworks).doc(artworkId).get(),
+    ]);
+    const aggProfile = aggProfileSnap.data() as ProfileDoc | undefined;
+    const aggUser = aggUserSnap.data() as UserDoc | undefined;
+    const artwork = artworkSnap.data() as ArtworkDoc | undefined;
+    if (!aggProfile?.pickupPincode) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "The current aggregator hasn't set a pickup address yet. We can't quote the reverse leg.",
+        status: 400,
+        code: "aggregator_missing_pickup",
+      });
+    }
+    if (!artwork) throw new NotFoundException();
+
+    // Shiprocket serviceability — the authoritative price for this exact
+    // pickup → drop pair at the artwork's weight and declared value.
+    const quote = await getShippingRate({
+      pickupPincode: aggProfile.pickupPincode,
+      dropPincode: body.pincode,
+      weightKg: artwork.physical?.weightKg ?? 2,
+      valueInr: Math.max(1, Math.round((artwork.listing?.displayPricePaise ?? 0) / 100)),
     });
+    if (!quote) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "No courier can serve that pincode for this piece right now. Try another drop pincode.",
+        status: 400,
+        code: "not_serviceable",
+      });
+    }
+
+    const breakdown = returnShippingTotal(quote.ratePaise, rates);
+
+    // Razorpay order. `receipt` identifies the holding so a webhook can
+    // find it; the 40-char Razorpay receipt cap is honoured by the
+    // shared `post()` helper in payments/razorpay.ts.
+    const razorpayOrder = await this.razorpay.createOrder({
+      orderId: `return:${target.holdingId}`,
+      amountPaise: breakdown.totalPaise,
+      customerId: req.authUser.uid,
+    });
+
+    const dropAddress: NonNullable<AggregatorHoldingDoc["returnDropAddress"]> = {
+      name: body.name,
+      phone: body.phone ?? null,
+      line1: body.line1,
+      line2: body.line2 ?? null,
+      city: body.city,
+      state: body.state,
+      pincode: body.pincode,
+    };
+
+    await this.db
+      .collection(Collections.aggregatorHoldings)
+      .doc(target.holdingId)
+      .set(
+        {
+          returnRazorpayOrderId: razorpayOrder.id,
+          returnShippingBasePaise: breakdown.shippingBasePaise,
+          returnConvenienceFeePaise: breakdown.convenienceFeePaise,
+          returnConvenienceGstPaise: breakdown.convenienceGstPaise,
+          returnShippingTotalPaise: breakdown.totalPaise,
+          returnDropAddress: dropAddress,
+        },
+        { merge: true },
+      );
+
+    return {
+      holdingId: target.holdingId,
+      razorpayOrderId: razorpayOrder.id,
+      razorpayKeyId: this.razorpay.keyId,
+      amountPaise: breakdown.totalPaise,
+      currency: razorpayOrder.currency,
+      breakdown,
+      pickup: {
+        name: aggProfile.companyName ?? aggUser?.name ?? "Current aggregator",
+        line1: aggProfile.pickupLine1,
+        city: aggProfile.pickupCity,
+        state: aggProfile.pickupState,
+        pincode: aggProfile.pickupPincode,
+      },
+      drop: dropAddress,
+      carrier: quote.carrier,
+      estimatedDeliveryDays: quote.estimatedDeliveryDays,
+    };
+  }
+
+  /**
+   * STEP 2 (verify). Razorpay Checkout.js posts back order_id, payment_id
+   * and signature; we verify the signature, re-read the order from
+   * Razorpay (necessary-not-sufficient check — signature alone can't
+   * prove the order is currently paid for the right amount), then and
+   * only then book Shiprocket. Idempotent on `artistReturnRequestedAt`:
+   * a replayed verify finds the stamp already set and short-circuits.
+   */
+  @Roles("artist")
+  @Post("artist/artworks/:id/request-return/verify")
+  async requestReturnVerify(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") artworkId: string,
+    @Body(new ZodValidationPipe(returnVerifySchema)) body: ReturnVerifyInput,
+  ) {
+    const holdingSnap = await this.db
+      .collection(Collections.aggregatorHoldings)
+      .doc(body.holdingId)
+      .get();
+    const holding = holdingSnap.data() as AggregatorHoldingDoc | undefined;
+    if (!holding || holding.artworkId !== artworkId) throw new NotFoundException();
+    // Owner check — only the artwork's artist may verify this return.
+    const artworkSnap = await this.db.collection(Collections.artworks).doc(artworkId).get();
+    const artwork = artworkSnap.data() as ArtworkDoc | undefined;
+    if (!artwork || artwork.artistId !== req.authUser.uid) throw new NotFoundException();
+
+    if (holding.artistReturnRequestedAt) {
+      // Replayed verify. Don't re-book, don't error — just confirm.
+      return { verified: true, holdingId: body.holdingId };
+    }
+    if (!holding.returnRazorpayOrderId || holding.returnRazorpayOrderId !== body.razorpayOrderId) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "This payment doesn't match the return quote on file.",
+        status: 400,
+        code: "order_mismatch",
+      });
+    }
+
+    const signatureOk = this.razorpay.verifyCheckoutSignature({
+      razorpayOrderId: body.razorpayOrderId,
+      razorpayPaymentId: body.razorpayPaymentId,
+      signature: body.razorpaySignature,
+    });
+    if (!signatureOk) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "Payment signature could not be verified.",
+        status: 400,
+        code: "bad_signature",
+      });
+    }
+
+    // Re-read the order over our authenticated connection: a signature
+    // only proves the payload came from Razorpay, not that the order is
+    // currently paid for the right amount.
+    const rpOrder = await this.razorpay.fetchOrder(body.razorpayOrderId);
+    if (rpOrder.status !== "paid" || rpOrder.amount_paid !== (holding.returnShippingTotalPaise ?? 0)) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "Payment hasn't settled with Razorpay yet — give it a moment and try again.",
+        status: 400,
+        code: "not_paid_yet",
+      });
+    }
+
+    // Stamp the holding BEFORE booking so a Shiprocket outage doesn't
+    // strand the artist on a paid but unrequested return — admin can
+    // rebook from the console. The webhook controller won't double-book
+    // because `return-<holdingId>` is the shared reference.
+    await holdingSnap.ref.update({
+      artistReturnRequestedAt: FieldValue.serverTimestamp(),
+      returnRazorpayPaymentId: body.razorpayPaymentId,
+    });
+
+    // Fire-and-forget: the booking either succeeds or an admin rebooks.
+    void bookReturnShipment(this.db, body.holdingId).catch((error) => {
+      console.error(
+        JSON.stringify({
+          event: "shiprocket.return.failed",
+          holdingId: body.holdingId,
+          error: String(error),
+        }),
+      );
+    });
+
+    return { verified: true, holdingId: body.holdingId };
   }
 
   /**

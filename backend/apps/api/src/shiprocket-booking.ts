@@ -419,8 +419,33 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
   if (!aggProfile?.pickupLine1 || !aggProfile.pickupPincode) {
     throw new Error(`booking: aggregator ${holding.aggregatorId} has no pickup address`);
   }
-  if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
-    throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
+  // Drop: the artist's chosen address from the return request — stamped on
+  // the holding when the Razorpay quote was taken. Falls back to the
+  // artist's default pickup profile if, for any reason, the stamp is
+  // absent (e.g. an admin manually revived a return).
+  const dropAddress = holding.returnDropAddress
+    ? {
+        name: holding.returnDropAddress.name,
+        phone: holding.returnDropAddress.phone ?? "0000000000",
+        line1: holding.returnDropAddress.line1,
+        line2: holding.returnDropAddress.line2,
+        city: holding.returnDropAddress.city,
+        state: holding.returnDropAddress.state,
+        pincode: holding.returnDropAddress.pincode,
+      }
+    : artistProfile?.pickupLine1 && artistProfile.pickupPincode
+      ? {
+          name: artistUser?.name ?? "GalleryZone Artist",
+          phone: artistUser?.phone ?? "0000000000",
+          line1: artistProfile.pickupLine1,
+          line2: artistProfile.pickupLine2 ?? null,
+          city: artistProfile.pickupCity ?? "",
+          state: artistProfile.pickupState ?? "",
+          pincode: artistProfile.pickupPincode,
+        }
+      : null;
+  if (!dropAddress) {
+    throw new Error(`booking: no drop address for return on holding ${holdingId}`);
   }
   // Pickup is the aggregator's gallery (they're returning the piece).
   // Register them as a Shiprocket pickup warehouse if we haven't already.
@@ -447,15 +472,7 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
       state: aggProfile.pickupState ?? "",
       pincode: aggProfile.pickupPincode,
     },
-    dropoff: {
-      name: artistUser?.name ?? "GalleryZone Artist",
-      phone: artistUser?.phone ?? "0000000000",
-      line1: artistProfile.pickupLine1,
-      line2: artistProfile.pickupLine2,
-      city: artistProfile.pickupCity ?? "",
-      state: artistProfile.pickupState ?? "",
-      pincode: artistProfile.pickupPincode,
-    },
+    dropoff: dropAddress,
     weightKg: artwork.physical?.weightKg ?? 2,
     artworkTitle: artwork.title,
     valueInr: Math.max(1, Math.round(holding.displayPricePaise / 100)),
