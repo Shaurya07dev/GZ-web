@@ -786,10 +786,6 @@ export interface AggregatorHoldingDoc {
    *  admin can see artist-initiated vs system-return cases in the audit
    *  log. 16 Nov 2026. */
   artistReturnRequestedAt?: FirebaseFirestore.Timestamp | null;
-  /** The return-shipping fee the artist still owes GalleryZone for this
-   *  pickup. Set when the artist raises the return; cleared when the
-   *  next settlement subtracts it from their payout. Paise. */
-  artistReturnShippingDuePaise?: number | null;
 }
 
 export interface HoldingExtensionRequest {

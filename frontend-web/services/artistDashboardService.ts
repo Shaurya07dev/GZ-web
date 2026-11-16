@@ -419,19 +419,17 @@ export const artistDashboardService = {
   },
 
   // Artist asks for a piece back from whichever aggregator holds it, at
-  // the end of the 6-month listing window. Backend gates the request on
-  // cycleStartedAt + aggregatorListingDays, so this is called only from
-  // UI that already knows the holding is eligible — a stray call still
-  // comes back as a 400 { code: "too_early" }.
-  requestArtworkReturn: async (
-    artworkId: string,
-  ): Promise<{ holdingId: string; returnShippingDuePaise: number }> => {
-    const res = await http.post<{
-      requested: true;
-      holdingId: string;
-      returnShippingDuePaise: number;
-    }>(`/v1/artist/artworks/${encodeURIComponent(artworkId)}/request-return`, {});
-    return { holdingId: res.holdingId, returnShippingDuePaise: res.returnShippingDuePaise };
+  // the end of the 6-month listing window. STUB — the backend currently
+  // returns 501 while a two-step Razorpay-first flow is wired up (quote
+  // the reverse leg → artist pays → Shiprocket books pickup). The UI
+  // still shows the button so the entry point is in place; a click
+  // relays the server's "being rebuilt" message as a toast.
+  requestArtworkReturn: async (artworkId: string): Promise<{ holdingId: string }> => {
+    const res = await http.post<{ requested: true; holdingId: string }>(
+      `/v1/artist/artworks/${encodeURIComponent(artworkId)}/request-return`,
+      {},
+    );
+    return { holdingId: res.holdingId };
   },
 
   // --- Account deactivation ------------------------------------------------

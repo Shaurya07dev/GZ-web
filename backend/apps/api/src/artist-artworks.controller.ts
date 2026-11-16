@@ -22,7 +22,6 @@ import {
   listArtistPenalties,
   listHoldingsForArtist,
   listSettlements,
-  requestArtistReturn,
   lockNfcTag,
   markSoldElsewhere,
   listArtistArtworksOwned,
@@ -41,7 +40,6 @@ import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
 import { Emails } from "./mail/emails.ts";
-import { bookReturnShipment } from "./shiprocket-booking.ts";
 import { Collections, type ArtworkDoc } from "@galleryzone/db";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -160,67 +158,23 @@ export class ArtistArtworksController {
 
   /**
    * Artist-initiated return at the end of the 6-month listing period.
-   * Gate (requestArtistReturn) refuses with HTTP 400 code=too_early if the
-   * window hasn't elapsed; the UI only renders the button when the gate
-   * would pass, so this is a belt-and-braces check for direct calls.
    *
-   * Fee: the holding is stamped with artistReturnShippingDuePaise so the
-   * next settlement subtracts it from the artist's payout (operations
-   * owns reconciliation until we wire a Razorpay intent). Nominal fee
-   * from rates for now — a per-route quote via Shiprocket serviceability
-   * is a follow-up.
+   * STUB — the real flow is being rebuilt in a follow-up commit as a
+   * two-step Razorpay-first path (quote → pay → Shiprocket books the
+   * pickup). The earlier version booked Shiprocket WITHOUT taking the
+   * artist's payment first, which would have had GalleryZone fronting
+   * the courier bill — wrong per the business model. Returning 501
+   * here so clients get a clear error instead of a silent nothing.
    */
   @Roles("artist")
   @Post("artist/artworks/:id/request-return")
-  async requestReturn(@Req() req: AuthenticatedRequest, @Param("id") artworkId: string) {
-    const rates = await this.rates();
-    let target: Awaited<ReturnType<typeof requestArtistReturn>>;
-    try {
-      target = await requestArtistReturn(
-        this.db,
-        req.authUser.uid,
-        artworkId,
-        rates,
-        rates.artistReturnShippingPaise,
-      );
-    } catch (error) {
-      const asAny = error as Error & { code?: string; eligibleAt?: string };
-      if (asAny?.code === "too_early") {
-        throw new BadRequestException({
-          type: "about:blank",
-          title: asAny.message,
-          status: 400,
-          code: "too_early",
-          eligibleAt: asAny.eligibleAt,
-        });
-      }
-      throw error;
-    }
-    if (!target) {
-      throw new BadRequestException({
-        type: "about:blank",
-        title: "No aggregator currently holds this piece.",
-        status: 400,
-        code: "no_active_holding",
-      });
-    }
-    // Fire-and-forget: a Shiprocket outage shouldn't fail the artist's
-    // request — the stamp is already on the holding and admin can
-    // manually rebook from the admin console.
-    void bookReturnShipment(this.db, target.holdingId).catch((error) => {
-      console.error(
-        JSON.stringify({
-          event: "shiprocket.return.failed",
-          holdingId: target.holdingId,
-          error: String(error),
-        }),
-      );
+  async requestReturn(@Req() _req: AuthenticatedRequest, @Param("id") _artworkId: string) {
+    throw new BadRequestException({
+      type: "about:blank",
+      title: "Return-request flow is being rebuilt to take payment up front. Please check back shortly.",
+      status: 501,
+      code: "not_implemented",
     });
-    return {
-      requested: true,
-      holdingId: target.holdingId,
-      returnShippingDuePaise: rates.artistReturnShippingPaise,
-    };
   }
 
   /**

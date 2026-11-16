@@ -28,7 +28,6 @@ import { ShipmentTracker } from "@/components/shared/shipment-tracker";
 import { ExpiryCountdown } from "@/features/aggregator/expiry-countdown";
 import { useArtistGallerySpaces } from "@/hooks/useArtistGallerySpaces";
 import { artistDashboardService } from "@/services/artistDashboardService";
-import { formatINR } from "@/lib/utils";
 import type { AggregatorHolding } from "@/types/aggregator";
 
 const STATUS_CONFIG: Record<
@@ -52,11 +51,6 @@ const STATUS_CONFIG: Record<
   },
 };
 
-// ₹200 default — same as the backend rate (artistReturnShippingPaise).
-// Displayed in the dialog so the artist knows what's getting deducted; the
-// authoritative amount still comes from the POST response.
-const DEFAULT_RETURN_SHIPPING_FEE = 200;
-
 export function GallerySpacesTable() {
   const { data, isPending, isError } = useArtistGallerySpaces();
   const queryClient = useQueryClient();
@@ -65,17 +59,15 @@ export function GallerySpacesTable() {
   const requestReturn = useMutation({
     mutationFn: (artworkId: string) =>
       artistDashboardService.requestArtworkReturn(artworkId),
-    onSuccess: ({ returnShippingDuePaise }) => {
-      toast.success(
-        `Return requested. ${formatINR(returnShippingDuePaise / 100)} return shipping will be deducted from your next payout.`,
-      );
+    onSuccess: () => {
+      toast.success("Return requested.");
       setConfirming(null);
       queryClient.invalidateQueries({ queryKey: ["artist-gallery-spaces"] });
     },
     onError: (e) => {
-      // Backend's too_early / no_active_holding codes land here as an
-      // Error whose message is the problem+json title. The server already
-      // sent a human-readable message; relay it directly.
+      // Backend's too_early / no_active_holding / not_implemented codes
+      // land here as an Error whose message is the problem+json title.
+      // The server already sent a human-readable message; relay it.
       toast.error(e instanceof Error ? e.message : "Couldn't raise the return");
     },
   });
@@ -248,9 +240,8 @@ export function GallerySpacesTable() {
             <DialogDescription>
               The current aggregator will be asked to hand &ldquo;
               {confirmingHolding?.artwork?.title ?? "this piece"}&rdquo; back to
-              you. GalleryZone books the return pickup; the return-shipping fee
-              (about {formatINR(DEFAULT_RETURN_SHIPPING_FEE)}) is deducted from
-              your next payout.
+              you. You&rsquo;ll be shown the return-shipping fee and asked to
+              pay for it before the courier is booked.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

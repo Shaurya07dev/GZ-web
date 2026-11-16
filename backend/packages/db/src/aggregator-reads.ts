@@ -348,23 +348,27 @@ export async function listPendingExtensionRequests(db: Firestore): Promise<Aggre
  * Returns the holding doc id so the caller can wire `bookReturnShipment`
  * at that id and persist the courier AWB on the row.
  */
+/**
+ * Validates that an artist may raise a return on this artwork right now:
+ * the artwork is theirs, the 6-month window has elapsed, an aggregator
+ * still holds it, and no earlier request is already in flight. Returns
+ * the holding id and the current holder — the caller is responsible for
+ * quoting Shiprocket, creating a Razorpay order for the return-shipping
+ * fee, and stamping `artistReturnRequestedAt` only after the artist's
+ * payment is captured. No writes here.
+ */
 export async function requestArtistReturn(
   db: Firestore,
   artistId: string,
   artworkId: string,
   rates: PricingRates,
-  returnShippingDuePaise: number,
-): Promise<{ holdingId: string; aggregatorId: string; returnEligibleAt: Date } | null> {
+): Promise<{ holdingId: string; aggregatorId: string; returnEligibleAt: Date }> {
   const artworkSnap = await db.collection(Collections.artworks).doc(artworkId).get();
   if (!artworkSnap.exists) throw new AggregatorReadError(`No artwork ${artworkId}`);
   const art = artworkSnap.data() as ArtworkDoc;
   if (art.artistId !== artistId) {
     throw new AggregatorReadError("That artwork is not yours.");
   }
-  // cycleStartedAt = earliest holding on this artwork. Needed BEFORE we
-  // look for an active holding — if the 180-day window hasn't elapsed
-  // yet, we refuse regardless of whether someone is currently holding
-  // it, so the artist sees a consistent "not eligible yet" message.
   const allHoldings = await holdingsFor(db, artworkId);
   const first = allHoldings[0];
   if (!first) {
@@ -384,9 +388,6 @@ export async function requestArtistReturn(
   if (!holding) {
     throw new AggregatorReadError("No aggregator currently holds this piece.");
   }
-  // activeHoldingForArtwork returns the view (no aggregatorId on it); read
-  // the raw doc to get the aggregatorId that owns the holding so the
-  // caller can book pickup from the right gallery.
   const rawSnap = await db.collection(Collections.aggregatorHoldings).doc(holding.id).get();
   const raw = rawSnap.data() as AggregatorHoldingDoc | undefined;
   if (!raw?.aggregatorId) {
@@ -395,14 +396,6 @@ export async function requestArtistReturn(
   if (raw.artistReturnRequestedAt) {
     throw new AggregatorReadError("You already requested this piece back; it's being arranged.");
   }
-  // Stamp the holding so the UI can switch to "Return requested" and the
-  // next settlement knows to deduct return shipping from the artist's
-  // payout. We don't flip status here — that happens inside returnHolding
-  // once the courier webhook confirms arrival at the studio.
-  await rawSnap.ref.update({
-    artistReturnRequestedAt: FieldValue.serverTimestamp(),
-    artistReturnShippingDuePaise: returnShippingDuePaise,
-  });
   return { holdingId: holding.id, aggregatorId: raw.aggregatorId, returnEligibleAt };
 }
 

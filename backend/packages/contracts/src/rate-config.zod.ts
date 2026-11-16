@@ -55,7 +55,6 @@ export const pricingRatesSchema = z
     aggregatorCycleMonths: z.number().int().min(1).max(24),
     aggregatorListingDays: z.number().int().min(1).max(730),
     aggregatorPlacementDays: z.number().int().min(1).max(365),
-    artistReturnShippingPaise: z.number().int().min(0).default(20_000),
     aggregatorMonthlyDiscountRates: z.array(percent(1)).min(1),
     // How far above GalleryZone's price an aggregator may go before GalleryZone
     // is warned (1 = double). It never blocks: a sanity ceiling only.

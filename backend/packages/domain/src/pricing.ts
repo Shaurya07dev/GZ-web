@@ -98,11 +98,6 @@ export interface PricingRates {
   aggregatorListingDays: number;
   /** One aggregator's display window, in days. */
   aggregatorPlacementDays: number;
-  /** Nominal reverse-pickup fee the artist is billed when they ask for a
-   *  piece back at the end of the 6-month listing period. Deducted from
-   *  their next settlement. Per-route Shiprocket quoting is a follow-up;
-   *  until then this flat amount covers typical reverse legs. Paise. */
-  artistReturnShippingPaise: number;
   /** Percent-off-artist-price ladder applied to the next aggregator's offer, index 0 = month 1. */
   aggregatorMonthlyDiscountRates: readonly number[];
   /**
@@ -177,8 +172,6 @@ export const DEFAULT_RATE_SEED: PricingRates = {
   aggregatorCycleMonths: 5,
   aggregatorListingDays: 180,
   aggregatorPlacementDays: 30,
-  // ₹200 — flat reverse-leg estimate pending per-route quoting.
-  artistReturnShippingPaise: 20_000,
   aggregatorMonthlyDiscountRates: [0, 0.02, 0.04, 0.06, 0.08],
   aggregatorPriceWarnRate: 1,
   deliveryZoneRates: {
