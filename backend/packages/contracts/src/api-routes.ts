@@ -211,6 +211,12 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "GET", path: "/v1/admin/reports", authRole: "admin", summary: "Generated finance reports", replaces: "adminService.listReports" },
   { method: "POST", path: "/v1/admin/reports", authRole: "admin", summary: "Generate a new report", replaces: "adminService.generateReport" },
 
+  // --- Coupons ---------------------------------------------------------------
+  { method: "POST", path: "/v1/admin/coupons", authRole: "admin", summary: "Create a marketplace discount code", replaces: "n/a — new" },
+  { method: "GET", path: "/v1/admin/coupons", authRole: "admin", summary: "List every coupon, newest first", replaces: "n/a — new" },
+  { method: "PATCH", path: "/v1/admin/coupons/:code", authRole: "admin", summary: "Pause / resume / expire a coupon", replaces: "n/a — new" },
+  { method: "POST", path: "/v1/coupons/apply", authRole: "customer", summary: "Validate a code against an artwork and quote the discount", replaces: "n/a — new" },
+
   // --- Admin rules console (rate config) ---------------------------------------------------
   { method: "GET", path: "/v1/admin/rate-config", authRole: "admin", summary: "Current + pending rate versions", replaces: "adminService.getSettings" },
   { method: "POST", path: "/v1/admin/rate-config/propose", authRole: "platform_admin", summary: "Propose a rate change (2-step: propose)", replaces: "adminService.updateSettings" },

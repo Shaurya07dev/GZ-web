@@ -139,6 +139,13 @@ export const Collections = {
    * replaces the pending code and takes its attempt count with it.
    */
   otps: "otps",
+  /**
+   * Admin-created marketplace discount codes. Doc id is the lowercased
+   * code so the lookup is a direct `get()` — codes are case-insensitive
+   * by convention (e.g. "DIWALI25" and "diwali25" are the same coupon).
+   * Discount is absorbed by platform_revenue; artist payouts never move.
+   */
+  coupons: "coupons",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -590,6 +597,13 @@ export interface OrderDoc {
   shiprocketTrackingId?: string | null;
   shiprocketCarrier?: string | null;
   shiprocketTrackedAt?: FirebaseFirestore.Timestamp | null;
+  /** Admin-created discount code the buyer applied at checkout, lowercased
+   *  to match the coupons/{code} doc id. Absent when no code was used. */
+  couponCode?: string | null;
+  /** The discount this coupon took off the customer total. Paise.
+   *  GalleryZone's platform revenue absorbs it — artist/aggregator
+   *  payouts are untouched. Absent when no coupon was used. */
+  couponDiscountPaise?: number | null;
 }
 
 /** Lives on the order doc so the invoice number can't drift across reads. */
@@ -1228,4 +1242,40 @@ export interface ReservationIntentDoc {
   paidAt: FirebaseFirestore.Timestamp | null;
   finalizedAt: FirebaseFirestore.Timestamp | null;
   refundedAt: FirebaseFirestore.Timestamp | null;
+}
+
+/**
+ * Admin-created marketplace coupon. Doc id is the code, lowercased, so
+ * lookups are case-insensitive without a second index.
+ *
+ * Only marketplace checkout honours these in the MVP. Aggregator sales
+ * are untouched because their price is already discounted through the
+ * aggregator pricing ladder. Artists and aggregators never see a cut
+ * to their payouts — the discount comes entirely out of GalleryZone's
+ * platform revenue, which is the margin we have to give.
+ */
+export interface CouponDoc {
+  /** Lowercased code, equal to the doc id. */
+  code: string;
+  /** "percent" takes value as a percent (0-100); "flat" takes value as paise. */
+  kind: "percent" | "flat";
+  /** Percent (0-100) or paise, by `kind`. */
+  value: number;
+  /** Floor: if the artwork's displayPrice is below this, the coupon refuses. Paise. Null = no floor. */
+  minOrderPaise: number | null;
+  /** Ceiling: a percent coupon never takes more than this. Paise. Null = no cap. */
+  maxDiscountPaise: number | null;
+  /** When the code goes live. */
+  validFrom: FirebaseFirestore.Timestamp;
+  /** When it expires. */
+  validUntil: FirebaseFirestore.Timestamp;
+  /** Total redemptions the code is good for, across all customers. */
+  usageCap: number | null;
+  /** Bumped inside the checkout transaction on a successful redemption. */
+  usedCount: number;
+  /** "active" (live), "paused" (admin took it offline), "expired" (past validUntil). */
+  status: "active" | "paused" | "expired";
+  /** Admin uid who created it. */
+  createdBy: string;
+  createdAt: FirebaseFirestore.Timestamp;
 }

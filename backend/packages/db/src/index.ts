@@ -56,3 +56,4 @@ export * from "./notifications.ts";
 export * from "./notification-preferences.ts";
 export * from "./holding-claim.ts";
 export * from "./invoices.ts";
+export * from "./coupons.ts";

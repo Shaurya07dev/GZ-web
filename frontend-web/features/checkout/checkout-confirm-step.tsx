@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { ArrowLeft, CheckCircle2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatINR } from "@/lib/utils";
 import { useCreateOrderMutation } from "@/hooks/useOrders";
 import { PaymentDismissedError } from "@/lib/razorpay-checkout";
 import { useCheckoutQuote } from "@/hooks/useCheckoutQuote";
+import { couponService, type CouponApplyResult } from "@/services/orderService";
 import type { Artwork } from "@/types/artwork";
 import type { Address } from "@/types/customer";
 import type { Order } from "@/types/order";
@@ -31,13 +35,35 @@ export function CheckoutConfirmStep({
   placedOrder,
 }: CheckoutConfirmStepProps) {
   const createOrderMutation = useCreateOrderMutation();
+  const [couponInput, setCouponInput] = useState("");
+  const [applied, setApplied] = useState<CouponApplyResult | null>(null);
 
   const { data: quote } = useCheckoutQuote(artwork.id, address.id);
-  const total = quote?.total ?? 0;
+  const baseTotal = quote?.total ?? 0;
+  const discount = applied ? applied.discountPaise / 100 : 0;
+  const total = Math.max(0, baseTotal - discount);
+
+  const applyCoupon = useMutation({
+    mutationFn: () =>
+      couponService.apply({ code: couponInput.trim(), artworkId: artwork.id }),
+    onSuccess: (result) => {
+      setApplied(result);
+      toast.success(
+        `Coupon applied — ${formatINR(result.discountPaise / 100)} off`,
+      );
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "That code didn't work");
+    },
+  });
 
   function handlePay() {
     createOrderMutation.mutate(
-      { artworkId: artwork.id, addressId: address.id },
+      {
+        artworkId: artwork.id,
+        addressId: address.id,
+        ...(applied ? { couponCode: applied.code } : {}),
+      },
       {
         onSuccess: (order) => {
           onOrderPlaced(order);
@@ -122,6 +148,63 @@ export function CheckoutConfirmStep({
           {address.line1}, {address.city}. Paying opens the secure Razorpay
           checkout — UPI, cards and net banking.
         </p>
+      </div>
+
+      {/* Coupon — optional. The server re-validates at order creation, so
+          a code paused between apply and pay fails cleanly before Razorpay
+          opens. */}
+      <div className="flex flex-col gap-2 border-t border-border pt-5">
+        <p className="text-sm font-medium text-foreground">Have a coupon?</p>
+        {applied ? (
+          <div className="flex items-center justify-between rounded-md border border-gold/30 bg-gold/5 px-3 py-2 text-sm">
+            <div>
+              <span className="font-mono text-foreground">
+                {applied.code.toUpperCase()}
+              </span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {formatINR(applied.discountPaise / 100)} off
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setApplied(null);
+                setCouponInput("");
+              }}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              disabled={createOrderMutation.isPending}
+            >
+              <X className="size-3.5" />
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Input
+              value={couponInput}
+              onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+              placeholder="Coupon code"
+              maxLength={24}
+              className="font-mono uppercase"
+              disabled={applyCoupon.isPending || createOrderMutation.isPending}
+            />
+            <Button
+              variant="outline"
+              onClick={() => applyCoupon.mutate()}
+              disabled={
+                !/^[A-Z0-9]{3,24}$/.test(couponInput.trim()) ||
+                applyCoupon.isPending ||
+                createOrderMutation.isPending
+              }
+            >
+              {applyCoupon.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Apply"
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between border-t border-border pt-5">

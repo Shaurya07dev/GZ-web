@@ -5,3 +5,4 @@ export * from "./secure-id-signature.ts";
 export * from "./settlement.ts";
 export * from "./policies.ts";
 export * from "./aggregator-cycle.ts";
+export * from "./coupons.ts";

@@ -41,6 +41,15 @@ export interface CreateOrderInput {
    * on the order so the UI can render an "estimated" badge.
    */
   deliveryQuote?: ShippingQuoteSnapshot | undefined;
+  /**
+   * Admin-created marketplace discount code the buyer applied. The caller
+   * MUST have already called validateCoupon() with the same artwork so
+   * `couponDiscountPaise` is a trusted number. createOrder just stamps it;
+   * markOrderPaid passes it into the settlement posting (and the discount
+   * is absorbed by platform_revenue there).
+   */
+  couponCode?: string | undefined;
+  couponDiscountPaise?: number | undefined;
 }
 
 /** Snapshotted on the order so re-visits never show a different number. */
@@ -56,7 +65,16 @@ export interface CreateOrderResult {
   totalPaise: number;
 }
 
-export async function createOrder({ db, customerId, artworkId, addressId, idempotencyKey, deliveryQuote }: CreateOrderInput): Promise<CreateOrderResult> {
+export async function createOrder({
+  db,
+  customerId,
+  artworkId,
+  addressId,
+  idempotencyKey,
+  deliveryQuote,
+  couponCode,
+  couponDiscountPaise,
+}: CreateOrderInput): Promise<CreateOrderResult> {
   // Guard against duplicate orders for the same (customer, artwork) that
   // happen when the client generates a fresh idempotencyKey on each tap
   // (double-tap, React-retry after a flaky network, mobile tap+touch).
@@ -173,6 +191,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   // show "estimated — final at dispatch".
   const checkout = checkoutTotal(displayPrice, rates, deliveryQuote?.ratePaise);
   const gstPaise = gstIncludedIn(displayPrice, rates);
+  const discount = Math.max(0, Math.min(checkout.total, Math.round(couponDiscountPaise ?? 0)));
 
   const orderRef = db.collection(Collections.orders).doc();
   const orderDoc: OrderDoc = {
@@ -184,7 +203,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     deliveryChargePaise: checkout.deliveryCharge,
     convenienceFeePaise: checkout.convenienceFee,
     convenienceGstPaise: checkout.convenienceGst,
-    totalPaise: checkout.total,
+    totalPaise: checkout.total - discount,
     status: "pending",
     rateConfigVersionId: activeVersion.id,
     artistId: pricing.artistId,
@@ -194,6 +213,8 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     // UI can render an "estimated" badge.
     shippingQuote: deliveryQuote ?? null,
     createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+    couponCode: couponCode ? couponCode.trim().toLowerCase() : null,
+    couponDiscountPaise: discount > 0 ? discount : null,
   };
   await orderRef.set(orderDoc);
   await db.collection(orderStatusEventsCol(orderRef.id)).add({ status: "pending", changedAt: FieldValue.serverTimestamp() });
@@ -203,7 +224,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     provider: "razorpay",
     providerPaymentId: null,
     method: "simulated",
-    amountPaise: checkout.total,
+    amountPaise: checkout.total - discount,
     idempotencyKey,
     status: "pending",
     rawWebhookPayload: null,
@@ -214,7 +235,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   // creating a second payment record.
   await db.collection(Collections.payments).doc(idempotencyKey).create(paymentDoc);
 
-  return { orderId: orderRef.id, totalPaise: checkout.total };
+  return { orderId: orderRef.id, totalPaise: checkout.total - discount };
 }
 
 /**
@@ -615,6 +636,7 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   const version = await rateStore.getActiveVersion(order.createdAt.toDate());
   if (!version) throw new CheckoutError("Order references a rate_config_version that is no longer resolvable");
 
+  const couponDiscountPaise = order.couponDiscountPaise ?? 0;
   // TDS depends on what the artist has already sold this financial year, so
   // it is decided inside the same transaction that posts the ledger entries.
   const { transactionId } = await postArtistSale(db, {
@@ -625,8 +647,36 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
     saleKey: `order:${orderId}`,
     orderId,
     build: (tdsApplies) =>
-      marketplaceCheckoutPostings({ artistId: pricing.artistId, artistPricePaise: pricing.artistPricePaise, rates: version.rates, tdsApplies }),
+      marketplaceCheckoutPostings({
+        artistId: pricing.artistId,
+        artistPricePaise: pricing.artistPricePaise,
+        rates: version.rates,
+        tdsApplies,
+        couponDiscountPaise,
+      }),
   });
+
+  // Bump the coupon's usedCount — best effort. A race past usageCap doesn't
+  // reverse a sale we already captured money for; we log and move on, admin
+  // can reconcile. Also idempotent on a replayed capture via the order's
+  // own paid guard above, so we don't double-count.
+  if (order.couponCode) {
+    try {
+      await db
+        .collection(Collections.coupons)
+        .doc(order.couponCode)
+        .update({ usedCount: FieldValue.increment(1) });
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          event: "coupon.usedCount.update_failed",
+          orderId,
+          code: order.couponCode,
+          error: String(error),
+        }),
+      );
+    }
+  }
 
   await orderRef.update({ status: "paid" });
   await db.collection(orderStatusEventsCol(orderId)).add({ status: "paid", changedAt: FieldValue.serverTimestamp() });

@@ -182,6 +182,7 @@ const NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { label: "Orders", href: "/admin/orders", icon: Receipt, tourId: "admin-orders" },
       { label: "Settlements", href: "/admin/settlements", icon: Scale, tourId: "admin-settlements" },
+      { label: "Coupons", href: "/admin/coupons", icon: Tags },
     ],
   },
   {
