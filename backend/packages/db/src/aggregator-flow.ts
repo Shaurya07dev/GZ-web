@@ -27,6 +27,7 @@ import {
 import { aggregatorEligibleSalesInPreviousMonthPaise } from "./aggregator-commission.ts";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { postArtistSale } from "./artist-sales.ts";
+import { redeemCouponTx, validateCoupon } from "./coupons.ts";
 import { postLedgerEntries } from "./ledger-repository.ts";
 import { getWalletBalance } from "./wallets.ts";
 import { Collections, artworkPricingCol, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type ArtworkPricingDoc } from "./collections.ts";
@@ -188,6 +189,9 @@ export interface RecordSaleInput {
   } | undefined;
   deliveryMode: "courier" | "self_pickup";
   paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
+  /** Admin coupon the aggregator applied at the counter. The code is
+   *  re-validated against the live coupon doc before the sale posts. */
+  couponCode?: string | undefined;
 }
 
 export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ saleId: string; transactionId: string }> {
@@ -226,6 +230,35 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
   );
   const commissionRate = commissionRateForPreviousMonthSales(previousMonthEligibleSales, rates);
 
+  // Coupon: aggregator-scoped codes are honoured on in-store sales. The
+  // aggregator entered the code manually — we re-validate against the
+  // live coupon doc before the sale posts so a code paused between the
+  // UI and the server is caught. perUserCap doesn't apply here (no user
+  // identity; the buyer is whoever walked into the gallery) so we pass
+  // a stable synthetic userId derived from the holding, which also
+  // prevents a single aggregator from spamming redemptions.
+  let couponCode: string | null = null;
+  let couponDiscountPaise = 0;
+  if (input.couponCode) {
+    try {
+      const { discountPaise, coupon } = await validateCoupon(db, {
+        code: input.couponCode,
+        subtotalPaise: holding.displayPricePaise,
+        context: {
+          channel: "aggregator",
+          artistId: pricing.artistId,
+          userId: `aggregator:${holding.aggregatorId}`,
+        },
+      });
+      couponCode = coupon.code;
+      couponDiscountPaise = discountPaise;
+    } catch (error) {
+      throw new AggregatorFlowError(
+        error instanceof Error ? error.message : "Coupon validation failed",
+      );
+    }
+  }
+
   const buildPostings = (tdsApplies: boolean) =>
     aggregatorSalePostings({
       artistId: pricing.artistId,
@@ -237,6 +270,7 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
       rates,
       tdsApplies,
       commissionRate,
+      couponDiscountPaise,
       // The delivery leg the aggregator was actually charged at reservation is
       // what comes off the artist, not the flat fallback.
       ...(holding.deliveryDepositPaise === null ? {} : { deliveryChargePaise: holding.deliveryDepositPaise }),
@@ -244,6 +278,31 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
 
   // Last step before money moves: a return racing this sale is refused from here on.
   await claimHoldingExit(db, holdingId, "sale");
+  // Claim the coupon slot atomically, mirroring the marketplace path.
+  // Keyed on holdingId so a replayed sale or a webhook retry can't
+  // double-redeem. A race past usageCap throws and we fail the sale
+  // BEFORE any money has moved (no Razorpay here — the aggregator can
+  // simply try again without the code if they insist).
+  if (couponCode) {
+    try {
+      await db.runTransaction(async (tx) =>
+        redeemCouponTx(db, tx, {
+          code: couponCode!,
+          refId: holdingId,
+          subtotalPaise: holding.displayPricePaise,
+          context: {
+            channel: "aggregator",
+            artistId: pricing.artistId,
+            userId: `aggregator:${holding.aggregatorId}`,
+          },
+        }),
+      );
+    } catch (error) {
+      throw new AggregatorFlowError(
+        error instanceof Error ? error.message : "Could not redeem coupon",
+      );
+    }
+  }
   const saleRef = db.collection(Collections.aggregatorSales).doc();
   const saleDoc: AggregatorSaleDoc = {
     holdingId,
@@ -264,6 +323,8 @@ export async function recordAggregatorSale(input: RecordSaleInput): Promise<{ sa
       : {}),
     deliveryMode: input.deliveryMode,
     paymentRoute: input.paymentRoute,
+    couponCode,
+    couponDiscountPaise: couponDiscountPaise > 0 ? couponDiscountPaise : null,
     remittedAt: null,
     // Cash is GalleryZone's money: the full price is due within two days.
     remitDueAt: input.paymentRoute === "cash_at_premises" ? Timestamp.fromDate(cashRemittanceDueAt(soldAt)) : null,

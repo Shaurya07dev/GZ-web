@@ -156,6 +156,9 @@ export const artworkImagesCol = (artworkId: string) => `artworks/${artworkId}/im
 export const artworkStatusEventsCol = (artworkId: string) => `artworks/${artworkId}/statusEvents`;
 export const artworkOwnershipEventsCol = (artworkId: string) => `artworks/${artworkId}/ownershipEvents`;
 export const orderStatusEventsCol = (orderId: string) => `orders/${orderId}/statusEvents`;
+
+/** Per-coupon redemption ledger. */
+export const couponRedemptionsCol = (code: string) => `coupons/${code}/redemptions`;
 export const userProfileCol = (userId: string) => `users/${userId}/profile`;
 export const userFinancialCol = (userId: string) => `users/${userId}/financial`;
 
@@ -918,6 +921,10 @@ export interface AggregatorSaleDoc {
    *  rewrites what was billed. Absent on sales recorded before the slab
    *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
   commissionRate?: number;
+  /** Admin coupon the aggregator applied at the counter. */
+  couponCode?: string | null;
+  /** Discount the coupon took off this sale, paise. Absorbed by platform revenue. */
+  couponDiscountPaise?: number | null;
 }
 
 /**
@@ -1271,11 +1278,34 @@ export interface CouponDoc {
   validUntil: FirebaseFirestore.Timestamp;
   /** Total redemptions the code is good for, across all customers. */
   usageCap: number | null;
+  /** How many times each customer may use this code. Null = unlimited per user. */
+  perUserCap: number | null;
   /** Bumped inside the checkout transaction on a successful redemption. */
   usedCount: number;
+  /** Which checkouts the code is honoured on. "both" works on either. */
+  scope: "marketplace" | "aggregator" | "both";
+  /** When present, restricts the coupon to pieces by these artists.
+   *  Null = any artist. Case-sensitive uids. */
+  artistIds: string[] | null;
   /** "active" (live), "paused" (admin took it offline), "expired" (past validUntil). */
   status: "active" | "paused" | "expired";
   /** Admin uid who created it. */
   createdBy: string;
   createdAt: FirebaseFirestore.Timestamp;
+}
+
+/**
+ * A single redemption of a coupon. Lives at
+ * `coupons/{code}/redemptions/{orderOrHoldingId}`. One doc per sale;
+ * created inside the payment-capture transaction so usedCount and the
+ * per-user-cap query stay in sync.
+ */
+export interface CouponRedemptionDoc {
+  userId: string;
+  channel: "marketplace" | "aggregator";
+  /** paise taken off this sale. */
+  discountPaise: number;
+  redeemedAt: FirebaseFirestore.Timestamp;
+  /** The order id (marketplace) or holding id (aggregator sale) this redemption belongs to. */
+  refId: string;
 }

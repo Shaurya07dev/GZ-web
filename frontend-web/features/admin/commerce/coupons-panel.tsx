@@ -67,9 +67,11 @@ export function CouponsPanel() {
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Code</th>
                 <th className="px-4 py-3 font-medium">Discount</th>
+                <th className="px-4 py-3 font-medium">Scope</th>
                 <th className="px-4 py-3 font-medium">Floor</th>
                 <th className="px-4 py-3 font-medium">Window</th>
                 <th className="px-4 py-3 font-medium">Used</th>
+                <th className="px-4 py-3 font-medium">Per user</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
@@ -115,17 +117,27 @@ function Row({
     month: "short",
   })}`;
   const used = coupon.usageCap ? `${coupon.usedCount}/${coupon.usageCap}` : `${coupon.usedCount}`;
+  const scopeLabel = coupon.scope === "both" ? "Both" : coupon.scope === "marketplace" ? "Marketplace" : "Aggregator";
   return (
     <tr className="border-b border-border last:border-0">
       <td className="px-4 py-3.5 font-mono text-foreground uppercase">
         {coupon.code}
+        {coupon.artistIds && coupon.artistIds.length > 0 ? (
+          <div className="mt-0.5 text-xs text-muted-foreground font-sans normal-case">
+            {coupon.artistIds.length} artist{coupon.artistIds.length === 1 ? "" : "s"}
+          </div>
+        ) : null}
       </td>
       <td className="px-4 py-3.5 text-foreground">{discount}</td>
+      <td className="px-4 py-3.5 text-muted-foreground">{scopeLabel}</td>
       <td className="px-4 py-3.5 text-muted-foreground">
         {coupon.minOrderPaise ? formatINR(coupon.minOrderPaise / 100) : "—"}
       </td>
       <td className="px-4 py-3.5 text-muted-foreground">{window}</td>
       <td className="px-4 py-3.5 text-foreground tabular-nums">{used}</td>
+      <td className="px-4 py-3.5 text-muted-foreground tabular-nums">
+        {coupon.perUserCap ?? "—"}
+      </td>
       <td className="px-4 py-3.5">
         <span
           className={
@@ -188,6 +200,9 @@ function CreateCouponDialog({
     new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
   );
   const [usageCap, setUsageCap] = useState<string>("");
+  const [perUserCap, setPerUserCap] = useState<string>("");
+  const [scope, setScope] = useState<"marketplace" | "aggregator" | "both">("marketplace");
+  const [artistIds, setArtistIds] = useState<string>("");
 
   const create = useMutation({
     mutationFn: () => {
@@ -198,6 +213,10 @@ function CreateCouponDialog({
       if (kind === "percent" && parsedValue > 100) {
         throw new Error("Percent coupons can't be above 100");
       }
+      const parsedArtistIds = artistIds
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       return couponsAdminService.create({
         code: code.trim(),
         kind,
@@ -207,6 +226,9 @@ function CreateCouponDialog({
         validFrom: new Date(validFrom).toISOString(),
         validUntil: new Date(validUntil).toISOString(),
         usageCap: usageCap ? Math.round(Number(usageCap)) : null,
+        perUserCap: perUserCap ? Math.round(Number(perUserCap)) : null,
+        scope,
+        artistIds: parsedArtistIds.length > 0 ? parsedArtistIds : null,
       });
     },
     onSuccess: () => {
@@ -311,16 +333,56 @@ function CreateCouponDialog({
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="c-cap">Total redemptions</Label>
+              <Input
+                id="c-cap"
+                type="number"
+                value={usageCap}
+                onChange={(e) => setUsageCap(e.target.value)}
+                min={1}
+                placeholder="optional"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="c-per-user">Per customer</Label>
+              <Input
+                id="c-per-user"
+                type="number"
+                value={perUserCap}
+                onChange={(e) => setPerUserCap(e.target.value)}
+                min={1}
+                placeholder="optional"
+              />
+            </div>
+          </div>
           <div className="grid gap-2">
-            <Label htmlFor="c-cap">Total redemptions (optional)</Label>
+            <Label htmlFor="c-scope">Where the code works</Label>
+            <select
+              id="c-scope"
+              value={scope}
+              onChange={(e) =>
+                setScope(e.target.value as "marketplace" | "aggregator" | "both")
+              }
+              className="h-10 rounded-md border border-border bg-background px-3 text-sm"
+            >
+              <option value="marketplace">Marketplace only</option>
+              <option value="aggregator">Aggregator sales only</option>
+              <option value="both">Both</option>
+            </select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="c-artists">Restrict to artists (optional)</Label>
             <Input
-              id="c-cap"
-              type="number"
-              value={usageCap}
-              onChange={(e) => setUsageCap(e.target.value)}
-              min={1}
-              placeholder="e.g. 100"
+              id="c-artists"
+              value={artistIds}
+              onChange={(e) => setArtistIds(e.target.value)}
+              placeholder="comma-separated artist uids"
             />
+            <p className="text-xs text-muted-foreground">
+              Leave blank to apply to any artist&rsquo;s piece.
+            </p>
           </div>
         </div>
         <DialogFooter>

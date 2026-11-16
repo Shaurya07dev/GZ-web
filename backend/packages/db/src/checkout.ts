@@ -18,6 +18,7 @@ import {
   type PricingRates, artistSettlementOf } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { getArtistSale, postArtistSale } from "./artist-sales.ts";
+import { redeemCouponTx, releaseCouponRedemption } from "./coupons.ts";
 import { claimReservation, clearReservation } from "./artwork-reservations.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
@@ -418,12 +419,31 @@ export async function markOrderRefunded(
   detail: { providerRefundId: string; reason: string },
 ): Promise<void> {
   const ref = db.collection(Collections.orders).doc(orderId);
+  const snap = await ref.get();
+  const order = snap.data() as OrderDoc | undefined;
   await ref.update({
     status: "cancelled",
     refundedAt: FieldValue.serverTimestamp(),
     providerRefundId: detail.providerRefundId,
     refundReason: detail.reason.slice(0, 500),
   });
+  // Give the coupon slot back so a capped code can be used again, and the
+  // per-user cap decrements for the buyer. Idempotent on refId — a second
+  // refund on an already-released order is a no-op.
+  if (order?.couponCode) {
+    try {
+      await releaseCouponRedemption(db, { code: order.couponCode, refId: orderId });
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          event: "coupon.release.failed",
+          orderId,
+          code: order.couponCode,
+          error: String(error),
+        }),
+      );
+    }
+  }
 }
 
 /**
@@ -637,6 +657,57 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   if (!version) throw new CheckoutError("Order references a rate_config_version that is no longer resolvable");
 
   const couponDiscountPaise = order.couponDiscountPaise ?? 0;
+  // Atomically claim the coupon's slot BEFORE posting the sale, so a race
+  // past usageCap / perUserCap refuses this capture instead of over-
+  // redeeming. The redemption doc is keyed on orderId, making the claim
+  // idempotent on a replayed webhook. If the redemption already exists
+  // (e.g. a slow webhook retrying) we reuse the recorded discount — the
+  // sale is settling for exactly what the buyer saw.
+  if (order.couponCode) {
+    try {
+      const { discountPaise } = await db.runTransaction(async (tx) =>
+        redeemCouponTx(db, tx, {
+          code: order.couponCode!,
+          refId: orderId,
+          subtotalPaise: order.displayPricePaise,
+          context: {
+            channel: "marketplace",
+            artistId: pricing.artistId,
+            userId: order.customerId,
+          },
+        }),
+      );
+      if (discountPaise !== couponDiscountPaise) {
+        // Should never happen — createOrder validated and froze the amount.
+        // If the admin edited the coupon between order creation and capture,
+        // honour the ORIGINAL stamp (the buyer saw that price) and log.
+        console.warn(
+          JSON.stringify({
+            event: "coupon.discount_drift",
+            orderId,
+            code: order.couponCode,
+            stamped: couponDiscountPaise,
+            recomputed: discountPaise,
+          }),
+        );
+      }
+    } catch (error) {
+      // Cap-exceeded, status flipped to paused, or validity window closed
+      // between order creation and capture. The customer already paid via
+      // Razorpay for the discounted total; refusing here would strand the
+      // sale. Log loudly, honour the stamped discount anyway (so the
+      // settlement still makes sense), and leave reconciliation to admin.
+      console.error(
+        JSON.stringify({
+          event: "coupon.redeem.failed",
+          orderId,
+          code: order.couponCode,
+          error: String(error),
+        }),
+      );
+    }
+  }
+
   // TDS depends on what the artist has already sold this financial year, so
   // it is decided inside the same transaction that posts the ledger entries.
   const { transactionId } = await postArtistSale(db, {
@@ -655,28 +726,6 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
         couponDiscountPaise,
       }),
   });
-
-  // Bump the coupon's usedCount — best effort. A race past usageCap doesn't
-  // reverse a sale we already captured money for; we log and move on, admin
-  // can reconcile. Also idempotent on a replayed capture via the order's
-  // own paid guard above, so we don't double-count.
-  if (order.couponCode) {
-    try {
-      await db
-        .collection(Collections.coupons)
-        .doc(order.couponCode)
-        .update({ usedCount: FieldValue.increment(1) });
-    } catch (error) {
-      console.warn(
-        JSON.stringify({
-          event: "coupon.usedCount.update_failed",
-          orderId,
-          code: order.couponCode,
-          error: String(error),
-        }),
-      );
-    }
-  }
 
   await orderRef.update({ status: "paid" });
   await db.collection(orderStatusEventsCol(orderId)).add({ status: "paid", changedAt: FieldValue.serverTimestamp() });

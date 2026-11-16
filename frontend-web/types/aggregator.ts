@@ -83,6 +83,7 @@ export interface RecordSalePayload {
   };
   deliveryMode: "courier" | "self_pickup";
   paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
+  couponCode?: string;
 }
 
 // Persisted result of recordSale() — buyer/price/delivery details Orders &

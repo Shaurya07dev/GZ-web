@@ -184,6 +184,11 @@ export class OrdersController {
         const { discountPaise, coupon } = await validateCoupon(this.db, {
           code: body.couponCode,
           subtotalPaise,
+          context: {
+            channel: "marketplace",
+            artistId: pricing.artistId,
+            userId: req.authUser.uid,
+          },
         });
         couponCode = coupon.code;
         couponDiscountPaise = discountPaise;

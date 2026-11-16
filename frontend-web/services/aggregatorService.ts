@@ -289,6 +289,7 @@ export const aggregatorService = {
       deliveryMode: payload.deliveryMode,
       paymentRoute: payload.paymentRoute,
       ...(address ? { deliveryAddress: address } : {}),
+      ...(payload.couponCode ? { couponCode: payload.couponCode } : {}),
     });
     const updated = await http.get<HoldingDto>(`/v1/aggregator/holdings/${encodeURIComponent(active.id)}`);
     return toHolding(updated);

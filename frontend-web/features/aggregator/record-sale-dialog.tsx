@@ -54,6 +54,12 @@ const recordSaleSchema = z.object({
   deliveryMode: z.enum(["courier", "self_pickup"], {
     message: "Select a delivery mode",
   }),
+  couponCode: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{3,24}$/, "3–24 letters/digits only")
+    .optional()
+    .or(z.literal("")),
 });
 type RecordSaleFormValues = z.infer<typeof recordSaleSchema>;
 
@@ -67,6 +73,7 @@ const BLANK_BUYER_FIELDS = {
   pincode: "",
   paymentRoute: "direct_to_galleryzone",
   deliveryMode: "courier",
+  couponCode: "",
 } as const;
 
 interface RecordSaleDialogProps {
@@ -122,6 +129,9 @@ export function RecordSaleDialog({
         },
         paymentRoute: values.paymentRoute,
         deliveryMode: values.deliveryMode,
+        ...(values.couponCode && values.couponCode.trim()
+          ? { couponCode: values.couponCode.trim() }
+          : {}),
       },
       {
         onSuccess: () => {
@@ -393,6 +403,31 @@ export function RecordSaleDialog({
                       ? "You will owe GalleryZone the full sale amount. Your commission is settled separately."
                       : "Nothing to transfer — the money reached GalleryZone directly."}
                   </p>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="couponCode"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="couponCode">
+                    Coupon code (optional)
+                  </FieldLabel>
+                  <Input
+                    id="couponCode"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                    className="font-mono uppercase"
+                    maxLength={24}
+                    placeholder="DIWALI25"
+                  />
+                  <FieldDescription>
+                    Marketplace codes don&rsquo;t apply here. Only codes an admin set
+                    to work on aggregator sales will be accepted.
+                  </FieldDescription>
                   <FieldError errors={[fieldState.error]} />
                 </Field>
               )}

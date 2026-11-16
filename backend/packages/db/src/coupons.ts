@@ -1,32 +1,39 @@
-// Admin-created marketplace coupons — create / list / pause / validate / apply.
-// Pure DB plumbing; the discount math is `computeCouponDiscount` in
-// packages/domain so settlement.check.ts can exercise it without Firestore.
+// Admin-created marketplace + aggregator coupons.
 //
 // Design notes (16 Nov 2026):
 //
-//   * Doc id is the code, lowercased. Entering "DIWALI25" or "diwali25" both
-//     hit the same row. The `code` field mirrors the id so dumping rows reads
-//     naturally.
+//   * Doc id is the code, lowercased — case-insensitive lookups without a
+//     second index. "DIWALI25" and "diwali25" are the same coupon.
 //
-//   * Discount is absorbed by platform_revenue at checkout time — see
-//     marketplaceCheckoutPostings. Artists and aggregators never see a cut
-//     to their payout, regardless of the coupon's size.
+//   * Discount is absorbed by platform_revenue in the ledger (see
+//     marketplaceCheckoutPostings + aggregatorSalePostings). Artists and
+//     aggregators always get their full settlement, regardless of coupon
+//     size — the admin is spending GalleryZone's margin, not someone else's.
 //
-//   * `usedCount` is incremented inside the same checkout transaction that
-//     posts the sale. Reserving at `/v1/coupons/apply` time would need a
-//     separate release path on abandoned carts; we keep it simpler by
-//     claiming at payment capture. Trade-off: two buyers racing on the
-//     last redemption of a capped coupon both see "valid" at apply but the
-//     slower of the two gets refused at checkout. Acceptable for MVP.
+//   * Each successful redemption is written as a doc under
+//     `coupons/{code}/redemptions/{refId}` inside the same transaction that
+//     bumps `usedCount`. That gives us two things for free:
+//       (a) atomic enforcement of usageCap / perUserCap (the TX re-reads
+//           both the coupon and the user's prior redemptions — two concurrent
+//           checkouts can't both sneak past a cap),
+//       (b) refunds: delete the redemption doc + decrement usedCount in one
+//           TX, idempotent on the refId.
 
 import { FieldValue, Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore";
 import { computeCouponDiscount, type CouponInput } from "@galleryzone/domain";
-import { Collections, type CouponDoc } from "./collections.ts";
+import {
+  Collections,
+  couponRedemptionsCol,
+  type CouponDoc,
+  type CouponRedemptionDoc,
+} from "./collections.ts";
 import { DbError } from "./errors.ts";
 
 export class CouponError extends DbError {
-  constructor(message: string, readonly code: CouponErrorCode) {
+  readonly code: CouponErrorCode;
+  constructor(message: string, code: CouponErrorCode) {
     super(message);
+    this.code = code;
   }
 }
 
@@ -36,7 +43,11 @@ export type CouponErrorCode =
   | "expired"
   | "not_yet_valid"
   | "usage_cap_reached"
+  | "per_user_cap_reached"
   | "below_floor"
+  | "wrong_scope"
+  | "wrong_artist"
+  | "invalid"
   | "already_exists";
 
 export interface CouponView {
@@ -48,7 +59,10 @@ export interface CouponView {
   validFrom: string;
   validUntil: string;
   usageCap: number | null;
+  perUserCap: number | null;
   usedCount: number;
+  scope: CouponDoc["scope"];
+  artistIds: string[] | null;
   status: CouponDoc["status"];
   createdBy: string;
   createdAt: string;
@@ -64,7 +78,10 @@ function toView(id: string, doc: CouponDoc): CouponView {
     validFrom: doc.validFrom.toDate().toISOString(),
     validUntil: doc.validUntil.toDate().toISOString(),
     usageCap: doc.usageCap,
+    perUserCap: doc.perUserCap,
     usedCount: doc.usedCount,
+    scope: doc.scope,
+    artistIds: doc.artistIds,
     status: doc.status,
     createdBy: doc.createdBy,
     createdAt: doc.createdAt.toDate().toISOString(),
@@ -80,6 +97,9 @@ export interface CreateCouponInput {
   validFrom: Date;
   validUntil: Date;
   usageCap: number | null;
+  perUserCap: number | null;
+  scope: CouponDoc["scope"];
+  artistIds: string[] | null;
 }
 
 export async function createCoupon(
@@ -91,7 +111,7 @@ export async function createCoupon(
   if (!/^[a-z0-9]{3,24}$/.test(code)) {
     throw new CouponError(
       "Coupon codes must be 3–24 characters, letters and digits only.",
-      "already_exists",
+      "invalid",
     );
   }
   const ref = db.collection(Collections.coupons).doc(code);
@@ -104,7 +124,10 @@ export async function createCoupon(
     validFrom: Timestamp.fromDate(input.validFrom),
     validUntil: Timestamp.fromDate(input.validUntil),
     usageCap: input.usageCap,
+    perUserCap: input.perUserCap,
     usedCount: 0,
+    scope: input.scope,
+    artistIds: input.artistIds && input.artistIds.length > 0 ? input.artistIds : null,
     status: "active",
     createdBy: adminId,
     createdAt: Timestamp.now(),
@@ -112,7 +135,6 @@ export async function createCoupon(
   try {
     await ref.create(doc);
   } catch (error) {
-    // Firestore ALREADY_EXISTS when the code is taken.
     if ((error as { code?: number } | null)?.code === 6) {
       throw new CouponError(`Coupon "${code}" already exists.`, "already_exists");
     }
@@ -140,24 +162,53 @@ export async function setCouponStatus(
   return toView(id, after);
 }
 
+export interface ValidateCouponContext {
+  channel: "marketplace" | "aggregator";
+  artistId: string;
+  userId: string;
+}
+
 /**
  * Read + validate a coupon for a checkout attempt. Returns the discount in
- * paise AND the raw doc, so the caller can both quote the amount and claim
- * it atomically at payment-capture time without re-reading. Throws
- * CouponError with a specific code when the coupon is unusable.
+ * paise AND the validated view. Throws CouponError with a specific code
+ * when the coupon is unusable. Does NOT reserve the slot — reservation is
+ * `redeemCouponTx` called at payment capture.
  */
 export async function validateCoupon(
   db: Firestore,
-  input: { code: string; subtotalPaise: number; now?: Date },
+  input: {
+    code: string;
+    subtotalPaise: number;
+    context: ValidateCouponContext;
+    now?: Date;
+  },
 ): Promise<{ discountPaise: number; coupon: CouponView }> {
   const id = input.code.trim().toLowerCase();
   const snap = await db.collection(Collections.coupons).doc(id).get();
   const doc = snap.data() as CouponDoc | undefined;
   if (!doc) throw new CouponError("That code doesn't exist.", "not_found");
-  const view = toView(id, doc);
-  assertUsable(doc, input.subtotalPaise, input.now ?? new Date());
-  const discountPaise = computeCouponDiscount({ coupon: toCouponInput(doc), subtotalPaise: input.subtotalPaise });
-  return { discountPaise, coupon: view };
+  assertUsable(doc, input.subtotalPaise, input.context, input.now ?? new Date());
+
+  // Per-user cap — a count query against the redemptions subcollection
+  // scoped to this user. Deliberately NOT inside a TX: validateCoupon is
+  // the optimistic "does this look good" check, the atomic enforcement
+  // is `redeemCouponTx` at payment capture. Two concurrent checkouts
+  // from the same user race here harmlessly.
+  if (doc.perUserCap !== null) {
+    const priorSnap = await db
+      .collection(couponRedemptionsCol(id))
+      .where("userId", "==", input.context.userId)
+      .get();
+    if (priorSnap.size >= doc.perUserCap) {
+      throw new CouponError("You've used that code already.", "per_user_cap_reached");
+    }
+  }
+
+  const discountPaise = computeCouponDiscount({
+    coupon: toCouponInput(doc),
+    subtotalPaise: input.subtotalPaise,
+  });
+  return { discountPaise, coupon: toView(id, doc) };
 }
 
 function toCouponInput(doc: CouponDoc): CouponInput {
@@ -168,39 +219,125 @@ function toCouponInput(doc: CouponDoc): CouponInput {
   };
 }
 
-function assertUsable(doc: CouponDoc, subtotalPaise: number, now: Date): void {
+function assertUsable(
+  doc: CouponDoc,
+  subtotalPaise: number,
+  context: ValidateCouponContext,
+  now: Date,
+): void {
   if (doc.status === "paused") throw new CouponError("That code is paused right now.", "paused");
   if (doc.status === "expired") throw new CouponError("That code has expired.", "expired");
-  if (now.getTime() < doc.validFrom.toMillis()) throw new CouponError("That code isn't live yet.", "not_yet_valid");
-  if (now.getTime() > doc.validUntil.toMillis()) throw new CouponError("That code has expired.", "expired");
+  if (now.getTime() < doc.validFrom.toMillis()) {
+    throw new CouponError("That code isn't live yet.", "not_yet_valid");
+  }
+  if (now.getTime() > doc.validUntil.toMillis()) {
+    throw new CouponError("That code has expired.", "expired");
+  }
   if (doc.usageCap !== null && doc.usedCount >= doc.usageCap) {
     throw new CouponError("That code has been fully redeemed.", "usage_cap_reached");
   }
   if (doc.minOrderPaise !== null && subtotalPaise < doc.minOrderPaise) {
+    throw new CouponError("This piece is below the minimum order for that code.", "below_floor");
+  }
+  if (doc.scope !== "both" && doc.scope !== context.channel) {
     throw new CouponError(
-      `This piece is below the minimum order for that code.`,
-      "below_floor",
+      `That code works on ${scopeLabel(doc.scope)} only.`,
+      "wrong_scope",
     );
   }
+  if (doc.artistIds && doc.artistIds.length > 0 && !doc.artistIds.includes(context.artistId)) {
+    throw new CouponError("That code doesn't apply to this artist.", "wrong_artist");
+  }
+}
+
+function scopeLabel(scope: CouponDoc["scope"]): string {
+  return scope === "marketplace" ? "marketplace purchases" : "aggregator sales";
 }
 
 /**
  * Claim one unit of a coupon's usage inside a Firestore transaction.
- * Called from the checkout payment-capture path. Re-reads the coupon
- * transactionally so two concurrent captures can't both slip through a
- * usageCap boundary. Throws CouponError when the claim can't be made.
+ * Called at payment-capture time. Writes a redemption doc keyed by
+ * `refId` (orderId for marketplace, holdingId for aggregator) and bumps
+ * `usedCount`. Idempotent: a replayed capture finds the redemption doc
+ * already there and skips (zero-discount return — caller shouldn't
+ * re-apply on top).
+ *
+ * The TX re-reads the coupon and the user's prior redemptions, so two
+ * concurrent captures can't both slip past usageCap or perUserCap.
  */
-export async function claimCouponUsage(
+export async function redeemCouponTx(
   db: Firestore,
   tx: Transaction,
-  input: { code: string; subtotalPaise: number; now?: Date },
+  input: {
+    code: string;
+    refId: string;
+    subtotalPaise: number;
+    context: ValidateCouponContext;
+    now?: Date;
+  },
+): Promise<{ discountPaise: number; alreadyRecorded: boolean }> {
+  const id = input.code.trim().toLowerCase();
+  const couponRef = db.collection(Collections.coupons).doc(id);
+  const redemptionRef = db.collection(couponRedemptionsCol(id)).doc(input.refId);
+  const [couponSnap, redemptionSnap] = await Promise.all([
+    tx.get(couponRef),
+    tx.get(redemptionRef),
+  ]);
+  const doc = couponSnap.data() as CouponDoc | undefined;
+  if (!doc) throw new CouponError("That code doesn't exist.", "not_found");
+  if (redemptionSnap.exists) {
+    const existing = redemptionSnap.data() as CouponRedemptionDoc;
+    return { discountPaise: existing.discountPaise, alreadyRecorded: true };
+  }
+  assertUsable(doc, input.subtotalPaise, input.context, input.now ?? new Date());
+
+  // Per-user cap again, this time inside the TX so a second concurrent
+  // redemption for the same user retries and sees the first one. The
+  // query is scoped to the user and consumed inside the TX.
+  if (doc.perUserCap !== null) {
+    const priorSnap = await tx.get(
+      db.collection(couponRedemptionsCol(id)).where("userId", "==", input.context.userId),
+    );
+    if (priorSnap.size >= doc.perUserCap) {
+      throw new CouponError("You've used that code already.", "per_user_cap_reached");
+    }
+  }
+
+  const discountPaise = computeCouponDiscount({
+    coupon: toCouponInput(doc),
+    subtotalPaise: input.subtotalPaise,
+  });
+  const redemption: CouponRedemptionDoc = {
+    userId: input.context.userId,
+    channel: input.context.channel,
+    discountPaise,
+    redeemedAt: Timestamp.now(),
+    refId: input.refId,
+  };
+  tx.create(redemptionRef, redemption);
+  tx.update(couponRef, { usedCount: FieldValue.increment(1) });
+  return { discountPaise, alreadyRecorded: false };
+}
+
+/**
+ * Reverse a redemption on refund. Idempotent: a double-call finds the
+ * redemption doc already gone and returns 0.
+ */
+export async function releaseCouponRedemption(
+  db: Firestore,
+  input: { code: string; refId: string },
 ): Promise<number> {
   const id = input.code.trim().toLowerCase();
-  const ref = db.collection(Collections.coupons).doc(id);
-  const snap = await tx.get(ref);
-  const doc = snap.data() as CouponDoc | undefined;
-  if (!doc) throw new CouponError("That code doesn't exist.", "not_found");
-  assertUsable(doc, input.subtotalPaise, input.now ?? new Date());
-  tx.update(ref, { usedCount: FieldValue.increment(1) });
-  return computeCouponDiscount({ coupon: toCouponInput(doc), subtotalPaise: input.subtotalPaise });
+  const couponRef = db.collection(Collections.coupons).doc(id);
+  const redemptionRef = db.collection(couponRedemptionsCol(id)).doc(input.refId);
+  let released = 0;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(redemptionRef);
+    if (!snap.exists) return;
+    const data = snap.data() as CouponRedemptionDoc;
+    released = data.discountPaise;
+    tx.delete(redemptionRef);
+    tx.update(couponRef, { usedCount: FieldValue.increment(-1) });
+  });
+  return released;
 }

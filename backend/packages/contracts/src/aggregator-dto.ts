@@ -70,6 +70,12 @@ export const recordAggregatorSaleInputSchema = z
     deliveryCity: z.string().min(1).optional(),
     deliveryState: z.string().min(1).optional(),
     deliveryPincode: z.string().regex(/^\d{6}$/).optional(),
+    /** Admin-created coupon the aggregator typed in at the counter. */
+    couponCode: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9]{3,24}$/)
+      .optional(),
   })
   .strict();
 

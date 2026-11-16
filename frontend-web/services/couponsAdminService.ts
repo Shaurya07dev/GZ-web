@@ -9,7 +9,10 @@ export interface AdminCoupon {
   validFrom: string;
   validUntil: string;
   usageCap: number | null;
+  perUserCap: number | null;
   usedCount: number;
+  scope: "marketplace" | "aggregator" | "both";
+  artistIds: string[] | null;
   status: "active" | "paused" | "expired";
   createdBy: string;
   createdAt: string;
@@ -24,6 +27,9 @@ export interface CreateCouponInput {
   validFrom: string;
   validUntil: string;
   usageCap: number | null;
+  perUserCap: number | null;
+  scope: "marketplace" | "aggregator" | "both";
+  artistIds: string[] | null;
 }
 
 export const couponsAdminService = {

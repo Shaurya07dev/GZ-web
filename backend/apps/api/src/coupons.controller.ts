@@ -40,6 +40,9 @@ const createSchema = z
     validFrom: z.string().datetime(),
     validUntil: z.string().datetime(),
     usageCap: z.number().int().positive().nullable(),
+    perUserCap: z.number().int().positive().nullable(),
+    scope: z.enum(["marketplace", "aggregator", "both"]),
+    artistIds: z.array(z.string().trim().min(1).max(200)).max(50).nullable(),
   })
   .strict()
   .refine((v) => (v.kind === "percent" ? v.value <= 100 : true), {
@@ -88,6 +91,9 @@ export class CouponsController {
           validFrom: new Date(body.validFrom),
           validUntil: new Date(body.validUntil),
           usageCap: body.usageCap,
+          perUserCap: body.perUserCap,
+          scope: body.scope,
+          artistIds: body.artistIds,
         },
         req.authUser.uid,
       );
@@ -141,7 +147,7 @@ export class CouponsController {
   @Roles("customer", "artist", "admin")
   @Post("coupons/apply")
   async apply(
-    @Req() _req: AuthenticatedRequest,
+    @Req() req: AuthenticatedRequest,
     @Body(new ZodValidationPipe(applySchema)) body: z.infer<typeof applySchema>,
   ) {
     const [pricingSnap, artworkSnap] = await Promise.all([
@@ -170,6 +176,11 @@ export class CouponsController {
       const { discountPaise, coupon } = await validateCoupon(this.db, {
         code: body.code,
         subtotalPaise,
+        context: {
+          channel: "marketplace",
+          artistId: pricing.artistId,
+          userId: req.authUser.uid,
+        },
       });
       return {
         code: coupon.code,
