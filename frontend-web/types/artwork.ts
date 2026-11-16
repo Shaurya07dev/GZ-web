@@ -90,6 +90,10 @@ export interface ArtworkSummary {
   dimensions?: string | null;
   sizeBand?: ArtworkSizeBand | null;
   artistLocation?: string | null;
+  /** When present and in the future, this piece is pinned to the top of
+   *  the marketplace grid. The card renders a "Featured" chip in that
+   *  case. Absent means not pinned. */
+  promotedUntil?: string | null;
 }
 
 export interface Artwork extends ArtworkSummary {
@@ -129,6 +133,9 @@ export interface Artwork extends ArtworkSummary {
   // because the fixture records predate the fields; the form collects them on
   // every new listing and requires them once the aggregator channel is picked.
   physical?: ArtworkPhysical | null;
+  /** Admin-set pin-to-top deadline (ISO). Non-null + in the future means
+   *  this piece floats above the rest of the marketplace grid. */
+  promotedUntil?: string | null;
 }
 
 // --- Physical details -------------------------------------------------------

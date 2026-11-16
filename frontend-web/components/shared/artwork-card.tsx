@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, ShoppingBag } from "lucide-react";
+import { Heart, Pin, ShoppingBag } from "lucide-react";
 import { cn, humanize } from "@/lib/utils";
 import { isPlaceholderImage } from "@/lib/api-mappers";
 import { useWishlistStore } from "@/store/useWishlistStore";
@@ -67,6 +67,8 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
   const status = isAvailable ? null : (STATUS_LABEL[artwork.status] ?? "Unavailable");
   const details = [humanize(artwork.medium), artwork.yearCreated].filter(Boolean).join(", ");
   const size = artwork.dimensions?.replace(/\s+x\s+/gi, " × ");
+  const isFeatured =
+    !!artwork.promotedUntil && new Date(artwork.promotedUntil).getTime() > Date.now();
 
   return (
     <article
@@ -120,6 +122,12 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
         variant="stamp"
         className="pointer-events-none absolute top-4 left-4"
       />
+      {isFeatured && (
+        <span className="pointer-events-none absolute top-3.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 rounded-full border border-gold/40 bg-background/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold-bright backdrop-blur-sm">
+          <Pin className="size-2.5" strokeWidth={2.5} />
+          Featured
+        </span>
+      )}
       <WishlistButton artworkId={artwork.id} className="absolute top-3.5 right-3.5" />
       {isAvailable && (
         <Link

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req } from "@nestjs/common";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
 import { FirestoreRateConfigStore, clearReservation, getArtworkForAdmin, listArtworksForAdmin, readActiveReservation, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
@@ -16,6 +17,18 @@ import { Emails } from "./mail/emails.ts";
 
 const raritySchema = z.object({ rarity: z.enum([...artworkRarityValues]) }).strict();
 type RarityBody = z.infer<typeof raritySchema>;
+
+const promoteSchema = z
+  .object({
+    /** ISO-8601 timestamp when the pin expires, or null to clear. */
+    promotedUntil: z.string().datetime().nullable(),
+  })
+  .strict()
+  .refine(
+    (v) => v.promotedUntil === null || new Date(v.promotedUntil).getTime() > Date.now(),
+    { message: "promotedUntil must be in the future" },
+  );
+type PromoteBody = z.infer<typeof promoteSchema>;
 
 @Controller("v1/admin")
 export class AdminArtworksController {
@@ -47,6 +60,44 @@ export class AdminArtworksController {
     await setArtworkRarity(this.db, id, body.rarity, req.authUser.uid);
     this.cache.clear();
     return { rarity: body.rarity };
+  }
+
+  /**
+   * Admin pins (or unpins) a piece to the top of the marketplace grid.
+   * `promotedUntil` is an ISO string; null clears the pin. The read-cache
+   * is busted so the next marketplace fetch sees the new order.
+   */
+  @Roles("admin")
+  @Post("artworks/:id/promote")
+  async promote(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(promoteSchema)) body: PromoteBody,
+  ) {
+    const ref = this.db.collection(Collections.artworks).doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      throw new NotFoundException({
+        type: "about:blank",
+        title: "Artwork not found",
+        status: 404,
+        code: "not_found",
+      });
+    }
+    await ref.update({
+      promotedUntil: body.promotedUntil ? Timestamp.fromDate(new Date(body.promotedUntil)) : null,
+    });
+    await this.db.collection(Collections.auditLog).add({
+      adminId: req.authUser.uid,
+      action: body.promotedUntil ? "artwork.promoted" : "artwork.unpromoted",
+      entityType: "artwork",
+      entityId: id,
+      entityLabel: null,
+      detail: body.promotedUntil ? `until ${body.promotedUntil}` : null,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    this.cache.clear();
+    return { promotedUntil: body.promotedUntil };
   }
 
   @Roles("admin")

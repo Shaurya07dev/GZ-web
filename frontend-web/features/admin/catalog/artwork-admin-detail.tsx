@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Clock, EyeOff, ExternalLink, Send, Undo2 } from "lucide-react";
+import { Clock, EyeOff, ExternalLink, Pin, Send, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
@@ -16,6 +16,7 @@ import {
   useAdminArtworkReservation,
   useAdminClearArtworkReservationMutation,
   useDelistArtworkMutation,
+  usePromoteArtworkMutation,
   usePullBackHoldingMutation,
   useSetArtworkRarityMutation,
 } from "@/hooks/useAdminCatalog";
@@ -59,6 +60,8 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
   const appendAudit = useAdminAuditStore((s) => s.append);
   const delistMutation = useDelistArtworkMutation();
   const rarityMutation = useSetArtworkRarityMutation();
+  const promoteMutation = usePromoteArtworkMutation();
+  const [promoteDays, setPromoteDays] = useState<string>("7");
   const { data: activeHolding } = useActiveHolding(artwork.id);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -340,6 +343,108 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-base font-semibold text-foreground">
+              Promote
+            </h2>
+            {artwork.promotedUntil && new Date(artwork.promotedUntil).getTime() > Date.now() ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-xs text-gold-bright">
+                <Pin className="size-3" strokeWidth={2} />
+                Pinned until{" "}
+                {new Date(artwork.promotedUntil).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Not pinned</span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pin this piece to the top of the marketplace grid for a chosen
+            number of days. Pinned pieces float above every other sort.
+          </p>
+          <div className="mt-3 flex items-end gap-2">
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor={`promote-days-${artwork.id}`}
+                className="text-xs text-muted-foreground"
+              >
+                Days
+              </label>
+              <input
+                id={`promote-days-${artwork.id}`}
+                type="number"
+                min={1}
+                max={90}
+                value={promoteDays}
+                onChange={(e) => setPromoteDays(e.target.value)}
+                className="h-9 w-20 rounded-md border border-border bg-background px-2 text-sm"
+                disabled={promoteMutation.isPending}
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                const days = Math.min(Math.max(Number(promoteDays) || 0, 1), 90);
+                const until = new Date(Date.now() + days * 86_400_000).toISOString();
+                promoteMutation.mutate(
+                  { artworkId: artwork.id, promotedUntil: until },
+                  {
+                    onSuccess: () => {
+                      toast.success(`Pinned to the top for ${days} day${days === 1 ? "" : "s"}`);
+                      appendAudit({
+                        adminName,
+                        action: "artwork.promoted",
+                        entityType: "artwork",
+                        entityId: artwork.id,
+                        entityLabel: artwork.title,
+                        detail: `until ${until}`,
+                      });
+                    },
+                    onError: () => toast.error("Could not pin the artwork"),
+                  },
+                );
+              }}
+              disabled={promoteMutation.isPending}
+            >
+              <Pin className="size-3.5" strokeWidth={2} />
+              {artwork.promotedUntil && new Date(artwork.promotedUntil).getTime() > Date.now()
+                ? "Extend"
+                : "Pin"}
+            </Button>
+            {artwork.promotedUntil && new Date(artwork.promotedUntil).getTime() > Date.now() ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  promoteMutation.mutate(
+                    { artworkId: artwork.id, promotedUntil: null },
+                    {
+                      onSuccess: () => {
+                        toast.success("Pin removed");
+                        appendAudit({
+                          adminName,
+                          action: "artwork.unpromoted",
+                          entityType: "artwork",
+                          entityId: artwork.id,
+                          entityLabel: artwork.title,
+                        });
+                      },
+                      onError: () => toast.error("Could not unpin the artwork"),
+                    },
+                  )
+                }
+                disabled={promoteMutation.isPending}
+              >
+                Unpin
+              </Button>
+            ) : null}
           </div>
         </section>
 

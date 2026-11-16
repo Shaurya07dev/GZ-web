@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminService } from "@/services/adminService";
+import { adminApi } from "@/services/adminApi";
 import type { ArtworkRarity } from "@/types/artwork";
 
 // ---------------------------------------------------------------------------
@@ -80,6 +81,32 @@ export function useSetArtworkRarityMutation() {
       artworkId: string;
       rarity: ArtworkRarity;
     }) => adminService.setArtworkRarity(artworkId, rarity),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin-artwork", variables.artworkId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["artworks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["artwork", variables.artworkId],
+      });
+    },
+  });
+}
+
+// Pin (or unpin) a piece to the top of the marketplace grid. Pass null to
+// clear. Same invalidation set as rarity because promotion changes the
+// public ordering.
+export function usePromoteArtworkMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      artworkId,
+      promotedUntil,
+    }: {
+      artworkId: string;
+      promotedUntil: string | null;
+    }) => adminApi.promoteArtwork(artworkId, promotedUntil),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["admin-artworks"] });
       queryClient.invalidateQueries({

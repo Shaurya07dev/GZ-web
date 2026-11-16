@@ -388,6 +388,14 @@ export interface ArtworkDoc {
   createdAt: FirebaseFirestore.Timestamp;
   /** Denormalised read model (listing-projection.ts). Absent on docs written before it existed — reindex fills it. */
   listing?: ListingProjection;
+  /**
+   * Admin-set pin-to-top deadline. When this is in the future, the piece
+   * floats above the rest of the marketplace grid, sorted by this field
+   * descending then createdAt descending. Cleared by setting to null;
+   * expires naturally when the deadline passes. Independent of status —
+   * pinning a sold piece is pointless but not forbidden. 16 Nov 2026.
+   */
+  promotedUntil?: FirebaseFirestore.Timestamp | null;
 }
 
 /**

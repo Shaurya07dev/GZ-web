@@ -15,12 +15,14 @@ interface AdminArtworkDto extends OwnerArtworkDto {
   nfcShipmentGateOverrideAt: string | null;
   nfcShipmentGateOverrideReason: string | null;
   nfcShipmentGateOverrideBy: string | null;
+  promotedUntil: string | null;
 }
 
 const toAdminArtwork = (dto: AdminArtworkDto): Artwork => ({
   ...toOwnerArtwork(dto),
   nfcShipmentGateOverrideAt: dto.nfcShipmentGateOverrideAt,
   nfcShipmentGateOverrideReason: dto.nfcShipmentGateOverrideReason,
+  promotedUntil: dto.promotedUntil,
 });
 
 interface AdminUserDto {
@@ -219,6 +221,12 @@ export const adminApi = {
     const artwork = await adminApi.getArtwork(id);
     if (!artwork) throw new Error("Artwork not found");
     return artwork;
+  },
+
+  /** Pin (or unpin) an artwork so it floats to the top of the marketplace
+   *  grid. Pass an ISO deadline string to pin; pass null to clear. */
+  async promoteArtwork(id: string, promotedUntil: string | null): Promise<void> {
+    await http.post(`${ADMIN_ARTWORK(id)}/promote`, { promotedUntil });
   },
 
 

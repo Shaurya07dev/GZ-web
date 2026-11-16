@@ -34,6 +34,7 @@ export interface ArtworkDto {
   createdAt: string;
   artistLocation?: string | null;
   sizeBand?: "small" | "medium" | "large" | null;
+  promotedUntil?: string | null;
 }
 
 /** Mirrors backend MarketplacePage (packages/db/public-artworks.ts). */
@@ -154,6 +155,7 @@ export function toArtworkSummary(dto: ArtworkDto): ArtworkSummary {
     dimensions: a.dimensions,
     sizeBand: dto.sizeBand ?? null,
     artistLocation: dto.artistLocation ?? null,
+    promotedUntil: dto.promotedUntil ?? null,
   };
 }
 

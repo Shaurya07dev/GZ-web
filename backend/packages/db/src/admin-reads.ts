@@ -24,6 +24,8 @@ export interface AdminArtworkView extends OwnerArtworkView {
   nfcShipmentGateOverrideAt: string | null;
   nfcShipmentGateOverrideReason: string | null;
   nfcShipmentGateOverrideBy: string | null;
+  /** Admin pin-to-top deadline. null = not pinned. */
+  promotedUntil: string | null;
 }
 
 async function withArtist(db: Firestore, view: OwnerArtworkView, artwork: ArtworkDoc, withOverrideNote = false): Promise<AdminArtworkView> {
@@ -35,6 +37,7 @@ async function withArtist(db: Firestore, view: OwnerArtworkView, artwork: Artwor
     nfcShipmentGateOverrideAt: artwork.nfcShipmentGateOverrideAt?.toDate().toISOString() ?? null,
     nfcShipmentGateOverrideReason: nfc?.shipmentGateOverrideReason ?? null,
     nfcShipmentGateOverrideBy: nfc?.shipmentGateOverrideBy ?? null,
+    promotedUntil: artwork.promotedUntil?.toDate().toISOString() ?? null,
   };
 }
 

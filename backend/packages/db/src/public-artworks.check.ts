@@ -28,6 +28,7 @@ const piece = (over: Partial<PublicArtworkView>): PublicArtworkView => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   artistLocation: "Hyderabad",
   sizeBand: "medium",
+  promotedUntil: null,
   ...over,
 });
 const all = [
@@ -85,6 +86,39 @@ assert.deepEqual(facets.artists, [{ id: "art1", name: "Devika" }, { id: "art2", 
 assert.deepEqual(ids(queryMarketplace(all, { location: "Pune" })), ["c"]);
 assert.deepEqual(ids(queryMarketplace(all, { size: "large" })), ["c"]);
 assert.equal(queryMarketplace([], {}).facets.priceRangePaise, null);
+
+// Pin-to-top: `promotedUntil` in the future floats a piece above the grid
+// regardless of the chosen sort, and two pinned pieces order by later
+// deadline first. An expired pin behaves exactly like no pin.
+const future = new Date(Date.now() + 86_400_000).toISOString();
+const laterFuture = new Date(Date.now() + 7 * 86_400_000).toISOString();
+const past = new Date(Date.now() - 86_400_000).toISOString();
+const pinned = [
+  piece({ id: "a", displayPricePaise: 300_00, createdAt: "2026-01-03T00:00:00.000Z" }),
+  piece({
+    id: "b",
+    displayPricePaise: 100_00,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    promotedUntil: future,
+  }),
+  piece({
+    id: "c",
+    displayPricePaise: 200_00,
+    createdAt: "2026-01-02T00:00:00.000Z",
+    promotedUntil: laterFuture,
+  }),
+  piece({ id: "d", createdAt: "2026-01-04T00:00:00.000Z", promotedUntil: past }),
+];
+assert.deepEqual(
+  ids(queryMarketplace(pinned, {})),
+  ["c", "b", "d", "a"],
+  "pinned float above, later deadline first; expired pin falls back to newest-first (d is newer than a)",
+);
+assert.deepEqual(
+  ids(queryMarketplace(pinned, { sort: "price_asc" })),
+  ["c", "b", "d", "a"],
+  "pinned still float even when the user picked price-asc; below the band d < a since d has default price",
+);
 
 assert.equal(sizeBandOf("24 x 36 in"), "medium");
 assert.equal(sizeBandOf("10 x 10 in"), "small");

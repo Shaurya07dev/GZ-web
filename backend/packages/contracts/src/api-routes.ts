@@ -146,6 +146,7 @@ export const apiRoutes: readonly RouteSpec[] = [
   { method: "POST", path: "/v1/admin/artworks/:id/reject", authRole: "admin", summary: "Reject, reason required", replaces: "adminService.rejectArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/delist", authRole: "admin", summary: "Pull off the marketplace", replaces: "adminService.delistArtwork" },
   { method: "POST", path: "/v1/admin/artworks/:id/rarity", authRole: "admin", summary: "Set R/U/O/S rank (required, cannot be cleared)", replaces: "adminService.setArtworkRarity" },
+  { method: "POST", path: "/v1/admin/artworks/:id/promote", authRole: "admin", summary: "Pin a piece to the top of the marketplace (promotedUntil)", replaces: "n/a — new" },
   { method: "GET", path: "/v1/artist/artworks/:id/images", authRole: "artist", summary: "Images of one of my artworks", replaces: "n/a — new" },
   { method: "POST", path: "/v1/artist/artworks/:id/images/upload-url", authRole: "artist", summary: "Presigned PUT for a new image (browser uploads straight to the bucket)", replaces: "n/a — new" },
   { method: "POST", path: "/v1/artist/artworks/:id/images/upload", authRole: "artist", summary: "Upload an image through the API (fallback when the bucket blocks a browser PUT)", replaces: "n/a — new" },
