@@ -15,7 +15,8 @@ import '../../../data/models/artist.dart';
 import '../../../data/models/artwork.dart';
 import '../../account/providers/account_providers.dart'
     show cartProvider, customerRepositoryProvider;
-import '../../auth/providers/auth_providers.dart' show authErrorMessage;
+import '../../auth/providers/auth_providers.dart'
+    show accountProvider, authErrorMessage;
 import '../../account/widgets/cart_action.dart';
 import '../providers/marketplace_providers.dart';
 import '../widgets/artwork_card.dart';
@@ -416,13 +417,38 @@ class _BuyBar extends ConsumerWidget {
     _ => 'No longer available',
   };
 
+  /// "7m 43s" / "43s" — short-form countdown for the reservation banner.
+  static String _countdown(int seconds) {
+    if (seconds <= 0) return '0s';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return m > 0 ? '${m}m ${s}s' : '${s}s';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isWishlisted = ref.watch(wishlistProvider).contains(artwork.id);
     final cartAsync = ref.watch(cartProvider);
     final isInCart = cartAsync.value?.contains(artwork.id) ?? false;
-    final isAvailable = artwork.status == ArtworkStatus.marketplace;
+    final statusIsMarketplace = artwork.status == ArtworkStatus.marketplace;
+    // Concurrent-buyer protection: poll the reservation state while the
+    // detail screen is open. Off when the piece isn't shoppable anyway
+    // (sold / reserved by the artist / etc.), to avoid wasted requests.
+    final reservationValue = statusIsMarketplace
+        ? ref.watch(artworkReservationProvider(artwork.id)).value
+        : null;
+    final me = ref.watch(accountProvider).value;
+    final heldByOther =
+        reservationValue != null &&
+        reservationValue.reserved &&
+        reservationValue.heldByCustomerId != null &&
+        reservationValue.heldByCustomerId != me?.uid;
+    final heldByMe =
+        reservationValue != null &&
+        reservationValue.reserved &&
+        reservationValue.heldByCustomerId == me?.uid;
+    final isAvailable = statusIsMarketplace && !heldByOther;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
@@ -441,6 +467,31 @@ class _BuyBar extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (heldByMe) ...[
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.tertiary.withValues(alpha: 0.1),
+                        border: Border.all(
+                          color: theme.colorScheme.tertiary.withValues(alpha: 0.4),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Your hold · ${_countdown(reservationValue.secondsRemaining)} left to pay',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.tertiary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                   Row(
                     children: [
                       Expanded(
@@ -455,7 +506,11 @@ class _BuyBar extends ConsumerWidget {
                                     );
                                   }
                                 : null,
-                            child: Text(_buyLabel(artwork.status)),
+                            child: Text(
+                              heldByOther
+                                  ? 'Reserved · ${_countdown(reservationValue.secondsRemaining)}'
+                                  : _buyLabel(artwork.status),
+                            ),
                           ),
                         ),
                       ),

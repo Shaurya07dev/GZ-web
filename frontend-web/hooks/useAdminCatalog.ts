@@ -29,6 +29,31 @@ export function useAdminArtwork(artworkId: string) {
   });
 }
 
+// Live reservation state for one artwork — polled every 10s on the admin
+// detail page so a stuck hold shows up without the operator refreshing.
+export function useAdminArtworkReservation(artworkId: string) {
+  return useQuery({
+    queryKey: ["admin-artwork-reservation", artworkId],
+    queryFn: () => adminService.getArtworkReservation(artworkId),
+    enabled: Boolean(artworkId),
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
+// Force-clear a stuck reservation so the next collector can checkout.
+export function useAdminClearArtworkReservationMutation(artworkId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => adminService.clearArtworkReservation(artworkId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin-artwork-reservation", artworkId],
+      });
+    },
+  });
+}
+
 // Delisting pulls an artwork off the marketplace, which moves the overview's
 // "active artworks" tile — hence the KPI invalidation.
 export function useDelistArtworkMutation() {

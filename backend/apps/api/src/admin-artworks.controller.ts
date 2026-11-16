@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
-import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
+import { FirestoreRateConfigStore, clearReservation, getArtworkForAdmin, listArtworksForAdmin, readActiveReservation, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { activeHoldingForArtwork, adminPullBackHolding, decideHoldingExtension, listAggregatorHoldings, listPendingExtensionRequests, AggregatorReadError, HoldingLifecycleError } from "@galleryzone/db";
 import { NfcError, adminUnlinkNfcTag, getNfcOverview, nfcStateViewOf, overrideShipmentGate, type ArtworkDoc } from "@galleryzone/db";
@@ -74,6 +74,48 @@ export class AdminArtworksController {
     const listing = await refreshListing(this.db, id);
     this.cache.clear();
     return { reindexed: listing ? 1 : 0 };
+  }
+
+  // --- Reservations (concurrent-buyer protection) -------------------------
+  // Added 16 Nov 2026 alongside the artworkReservations collection. An
+  // admin may need to force-clear a reservation when a buyer's payment
+  // flow stalled past the 10-minute window but the client-driven abandon
+  // never fired (phone died, browser crashed, Razorpay silently hung).
+  // Normally the next successful claim overwrites, but a different buyer
+  // still has to actually try — meanwhile the piece looks "reserved" on
+  // the marketplace. This endpoint gives admin an immediate unlock.
+
+  @Roles("admin")
+  @Get("artworks/:id/reservation")
+  async currentReservation(@Param("id") id: string) {
+    const r = await readActiveReservation(this.db, id);
+    return {
+      reserved: Boolean(r),
+      heldByCustomerId: r?.customerId ?? null,
+      expiresAt: r?.expiresAt ?? null,
+      secondsRemaining: r?.secondsRemaining ?? 0,
+    };
+  }
+
+  @Roles("admin")
+  @HttpCode(204)
+  @Post("artworks/:id/reservation/clear")
+  async clearReservation(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    await clearReservation(this.db, id);
+    // Audit so a cleared-then-re-locked piece is traceable to who did the
+    // unblock. Same shape as the other admin audit rows.
+    await this.db.collection(Collections.auditLog).add({
+      adminId: req.authUser.uid,
+      action: "artwork.reservation_cleared",
+      entityType: "artwork",
+      entityId: id,
+      entityLabel: null,
+      detail: null,
+      createdAt: new Date(),
+    });
   }
 
   // --- NFC (NFC_IMPLEMENTATION.md §4.3, §4.4, §13) ------------------------------

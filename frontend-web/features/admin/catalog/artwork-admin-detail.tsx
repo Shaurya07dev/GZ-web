@@ -7,12 +7,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { EyeOff, ExternalLink, Send, Undo2 } from "lucide-react";
+import { Clock, EyeOff, ExternalLink, Send, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AdminStatusBadge } from "@/features/admin/admin-status-badge";
 import { ConfirmActionDialog } from "@/features/admin/confirm-action-dialog";
 import {
   useActiveHolding,
+  useAdminArtworkReservation,
+  useAdminClearArtworkReservationMutation,
   useDelistArtworkMutation,
   usePullBackHoldingMutation,
   useSetArtworkRarityMutation,
@@ -405,6 +407,8 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
           </section>
         )}
 
+        <ReservationPanel artworkId={artwork.id} />
+
         <section className="rounded-xl border border-border bg-card p-5">
           <h2 className="font-display text-base font-semibold text-foreground">
             Admin actions
@@ -465,6 +469,89 @@ export function ArtworkAdminDetail({ artwork }: { artwork: Artwork }) {
         onConfirm={handleDelist}
       />
     </div>
+  );
+}
+
+/** "7m 43s" — short-form countdown for the admin reservation panel. */
+function formatSeconds(seconds: number): string {
+  if (seconds <= 0) return "0s";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+/**
+ * Shows the current concurrent-buyer reservation on an artwork (if any)
+ * and a "Force clear" button so admin can unblock a stuck checkout —
+ * usually when a buyer's payment flow died mid-flight and the 10-minute
+ * natural expiry hasn't elapsed yet. Added 16 Nov 2026 alongside the
+ * artworkReservations collection.
+ */
+function ReservationPanel({ artworkId }: { artworkId: string }) {
+  const { data: reservation } = useAdminArtworkReservation(artworkId);
+  const clearMutation = useAdminClearArtworkReservationMutation(artworkId);
+
+  // Hide the entire panel when there's nothing held — operator doesn't
+  // need to see empty state for a feature that usually has nothing to do.
+  if (!reservation?.reserved) return null;
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5">
+      <div className="flex items-start gap-3">
+        <Clock
+          className="mt-0.5 size-4 shrink-0 text-gold-bright"
+          strokeWidth={1.75}
+        />
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-base font-semibold text-foreground">
+            Reservation in progress
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            A collector is checking out right now. Other buyers will see
+            &quot;Reserved by another collector&quot; and can&rsquo;t open the
+            checkout until this one finishes or the hold expires.
+          </p>
+          <dl className="mt-3 space-y-1 text-xs">
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Held by</dt>
+              <dd className="font-mono text-foreground">
+                {reservation.heldByCustomerId ?? "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Expires</dt>
+              <dd className="tabular-nums text-foreground">
+                in {formatSeconds(reservation.secondsRemaining)}
+              </dd>
+            </div>
+          </dl>
+          <Button
+            variant="outline"
+            onClick={() => {
+              clearMutation.mutate(undefined, {
+                onSuccess: () => toast.success("Reservation cleared"),
+                onError: (error) =>
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not clear reservation",
+                  ),
+              });
+            }}
+            disabled={clearMutation.isPending}
+            className="mt-4 w-full"
+          >
+            Force clear
+          </Button>
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            Use when a buyer&rsquo;s checkout stalled past the 10-minute
+            window but never auto-cleared (phone died, browser crashed).
+            Normally the next buyer&rsquo;s own checkout overwrites —
+            this just skips the wait.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 

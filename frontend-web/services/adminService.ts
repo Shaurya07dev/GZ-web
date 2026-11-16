@@ -280,6 +280,9 @@ export const adminService = {
 
   delistArtwork: (id: string): Promise<{ id: string; status: "returned" }> => adminApi.delistArtwork(id),
 
+  getArtworkReservation: (id: string) => adminApi.getArtworkReservation(id),
+  clearArtworkReservation: (id: string) => adminApi.clearArtworkReservation(id),
+
   activeHoldingFor: async (artworkId: string): Promise<AggregatorHolding | null> => {
     const { holding } = await http.get<{ holding: AdminHoldingDto | null }>(`/v1/admin/artworks/${encodeURIComponent(artworkId)}/holding`);
     return holding ? toAdminHolding(holding) : null;

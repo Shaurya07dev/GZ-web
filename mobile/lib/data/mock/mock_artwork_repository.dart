@@ -2,6 +2,7 @@ import '../models/artist.dart';
 import '../models/artist_portal.dart';
 import '../models/artwork.dart';
 import '../models/artwork_filters.dart';
+import '../models/artwork_reservation.dart';
 import '../models/marketplace.dart';
 import '../repositories/artwork_repository.dart';
 import '../storage/mock_db.dart';
@@ -332,4 +333,9 @@ class MockArtworkRepository implements ArtworkRepository {
           ),
     ];
   });
+
+  @override
+  Future<ArtworkReservation> reservation(String _) =>
+      // Mock build never carries contention; always report "available".
+      mockDelay(() => ArtworkReservation.unreserved());
 }
