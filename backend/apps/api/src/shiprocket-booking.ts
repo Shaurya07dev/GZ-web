@@ -81,8 +81,6 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
   // demo id), so stop before reading anything. Callers log this; the
   // reservation itself still stands.
   if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured; inbound booking was not created");
-  // Resolve the three parties: artwork → artist, artist profile → studio
-  // address, aggregator profile → gallery address.
   const [artworkSnap, aggProfileSnap, aggUserSnap] = await Promise.all([
     db.collection(Collections.artworks).doc(artworkId).get(),
     db.collection(`users/${aggregatorId}/profile`).doc("data").get(),
@@ -90,38 +88,86 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
   ]);
   const artwork = artworkSnap.data() as ArtworkDoc | undefined;
   if (!artwork) throw new Error(`booking: no artwork ${artworkId}`);
-  const [artistProfileSnap, artistUserSnap] = await Promise.all([
-    db.collection(`users/${artwork.artistId}/profile`).doc("data").get(),
-    db.collection(Collections.users).doc(artwork.artistId).get(),
-  ]);
-  const artistProfile = artistProfileSnap.data() as ProfileDoc | undefined;
-  const artistUser = artistUserSnap.data() as UserDoc | undefined;
+
+  // Where does the piece physically live right now?
+  // If a previous aggregator held it (and either returned it or had their
+  // 30-day cycle expire without returning), it is still at THAT aggregator's
+  // gallery. The courier must pickup from the previous holder, not the
+  // artist. Client-flagged 16 Nov 2026 as a workflow truth: "After 30 days
+  // the piece stays at the aggregator. When another aggregator reserves,
+  // pickup goes from the first aggregator to the new one."
+  const priorHoldingsSnap = await db
+    .collection(Collections.aggregatorHoldings)
+    .where("artworkId", "==", artworkId)
+    .get();
+  const priorAggregators = priorHoldingsSnap.docs
+    .map((d) => d.data() as { aggregatorId?: string; assignedAt?: FirebaseFirestore.Timestamp })
+    .filter((h) => h.aggregatorId && h.aggregatorId !== aggregatorId)
+    .sort((a, b) => (b.assignedAt?.toMillis() ?? 0) - (a.assignedAt?.toMillis() ?? 0));
+  const priorAggregatorId = priorAggregators[0]?.aggregatorId;
+
   const aggProfile = aggProfileSnap.data() as ProfileDoc | undefined;
   const aggUser = aggUserSnap.data() as UserDoc | undefined;
-  if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
-    throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
+
+  // Resolve the pickup party — previous aggregator OR the artist for the
+  // first ever reservation on this piece.
+  type PickupResolution = {
+    role: "artist" | "aggregator";
+    userId: string;
+    user: UserDoc | undefined;
+    profile: ProfileDoc | undefined;
+  };
+  let pickup: PickupResolution;
+  if (priorAggregatorId) {
+    const [pSnap, uSnap] = await Promise.all([
+      db.collection(`users/${priorAggregatorId}/profile`).doc("data").get(),
+      db.collection(Collections.users).doc(priorAggregatorId).get(),
+    ]);
+    pickup = {
+      role: "aggregator",
+      userId: priorAggregatorId,
+      user: uSnap.data() as UserDoc | undefined,
+      profile: pSnap.data() as ProfileDoc | undefined,
+    };
+  } else {
+    const [pSnap, uSnap] = await Promise.all([
+      db.collection(`users/${artwork.artistId}/profile`).doc("data").get(),
+      db.collection(Collections.users).doc(artwork.artistId).get(),
+    ]);
+    pickup = {
+      role: "artist",
+      userId: artwork.artistId,
+      user: uSnap.data() as UserDoc | undefined,
+      profile: pSnap.data() as ProfileDoc | undefined,
+    };
   }
-  // Pickup is the artist's studio — register them as a Shiprocket pickup
-  // warehouse if we haven't already. Without this the courier is routed
-  // to GalleryZone HQ instead.
+
+  if (!pickup.profile?.pickupLine1 || !pickup.profile.pickupPincode) {
+    throw new Error(`booking: ${pickup.role} ${pickup.userId} has no pickup address`);
+  }
+  // Register the pickup party as a Shiprocket warehouse. Works for both
+  // artists AND aggregators via ensurePickupNickname.
   const pickupNickname = await ensurePickupNickname(
     db,
-    "artist",
-    artwork.artistId,
-    artistUser,
-    artistProfile,
+    pickup.role,
+    pickup.userId,
+    pickup.user,
+    pickup.profile,
   );
   const booked = await bookShipment({
     orderReference: `holding-${holdingId}`,
     pickupLocationNickname: pickupNickname,
     pickup: {
-      name: artistUser?.name ?? "GalleryZone Artist",
-      phone: artistUser?.phone ?? "0000000000",
-      line1: artistProfile.pickupLine1,
-      line2: artistProfile.pickupLine2,
-      city: artistProfile.pickupCity ?? "",
-      state: artistProfile.pickupState ?? "",
-      pincode: artistProfile.pickupPincode,
+      name:
+        pickup.profile?.companyName ??
+        pickup.user?.name ??
+        (pickup.role === "artist" ? "GalleryZone Artist" : "GalleryZone Aggregator"),
+      phone: pickup.user?.phone ?? "0000000000",
+      line1: pickup.profile.pickupLine1,
+      line2: pickup.profile.pickupLine2,
+      city: pickup.profile.pickupCity ?? "",
+      state: pickup.profile.pickupState ?? "",
+      pincode: pickup.profile.pickupPincode,
     },
     dropoff: {
       name: aggProfile?.companyName ?? aggUser?.name ?? "Aggregator",

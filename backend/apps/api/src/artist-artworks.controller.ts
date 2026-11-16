@@ -22,6 +22,7 @@ import {
   listArtistPenalties,
   listHoldingsForArtist,
   listSettlements,
+  requestArtistReturn,
   lockNfcTag,
   markSoldElsewhere,
   listArtistArtworksOwned,
@@ -40,6 +41,7 @@ import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
 import { CacheKeys, ReadCache } from "./read-cache.ts";
 import { Emails } from "./mail/emails.ts";
+import { bookReturnShipment } from "./shiprocket-booking.ts";
 import { Collections, type ArtworkDoc } from "@galleryzone/db";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 
@@ -154,6 +156,44 @@ export class ArtistArtworksController {
   @Get("artist/gallery-spaces")
   async myGallerySpaces(@Req() req: AuthenticatedRequest) {
     return { holdings: await listHoldingsForArtist(this.db, req.authUser.uid) };
+  }
+
+  /**
+   * Artist-initiated return. Once an artist's 6-month listing period winds
+   * down (or whenever they decide they want the piece back), they POST
+   * here with an artwork id. Backend identifies the current aggregator,
+   * books the Shiprocket return pickup from gallery → artist studio, and
+   * records the artist as the payer of return shipping.
+   *
+   * MVP: no payment gating here. Artist pays return shipping manually or
+   * we invoice them later — production would wire a Razorpay intent first.
+   * Added 16 Nov 2026 for the end-of-listing-period flow.
+   */
+  @Roles("artist")
+  @Post("artist/artworks/:id/request-return")
+  async requestReturn(@Req() req: AuthenticatedRequest, @Param("id") artworkId: string) {
+    const target = await requestArtistReturn(this.db, req.authUser.uid, artworkId);
+    if (!target) {
+      throw new BadRequestException({
+        type: "about:blank",
+        title: "No aggregator currently holds this piece.",
+        status: 400,
+        code: "no_active_holding",
+      });
+    }
+    // Fire-and-forget: a Shiprocket outage shouldn't fail the artist's
+    // request — the holding mark is already in place and admin can
+    // manually rebook from the admin console.
+    void bookReturnShipment(this.db, target.holdingId).catch((error) => {
+      console.error(
+        JSON.stringify({
+          event: "shiprocket.return.failed",
+          holdingId: target.holdingId,
+          error: String(error),
+        }),
+      );
+    });
+    return { requested: true, holdingId: target.holdingId };
   }
 
   /**

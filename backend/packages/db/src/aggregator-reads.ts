@@ -282,6 +282,47 @@ export async function listPendingExtensionRequests(db: Firestore): Promise<Aggre
   return views.sort((a, b) => a.assignedAt.localeCompare(b.assignedAt));
 }
 
+/**
+ * Artist-initiated return at the end of the listing period. The artist
+ * pays return shipping (handled upstream by the controller / payment flow);
+ * this function just marks the active holding returned so the pickup can
+ * be booked from the current aggregator to the artist. Idempotent on an
+ * already-returned holding. Added 16 Nov 2026.
+ *
+ * Returns the holding doc id so the caller can wire `bookReturnShipment`
+ * at that id and persist the courier AWB on the row.
+ */
+export async function requestArtistReturn(
+  db: Firestore,
+  artistId: string,
+  artworkId: string,
+): Promise<{ holdingId: string; aggregatorId: string } | null> {
+  const artworkSnap = await db.collection(Collections.artworks).doc(artworkId).get();
+  if (!artworkSnap.exists) throw new AggregatorReadError(`No artwork ${artworkId}`);
+  const art = artworkSnap.data() as ArtworkDoc;
+  if (art.artistId !== artistId) {
+    throw new AggregatorReadError("That artwork is not yours.");
+  }
+  const holding = await activeHoldingForArtwork(db, artworkId);
+  if (!holding) {
+    throw new AggregatorReadError("No aggregator currently holds this piece.");
+  }
+  // activeHoldingForArtwork returns the view (no aggregatorId on it); read
+  // the raw doc to get the aggregatorId that owns the holding so the
+  // caller can book pickup from the right gallery.
+  const rawSnap = await db.collection(Collections.aggregatorHoldings).doc(holding.id).get();
+  const raw = rawSnap.data() as AggregatorHoldingDoc | undefined;
+  if (!raw?.aggregatorId) {
+    throw new AggregatorReadError("Could not resolve the aggregator for this holding.");
+  }
+  // We don't flip status here — that happens inside returnHolding (via the
+  // courier webhook when the piece actually arrives). This function just
+  // identifies the current holder so the caller can book pickup. The
+  // caller is responsible for charging the artist for return shipping
+  // (the pre-launch note: artist pays, not us).
+  return { holdingId: holding.id, aggregatorId: raw.aggregatorId };
+}
+
 /** Unsold return: the advance goes back to the aggregator's wallet, the delivery deposit is forfeited, the artwork goes back on the marketplace. */
 export async function returnHolding(db: Firestore, aggregatorId: string, holdingId: string): Promise<void> {
   const ref = db.collection(Collections.aggregatorHoldings).doc(holdingId);
