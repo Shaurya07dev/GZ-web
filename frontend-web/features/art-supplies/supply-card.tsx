@@ -10,6 +10,15 @@ export const AFFILIATE_REL = "sponsored nofollow noopener";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
+/** The category an admin gives a product to pin it in the segment at the top of the shelf (client, 15 Nov 2026). */
+export const IMPORTANT_BUYS = "Important buys";
+export const LOCAL_NOTE = "You can purchase them locally to save time";
+
+/** Everything in Important buys except the NFC tag, which has to be the right chip, can be bought in a local shop. */
+export function buyableLocally(product: AffiliateProduct): boolean {
+  return product.category === IMPORTANT_BUYS && !/nfc|ntag/i.test(product.title);
+}
+
 export function SupplyCard({ product, onQuickView }: { product: AffiliateProduct; onQuickView: () => void }) {
   const [cover, second] = product.images;
 
@@ -60,6 +69,7 @@ export function SupplyCard({ product, onQuickView }: { product: AffiliateProduct
           {product.title}
         </h3>
         <p className="mt-1.5 truncate text-xs text-gold-bright">{product.category}</p>
+        {buyableLocally(product) && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{LOCAL_NOTE}</p>}
         <div className="mt-auto pt-3">
           <a
             href={product.url}

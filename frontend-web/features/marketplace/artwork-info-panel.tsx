@@ -10,7 +10,7 @@ import {
   ScrollText,
   ShoppingCart,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, humanize } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useArtworkReservation } from "@/hooks/useArtwork";
 import { useCart, CART_MAX_ITEMS } from "@/store/useCartStore";
@@ -161,8 +161,8 @@ export function ArtworkInfoPanel({
 
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <PriceTag amount={artwork.customerPrice} className="text-3xl" />
-          <p className="mt-1 text-xs text-muted-foreground">incl. GST</p>
+          <PriceTag amount={artwork.customerPrice} className="block text-3xl leading-none" />
+          <p className="mt-2 text-xs text-muted-foreground">incl. GST</p>
         </div>
 
         {artwork.exclusive && (
@@ -258,7 +258,7 @@ export function ArtworkInfoPanel({
         <div>
           <dt className="text-xs text-muted-foreground">Medium</dt>
           <dd className="mt-0.5 font-medium text-foreground">
-            {artwork.medium}
+            {humanize(artwork.medium)}
           </dd>
         </div>
         <div>

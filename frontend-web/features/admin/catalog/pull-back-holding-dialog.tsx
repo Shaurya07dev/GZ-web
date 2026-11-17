@@ -124,7 +124,7 @@ export function PullBackHoldingDialog({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Shown to the aggregator alongside the wallet entry.
+              Shown to the aggregator with the pull-back notice.
             </p>
           </div>
 

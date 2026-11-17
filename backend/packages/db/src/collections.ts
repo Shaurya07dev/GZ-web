@@ -99,6 +99,7 @@ export const Collections = {
   disputes: "disputes",
   rateConfigVersions: "rateConfigVersions",
   messageThreads: "messageThreads",
+  broadcasts: "broadcasts",
   artistReviews: "artistReviews",
   resaleListings: "resaleListings",
   artistSales: "artistSales",
@@ -757,6 +758,8 @@ export interface WithdrawalRequestDoc {
   status: WithdrawalStatus;
   requestedAt: FirebaseFirestore.Timestamp;
   processedAt: FirebaseFirestore.Timestamp | null;
+  /** The admin who approved or rejected it. Absent on requests decided before this was recorded. */
+  processedBy?: string | null;
 }
 
 export interface AggregatorHoldingDoc {
@@ -1098,6 +1101,18 @@ export interface RateConfigVersionDoc {
   // filters on this plain boolean instead.
   approved: boolean;
   reason: string;
+}
+
+/** One admin announcement to a whole audience (artists, aggregators or both). See broadcasts.ts. */
+export interface BroadcastDoc {
+  title: string;
+  body: string;
+  audiences: string[];
+  /** A path on the site the message points at, or null. */
+  url: string | null;
+  sentBy: string;
+  sentAt: FirebaseFirestore.Timestamp;
+  recipientCount: number;
 }
 
 export interface MessageThreadDoc {

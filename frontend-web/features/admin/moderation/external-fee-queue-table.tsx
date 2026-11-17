@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { QueueViewSwitch, ReviewedBy, type QueueView } from "./queue-view";
 import { toast } from "sonner";
 import { Check, ReceiptText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,8 @@ export function ExternalFeeQueueTable() {
   const decide = useDecideExternalSaleFeeMutation();
   const [waiving, setWaiving] = useState<ExternalSalePenalty | null>(null);
 
-  const rows = fees ?? [];
+  const [view, setView] = useState<QueueView>("waiting");
+  const rows = (fees ?? []).filter((fee) => (penaltyStatus(fee) === "pending_review") === (view === "waiting"));
 
   function approve(row: ExternalSalePenalty) {
     decide.mutate(
@@ -123,6 +125,13 @@ export function ExternalFeeQueueTable() {
       sortValue: (row) => penaltyStatus(row),
     },
     {
+      key: "reviewedBy",
+      header: "Reviewed by",
+      render: (row) => <ReviewedBy name={row.decidedByName} decision={penaltyStatus(row)} at={row.decidedAt} />,
+      sortable: true,
+      sortValue: (row) => row.decidedAt ?? "",
+    },
+    {
       key: "actions",
       header: "",
       render: (row) =>
@@ -153,9 +162,10 @@ export function ExternalFeeQueueTable() {
 
   return (
     <>
+      <QueueViewSwitch value={view} onChange={setView} />
       <AdminDataTable
         rows={rows}
-        columns={columns}
+        columns={view === "reviewed" ? columns : columns.filter((column) => column.key !== "reviewedBy")}
         isLoading={isPending}
         getRowKey={(row) => row.id}
         searchPlaceholder="Search fees"
@@ -171,8 +181,8 @@ export function ExternalFeeQueueTable() {
             matches: (row, value) => penaltyStatus(row) === value,
           },
         ]}
-        emptyTitle="No off-platform sale fees"
-        emptyDescription="Nothing has been marked sold on another platform."
+        emptyTitle={view === "waiting" ? "No fees waiting" : "No fees reviewed yet"}
+        emptyDescription={view === "waiting" ? "Nothing marked sold on another platform is waiting for a decision." : "Fees you charge or waive will be listed here."}
         emptyIcon={ReceiptText}
       />
 

@@ -283,7 +283,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     // actual registered signatory.
     mouSignatory: {
       name: optional(source.MOU_SIGNATORY_NAME?.trim()) ?? "GalleryZone Private Limited",
-      designation: optional(source.MOU_SIGNATORY_DESIGNATION?.trim()) ?? "Authorised Signatory",
+      designation: optional(source.MOU_SIGNATORY_DESIGNATION?.trim()) ?? "Director & COO",
     },
     invoiceSeller: {
       legalName: source.INVOICE_SELLER_LEGAL_NAME?.trim() || "GalleryZone",

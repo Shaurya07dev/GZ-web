@@ -189,3 +189,39 @@ test('the aggregator MOU fills business name, GST and the effective date in IST'
   await expect(page.getByLabel('PIN code')).toHaveValue('500034');
   await doc.screenshot({ path: testInfo.outputPath('aggregator-mou.png') });
 });
+
+for (const [role, version, route] of [
+  ['artist', '2026.4', '/dashboard/profile'],
+  ['aggregator', '2026.3', '/aggregator/profile'],
+] as const) {
+  test(`a signed ${role} MOU shows the company signatory's designation and signature`, async ({ page, baseURL }, testInfo) => {
+    const companyBlock = { name: 'GalleryZone Private Limited', designation: 'Director & COO' };
+    const path = await open(page, role, baseURL!, route);
+    await json(page, '**/v1/me/profile', profile());
+    await json(page, `**/v1/${role}/mou`, {
+      acceptance: { party: role, version, signatureName: 'Meera Kulkarni', signatureDataUrl: null, acceptedAt: AS_OF, parties: { party: artistParty, company: companyBlock } },
+      draft: { version, parties: { party: artistParty, company: companyBlock }, missing: [], asOf: AS_OF },
+    });
+    await page.goto(path);
+    // The profile page keeps moving under a click here (it also stalls the older signing test), so open the
+    // section directly instead of waiting for it to hold still.
+    await page.locator('details', { hasText: 'Read the signed agreement' }).evaluate((d: HTMLDetailsElement) => { d.open = true; });
+    await expect(page.getByText('Director & COO')).toBeVisible();
+    const signature = page.getByRole('img', { name: 'Signature of the GalleryZone signatory' });
+    await expect(signature).toBeVisible();
+    // The image really loads: it has a size, it is not a broken-image box.
+    await expect.poll(() => signature.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(100);
+
+    // The signed PDF carries it too: with no drawn party signature in this stub, the one picture in the file
+    // (jsPDF lists it on every page, so count each image once) is the company's.
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download signed PDF' }).evaluate((button: HTMLButtonElement) => button.click());
+    const file = testInfo.outputPath(`${role}-mou.pdf`);
+    await (await download).saveAs(file);
+    const pictures = execFileSync('python', ['-c', 'import fitz,sys; print(len({img[0] for p in fitz.open(sys.argv[1]) for img in p.get_images()}))', file], {
+      encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    });
+    expect(Number(pictures.trim())).toBe(1);
+  });
+}
+

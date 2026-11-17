@@ -237,8 +237,7 @@ async function readSettings(): Promise<ArtistSettings> {
 
 export const artistDashboardService = {
   getKpiMetrics: async (): Promise<ArtworkKpiMetric[]> => {
-    const [wallet, artworks, transactions] = await Promise.all([
-      artistWalletApi.getWallet(),
+    const [artworks, transactions] = await Promise.all([
       artistArtworkApi.list(),
       artistWalletApi.listTransactions(),
     ]);
@@ -254,14 +253,6 @@ export const artistDashboardService = {
       },
       {
         ...KPI_METRICS[1],
-        value: `₹${wallet.balance.toLocaleString("en-IN")}`,
-        delta:
-          wallet.lockedBalance > 0
-            ? `₹${wallet.lockedBalance.toLocaleString("en-IN")} withdrawal pending`
-            : "Available to withdraw",
-      },
-      {
-        ...KPI_METRICS[2],
         value: String(pendingCount),
         delta: pendingCount > 0 ? "Awaiting admin review" : "All caught up",
       },

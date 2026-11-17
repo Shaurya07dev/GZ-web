@@ -23,7 +23,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriceTag } from "@/components/shared/price-tag";
-import { cn } from "@/lib/utils";
+import { cn, humanize } from "@/lib/utils";
 import { useCollection } from "@/hooks/useCollection";
 import { useVerifyPassport } from "@/hooks/useVerify";
 import type { CollectionItem } from "@/services/customerCollectionService";
@@ -178,7 +178,7 @@ function CollectionItemDialog({
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Medium</dt>
-                <dd className="text-foreground">{item.artwork.medium}</dd>
+                <dd className="text-foreground">{humanize(item.artwork.medium)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Certificate issued</dt>

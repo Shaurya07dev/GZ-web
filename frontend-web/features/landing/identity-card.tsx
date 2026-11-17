@@ -85,7 +85,8 @@ export function IdentityCard({
       </p>
       <Link
         href={card.href}
-        className="group/link mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-gold-bright"
+        // Stretched: the whole card opens the page, not only this line (client, 14 Nov 2026).
+        className="group/link mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-gold-bright after:absolute after:inset-0 after:rounded-lg after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
       >
         {card.linkLabel}
         <ArrowRight className="size-3 transition-transform group-hover/link:translate-x-0.5" />

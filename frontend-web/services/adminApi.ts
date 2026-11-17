@@ -5,7 +5,8 @@
 import type { Artwork, ArtworkRarity } from "@/types/artwork";
 import type { Order } from "@/types/order";
 import type { Address } from "@/types/customer";
-import type { AdminKpis, AdminUser, AuditLogEntry, GstStatus, KycStatus, UserRole, UserStatus, WithdrawalRequest } from "@/types/admin";
+import type { AdminKpis, AdminUser, AuditLogEntry, GstStatus, KycStatus, QueueView, ReviewStamp, UserRole, UserStatus, WithdrawalRequest } from "@/types/admin";
+import { artworkReview } from "@/lib/artwork-review";
 import { http, isApiError } from "@/lib/api";
 import { paiseToRupees, toAddress, toOrder, type AddressDto, type OrderDto } from "@/lib/api-mappers";
 import { toOwnerArtwork, type OwnerArtworkDto } from "@/services/artistArtworkApi";
@@ -53,6 +54,8 @@ interface AdminUserDto {
    *  still decides. Always absent on the list endpoint; only the detail
    *  endpoint returns it. */
   earningsAbove5LSuggested?: boolean | null;
+  /** GST and KYC queues: the latest admin decision on this person, if any. */
+  review?: ReviewStamp | null;
 }
 
 interface AdminWithdrawalDto {
@@ -66,6 +69,7 @@ interface AdminWithdrawalDto {
   status: WithdrawalRequest["status"];
   requestedAt: string;
   processedAt: string | null;
+  processedByName?: string | null;
 }
 
 interface AdminKpiDto {
@@ -115,6 +119,7 @@ function toAdminUser(u: AdminUserDto): AdminUser {
     galleryzoneRating: u.galleryzoneRating,
     earningsAbove5L: u.earningsAbove5L,
     earningsAbove5LSuggested: u.earningsAbove5LSuggested ?? null,
+    review: u.review ?? null,
   };
 }
 
@@ -130,6 +135,7 @@ function toWithdrawal(w: AdminWithdrawalDto): WithdrawalRequest {
     status: w.status,
     requestedAt: w.requestedAt,
     processedAt: w.processedAt,
+    processedByName: w.processedByName ?? null,
   };
 }
 
@@ -175,6 +181,12 @@ export const adminApi = {
 
   async listPendingArtworks(): Promise<Artwork[]> {
     return (await adminApi.listAllArtworks()).filter((a) => a.status === "pending_approval");
+  },
+
+  /** Pieces an admin has already approved or rejected. Newest review first. */
+  async listReviewedArtworks(): Promise<Artwork[]> {
+    const reviewed = (await adminApi.listAllArtworks()).filter((a) => artworkReview(a.statusHistory) !== null);
+    return reviewed.sort((a, b) => (artworkReview(b.statusHistory)?.at ?? "").localeCompare(artworkReview(a.statusHistory)?.at ?? ""));
   },
 
   async getArtwork(id: string): Promise<Artwork | undefined> {
@@ -272,13 +284,13 @@ export const adminApi = {
     return { id, galleryzoneRating };
   },
 
-  async listKycQueue(): Promise<AdminUser[]> {
-    const { users } = await http.get<{ users: AdminUserDto[] }>("/v1/admin/moderation/kyc");
+  async listKycQueue(view: QueueView = "waiting"): Promise<AdminUser[]> {
+    const { users } = await http.get<{ users: AdminUserDto[] }>(`/v1/admin/moderation/kyc?state=${view}`);
     return users.map(toAdminUser);
   },
 
-  async listGstQueue(): Promise<AdminUser[]> {
-    const { users } = await http.get<{ users: AdminUserDto[] }>("/v1/admin/moderation/gst");
+  async listGstQueue(view: QueueView = "waiting"): Promise<AdminUser[]> {
+    const { users } = await http.get<{ users: AdminUserDto[] }>(`/v1/admin/moderation/gst?state=${view}`);
     return users.map(toAdminUser);
   },
 

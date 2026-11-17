@@ -12,6 +12,7 @@ import { BadgeCheck, CircleCheck, LockOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoaCertificate } from "@/features/coa/coa-certificate";
+import { DisplayCardView, labelize } from "@/features/coa/display-card";
 import type { CoaPdfInput } from "@/features/coa/coa-pdf";
 import { DownloadCoaButton } from "@/features/coa/download-coa-button";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
@@ -150,7 +151,9 @@ export function NfcArtworkPassportView({ artworkId }: { artworkId: string }) {
   if (isLoading || passportLoading) return <PassportSkeleton />;
   if (!artwork) notFound();
 
-  // The marketplace listing doesn't carry the certificate; the passport does.
+  // The marketplace listing doesn't carry the certificate; the passport does, but only when the viewer is the
+  // owner, the artist or an admin (the API leaves the certificate out for everyone else). A stranger who taps
+  // the tag sees the Display card instead.
   const coaNumber = passport?.coaCertificateNumber ?? "";
   const coaIssued = passport?.coaIssuedAt ?? "";
 
@@ -246,11 +249,13 @@ export function NfcArtworkPassportView({ artworkId }: { artworkId: string }) {
                   </dl>
                 )}
 
-                <div className="pp-in flex flex-col gap-1 border-t border-passport-rule pt-6" style={at(5)}>
-                  <p className="text-sm text-passport-ink-2">Certificate of Authenticity</p>
-                  <p className="text-lg font-medium tabular-nums">{coaNumber || "Not issued yet"}</p>
-                  {coaIssued && <p className="text-sm text-passport-ink-2">Certificate issued {longDate.format(new Date(coaIssued))}</p>}
-                </div>
+                {coaNumber && (
+                  <div className="pp-in flex flex-col gap-1 border-t border-passport-rule pt-6" style={at(5)}>
+                    <p className="text-sm text-passport-ink-2">Certificate of Authenticity</p>
+                    <p className="text-lg font-medium tabular-nums">{coaNumber}</p>
+                    {coaIssued && <p className="text-sm text-passport-ink-2">Certificate issued {longDate.format(new Date(coaIssued))}</p>}
+                  </div>
+                )}
 
                 <div className="pp-in flex flex-wrap items-center gap-x-8 gap-y-1" style={at(6)}>
                   {coaNumber && (
@@ -287,6 +292,29 @@ export function NfcArtworkPassportView({ artworkId }: { artworkId: string }) {
             <NfcLifecycleTimeline entries={passport?.lifecycle ?? []} />
           </div>
         </section>
+
+        {/* ── The Display card, for everyone who is not the owner, the artist or an admin ─────── */}
+        {!coaNumber && (
+          <section aria-labelledby="card-heading" className={cn(PAGE, "mt-28 sm:mt-36")}>
+            <h2 id="card-heading" className={H2}>
+              Display card
+            </h2>
+            <div className="mx-auto mt-10 max-w-[640px]">
+              <DisplayCardView
+                input={{
+                  artworkId: artwork.id,
+                  title: artwork.title,
+                  description: artwork.description,
+                  artForm: labelize(artwork.category),
+                  medium: labelize(artwork.medium),
+                  size: artwork.dimensions ?? "—",
+                  artworkCode: passport?.productCode || artwork.id,
+                  artistName: artwork.artistName,
+                }}
+              />
+            </div>
+          </section>
+        )}
 
         {/* ── The certificate itself ──────────────────────────────────────────────────── */}
         {coaNumber && (

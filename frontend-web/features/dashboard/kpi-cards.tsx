@@ -7,7 +7,7 @@ export function KpiCards() {
   const { data: metrics } = useArtistKpiMetrics();
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {(metrics ?? []).map((metric, i) => (
         <motion.div
           key={metric.key}

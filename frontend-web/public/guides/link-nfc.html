@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How to link NFC to your artwork | Galleryzone</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#EEF0F5;--ink:#141640;--mut:#555a7a;--card:#fff;--line:#d5d8e4;--stage:#171A4A;--gold:#F4B63F;--teal:#2FB5A3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0f2b;--ink:#eef0ff;--mut:#a3a8cc;--card:#171a44;--line:#2b2f66}}
+:root[data-theme="dark"]{--bg:#0d0f2b;--ink:#eef0ff;--mut:#a3a8cc;--card:#171a44;--line:#2b2f66}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:clamp(1.5rem,3.6vw,2.2rem);font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.sub{margin:0 0 16px;color:var(--mut)}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:16px}
+@media(max-width:700px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.stage{background:var(--stage);border-radius:14px;overflow:hidden;position:relative}
+svg{display:block;width:100%;height:auto}
+.cap{padding:14px 18px 16px;color:#fff;min-height:84px;font-size:1.05rem;line-height:1.5;border-top:1px solid #ffffff22}
+.bar{height:4px;background:#ffffff22}.bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .4s}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+button,select{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;cursor:pointer}
+button.go{background:var(--gold);color:#141640;border-color:var(--gold);font-weight:600}
+.ctl label{max-width:100%}select{max-width:100%;min-width:0}
+button:focus-visible,select:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.steps button{width:100%;text-align:left;display:flex;gap:10px;align-items:center}
+.steps b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--line);font-size:.8rem;flex:none}
+.steps .on{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+.steps .on b{background:var(--gold);color:#141640}
+.note{font-size:.85rem;color:var(--mut);margin-top:10px}
+/* stage animation */
+.t{transition:transform 1s ease,opacity .6s ease}
+#phone,#waves,#badge,#lock{opacity:0}
+#phone{transform:translate(260px,0)}
+#tag,#waves{transform:translate(150px,80px)}
+[data-s="9"] #tag,[data-s="10"] #tag{transform:none}
+[data-s="1"] #phone,[data-s="2"] #phone,[data-s="3"] #phone,[data-s="4"] #phone,[data-s="8"] #phone{transform:none;opacity:1}
+[data-s="5"] #phone,[data-s="6"] #phone,[data-s="7"] #phone{transform:translate(0,40px);opacity:1}
+[data-s="5"] #waves,[data-s="6"] #waves,[data-s="7"] #waves{opacity:1}
+[data-s="6"] #badge,[data-s="7"] #badge,[data-s="10"] #badge{opacity:1}
+[data-s="8"] #lock,[data-s="9"] #lock,[data-s="10"] #lock{opacity:1}
+[data-s="9"] #glow,[data-s="10"] #glow{opacity:1}
+#glow{opacity:0;transition:opacity .6s}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>How to link NFC to your artwork</h1>
+<p class="sub">A step-by-step guide for Galleryzone artists, with voiceover.</p>
+<div class="wrap" id="app">
+ <div>
+  <div class="stage" id="stage" data-s="0">
+   <svg viewBox="0 0 800 450" role="img" aria-label="Animated illustration of linking an NFC tag to an artwork">
+    <defs><clipPath id="c"><rect x="140" y="50" width="300" height="320" rx="4"/></clipPath></defs>
+    <g id="art">
+     <rect x="128" y="38" width="324" height="344" rx="6" fill="#F4B63F"/>
+     <rect x="140" y="50" width="300" height="320" rx="3" fill="#F7EAD0"/>
+     <g clip-path="url(#c)"><circle cx="360" cy="130" r="48" fill="#E8553D"/><path d="M140 370V250l90-70 80 80 60-50 70 60v100z" fill="#2FB5A3"/><path d="M140 370V300l70-40 90 60 140-50v100z" fill="#1d6f8f"/></g>
+     <path d="M300 345c14-14 22 8 34-4s18-10 30-6" stroke="#141640" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </g>
+    <circle id="glow" cx="350" cy="320" r="30" fill="#F4B63F" opacity=".35"/>
+    <g id="tag" class="t"><circle cx="350" cy="320" r="13" fill="#fff" stroke="#141640" stroke-width="2"/><circle cx="350" cy="320" r="6" fill="none" stroke="#141640" stroke-width="2"/></g>
+    <g id="lock" class="t"><rect x="486" y="108" width="28" height="22" rx="4" fill="#F4B63F"/><path d="M491 108v-7a9 9 0 0 1 18 0v7" fill="none" stroke="#F4B63F" stroke-width="4"/></g>
+    <g id="waves" class="t" fill="none" stroke="#F4B63F" stroke-width="3" stroke-linecap="round"><path d="M372 306a30 30 0 0 1 0 28"/><path d="M386 298a46 46 0 0 1 0 44"/><path d="M400 290a62 62 0 0 1 0 60"/></g>
+    <g id="phone" class="t"><rect x="560" y="70" width="160" height="300" rx="22" fill="#0b0d2a" stroke="#fff" stroke-opacity=".5" stroke-width="3"/><rect x="574" y="96" width="132" height="248" rx="10" fill="#EEF0F5"/>
+     <text id="st" x="640" y="170" text-anchor="middle" font-size="16" font-weight="700" fill="#141640" font-family="system-ui,sans-serif">Galleryzone</text>
+     <text id="ss" x="640" y="196" text-anchor="middle" font-size="12" fill="#555a7a" font-family="system-ui,sans-serif"></text>
+     <rect x="596" y="270" width="88" height="34" rx="8" fill="#F4B63F"/><text id="sb" x="640" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#141640" font-family="system-ui,sans-serif">Open</text></g>
+    <g id="badge" class="t"><circle cx="440" cy="60" r="22" fill="#2FB5A3"/><path d="M430 60l7 7 13-14" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <text id="lab" x="40" y="425" font-size="20" font-weight="700" fill="#fff" font-family="'Bricolage Grotesque',system-ui,sans-serif"></text>
+   </svg>
+   <div class="bar"><i id="prog"></i></div>
+   <div class="cap" id="cap" aria-live="polite"></div>
+  </div>
+  <div class="ctl">
+   <button class="go" id="play">Play all</button>
+   <button id="prev" aria-label="Previous step">Back</button>
+   <button id="next" aria-label="Next step">Next</button>
+   <label>Voice <select id="voice"></select></label>
+   <label>Speed <select id="rate"><option value=".85">Slow</option><option value="1" selected>Normal</option><option value="1.15">Fast</option></select></label>
+  </div>
+  <p class="note" id="note"></p>
+ </div>
+ <ol class="steps" id="steps"></ol>
+</div>
+</main>
+<script>
+var S=[
+{n:"Start",l:"How to link NFC",t:"Every artwork on Galleryzone can carry its own NFC tag. Let's link one to your artwork in ten simple steps.",ph:["Galleryzone","","Open"]},
+{n:"Open dashboard",l:"Step 1: Open the dashboard",t:"Step one. Open your Galleryzone app or website. Under the artist dashboard, you will find the options C O A and NFC. Click on NFC.",ph:["Artist dashboard","COA | NFC","NFC"]},
+{n:"Buy the tag",l:"Step 2: Buy an NTAG 213 tag",t:"Step two. Please purchase the Galleryzone recommended N-TAG 213 NFC tag. A link will be provided to you, or you can find it in art supplies.",ph:["Art Supplies","NTAG 213 NFC tag","Buy"]},
+{n:"Turn on NFC",l:"Step 3: Turn on NFC",t:"Step three. Make sure NFC is on. If it is not, go to your mobile settings, search for NFC, and activate it. Then reload the site or application. If it still does not work, try another NFC supported device.",ph:["Settings","NFC is ON","ON"]},
+{n:"Select artwork",l:"Step 4: Select your artwork",t:"Step four. Select the artwork you want to link, and click on Link Tag.",ph:["Your artworks","Select artwork","Link tag"]},
+{n:"Write the tag",l:"Step 5: Tap and write",t:"Step five. Bring the NFC tag close to your device, and tap on Write Tag.",ph:["Link tag","Hold tag near phone","Write tag"]},
+{n:"Do it later",l:"Step 6: Choose do it later",t:"Step six. Once the data is transferred, you will get an option to lock the NFC, or do it later. Select Do it later.",ph:["Data transferred","Lock now or later","Do it later"]},
+{n:"Scan and check",l:"Step 7: Scan and check",t:"Step seven. Scan the tag and check whether the link is working.",ph:["Scan the tag","Does the link open?","Check"]},
+{n:"Lock the tag",l:"Step 8: Lock the tag",t:"Step eight. Once it is working, lock it using the lock option beside Link Tag on Galleryzone.",ph:["Link tag","Lock option","Lock"]},
+{n:"Stick on canvas",l:"Step 9: Stick behind the signature",t:"Step nine. Stick the NFC tag on the back of the canvas, in the left hand corner, behind the signature. This is the standard position for the NFC tag and the signature.",ph:["","",""]},
+{n:"Done",l:"Step 10: All done",t:"Step ten. You have finished all the steps. Congratulations on linking the NFC tag with your artwork!",ph:["","",""]}
+];
+var $=function(i){return document.getElementById(i)},cur=0,playing=false,tok=0,timer=null,voices=[];
+var ss=window.speechSynthesis;
+S.forEach(function(s,i){var li=document.createElement('li'),b=document.createElement('button');b.innerHTML='<b>'+(i||'•')+'</b><span>'+s.n+'</span>';b.onclick=function(){stop();show(i);$('stage').scrollIntoView({block:'nearest'});speak(i,false)};li.appendChild(b);$('steps').appendChild(li)});
+function show(i){cur=i;$('stage').setAttribute('data-s',i);var s=S[i];$('cap').textContent=s.t;$('lab').textContent=s.l;$('st').textContent=s.ph[0];$('ss').textContent=s.ph[1];$('sb').textContent=s.ph[2];$('prog').style.width=((i+1)/S.length*100)+'%';
+ Array.prototype.forEach.call($('steps').querySelectorAll('button'),function(b,k){b.className=k===i?'on':''})}
+function stop(){tok++;playing=false;clearTimeout(timer);if(ss)ss.cancel();$('play').textContent='Play all'}
+function speak(i,chain){var my=++tok;clearTimeout(timer);if(ss)ss.cancel();
+ function done(){if(my!==tok)return;timer=setTimeout(function(){if(my!==tok)return;if(chain&&i<S.length-1){show(i+1);speak(i+1,true)}else{playing=false;$('play').textContent=i>=S.length-1&&chain?'Replay':'Play all'}},700)}
+ if(!ss){timer=setTimeout(done,Math.max(3000,S[i].t.length*65));return}
+ var u=new SpeechSynthesisUtterance(S[i].t),v=voices[$('voice').value];if(v){u.voice=v;u.lang=v.lang}else u.lang='en-IN';u.rate=parseFloat($('rate').value);u.onend=done;u.onerror=function(){if(my===tok)done()};
+ setTimeout(function(){if(my===tok)ss.speak(u)},60)}
+$('play').onclick=function(){if(playing){stop();return}playing=true;$('play').textContent='Pause';if(cur>=S.length-1)show(0);speak(cur,true)};
+$('next').onclick=function(){stop();show(Math.min(cur+1,S.length-1));speak(cur,false)};
+$('prev').onclick=function(){stop();show(Math.max(cur-1,0));speak(cur,false)};
+function loadVoices(){if(!ss)return;var all=ss.getVoices();if(!all.length)return;voices=all.filter(function(v){return /^en/i.test(v.lang)});if(!voices.length)voices=all;
+ var sel=$('voice');sel.innerHTML='';var pick=0;voices.forEach(function(v,i){var o=document.createElement('option');o.value=i;o.textContent=v.name+' ('+v.lang+')';sel.appendChild(o);if(/en-IN/i.test(v.lang)&&!pick)pick=i});sel.value=pick}
+if(ss){loadVoices();ss.onvoiceschanged=loadVoices}else{$('note').textContent='Voice is not supported in this browser, so the steps will play with captions only.'}
+if(ss)$('note').textContent='Voiceover uses your device voice.';
+show(0);
+</script>
+</body>
+</html>

@@ -8,6 +8,11 @@
 
 export type MouParty = "artist" | "aggregator";
 
+/** The company's stamp with the signatory's signature set inside it ("For GALLERYZONE PRIVATE LIMITED", the signature,
+ *  "Authorized signatory"), drawn on every signed MOU in place of the words "Signed electronically". */
+export const COMPANY_SIGNATURE_URL = "/brand/mou-company-stamp.png";
+export const COMPANY_SIGNATURE_ALT = "Signature of the GalleryZone signatory, under the company stamp: For GalleryZone Private Limited, Authorized signatory";
+
 export type MouFieldKey =
   | "party.name"
   | "party.businessName"
@@ -97,7 +102,7 @@ export interface MouFill {
 
 export type MouFieldValue =
   | { kind: "text"; text: string }
-  | { kind: "signature"; name: string; image: string | null }
+  | { kind: "signature"; name: string; image: string | null; /** What a screen reader says when the name under it is not the signer. */ alt?: string }
   | { kind: "pending"; text: string }
   | { kind: "missing" }
   | { kind: "blank" };
@@ -158,7 +163,9 @@ export function mouFieldValue(key: MouFieldKey, fill: MouFill, party: MouParty):
       return company.designation ? { kind: "text", text: company.designation } : { kind: "blank" };
     case "company.signature":
       if (!companySigns) return { kind: "blank" };
-      return fill.signed ? { kind: "text", text: "Signed electronically" } : { kind: "pending", text: "Signed electronically when you sign" };
+      return fill.signed
+        ? { kind: "signature", name: "Signed electronically", image: COMPANY_SIGNATURE_URL, alt: COMPANY_SIGNATURE_ALT }
+        : { kind: "pending", text: "Signed electronically when you sign" };
     case "company.date":
       if (!companySigns) return { kind: "blank" };
       return fill.signed ? { kind: "text", text: mouDate(fill.date) } : { kind: "pending", text: mouDate(fill.date) };

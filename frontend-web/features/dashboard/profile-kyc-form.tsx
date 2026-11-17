@@ -4,11 +4,12 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Camera,
+  Loader2,
   ShieldCheck,
   Check,
   Lock,
@@ -944,6 +945,7 @@ function ProfilePhotoField({
   const upload = useUploadProfilePhotoMutation();
   const remove = useRemoveProfilePhotoMutation();
   const busy = upload.isPending || remove.isPending;
+  const inputRef = useRef<HTMLInputElement>(null);
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -953,6 +955,8 @@ function ProfilePhotoField({
     upload.mutate(file);
   }
 
+  // A visible button, not only a hover overlay: on a phone there is no hover, so the camera icon
+  // alone left artists with no way to find the upload (client, 14 Nov 2026).
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
@@ -960,20 +964,47 @@ function ProfilePhotoField({
         <p className="text-xs text-muted-foreground">
           Shown on your public artist page. JPEG, PNG or WebP, up to 5&nbsp;MB.
         </p>
-        {photoUrl && (
-          <button
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button
             type="button"
-            onClick={() => remove.mutate()}
+            variant="outline"
+            size="sm"
             disabled={busy}
-            className="mt-2 text-xs font-medium text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:pointer-events-none disabled:opacity-50"
+            onClick={() => inputRef.current?.click()}
           >
-            Remove photo
-          </button>
-        )}
+            {upload.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Camera className="size-3.5" />
+            )}
+            {upload.isPending ? "Uploading…" : photoUrl ? "Change photo" : "Upload photo"}
+          </Button>
+          {photoUrl && (
+            <button
+              type="button"
+              onClick={() => remove.mutate()}
+              disabled={busy}
+              className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:pointer-events-none disabled:opacity-50"
+            >
+              Remove photo
+            </button>
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          disabled={busy}
+          onChange={onPick}
+        />
       </div>
-      <label
-        className="relative size-16 shrink-0 cursor-pointer overflow-hidden rounded-full border border-gold/40"
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
         aria-label={photoUrl ? "Change photo" : "Upload photo"}
+        className="relative size-16 shrink-0 cursor-pointer overflow-hidden rounded-full border border-gold/40"
       >
         <UserAvatar
           name={name}
@@ -983,14 +1014,7 @@ function ProfilePhotoField({
         <span className="absolute inset-0 flex items-center justify-center bg-background/0 text-transparent transition-colors hover:bg-background/60 hover:text-foreground">
           <Camera className="size-4" />
         </span>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          disabled={busy}
-          onChange={onPick}
-        />
-      </label>
+      </button>
     </div>
   );
 }

@@ -40,9 +40,9 @@ export function PassportLiveExample({ topic }: { topic: PassportTopicSlug }) {
   const facts: { label: string; value: string }[] =
     topic === "certificate"
       ? [
-          // The marketplace doesn't carry the certificate; the passport does.
-          { label: "Certificate number", value: passport?.coaCertificateNumber || "Pending" },
-          { label: "Issued", value: formatDate(passport?.coaIssuedAt) },
+          // Only the owner, the artist and admins can read the certificate; to anyone else the passport leaves it out.
+          { label: "Certificate number", value: passport?.coaCertificateNumber || "Shown to the owner only" },
+          ...(passport?.coaIssuedAt ? [{ label: "Issued", value: formatDate(passport.coaIssuedAt) }] : []),
         ]
       : topic === "provenance"
         ? [

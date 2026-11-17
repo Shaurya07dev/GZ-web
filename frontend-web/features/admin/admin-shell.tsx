@@ -22,6 +22,7 @@ import {
   Users,
   Receipt,
   Scale,
+  Megaphone,
   ScrollText,
   FileChartColumn,
   SlidersHorizontal,
@@ -188,6 +189,7 @@ const NAV_GROUPS: AdminNavGroup[] = [
   {
     heading: "System",
     items: [
+      { label: "Broadcasts", href: "/admin/broadcasts", icon: Megaphone },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText, tourId: "admin-audit-logs" },
       { label: "Reports", href: "/admin/reports", icon: FileChartColumn },
       { label: "Settings", href: "/admin/settings", icon: SlidersHorizontal },

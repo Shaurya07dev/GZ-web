@@ -405,7 +405,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
             control={control}
             name="gstNumber"
             render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
+              <Field data-invalid={fieldState.invalid} className="sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <FieldLabel htmlFor="gstNumber">
                     GST number{" "}
@@ -419,7 +419,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
                 <Input
                   id="gstNumber"
                   maxLength={15}
-                  className="h-10 font-mono uppercase"
+                  className="h-10 font-mono uppercase sm:max-w-xs"
                   value={field.value}
                   onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                   onBlur={field.onBlur}

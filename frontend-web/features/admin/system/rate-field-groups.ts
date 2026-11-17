@@ -75,7 +75,7 @@ export const RATE_GROUPS: RateGroup[] = [
     description: "Guard rails the portals enforce.",
     fields: [
       { key: "minWithdrawalPaise", label: "Minimum withdrawal", unit: "rupees", hint: "Artists and aggregators." },
-      { key: "minCustomerWithdrawalPaise", label: "Minimum withdrawal (collector)", unit: "rupees", hint: "Collector wallets." },
+      { key: "minCustomerWithdrawalPaise", label: "Minimum withdrawal (collector)", unit: "rupees", hint: "Collector payouts." },
       { key: "earningsAbove5LThresholdPaise", label: "TDS tracking threshold", unit: "rupees", hint: "Financial-year (April to March) sales at which TDS starts being withheld from an artist. ₹5,00,000." },
       { key: "externalSalePenaltyRate", label: "External-sale fee", unit: "percent", hint: "Charged when an artist sells a listed piece elsewhere." },
       { key: "artistEditWindowDays", label: "Free edit window", unit: "days", hint: "How long an artist may edit a listing after it goes live." },

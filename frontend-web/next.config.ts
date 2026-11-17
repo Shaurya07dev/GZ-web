@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
   // Requires a dev server restart to take effect (next.config.ts is not
   // hot-reloaded).
   allowedDevOrigins: ["127.0.0.1"],
+  // The Earnings pages used to live at .../wallet (client, 14 Nov 2026: no wallet wording anywhere).
+  // Old bookmarks and emails already sent keep working.
+  async redirects() {
+    return [
+      { source: "/dashboard/wallet", destination: "/dashboard/earnings", permanent: true },
+      { source: "/aggregator/wallet", destination: "/aggregator/earnings", permanent: true },
+    ];
+  },
   // No other site may frame these pages (clickjacking an admin approval or a
   // checkout). 'self', not 'none': the help guides are same-origin iframes.
   async headers() {

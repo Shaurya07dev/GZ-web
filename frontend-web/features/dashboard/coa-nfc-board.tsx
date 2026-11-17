@@ -1,6 +1,8 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { GuideLauncher } from "@/components/shared/guide-launcher";
+import { GUIDES } from "@/lib/guides";
 
 import { useState } from "react";
 import Image from "next/image";
@@ -64,6 +66,8 @@ export function CoaNfcBoard() {
           physical pieces also get an NFC/QR tag linked to it.
         </p>
       </div>
+
+      <GuideLauncher guide={GUIDES.linkNfc} className="sm:max-w-xl" />
 
       {awaitingLock > 0 && (
         <div

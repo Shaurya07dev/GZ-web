@@ -2,14 +2,16 @@
 
 import { useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { RarityBadge } from "@/components/shared/rarity-badge";
 import { motion } from "framer-motion";
+import { humanize } from "@/lib/utils";
 import type { ArtworkStatus } from "@/types/artwork";
 import { useArtistDashboardArtworks } from "@/hooks/useArtistArtworks";
 
 // What buyers effectively see of this artist's work, distinct from My
 // Artworks' management board (which also shows drafts/pending). Read-only —
-// no edit affordances. Devika Rao has no public artist profile page (she's
+// no edit affordances; each card opens the live listing. Devika Rao has no public artist profile page (she's
 // deliberately excluded from lib/mock-data/artists.ts's mockArtists), so
 // this is an in-dashboard preview only, not a link-out to a live page.
 const PUBLIC_STATUSES = new Set<ArtworkStatus>([
@@ -52,7 +54,7 @@ export function PortfolioBoard() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: i * 0.04, ease: "easeOut" }}
-              className="overflow-hidden rounded-lg border border-border bg-card"
+              className="group relative overflow-hidden rounded-lg border border-border bg-card transition-colors hover:border-gold/30"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
@@ -68,10 +70,16 @@ export function PortfolioBoard() {
               </div>
               <div className="p-4">
                 <h3 className="truncate font-display text-base font-semibold text-foreground">
-                  {artwork.title}
+                  {/* Every card here is live, so the whole card opens the piece the way a buyer sees it. */}
+                  <Link
+                    href={`/marketplace/${artwork.id}`}
+                    className="after:absolute after:inset-0 after:content-[''] hover:text-gold-bright focus-visible:outline-2 focus-visible:outline-ring"
+                  >
+                    {artwork.title}
+                  </Link>
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {artwork.medium}
+                  {humanize(artwork.medium)}
                   {artwork.yearCreated ? ` · ${artwork.yearCreated}` : ""}
                 </p>
               </div>

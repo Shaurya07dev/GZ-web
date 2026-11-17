@@ -9,10 +9,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAffiliateProducts } from "@/hooks/useAffiliateProducts";
 import { cn } from "@/lib/utils";
 import { amazonImageAt, type AffiliateProduct } from "@/types/affiliate";
-import { SupplyCard } from "./supply-card";
+import { IMPORTANT_BUYS, SupplyCard } from "./supply-card";
 import { SupplyQuickView } from "./supply-quick-view";
 
 const GRID = "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+
+// The things every artist needs to send a piece out, pinned to the top (client, 14 and 15 Nov 2026). An admin puts a
+// product here by giving it the category "Important buys"; they then show in the client's order, whatever the
+// products' titles say. A product whose title matches none of these still sits in the group, after the rest.
+// The "Newest" pill is not a category: it shows everything, most recently added first.
+const NEWEST = "__newest";
+// One entry per slot, in the client's order; any word in an entry puts the product in that slot. Nylon thread has no
+// product yet.
+const IMPORTANT_ORDER = [
+  ["nfc", "ntag"],
+  ["hanger", "metal hook"],
+  ["nylon thread"],
+  ["sticky nail", "nail free"],
+  ["rolling paper", "paper roll"],
+  ["bubble"],
+  ["mailing tube", "packaging tube"],
+  ["cardboard", "corrugated"],
+];
+
+function importantRank(product: AffiliateProduct): number {
+  if (product.category !== IMPORTANT_BUYS) return Number.POSITIVE_INFINITY;
+  const title = product.title.toLowerCase();
+  const at = IMPORTANT_ORDER.findIndex((words) => words.some((word) => title.includes(word)));
+  return at === -1 ? IMPORTANT_ORDER.length : at;
+}
 
 function matches(product: AffiliateProduct, query: string): boolean {
   const haystack = `${product.title} ${product.brand ?? ""} ${product.category}`.toLowerCase();
@@ -25,16 +50,29 @@ export function SuppliesShelf() {
   const [category, setCategory] = useState<string | null>(null);
   const [quickView, setQuickView] = useState<AffiliateProduct | null>(null);
 
-  // Largest category first, so the pills lead with what the shelf holds most of.
+  // "Important buys" first, then largest category first, so the pills lead with what the shelf holds most of.
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
     for (const p of products ?? []) counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
-    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return [...counts].sort(
+      (a, b) => Number(b[0] === IMPORTANT_BUYS) - Number(a[0] === IMPORTANT_BUYS) || b[1] - a[1] || a[0].localeCompare(b[0]),
+    );
   }, [products]);
 
-  const visible = (products ?? []).filter(
-    (p) => (!category || p.category === category) && (!query.trim() || matches(p, query)),
-  );
+  // Array.sort is stable, so everything that is not an important buy keeps the shelf's own order after them.
+  const visible = (products ?? [])
+    .filter((p) => (!category || category === NEWEST || p.category === category) && (!query.trim() || matches(p, query)))
+    .sort((a, b) => {
+      if (category === NEWEST) return b.createdAt.localeCompare(a.createdAt);
+      const [ra, rb] = [importantRank(a), importantRank(b)];
+      return ra === rb ? 0 : ra < rb ? -1 : 1;
+    });
+
+  // On the plain shelf (no pill, no search) the important buys are a segment of their own at the very top. Nothing
+  // is shown for a segment with no products, so there is no empty block while the client's links are pending.
+  const important = visible.filter((p) => p.category === IMPORTANT_BUYS);
+  const showSegment = category === null && !query.trim() && important.length > 0;
+  const rest = showSegment ? visible.filter((p) => p.category !== IMPORTANT_BUYS) : visible;
 
   return (
     <>
@@ -85,11 +123,23 @@ export function SuppliesShelf() {
             <Pill active={category === null} onClick={() => setCategory(null)} count={products?.length ?? 0}>
               All
             </Pill>
-            {categories.map(([name, count]) => (
-              <Pill key={name} active={category === name} onClick={() => setCategory(category === name ? null : name)} count={count}>
-                {name}
-              </Pill>
-            ))}
+            {categories
+              .filter(([name]) => name === IMPORTANT_BUYS)
+              .map(([name, count]) => (
+                <Pill key={name} active={category === name} onClick={() => setCategory(category === name ? null : name)} count={count}>
+                  {name}
+                </Pill>
+              ))}
+            <Pill active={category === NEWEST} onClick={() => setCategory(category === NEWEST ? null : NEWEST)}>
+              Newest
+            </Pill>
+            {categories
+              .filter(([name]) => name !== IMPORTANT_BUYS)
+              .map(([name, count]) => (
+                <Pill key={name} active={category === name} onClick={() => setCategory(category === name ? null : name)} count={count}>
+                  {name}
+                </Pill>
+              ))}
           </div>
         )}
 
@@ -149,11 +199,29 @@ export function SuppliesShelf() {
                 ? `${visible.length} products`
                 : `${visible.length} of ${products?.length} products`}
             </p>
-            <div className={cn(GRID, "mt-3")}>
-              {visible.map((product) => (
-                <SupplyCard key={product.id} product={product} onQuickView={() => setQuickView(product)} />
-              ))}
-            </div>
+            {showSegment && (
+              <section aria-labelledby="important-buys-heading" className="mt-5 rounded-xl border border-gold/30 bg-gold/5 p-4 sm:p-6">
+                <h2 id="important-buys-heading" className="font-display text-2xl font-semibold text-foreground">
+                  Important buys
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">What every artist needs to pack and send a piece out.</p>
+                <div className={cn(GRID, "mt-4")}>
+                  {important.map((product) => (
+                    <SupplyCard key={product.id} product={product} onQuickView={() => setQuickView(product)} />
+                  ))}
+                </div>
+              </section>
+            )}
+            {rest.length > 0 && (
+              <>
+                {showSegment && <h2 className="mt-10 font-display text-xl font-semibold text-foreground">All supplies</h2>}
+                <div className={cn(GRID, showSegment ? "mt-4" : "mt-3")}>
+                  {rest.map((product) => (
+                    <SupplyCard key={product.id} product={product} onQuickView={() => setQuickView(product)} />
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -171,7 +239,7 @@ function Pill({
 }: {
   active: boolean;
   onClick: () => void;
-  count: number;
+  count?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -187,7 +255,9 @@ function Pill({
       )}
     >
       {children}
-      <span className={cn("text-xs tabular-nums", active ? "text-[#171310]/70" : "text-muted-foreground")}>{count}</span>
+      {count !== undefined && (
+        <span className={cn("text-xs tabular-nums", active ? "text-[#171310]/70" : "text-muted-foreground")}>{count}</span>
+      )}
     </button>
   );
 }

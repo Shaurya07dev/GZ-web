@@ -113,7 +113,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: "finance",
     label: "Finance",
     items: [
-      { label: "Earnings", href: "/aggregator/wallet", icon: Wallet, tourId: "aggregator-earnings" },
+      { label: "Earnings", href: "/aggregator/earnings", icon: Wallet, tourId: "aggregator-earnings" },
       { label: "Settlements", href: "/aggregator/settlements", icon: Landmark },
     ],
   },

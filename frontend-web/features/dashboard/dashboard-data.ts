@@ -1,4 +1,4 @@
-import { IndianRupee, Wallet, Clock3 } from "lucide-react";
+import { IndianRupee, Clock3 } from "lucide-react";
 
 // Activity entries carry a `kind` string rather than a Lucide icon component
 // (not JSON-serializable); recent-activity-feed.tsx maps the kind to an icon at
@@ -11,12 +11,12 @@ export type ActivityKind =
   | "verification"
   | "withdrawal";
 
-// The three cards at the top of the artist dashboard: which, what they are
+// The two cards at the top of the artist dashboard: which, what they are
 // called and how they read. Their values are worked out from the artist's own
-// wallet and artworks in artistDashboardService.getKpiMetrics.
+// settlements and artworks in artistDashboardService.getKpiMetrics. (The wallet
+// balance card was removed on the client's request, 14 Nov 2026.)
 export const KPI_METRICS = [
   { key: "revenue", label: "Total revenue", positive: true, icon: IndianRupee },
-  { key: "wallet", label: "Wallet balance", positive: true, icon: Wallet },
   { key: "pendingApproval", label: "Pending approval", positive: false, icon: Clock3 },
 ] as const;
 

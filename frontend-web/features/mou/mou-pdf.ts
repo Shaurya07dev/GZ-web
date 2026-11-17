@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { mouDateTime, mouFieldValue, type MouBlock, type MouDocument, type MouFill } from "./mou-document";
+import { COMPANY_SIGNATURE_URL, mouDateTime, mouFieldValue, type MouBlock, type MouDocument, type MouFill } from "./mou-document";
 
 const PAGE_WIDTH = 210; // A4, mm
 const PAGE_HEIGHT = 297;
@@ -24,7 +24,20 @@ const SYMBOL_CHARS = new RegExp(`([${Object.keys(SYMBOL_GLYPHS).join("")}])`);
  * execution record at the end. Built in the browser from data the page
  * already has; nothing new is fetched.
  */
-export function downloadMouPdf(document_: MouDocument, fill: MouFill) {
+/** A file on this site as a data URL, the form jsPDF can place on a page. */
+async function imageDataUrl(url: string): Promise<string> {
+  const blob = await (await fetch(url)).blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+export async function downloadMouPdf(document_: MouDocument, fill: MouFill) {
+  // Without it the company's signature line just carries the words under it, like the blank it replaced.
+  const companySignature = await imageDataUrl(COMPANY_SIGNATURE_URL).catch(() => null);
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   let y = MARGIN;
 
@@ -90,15 +103,17 @@ export function downloadMouPdf(document_: MouDocument, fill: MouFill) {
     const x = MARGIN + labelWidth;
 
     if (value.kind === "signature") {
-      const imageHeight = 14;
+      // The company's stamp has two lines of printed text around the signature, so it gets a taller box to stay readable.
+      const imageHeight = value.image === COMPANY_SIGNATURE_URL ? 26 : 14;
       ensureSpace(imageHeight + lineHeight(size) * 2);
       doc.text(label, MARGIN, y + imageHeight - lineHeight(size), { baseline: "top" });
-      if (value.image) {
+      const image = value.image === COMPANY_SIGNATURE_URL ? companySignature : value.image;
+      if (image) {
         try {
           // The pad is a wide strip; keep its proportions inside a 70 × 14 mm box.
-          const { width, height } = doc.getImageProperties(value.image);
+          const { width, height } = doc.getImageProperties(image);
           const w = Math.min(70, (width / height) * imageHeight);
-          doc.addImage(value.image, "PNG", x, y + imageHeight - (w / width) * height, w, (w / width) * height);
+          doc.addImage(image, "PNG", x, y + imageHeight - (w / width) * height, w, (w / width) * height);
         } catch {
           // A malformed image only loses the drawing; the typed name below still stands.
         }

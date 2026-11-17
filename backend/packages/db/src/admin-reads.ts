@@ -17,6 +17,7 @@ import {
 import { getArtistArtwork, type OwnerArtworkView } from "./artist-artworks.ts";
 import { getWalletBalance } from "./wallets.ts";
 import { getArtworkNfc } from "./nfc.ts";
+import { adminNames, loadReviews, type ReviewStamp } from "./reviews.ts";
 
 export interface AdminArtworkView extends OwnerArtworkView {
   artistEmail: string | null;
@@ -141,6 +142,8 @@ export interface AdminWithdrawalView {
   status: WithdrawalRequestDoc["status"];
   requestedAt: string;
   processedAt: string | null;
+  /** The admin who approved or rejected it. Null while pending and on requests decided before this was recorded. */
+  processedByName: string | null;
 }
 
 /** All withdrawal requests, pending first then newest. */
@@ -167,11 +170,29 @@ export async function listWithdrawalsForAdmin(db: Firestore): Promise<AdminWithd
         status: w.status,
         requestedAt: w.requestedAt?.toDate().toISOString() ?? new Date(0).toISOString(),
         processedAt: w.processedAt?.toDate().toISOString() ?? null,
+        processedBy: w.processedBy ?? null,
       };
     }),
   );
+  const names = await adminNames(db, rows.map((r) => r.processedBy ?? ""));
   const rank = (s: string) => (s === "pending" ? 0 : 1);
-  return rows.sort((a, b) => rank(a.status) - rank(b.status) || b.requestedAt.localeCompare(a.requestedAt));
+  return rows.map(({ processedBy, ...row }) => ({ ...row, processedByName: processedBy ? (names.get(processedBy) ?? "An admin") : null })).sort((a, b) => rank(a.status) - rank(b.status) || b.requestedAt.localeCompare(a.requestedAt));
+}
+
+export type ModerationUserView = AdminUserView & { review: ReviewStamp | null };
+
+/**
+ * The GST or KYC queue with who reviewed each row. "waiting" is what needs a decision; "reviewed" is
+ * everyone already approved or rejected. A waiting row can still carry an earlier review (rejected, then
+ * submitted again).
+ */
+export async function listModerationQueueWithReviews(db: Firestore, kind: "gst" | "kyc", state: "waiting" | "reviewed"): Promise<ModerationUserView[]> {
+  const users = await listUsersForAdmin(db);
+  const field = kind === "gst" ? "gstStatus" : "aadhaarStatus";
+  const wanted = (status: string | null) => (state === "waiting" ? status === "submitted" : status === "approved" || status === "rejected");
+  const rows = users.filter((u) => (u.role === "artist" || u.role === "aggregator") && wanted(u[field]));
+  const reviews = await loadReviews(db, [`${kind}.approved`, `${kind}.rejected`]);
+  return rows.map((u) => ({ ...u, review: reviews.get(u.id) ?? null }));
 }
 
 /** Artists/aggregators whose GST or KYC is waiting on a decision. */

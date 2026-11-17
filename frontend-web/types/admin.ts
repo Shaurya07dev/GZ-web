@@ -11,6 +11,17 @@ export type KycStatus =
 // same thing in both queues.
 export type GstStatus = "not_submitted" | "submitted" | "approved" | "rejected";
 
+/** The admin queues' two views: what still needs a decision, and what an admin has already decided. */
+export type QueueView = "waiting" | "reviewed";
+
+/** Who last decided an item, for the "Reviewed by" column. */
+export interface ReviewStamp {
+  adminName: string;
+  /** "approved" or "rejected". */
+  decision: string;
+  at: string;
+}
+
 export interface AdminUser {
   id: string;
   name: string;
@@ -42,6 +53,8 @@ export interface AdminUser {
    *  financial-year gross has crossed the threshold, computed off the
    *  active rates. A human still decides. */
   earningsAbove5LSuggested?: boolean | null;
+  /** GST and KYC queues only: the latest admin decision on this person, if any. */
+  review?: ReviewStamp | null;
 }
 
 export type WithdrawalStatus = "pending" | "completed" | "rejected" | "failed";
@@ -57,6 +70,8 @@ export interface WithdrawalRequest {
   status: WithdrawalStatus;
   requestedAt: string;
   processedAt: string | null;
+  /** The admin who approved or rejected it. Null while pending and on requests decided before this was recorded. */
+  processedByName?: string | null;
 }
 
 export type SettlementStatus = "pending" | "processed" | "failed";
@@ -125,6 +140,8 @@ export interface DeactivationRequest {
   decidedAt: string | null;
   /** Why an admin refused, shown back to the artist. */
   decisionNote: string | null;
+  /** The admin who decided. Null while pending. */
+  decidedByName?: string | null;
 }
 
 export type AuditAction =

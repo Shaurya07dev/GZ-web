@@ -64,7 +64,7 @@ const MONEY_TILES: StatTile[] = [
     label: "Artist payouts",
     icon: Wallet,
     value: (k) => formatINR(k.artistPayouts),
-    hint: "Settled to artist wallets",
+    hint: "Settled to artists",
   },
 ];
 

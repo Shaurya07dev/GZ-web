@@ -17,6 +17,7 @@ import type {
   GeneratedReport,
   GenerateReportInput,
   PlatformSettings,
+  QueueView,
   ReportType,
   Settlement,
   UserRole,
@@ -78,9 +79,10 @@ interface PenaltyDto {
   decidedAt: string | null;
   decisionNote: string | null;
   settledAt: string | null;
+  decidedByName?: string | null;
 }
 function toPenalty(p: PenaltyDto): ExternalSalePenalty {
-  return { id: p.id, artworkId: p.artworkId, artworkTitle: p.artworkTitle, amount: paiseToRupees(p.amountPaise), createdAt: p.createdAt, settledAt: p.settledAt, status: p.status, decidedAt: p.decidedAt, decisionNote: p.decisionNote };
+  return { id: p.id, artworkId: p.artworkId, artworkTitle: p.artworkTitle, amount: paiseToRupees(p.amountPaise), createdAt: p.createdAt, settledAt: p.settledAt, status: p.status, decidedAt: p.decidedAt, decisionNote: p.decisionNote, decidedByName: p.decidedByName ?? null };
 }
 interface DeactivationDto {
   id: string;
@@ -91,6 +93,7 @@ interface DeactivationDto {
   requestedAt: string;
   decidedAt: string | null;
   decisionNote: string | null;
+  decidedByName?: string | null;
 }
 function toDeactivation(d: DeactivationDto): DeactivationRequest {
   return { ...d, userRole: "artist" };
@@ -195,6 +198,8 @@ export const adminService = {
   // --- moderation ----------------------------------------------------------
   listPendingArtworks: (): Promise<Artwork[]> => adminApi.listPendingArtworks(),
 
+  listReviewedArtworks: (): Promise<Artwork[]> => adminApi.listReviewedArtworks(),
+
   getPendingArtwork: (id: string): Promise<Artwork | undefined> => adminApi.getArtwork(id),
 
   approveArtwork: (id: string, rarity: ArtworkRarity): Promise<{ id: string; status: "marketplace" }> => adminApi.approveArtwork(id, rarity),
@@ -204,7 +209,7 @@ export const adminService = {
     return adminApi.rejectArtwork(id, reason);
   },
 
-  listKycQueue: (): Promise<AdminUser[]> => adminApi.listKycQueue(),
+  listKycQueue: (view: QueueView = "waiting"): Promise<AdminUser[]> => adminApi.listKycQueue(view),
 
   approveKyc: async (userId: string): Promise<{ userId: string; kycStatus: "approved" }> => {
     await adminApi.decideKyc(userId, "approve");
@@ -217,7 +222,7 @@ export const adminService = {
     return { userId, kycStatus: "rejected" as const, reason };
   },
 
-  listGstQueue: (): Promise<AdminUser[]> => adminApi.listGstQueue(),
+  listGstQueue: (view: QueueView = "waiting"): Promise<AdminUser[]> => adminApi.listGstQueue(view),
 
   approveGst: async (userId: string): Promise<{ userId: string; gstStatus: "approved" }> => {
     await adminApi.decideGst(userId, "approve");

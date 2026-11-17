@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Inject, Logger, Param, Patch, Post, Query } from "@nestjs/common";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
-import { FirestoreRateConfigStore, addSurveyRespondents, listSurveyRespondents, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueue, listUsersForAdmin, listWithdrawalsForAdmin, setUserExternalArtist, setUserGalleryzoneRating, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
+import { FirestoreRateConfigStore, addSurveyRespondents, listSurveyRespondents, suggestEarningsAbove5L, adminKpis, listCategories, createCategory, updateCategory, deleteCategory, getUserForAdmin, listModerationQueueWithReviews, listUsersForAdmin, listWithdrawalsForAdmin, setUserExternalArtist, setUserGalleryzoneRating, setUserStatus, userRoleValues, userStatusValues, type Db, type UserRole } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import { Emails } from "./mail/emails.ts";
@@ -47,14 +47,14 @@ export class AdminController {
 
   @Roles("admin")
   @Get("moderation/gst")
-  async gstQueue() {
-    return { users: await listModerationQueue(this.db, "gst") };
+  async gstQueue(@Query("state") state?: string) {
+    return { users: await listModerationQueueWithReviews(this.db, "gst", state === "reviewed" ? "reviewed" : "waiting") };
   }
 
   @Roles("admin")
   @Get("moderation/kyc")
-  async kycQueue() {
-    return { users: await listModerationQueue(this.db, "kyc") };
+  async kycQueue(@Query("state") state?: string) {
+    return { users: await listModerationQueueWithReviews(this.db, "kyc", state === "reviewed" ? "reviewed" : "waiting") };
   }
 
   /** Artists on this list get a year of free access instead of six months, counted from when they joined. */

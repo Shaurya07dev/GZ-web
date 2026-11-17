@@ -51,9 +51,11 @@ import {
   ARTWORK_CATEGORIES,
   ARTWORK_MEDIUMS,
   ARTWORK_TYPES,
+  ARTWORK_TYPE_GROUPS,
   DIMENSION_UNITS,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
+  RECOMMENDED_ARTWORK_IMAGES,
   ARTWORK_FORMATS,
 
 } from "./artwork-submit-data";
@@ -579,7 +581,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 You marked artwork as sold on another platform and GalleryZone
-                approved the fee. It is charged to your wallet when you submit
+                approved the fee. It is collected when you submit
                 this piece for review. Saving a draft doesn&rsquo;t trigger it.
               </p>
             </div>
@@ -622,6 +624,11 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             Up to {MAX_ARTWORK_IMAGES} photos, cover image first. JPEG, PNG or
             WebP, 15 MB each. Photos upload when you save.
           </p>
+          <p className="mt-2 text-xs text-foreground/80">
+            We recommend at least {RECOMMENDED_ARTWORK_IMAGES} photos: the full
+            piece, a close-up of the detail, and the signature or back.
+            Listings with more photos earn more trust from buyers.
+          </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
             {images.map((img) => (
@@ -662,8 +669,17 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               </label>
             )}
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p
+            className={cn(
+              "mt-3 text-xs",
+              images.length < RECOMMENDED_ARTWORK_IMAGES
+                ? "text-gold-bright"
+                : "text-muted-foreground",
+            )}
+          >
             {images.length} / {MAX_ARTWORK_IMAGES} uploaded
+            {images.length < RECOMMENDED_ARTWORK_IMAGES &&
+              ` · add ${RECOMMENDED_ARTWORK_IMAGES - images.length} more (recommended)`}
           </p>
         </section>
 
@@ -780,41 +796,45 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
                 </PopoverTrigger>
                 <PopoverContent className="w-[min(360px,calc(100vw-2rem))] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search state or tradition…" />
+                    <CommandInput placeholder="Search art form, state or country…" />
                     <CommandList>
                       <CommandEmpty>No matching type.</CommandEmpty>
-                      <CommandGroup>
-                        {ARTWORK_TYPES.map((t) => (
-                          <CommandItem
-                            key={t.value}
-                            value={t.label}
-                            onSelect={() => {
-                              updateField(
-                                "artworkType",
-                                form.artworkType === t.value ? "" : t.value,
-                              );
-                              setOpenStyleCombo(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4 shrink-0",
-                                form.artworkType === t.value
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                            <span className="truncate">{t.label}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                      {ARTWORK_TYPE_GROUPS.map(({ group, heading }) => (
+                        <CommandGroup key={group} heading={heading}>
+                          {ARTWORK_TYPES.filter((t) => t.group === group).map((t) => (
+                            <CommandItem
+                              key={t.value}
+                              value={t.label}
+                              keywords={t.keywords ? [t.keywords] : undefined}
+                              onSelect={() => {
+                                updateField(
+                                  "artworkType",
+                                  form.artworkType === t.value ? "" : t.value,
+                                );
+                                setOpenStyleCombo(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 size-4 shrink-0",
+                                  form.artworkType === t.value
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span className="truncate">{t.label}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      ))}
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
               <p className="text-xs text-muted-foreground">
-                One of 28 regional Indian art traditions &mdash; or pick
-                &ldquo;Other&rdquo; and name your own.
+                One of {ARTWORK_TYPES.length - 1} art forms, Indian and from
+                around the world &mdash; or pick &ldquo;Other&rdquo; and name
+                your own.
               </p>
               {form.artworkType === "other" && (
                 <Input

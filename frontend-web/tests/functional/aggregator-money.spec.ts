@@ -445,7 +445,7 @@ test('earnings are read-only and expose no top-up or withdrawal controls', async
     ],
   });
 
-  await page.goto('/aggregator/wallet');
+  await page.goto('/aggregator/earnings');
 
   await expect(page.getByText('Owed to you')).toBeVisible();
   await expect(page.getByText('How the money moves')).toBeVisible();
@@ -533,4 +533,103 @@ test('ticking specific sales pays only those through Razorpay', async ({ page, b
   await page.getByRole('button', { name: /Pay .* through Razorpay/ }).click();
   await expect(page.getByText(/Remittance paid/)).toBeVisible();
   expect(startBody).toEqual({ saleIds: ['s1'] });
+});
+
+test('Browse GalleryZone: search, the category chips, the Filters panel and Sort narrow the grid', async ({ page, baseURL }) => {
+  await open(page, baseURL!, {
+    inventory: [
+      listed('a1', monthOne, { title: 'Monsoon Window', artistName: 'Asha Rao', medium: 'oil-on-canvas', category: 'painting' }),
+      listed('a2', monthTwo, { title: 'Lotus Pond', artistName: 'Ravi Menon', medium: 'watercolor', category: 'painting', sizeBand: 'small' }),
+      listed('a3', monthOne, { title: 'Quiet Field', artistName: 'Asha Rao', medium: 'charcoal', category: 'drawing' }),
+    ],
+  });
+  await page.goto('/aggregator/inventory');
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+  const cards = page.locator('a[href^="/marketplace/"]');
+
+  // Search: by artist, then by something that is not there.
+  const search = page.getByRole('searchbox', { name: /Search artworks/ });
+  await search.fill('asha');
+  await expect(page.getByText('2 of 3 artworks')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lotus Pond' })).toHaveCount(0);
+  await search.fill('nothing like this');
+  await expect(page.getByText('No artworks match')).toBeVisible();
+  await page.getByRole('button', { name: 'Clear search and filters' }).click();
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+
+  // Category chips come from what is on the shelf.
+  await page.getByRole('button', { name: 'Drawing', exact: true }).click();
+  await expect(page.getByText('1 of 3 artworks')).toBeVisible();
+  await expect(cards.first()).toHaveAttribute('href', '/marketplace/a3');
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+
+  // The Filters panel: pick a medium, see the count on the button, reset.
+  await page.getByRole('button', { name: /Filters/ }).click();
+  const panel = page.getByRole('dialog');
+  await panel.getByText('Watercolor').click();
+  await panel.getByRole('button', { name: 'Show 1 artwork' }).click();
+  await expect(page.getByText('1 of 3 artworks')).toBeVisible();
+  await expect(cards.first()).toHaveAttribute('href', '/marketplace/a2');
+  await expect(page.getByRole('button', { name: /Filters/ })).toContainText('1');
+  await page.getByRole('button', { name: /Filters/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: /^Show 3 artworks$/ }).click();
+  await expect(page.getByText('3 artworks available')).toBeVisible();
+
+  // Sort: month 2's price is lower, so it leads low to high.
+  await page.getByRole('combobox', { name: 'Sort artworks' }).click();
+  await page.getByRole('option', { name: 'Price: Low to High' }).click();
+  await expect(cards.first()).toHaveAttribute('href', '/marketplace/a2');
+});
+
+test('the old wallet addresses redirect to Earnings, so old bookmarks and emails keep working', async ({ request, baseURL }) => {
+  for (const [from, to] of [['/dashboard/wallet', '/dashboard/earnings'], ['/aggregator/wallet', '/aggregator/earnings']]) {
+    const res = await request.get(`${baseURL}${from}`, { maxRedirects: 0 });
+    expect(res.status()).toBe(308);
+    expect(res.headers()['location']).toMatch(new RegExp(`${to}$`));
+  }
+});
+
+test('the dashboard: before the first reservation, Recent activity shows the newest pieces to reserve, not an empty card', async ({ page, baseURL }) => {
+  await open(page, baseURL!, {
+    inventory: [listed('a1', monthOne, { title: 'Monsoon Study' }), listed('a2', monthTwo, { title: 'Tiny Harbour' })],
+    holdings: [],
+  });
+  await page.goto('/aggregator/dashboard');
+  await expect(page.getByText('No activity yet. These are the newest pieces you can reserve.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /Monsoon Study/ })).toHaveAttribute('href', '/aggregator/inventory/a1/reserve');
+  await expect(page.getByRole('link', { name: /Tiny Harbour/ })).toHaveAttribute('href', '/aggregator/inventory/a2/reserve');
+  await expect(page.getByRole('button', { name: 'Browse Inventory' })).toBeVisible();
+});
+
+test('the Browse heart saves a piece to the wishlist, and the Saved chip shows only saved pieces', async ({ page, baseURL }) => {
+  await open(page, baseURL!, {
+    inventory: [listed('a1', monthOne, { title: 'Monsoon Window' }), listed('a2', monthTwo, { title: 'Lotus Pond' })],
+  });
+  const saved: string[] = [];
+  await page.route('**/v1/me/wishlist', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ entries: saved.map((artworkId) => ({ artworkId, addedAt: '2026-11-14T00:00:00.000Z' })) }) }),
+  );
+  await page.route('**/v1/me/wishlist/items', (route) => {
+    saved.push((route.request().postDataJSON() as { artworkId: string }).artworkId);
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{}' });
+  });
+  await page.goto('/aggregator/inventory');
+  await expect(page.getByText('2 artworks available')).toBeVisible();
+
+  // Nothing saved yet: the Saved chip says so instead of showing a blank page.
+  await page.getByRole('button', { name: /^Saved/ }).click();
+  await expect(page.getByText('Nothing saved yet')).toBeVisible();
+  await page.getByRole('button', { name: /^Saved/ }).click();
+
+  // The heart saves without opening the piece.
+  await page.getByRole('button', { name: 'Save for later' }).first().click();
+  await expect.poll(() => saved).toEqual(['a1']);
+  await expect(page).toHaveURL(/\/aggregator\/inventory$/);
+  await expect(page.getByRole('button', { name: 'Remove from saved' })).toHaveCount(1);
+
+  await page.getByRole('button', { name: /^Saved/ }).click();
+  await expect(page.getByText('1 of 2 artworks')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lotus Pond' })).toHaveCount(0);
 });

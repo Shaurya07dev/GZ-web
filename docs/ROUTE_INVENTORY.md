@@ -93,7 +93,7 @@ All under `features/account/*` + `AccountShell`.
 | `/dashboard/profile` | Profile & KYC | Static | P1 |
 | `/dashboard/portfolio` | Public-facing portfolio builder | Static | P1 |
 | `/dashboard/orders` | Orders | Static | P1 |
-| `/dashboard/wallet` | Earnings & Wallet | Static | P1 |
+| `/dashboard/earnings` | Earnings | Static | P1 |
 | `/dashboard/settlements` | Settlements | Static | P1 |
 | `/dashboard/coa-nfc` | COA & NFC management | Static | P1 |
 | `/dashboard/analytics` | Analytics | Static | P1 |
@@ -118,7 +118,7 @@ All under `features/dashboard/*` + `DashboardShell`. Nav order above matches the
 | `/aggregator/customers` | Customers | Static | P1 |
 | `/aggregator/shipping` | Shipping & Logistics | Static | P1 |
 | `/aggregator/settlements` | Settlements | Static | P1 |
-| `/aggregator/wallet` | Earnings & Wallet | Static | P1 |
+| `/aggregator/earnings` | Earnings | Static | P1 |
 | `/aggregator/analytics` | Analytics | Static | P1 |
 | `/aggregator/messages` | Messages | Static | P1 |
 | `/aggregator/gallery-spaces` | Display Spaces | Static | P1 |

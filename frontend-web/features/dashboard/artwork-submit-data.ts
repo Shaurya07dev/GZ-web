@@ -1,5 +1,6 @@
 import type { ListingType } from "@/types/artwork";
 import { REGIONAL_PAINTING_STYLES } from "@/features/artist-survey/artist-survey-data";
+import { PAINTING_ART_FORMS } from "./painting-art-forms";
 
 // Paintings only (owner directive, repeated 5 Nov 2026): GalleryZone
 // currently only accepts paintings, so every other category — sculpture,
@@ -10,16 +11,29 @@ export const ARTWORK_CATEGORIES = [
   { value: "painting", label: "Painting" },
 ];
 
-// Artwork type = one of the 28 regional Indian art traditions the survey
-// offers (client, 19 Oct 2026: "use the same list as the artist survey"),
-// plus "Other" with a free-text field for anything not on the list — exactly
-// as the survey works. The label on the submit form says "Type of artwork";
-// the value stored (and printed on the COA) is the full "State: Tradition"
-// string, e.g. "Rajasthan: Phad Painting". Non-Indian or non-painting pieces
-// pick "Other" and type their own.
-export const ARTWORK_TYPES: { value: string; label: string }[] = [
-  ...REGIONAL_PAINTING_STYLES.map((name) => ({ value: name, label: name })),
-  { value: "other", label: "Other" },
+// Artwork type: the 28 regional Indian traditions from the artist survey (client, 19 Oct 2026) plus the 97
+// world art forms (client, 14 Nov 2026: "not only Indian art"), then "Other" with a free-text field. The
+// value stored (and printed on the COA) is the label itself, e.g. "Rajasthan: Phad Painting" or "Ukiyo-e".
+// The Indian labels carry a "State: " prefix, so no label appears twice. Region and category of a world form
+// are search keywords only, so typing "Japan" or "Tribal Art" finds it.
+export type ArtworkTypeGroup = "india" | "world" | "other";
+export interface ArtworkTypeOption {
+  value: string;
+  label: string;
+  group: ArtworkTypeGroup;
+  keywords?: string;
+}
+export const ARTWORK_TYPES: ArtworkTypeOption[] = [
+  ...REGIONAL_PAINTING_STYLES.map((name): ArtworkTypeOption => ({ value: name, label: name, group: "india" })),
+  ...PAINTING_ART_FORMS.map(
+    (form): ArtworkTypeOption => ({ value: form.name, label: form.name, group: "world", keywords: `${form.region} ${form.category}` }),
+  ),
+  { value: "other", label: "Other", group: "other" },
+];
+export const ARTWORK_TYPE_GROUPS: { group: ArtworkTypeGroup; heading: string }[] = [
+  { group: "india", heading: "Indian art, by state" },
+  { group: "world", heading: "World art forms" },
+  { group: "other", heading: "Something else" },
 ];
 
 export const DIMENSION_UNITS = [
@@ -78,6 +92,10 @@ export const ARTWORK_FORMATS = [
 ];
 
 export const MAX_ARTWORK_IMAGES = 8;
+
+// Client (14 Nov 2026): at least three photos are recommended, not required. A listing can still be
+// saved with fewer, so this only drives the guidance on the form.
+export const RECOMMENDED_ARTWORK_IMAGES = 3;
 
 // Stock photos pre-filling every image slot so the upload form is always
 // submittable with zero clicks (there's no backend to actually store a

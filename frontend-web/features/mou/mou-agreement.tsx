@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SignaturePad } from "./signature-pad";
 import { downloadMouPdf } from "./mou-pdf";
 import {
+  COMPANY_SIGNATURE_URL,
   MOU_DETAIL_LABEL,
   mouDate,
   mouDateTime,
@@ -113,7 +114,7 @@ export function MouAgreement({
           </div>
           <button
             type="button"
-            onClick={() => downloadMouPdf(document, fill)}
+            onClick={() => void downloadMouPdf(document, fill)}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-gold/50 hover:text-gold-bright focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <Download className="size-3.5" />
@@ -404,7 +405,7 @@ function Field({ label, fieldKey, fill, party }: { label: string; fieldKey: MouF
         <span className="flex w-fit flex-col border-b border-dashed border-gold/60 pb-1">
           {value.image && (
             // eslint-disable-next-line @next/next/no-img-element -- a locally drawn data URL
-            <img src={value.image} alt={`${value.name}'s signature`} className="h-12 w-auto dark:invert" />
+            <img src={value.image} alt={value.alt ?? `${value.name}'s signature`} className={cn("w-auto dark:invert", value.image === COMPANY_SIGNATURE_URL ? "h-24" : "h-12")} />
           )}
           <span className="font-display text-base italic text-foreground">{value.name}</span>
         </span>

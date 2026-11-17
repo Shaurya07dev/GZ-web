@@ -12,6 +12,7 @@ import {
   FileSearch,
   Fingerprint,
 } from "lucide-react";
+import { useSessionRole } from "@/hooks/useSessionRole";
 import { IdentityTimeline } from "./identity-timeline";
 import { IdentityCard, type IdentityCardData } from "./identity-card";
 
@@ -63,8 +64,14 @@ const CARDS: IdentityCardData[] = [
   },
 ];
 
+// A signed-in artist or collector goes straight to their own COA and NFC page; everyone else gets the explainer.
+const COA_NFC_PAGE = { artist: "/dashboard/coa-nfc", customer: "/account/coa-nfc" } as const;
+
 export function IdentitySection() {
   const [hovered, setHovered] = useState<number | null>(null);
+  const role = useSessionRole();
+  const certificateHref = role === "artist" || role === "customer" ? COA_NFC_PAGE[role] : "/passport/certificate";
+  const cards = CARDS.map((card) => (card.title === "Certificate" ? { ...card, href: certificateHref } : card));
 
   return (
     <section className="relative overflow-hidden py-16 sm:py-28 md:py-36">
@@ -105,13 +112,13 @@ export function IdentitySection() {
           >
             <FadeItem className="flex justify-center">
               <IdentityCard
-                card={CARDS[0]}
+                card={cards[0]}
                 onHover={(h) => setHovered(h ? 0 : null)}
               />
             </FadeItem>
             <FadeItem className="flex justify-center">
               <IdentityCard
-                card={CARDS[1]}
+                card={cards[1]}
                 onHover={(h) => setHovered(h ? 1 : null)}
               />
             </FadeItem>
@@ -141,13 +148,13 @@ export function IdentitySection() {
 
             <FadeItem className="flex justify-center">
               <IdentityCard
-                card={CARDS[2]}
+                card={cards[2]}
                 onHover={(h) => setHovered(h ? 2 : null)}
               />
             </FadeItem>
             <FadeItem className="flex justify-center">
               <IdentityCard
-                card={CARDS[3]}
+                card={cards[3]}
                 onHover={(h) => setHovered(h ? 3 : null)}
               />
             </FadeItem>

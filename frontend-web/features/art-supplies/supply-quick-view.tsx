@@ -6,7 +6,7 @@ import { ArrowUpRight, X } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { amazonImageAt, type AffiliateProduct } from "@/types/affiliate";
-import { AFFILIATE_REL } from "./supply-card";
+import { AFFILIATE_REL, LOCAL_NOTE, buyableLocally } from "./supply-card";
 
 export function SupplyQuickView({
   product,
@@ -86,6 +86,7 @@ function QuickViewBody({ product }: { product: AffiliateProduct }) {
           Chosen by GalleryZone for working artists. The price, delivery date and reviews are on
           Amazon, and you check out there.
         </DialogDescription>
+        {buyableLocally(product) && <p className="mt-2 text-sm font-medium text-foreground">{LOCAL_NOTE}</p>}
 
         <div className="mt-6 md:mt-auto md:pt-6">
           <a
