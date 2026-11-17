@@ -24,6 +24,8 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   "artwork.ranked": "Artwork ranked",
   "artwork.rank_cleared": "Artwork rank cleared",
   "artwork.delisted": "Artwork delisted",
+  "artwork.promoted": "Artwork pinned to top",
+  "artwork.unpromoted": "Artwork unpinned",
   "kyc.approved": "KYC approved",
   "kyc.rejected": "KYC rejected",
   "gst.approved": "GST approved",

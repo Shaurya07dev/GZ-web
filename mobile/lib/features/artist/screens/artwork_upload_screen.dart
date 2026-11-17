@@ -1206,18 +1206,8 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
               child: const Text('Read the full terms'),
             ),
           ),
-          const SizedBox(height: 10),
-          const ComingSoonTile(
-            icon: LucideIcons.circlePlay,
-            title: 'Explainer video',
-            text: 'A short walkthrough of the aggregator process goes here. Coming soon.',
-          ),
-          const SizedBox(height: 8),
-          const ComingSoonTile(
-            icon: LucideIcons.layoutTemplate,
-            title: 'Display card',
-            text: 'Coming soon.',
-          ),
+          // Two "Coming soon" tiles (Explainer video, Display card) removed
+          // pre-launch (audit N1, 14 Nov 2026). Re-add when the assets land.
         ],
       ),
     );

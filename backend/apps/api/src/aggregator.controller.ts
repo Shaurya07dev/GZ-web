@@ -204,6 +204,7 @@ export class AggregatorController {
           : undefined,
         deliveryMode: body.deliveryMode,
         paymentRoute: body.paymentRoute,
+        couponCode: body.couponCode,
       });
       this.cache.clear();
       void this.emails.saleRecorded(result.saleId).catch(this.emails.swallow("sale recorded mail"));

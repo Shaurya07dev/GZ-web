@@ -28,7 +28,7 @@ import type { Address } from "@/types/customer";
 import type { AggregatorHolding, HoldingExtensionRequest } from "@/types/aggregator";
 import { adminApi } from "@/services/adminApi";
 import { artistService } from "@/services/artworkService";
-import { http } from "@/lib/api";
+import { http, isApiError } from "@/lib/api";
 import { paiseToRupees, toArtworkSummary, type ArtworkDto } from "@/lib/api-mappers";
 import { aggregatorService } from "@/services/aggregatorService";
 
@@ -285,6 +285,9 @@ export const adminService = {
 
   delistArtwork: (id: string): Promise<{ id: string; status: "returned" }> => adminApi.delistArtwork(id),
 
+  getArtworkReservation: (id: string) => adminApi.getArtworkReservation(id),
+  clearArtworkReservation: (id: string) => adminApi.clearArtworkReservation(id),
+
   activeHoldingFor: async (artworkId: string): Promise<AggregatorHolding | null> => {
     const { holding } = await http.get<{ holding: AdminHoldingDto | null }>(`/v1/admin/artworks/${encodeURIComponent(artworkId)}/holding`);
     return holding ? toAdminHolding(holding) : null;
@@ -411,6 +414,38 @@ export const adminService = {
    */
   advanceOrderStatus: async (orderId: string, to: OrderStatus) => {
     await http.patch(`/v1/admin/orders/${encodeURIComponent(orderId)}/status`, { to });
+  },
+
+  /**
+   * Runs the paid-side effects (settlement, Shiprocket booking, buyer +
+   * artist emails + in-app notifications) on an order that is already in
+   * "paid" state. Used after scripts/revive-order-direct.ts wrote the
+   * paid state to Firestore directly and deliberately skipped these
+   * downstream effects. Added 16 Nov 2026 for the ₹260.21 revival.
+   */
+  finishRevivedOrder: async (orderId: string): Promise<Record<string, string>> =>
+    http.post(`/v1/admin/orders/${encodeURIComponent(orderId)}/finish-revived`),
+
+  /**
+   * Look up any user (buyer / artist / aggregator / admin) by uid. Admin-only.
+   * Used by the admin order-detail page to render the real buyer, not the
+   * signed-in admin — the previous page was mistakenly calling
+   * useCustomerProfile() which returns the current session's user, so every
+   * order looked like it was bought by the admin (fixed 16 Nov 2026).
+   */
+  getUserById: async (uid: string): Promise<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+  } | null> => {
+    try {
+      return await http.get(`/v1/admin/users/${encodeURIComponent(uid)}`);
+    } catch (error) {
+      if (isApiError(error, 404)) return null;
+      throw error;
+    }
   },
 
   getAddressAdmin: (id: string): Promise<Address | undefined> => adminApi.getAddress(id),

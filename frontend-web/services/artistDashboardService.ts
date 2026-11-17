@@ -1,5 +1,37 @@
 import type { Artwork, ArtworkPhysical, ExternalSalePenalty } from "@/types/artwork";
 import type { AggregatorHolding } from "@/types/aggregator";
+
+export interface ReturnQuote {
+  holdingId: string;
+  razorpayOrderId: string;
+  razorpayKeyId: string | null;
+  amountPaise: number;
+  currency: string;
+  breakdown: {
+    shippingBasePaise: number;
+    convenienceFeePaise: number;
+    convenienceGstPaise: number;
+    totalPaise: number;
+  };
+  pickup: {
+    name: string | null;
+    line1: string | null;
+    city: string | null;
+    state: string | null;
+    pincode: string;
+  };
+  drop: {
+    name: string;
+    phone: string | null;
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  carrier: string;
+  estimatedDeliveryDays: number | null;
+}
 import type { Order } from "@/types/order";
 import type { DeactivationRequest, Settlement } from "@/types/admin";
 import { http } from "@/lib/api";
@@ -407,6 +439,44 @@ export const artistDashboardService = {
   listGallerySpaces: async (): Promise<Array<AggregatorHolding & { artwork: Artwork }>> => {
     const { holdings } = await http.get<{ holdings: HoldingDto[] }>("/v1/artist/gallery-spaces");
     return holdings.map(toArtistHolding);
+  },
+
+  // Artist asks for a piece back from whichever aggregator holds it, at
+  // the end of the 6-month listing window. Two-step flow, mirroring
+  // every other paid flow here: quote → pay with Razorpay → verify.
+  // The backend books Shiprocket only after verify, so GalleryZone is
+  // never out-of-pocket on the reverse leg.
+  requestArtworkReturn: async (
+    artworkId: string,
+    dropAddress: {
+      name: string;
+      phone: string | null;
+      line1: string;
+      line2: string | null;
+      city: string;
+      state: string;
+      pincode: string;
+    },
+  ): Promise<ReturnQuote> => {
+    return http.post<ReturnQuote>(
+      `/v1/artist/artworks/${encodeURIComponent(artworkId)}/request-return`,
+      dropAddress,
+    );
+  },
+
+  verifyArtworkReturn: async (
+    artworkId: string,
+    payload: {
+      holdingId: string;
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+    },
+  ): Promise<{ verified: true; holdingId: string }> => {
+    return http.post<{ verified: true; holdingId: string }>(
+      `/v1/artist/artworks/${encodeURIComponent(artworkId)}/request-return/verify`,
+      payload,
+    );
   },
 
   // --- Account deactivation ------------------------------------------------

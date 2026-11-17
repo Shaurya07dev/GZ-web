@@ -47,4 +47,11 @@ export interface Order {
   shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
   trackingId?: string | null;
   carrier?: string | null;
+  /** Shiprocket's ETA in days from the time of booking. Null when the
+   *  courier didn't commit to one. Used to render "Expected to arrive by
+   *  Nov 23" on the customer order detail. */
+  estimatedDeliveryDays?: number | null;
+  /** When the shipment was booked — pair with estimatedDeliveryDays to
+   *  compute the ETA date on the customer UI. */
+  shiprocketTrackedAt?: string | null;
 }

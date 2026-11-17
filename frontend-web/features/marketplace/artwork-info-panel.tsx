@@ -11,6 +11,8 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { cn, humanize } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useArtworkReservation } from "@/hooks/useArtwork";
 import { useCart, CART_MAX_ITEMS } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { PriceTag } from "@/components/shared/price-tag";
@@ -38,6 +40,14 @@ const SOCIAL_LABEL: Record<SocialProofLink["platform"], string> = {
   x: "X",
   tiktok: "TikTok",
 };
+
+// "7m 43s" / "43s" — short-form countdown for the reservation banner.
+function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return "0s";
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
 
 interface ArtworkInfoPanelProps {
   artwork: Artwork;
@@ -101,13 +111,32 @@ export function ArtworkInfoPanel({
     }
   }
 
-  const isAvailable = artwork.status === "marketplace";
+  const { data: me } = useCurrentUser();
+  // Only poll reservation while the artwork is still shoppable — once it's
+  // sold the reservation state doesn't matter and we'd be hammering the
+  // API for nothing.
+  const statusIsMarketplace = artwork.status === "marketplace";
+  const { data: reservation } = useArtworkReservation(
+    statusIsMarketplace ? artwork.id : "",
+  );
+  const heldByOther = Boolean(
+    reservation?.reserved &&
+      reservation.heldByCustomerId &&
+      reservation.heldByCustomerId !== me?.uid,
+  );
+  const heldByMe = Boolean(
+    reservation?.reserved && reservation.heldByCustomerId === me?.uid,
+  );
+
+  const isAvailable = statusIsMarketplace && !heldByOther;
   const buyLabel =
     artwork.status === "reserved"
       ? "Reserved"
       : artwork.status === "sold"
         ? "Sold"
-        : "No longer available";
+        : heldByOther
+          ? `Reserved by another collector · ${formatCountdown(reservation!.secondsRemaining)} left`
+          : "No longer available";
 
   return (
     <div className="flex flex-col gap-7">
@@ -145,6 +174,14 @@ export function ArtworkInfoPanel({
           </span>
         )}
       </div>
+
+      {heldByMe && reservation ? (
+        <div className="flex items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-4 py-2.5 text-sm text-gold-bright">
+          <span className="font-medium">Your hold</span>
+          <span className="text-foreground/70">·</span>
+          <span>{formatCountdown(reservation.secondsRemaining)} left to pay</span>
+        </div>
+      ) : null}
 
       {/* Buying sits with the price: at the end of the panel it was a screen and a half below the fold on phones. */}
       <div className="flex flex-col gap-3 sm:flex-row">

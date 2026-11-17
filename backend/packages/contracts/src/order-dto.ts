@@ -14,6 +14,15 @@ export const createOrderInputSchema = z
     // after a flaky connection) never creates two orders. Enforced again
     // at the DB unique-constraint level on payments.idempotencyKey.
     idempotencyKey: z.string().min(16),
+    // Optional discount code the buyer applied. The server re-validates
+    // against the coupon doc before stamping it on the order; passing an
+    // invalid or expired code refuses the order so the buyer can try
+    // another instead of being silently charged full price.
+    couponCode: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9]{3,24}$/)
+      .optional(),
   })
   .strict();
 

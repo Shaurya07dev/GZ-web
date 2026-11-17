@@ -5,6 +5,7 @@ import '../../../data/mock/mock_artwork_repository.dart';
 import '../../../data/models/artist.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/artwork_filters.dart';
+import '../../../data/models/artwork_reservation.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../data/repositories/artwork_repository.dart';
 import '../../account/providers/account_providers.dart';
@@ -129,6 +130,29 @@ final artworkProvider = FutureProvider.autoDispose.family<Artwork?, String>((
   id,
 ) {
   return ref.watch(artworkRepositoryProvider).get(id);
+});
+
+/// Live concurrent-buyer reservation state for one artwork. Polled every
+/// 10 seconds while the artwork detail screen is open. Auto-disposes when
+/// the user navigates away so idle screens don't hammer the API.
+///
+/// Mirrors the web useArtworkReservation hook; backend endpoint at
+/// GET /v1/artworks/:id/reservation. Added 16 Nov 2026 for the
+/// concurrent-buyer protection feature.
+final artworkReservationProvider =
+    StreamProvider.autoDispose.family<ArtworkReservation, String>((ref, id) async* {
+  final repo = ref.watch(artworkRepositoryProvider);
+  // Emit immediately so the UI doesn't have to wait 10s for first render.
+  yield await repo.reservation(id);
+  while (true) {
+    await Future<void>.delayed(const Duration(seconds: 10));
+    try {
+      yield await repo.reservation(id);
+    } catch (_) {
+      // On transient failure keep the previous state visible rather than
+      // flashing an error — a 10s retry is the next poll.
+    }
+  }
 });
 
 /// A set of artwork ids, compared by content so it can key a provider family:

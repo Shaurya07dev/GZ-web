@@ -25,7 +25,12 @@ export const reserveHoldingInputSchema = z
      * The price BEFORE GST the aggregator chooses. Month 1 only, never below
      * GalleryZone's offer; omitted means GalleryZone's offer.
      */
-    sellingPricePaise: z.number().int().positive().optional(),
+    // Cap at ₹1 crore (100_000_00_00 paise). Pre-launch audit M4
+    // (14 Nov 2026) — without a ceiling a mistyped price could overflow
+    // downstream paise math (Razorpay refuses amounts > ₹5 crore anyway)
+    // and even an honest ₹5cr artwork should go through a manual admin
+    // flow, not the auto-reservation endpoint.
+    sellingPricePaise: z.number().int().positive().max(100_000_000_00).optional(),
   })
   .strict();
 
@@ -49,7 +54,7 @@ export type DecideHoldingExtensionInput = z.infer<typeof decideHoldingExtensionI
 // every record-sale attempt.
 export const recordAggregatorSaleInputSchema = z
   .object({
-    soldPricePaise: z.number().int().positive(),
+    soldPricePaise: z.number().int().positive().max(100_000_000_00), // ₹1cr cap — audit M4
     buyerName: z.string().min(1),
     buyerEmail: z.string().email(),
     buyerPhone: z.string().min(6).optional(),
@@ -65,6 +70,12 @@ export const recordAggregatorSaleInputSchema = z
     deliveryCity: z.string().min(1).optional(),
     deliveryState: z.string().min(1).optional(),
     deliveryPincode: z.string().regex(/^\d{6}$/).optional(),
+    /** Admin-created coupon the aggregator typed in at the counter. */
+    couponCode: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9]{3,24}$/)
+      .optional(),
   })
   .strict();
 
@@ -111,7 +122,12 @@ export type ResolveHoldingReportInput = z.infer<typeof resolveHoldingReportInput
 export const createReservationIntentInputSchema = z
   .object({
     artworkId: firestoreId,
-    sellingPricePaise: z.number().int().positive().optional(),
+    // Cap at ₹1 crore (100_000_00_00 paise). Pre-launch audit M4
+    // (14 Nov 2026) — without a ceiling a mistyped price could overflow
+    // downstream paise math (Razorpay refuses amounts > ₹5 crore anyway)
+    // and even an honest ₹5cr artwork should go through a manual admin
+    // flow, not the auto-reservation endpoint.
+    sellingPricePaise: z.number().int().positive().max(100_000_000_00).optional(),
     idempotencyKey: z.string().min(16).max(128),
   })
   .strict();

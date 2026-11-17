@@ -72,6 +72,33 @@ export interface ShipmentBookingInput {
   weightKg: number;
   artworkTitle: string;
   valueInr: number;
+  /**
+   * Public URL Shiprocket fetches to print the GST tax invoice onto the
+   * parcel. Only set when the leg actually carries a tax invoice (marketplace
+   * outbound = yes; artist→aggregator inbound = no, there's no sale yet).
+   * HMAC-token-protected so a stranger can't enumerate invoices via the URL.
+   */
+  invoiceUrl?: string;
+  /**
+   * Shiprocket pickup-location nickname for this specific pickup. When
+   * provided, Shiprocket uses the registered warehouse matching that
+   * nickname as the pickup address. When omitted, falls back to the
+   * account-level default (SHIPROCKET_PICKUP_LOCATION_NAME = GalleryZone
+   * HQ), which is almost never what we want — see the comment on
+   * registerPickupLocation for the full history.
+   */
+  pickupLocationNickname?: string;
+  /**
+   * The courier company id from the serviceability quote that fed the
+   * buyer's displayed delivery charge. When passed, we force Shiprocket
+   * to assign THIS courier on the courier/assign/awb step so the billed
+   * rate matches what the buyer saw within Shiprocket's own slot-level
+   * variance (±₹5 typically). When omitted, Shiprocket picks the
+   * cheapest serviceable courier at book time — which can drift
+   * materially from the quote if a courier dropped out of serviceability
+   * in between.
+   */
+  preferredCourierId?: number;
 }
 
 export interface ShipmentParty {
@@ -95,6 +122,93 @@ let authCache: AuthCache | null = null;
 
 export function isShiprocketConfigured(): boolean {
   return CONFIG !== null;
+}
+
+/**
+ * Registers a new pickup location on the Shiprocket account so a specific
+ * artist's address becomes a valid `pickup_location` nickname. Called once
+ * per artist when they complete KYC, or lazily on first sale.
+ *
+ * CRITICAL (client bug 16 Nov 2026): without this, every order books
+ * against the single account-level pickup nickname (SHIPROCKET_PICKUP_
+ * LOCATION_NAME), which means the courier shows up at GalleryZone HQ
+ * instead of the artist's studio. The per-order pickup_customer_name /
+ * _phone / _address fields we send in bookShipment are IGNORED by
+ * Shiprocket when pickup_location is set — their validator only honours
+ * the account-registered warehouse that matches the nickname.
+ *
+ * So each artist needs their own warehouse on the account. We generate
+ * a stable, unique nickname like "artist-{first 8 chars of uid}" so the
+ * same artist always maps to the same warehouse (idempotent) and we can
+ * spot-check in Shiprocket's dashboard.
+ *
+ * Returns the nickname (caller should persist it on the artist profile).
+ * Throws if Shiprocket rejects — usually a duplicate nickname (already
+ * registered, safe to use as-is) or a bad pincode / missing phone.
+ */
+export interface PickupLocationInput {
+  nickname: string;
+  name: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
+export async function registerPickupLocation(input: PickupLocationInput): Promise<{ nickname: string; alreadyExisted: boolean }> {
+  if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured");
+  const token = await getToken();
+  const res = await fetch(`${CONFIG!.baseUrl}/settings/company/addpickup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      pickup_location: input.nickname,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      address: input.addressLine1,
+      address_2: input.addressLine2 ?? "",
+      city: input.city,
+      state: input.state,
+      country: "India",
+      pin_code: input.pincode,
+    }),
+  });
+  if (res.ok) {
+    return { nickname: input.nickname, alreadyExisted: false };
+  }
+  const bodyText = await res.text().catch(() => "");
+  // Shiprocket's duplicate-nickname error has a few shapes depending on
+  // which deployment is live. Any 4xx mentioning "exists" / "already" /
+  // "duplicate" means the warehouse is on file and the nickname is
+  // reusable — not an error we should propagate.
+  const existsLike = /already|exists|duplicate/i.test(bodyText);
+  if (existsLike) return { nickname: input.nickname, alreadyExisted: true };
+  throw new Error(
+    `ShipRocket addpickup failed (${res.status}): ${bodyText.slice(0, 500)}`,
+  );
+}
+
+/**
+ * Build a stable per-vendor pickup nickname. Short enough to pass
+ * Shiprocket's length rules (max ~36 chars observed); stable so the
+ * same user always maps to the same warehouse on repeat registrations.
+ * Role prefix distinguishes artist warehouses from aggregator warehouses
+ * in the Shiprocket dashboard (which otherwise is an unstructured list).
+ */
+export function pickupNicknameFor(role: "artist" | "aggregator", userId: string): string {
+  return `${role}-${userId.slice(0, 20)}`;
+}
+
+/** @deprecated use pickupNicknameFor(...) — kept for any legacy callers. */
+export function artistPickupNickname(artistId: string): string {
+  return pickupNicknameFor("artist", artistId);
 }
 
 async function getToken(): Promise<string> {
@@ -214,19 +328,42 @@ export async function getShippingRate(input: ShippingRateInput): Promise<Shippin
   };
 }
 
+/**
+ * Shiprocket's /orders/create/adhoc requires separate first-name and
+ * last-name fields (billing_customer_name / billing_last_name, same for
+ * pickup side on some accounts). Our data model carries a single `name`
+ * string, so split on first whitespace. An empty last name passes
+ * validation (the validator checks "present", not "non-empty").
+ */
+function splitName(full: string | null | undefined, prefix: "billing" | "shipping"): Record<string, string> {
+  const safe = (full ?? "").trim();
+  const space = safe.indexOf(" ");
+  const first = space === -1 ? safe : safe.slice(0, space);
+  const last = space === -1 ? "" : safe.slice(space + 1).trim();
+  return {
+    [`${prefix}_customer_name`]: first || "Customer",
+    [`${prefix}_last_name`]: last,
+  };
+}
+
 export async function bookShipment(input: ShipmentBookingInput): Promise<BookedShipment> {
   if (!isShiprocketConfigured()) {
     throw new Error("ShipRocket is not configured; no shipment was booked");
   }
   const token = await getToken();
-  // `pickup_location` is the ACCOUNT-level nickname ShipRocket uses as a
-  // billing anchor. The actual pickup street address comes from the
-  // per-order `pickup_customer_name` / `pickup_address` fields below — this
-  // is how multi-vendor marketplaces (Meesho, Flipkart, Etsy-style) handle
-  // "pickup from the artist's studio" without registering each artist as a
-  // separate warehouse. The nickname is configurable via env in case the
-  // ShipRocket account uses a non-default one.
-  const pickupLocationNickname = CONFIG!.pickupLocationName;
+  // `pickup_location` MUST reference a Shiprocket-registered warehouse
+  // on the account — Shiprocket's /orders/create/adhoc validator ignores
+  // the per-order pickup_customer_name / _phone / _address fields when a
+  // nickname is set, and uses the warehouse's registered address as the
+  // true pickup point. (Earlier comment on this file claimed the opposite;
+  // it was wrong, and a live order on 16 Nov 2026 shipped against the
+  // wrong HQ address because of it.)
+  //
+  // Per-artist pickup nicknames are now registered via registerPickupLocation
+  // and passed in via `input.pickupLocationNickname`. The env-level default
+  // stays as a fallback for legs where there is no per-vendor nickname
+  // (e.g., an aggregator return to GalleryZone HQ).
+  const pickupLocationNickname = input.pickupLocationNickname ?? CONFIG!.pickupLocationName;
   const payload = {
     order_id: input.orderReference,
     order_date: new Date().toISOString(),
@@ -244,7 +381,14 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     pickup_pincode: input.pickup.pincode,
     pickup_country: "India",
 
-    billing_customer_name: input.dropoff.name,
+    // Shiprocket's /orders/create/adhoc validates billing_last_name as
+    // required-present (empty string ok, undefined not). Our data model
+    // stores the buyer's name as a single field, so we split on the
+    // first space — "Yata Shiva Kumar" → first="Yata", last="Shiva Kumar".
+    // Single-name buyers get first=name, last="" which also passes.
+    // Discovered 16 Nov 2026 — 422 'billing_last_name: validation.present'
+    // when reviving a real order's shipment booking.
+    ...splitName(input.dropoff.name, "billing"),
     billing_phone: input.dropoff.phone,
     billing_address: input.dropoff.line1,
     billing_address_2: input.dropoff.line2 ?? "",
@@ -263,20 +407,135 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     breadth: 30,
     height: 10,
     weight: Math.max(0.5, input.weightKg),
+    // Shiprocket fetches this URL and prints the invoice onto the label
+    // sheet so the courier attaches it to the parcel (B2C GST-compliant
+    // shipment). Only sent when provided — inbound-only legs that carry
+    // no sale skip it.
+    ...(input.invoiceUrl ? { invoice_url: input.invoiceUrl } : {}),
   };
   const res = await fetch(`${CONFIG!.baseUrl}/orders/create/adhoc`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`ShipRocket order create failed (${res.status})`);
-  const data = (await res.json()) as { awb_code?: string | null; courier_name?: string | null; shipment_id?: number };
+  if (!res.ok) {
+    // Pre-launch audit: 422 responses carry the specific field that was
+    // rejected. Surface Shiprocket's message so operators don't have to
+    // tail Railway logs to debug missing fields / unknown pickup location
+    // nicknames / invalid pincodes. Capped at 500 chars so a malicious
+    // reflected response can't blow up our own error trail.
+    const detail = await res.text().catch(() => "");
+    throw new Error(
+      `ShipRocket order create failed (${res.status})${detail ? `: ${detail.slice(0, 500)}` : ""}`,
+    );
+  }
+  const data = (await res.json()) as {
+    awb_code?: string | null;
+    courier_name?: string | null;
+    shipment_id?: number;
+    order_id?: number;
+  };
+
+  // Shiprocket's /orders/create/adhoc only creates the order record.
+  // Without the two steps below, the shipment stays "NEW" in their
+  // dashboard and nobody picks it up. Client-flagged 16 Nov 2026 as a
+  // critical gap: the operator should NOT have to click Ship Now
+  // manually. Assigning + requesting pickup is what actually dispatches
+  // a courier.
+  //
+  // Both failures below are LOGGED and SWALLOWED — the Shiprocket order
+  // exists on their side and can be rescued by hand; a hard throw here
+  // would strand an otherwise-booked shipment with no tracking row on
+  // our side.
+  let awb = data.awb_code ?? null;
+  let carrier = data.courier_name ?? null;
+  if (data.shipment_id) {
+    try {
+      // Courier assignment picks a specific courier and generates the AWB
+      // barcode. `courier_id` optional; omitting lets Shiprocket pick the
+      // cheapest serviceable courier. We pass the one from the quote when
+      // available (input.preferredCourierId) so the actual billed rate
+      // matches what the buyer saw at checkout within Shiprocket's own
+      // slot-availability variance (which is typically ±₹5).
+      const assigned = await assignCourier({
+        shipmentId: data.shipment_id,
+        ...(input.preferredCourierId ? { courierId: input.preferredCourierId } : {}),
+        token,
+      });
+      awb = assigned.awb ?? awb;
+      carrier = assigned.courierName ?? carrier;
+      // Request pickup: tells the assigned courier to come. Without this
+      // the AWB is generated but no one shows up.
+      await requestPickup({ shipmentId: data.shipment_id, token });
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          event: "shiprocket.auto_ship.failed",
+          orderReference: input.orderReference,
+          shipmentId: data.shipment_id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+
   return {
-    trackingId: data.awb_code ?? String(data.shipment_id ?? input.orderReference),
-    carrier: data.courier_name ?? null,
+    trackingId: awb ?? String(data.shipment_id ?? input.orderReference),
+    carrier,
     stage: "pickup",
     real: true,
   };
+}
+
+interface AssignCourierResult {
+  awb: string | null;
+  courierName: string | null;
+}
+
+async function assignCourier(input: {
+  shipmentId: number;
+  courierId?: number;
+  token: string;
+}): Promise<AssignCourierResult> {
+  const body: Record<string, unknown> = { shipment_id: input.shipmentId };
+  if (input.courierId) body.courier_id = input.courierId;
+  const res = await fetch(`${CONFIG!.baseUrl}/courier/assign/awb`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${input.token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`courier/assign/awb failed (${res.status})${detail ? `: ${detail.slice(0, 400)}` : ""}`);
+  }
+  const data = (await res.json()) as {
+    awb_assign_status?: number;
+    response?: {
+      data?: { awb_code?: string | null; courier_name?: string | null };
+    };
+  };
+  return {
+    awb: data.response?.data?.awb_code ?? null,
+    courierName: data.response?.data?.courier_name ?? null,
+  };
+}
+
+async function requestPickup(input: { shipmentId: number; token: string }): Promise<void> {
+  const res = await fetch(`${CONFIG!.baseUrl}/courier/generate/pickup`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${input.token}`,
+    },
+    body: JSON.stringify({ shipment_id: [input.shipmentId] }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`courier/generate/pickup failed (${res.status})${detail ? `: ${detail.slice(0, 400)}` : ""}`);
+  }
 }
 
 // ShipRocket's webhook body carries a `current_status` string we map onto

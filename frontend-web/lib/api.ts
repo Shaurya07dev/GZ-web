@@ -57,6 +57,14 @@ export function isApiError(error: unknown, status?: number): error is ApiError {
   return error instanceof ApiError && (status === undefined || error.status === status);
 }
 
+// Audit N3 (14 Nov 2026): in a production build, refuse to start with the
+// localhost fallback — a misconfigured Vercel deploy would silently point the
+// web app at nothing. Harmless default in dev; failure in prod is immediate.
+if (process.env.NODE_ENV === "production" && !process.env.NEXT_PUBLIC_API_URL) {
+  throw new Error(
+    "NEXT_PUBLIC_API_URL is not set on this production build. Set it in Vercel environment variables to the Railway API URL.",
+  );
+}
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
 export const api = axios.create({ baseURL: API_URL, timeout: 20_000 });
@@ -93,3 +101,33 @@ export const http = {
   put: <T>(url: string, body?: unknown, config?: AxiosRequestConfig) => api.put<T>(url, body, config).then((r) => r.data),
   delete: <T>(url: string, config?: AxiosRequestConfig) => api.delete<T>(url, config).then((r) => r.data),
 };
+
+/**
+ * Fetch an authenticated binary endpoint (currently used for the admin
+ * Excel-export routes at /v1/admin/export/*.xlsx) and trigger a browser
+ * download. Uses the main `api` instance so the auth header interceptor
+ * fires — a direct window.open('/v1/admin/export/orders.xlsx') would 401.
+ *
+ * `filenameFallback` is used only when the server doesn't include a
+ * Content-Disposition header for some reason; the backend always does.
+ */
+export async function downloadAuthenticatedFile(
+  path: string,
+  filenameFallback: string,
+): Promise<void> {
+  const response = await api.get<Blob>(path, { responseType: "blob" });
+  const disposition = response.headers?.["content-disposition"] as string | undefined;
+  const match = disposition?.match(/filename="([^"]+)"/);
+  const filename = match?.[1] ?? filenameFallback;
+
+  const url = URL.createObjectURL(response.data);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Release the blob URL on the next tick so the browser has time to
+  // start the download first.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}

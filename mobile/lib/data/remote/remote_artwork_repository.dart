@@ -4,6 +4,7 @@ import '../../core/api/json_utils.dart';
 import '../models/artist.dart';
 import '../models/artwork.dart';
 import '../models/artwork_filters.dart';
+import '../models/artwork_reservation.dart';
 import '../models/marketplace.dart';
 import '../repositories/artwork_repository.dart';
 import 'mappers/catalog_mappers.dart';
@@ -126,5 +127,14 @@ class RemoteArtworkRepository implements ArtworkRepository {
   Future<List<ArtistCard>> listArtistCards() async {
     final json = await api.getMap('/v1/artists', auth: false);
     return asMapList(json['artists']).map(artistCardFromApi).toList();
+  }
+
+  @override
+  Future<ArtworkReservation> reservation(String artworkId) async {
+    final json = await api.getMap(
+      '/v1/artworks/${Uri.encodeComponent(artworkId)}/reservation',
+      auth: false,
+    );
+    return ArtworkReservation.fromJson(json);
   }
 }

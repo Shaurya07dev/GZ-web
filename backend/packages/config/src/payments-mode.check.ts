@@ -16,6 +16,17 @@ import { loadEnv } from "./env.ts";
 const base = { FIREBASE_PROJECT_ID: "p", GCP_PROJECT_ID: "p" } as const;
 const load = (extra: Record<string, string | undefined>) => loadEnv({ ...base, ...extra } as NodeJS.ProcessEnv);
 
+// Prod launch gate (14 Nov 2026 pre-launch audit) refuses a production boot
+// missing GSTIN, CIN, or the field-encryption key. Supply them for every test
+// that exercises NODE_ENV=production so each test only exercises the one
+// variable it is actually about.
+const PROD_REQUIRED = {
+  NODE_ENV: "production",
+  INVOICE_SELLER_GSTIN: "29ABCDE1234F1Z5",
+  INVOICE_SELLER_CIN: "U72200KA2024PTC123456",
+  FINANCIAL_ENC_KEY: "0".repeat(64), // 32 bytes hex, test-only value
+} as const;
+
 // The two deliberate values are accepted.
 assert.equal(load({ PAYMENTS_MODE: "simulated" }).paymentsMode, "simulated");
 assert.equal(load({ PAYMENTS_MODE: "razorpay" }).paymentsMode, "razorpay");
@@ -37,9 +48,27 @@ assert.equal(load({ PAYMENTS_MODE: "" }).paymentsMode, "simulated");
 // ...but never silently in production, where omitting it is never intentional.
 assert.throws(() => load({ NODE_ENV: "production" }), /PAYMENTS_MODE is not set/);
 assert.throws(() => load({ NODE_ENV: "production", PAYMENTS_MODE: "" }), /PAYMENTS_MODE is not set/);
-// An explicit choice in production is honoured, including the permissive one.
-assert.equal(load({ NODE_ENV: "production", PAYMENTS_MODE: "razorpay" }).paymentsMode, "razorpay");
-assert.equal(load({ NODE_ENV: "production", PAYMENTS_MODE: "simulated" }).paymentsMode, "simulated");
+// Razorpay in production works (as long as the launch gate's other vars are set).
+assert.equal(load({ ...PROD_REQUIRED, PAYMENTS_MODE: "razorpay" }).paymentsMode, "razorpay");
+// Simulated in production now ALSO throws — 14 Nov 2026 pre-launch tightening.
+// One Railway typo = free orders was too easy; the launch gate refuses the boot.
+assert.throws(
+  () => load({ ...PROD_REQUIRED, PAYMENTS_MODE: "simulated" }),
+  /PAYMENTS_MODE must be "razorpay" in production/,
+);
+// And the launch gate catches each other required var individually.
+assert.throws(
+  () => load({ ...PROD_REQUIRED, PAYMENTS_MODE: "razorpay", INVOICE_SELLER_GSTIN: undefined }),
+  /INVOICE_SELLER_GSTIN/,
+);
+assert.throws(
+  () => load({ ...PROD_REQUIRED, PAYMENTS_MODE: "razorpay", FINANCIAL_ENC_KEY: undefined }),
+  /FINANCIAL_ENC_KEY/,
+);
+assert.throws(
+  () => load({ ...PROD_REQUIRED, PAYMENTS_MODE: "razorpay", FINANCIAL_ENC_KEY: "not-hex-64-chars" }),
+  /FINANCIAL_ENC_KEY must be 32 bytes/,
+);
 
 // Cashfree's own environment is the other switch that must not drift open. It
 // now only selects the Secure ID base URL, but a verification call landing on

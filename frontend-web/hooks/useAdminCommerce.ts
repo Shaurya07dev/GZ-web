@@ -84,6 +84,37 @@ export function useAdminRefundOrderMutation(orderId: string) {
 }
 
 /**
+ * Look up any user (buyer / artist / admin) by uid. Used by the admin
+ * order-detail page to show the real buyer rather than the signed-in
+ * admin (which was the previous bug: every order looked like it was
+ * bought by the admin because the page called useCustomerProfile()).
+ */
+export function useAdminUser(uid: string | undefined) {
+  return useQuery({
+    queryKey: ["admin-user", uid],
+    queryFn: () => adminService.getUserById(uid!),
+    enabled: Boolean(uid),
+  });
+}
+
+/**
+ * Re-run paid-side effects on an order that was manually revived via
+ * scripts/revive-order-direct.ts. Settlement, Shiprocket booking, and
+ * buyer+artist notifications. Added 16 Nov 2026 after the ₹260.21
+ * recovery left those three jobs undone.
+ */
+export function useAdminFinishRevivedOrderMutation(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => adminService.finishRevivedOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
+    },
+  });
+}
+
+/**
  * Walk an order along the fulfilment ladder. Admin-only, backend runs the
  * state-machine assertion and emails the buyer about the new stage.
  */

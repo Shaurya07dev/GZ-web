@@ -150,6 +150,8 @@ export type AuditAction =
   | "artwork.delisted"
   | "artwork.ranked"
   | "artwork.rank_cleared"
+  | "artwork.promoted"
+  | "artwork.unpromoted"
   | "kyc.approved"
   | "kyc.rejected"
   | "gst.approved"

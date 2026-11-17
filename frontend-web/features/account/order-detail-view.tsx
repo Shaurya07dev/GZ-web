@@ -114,9 +114,22 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               what the courier is doing right now. */}
           {(order.shiprocketStage || order.status === "transit" || order.status === "packed") && (
             <div className="rounded-lg border border-border bg-card p-4">
-              <h3 className="font-display text-sm font-semibold text-foreground">
-                Shipment
-              </h3>
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="font-display text-sm font-semibold text-foreground">
+                  Shipment
+                </h3>
+                {order.estimatedDeliveryDays != null && order.shiprocketTrackedAt ? (
+                  <span className="text-xs text-muted-foreground">
+                    Expected by{" "}
+                    <span className="text-foreground">
+                      {formatEtaDate(
+                        order.shiprocketTrackedAt,
+                        order.estimatedDeliveryDays,
+                      )}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
               <div className="mt-3">
                 <ShipmentTracker
                   stage={order.shiprocketStage ?? null}
@@ -285,4 +298,16 @@ function PendingOrderActions({ order }: { order: Order }) {
       </p>
     </div>
   );
+}
+
+/** "Mon, 24 Nov" — the ETA date from Shiprocket's day-count estimate. */
+function formatEtaDate(trackedAt: string, estimatedDays: number): string {
+  const booked = new Date(trackedAt);
+  if (Number.isNaN(booked.getTime())) return "";
+  const eta = new Date(booked.getTime() + estimatedDays * 24 * 60 * 60 * 1000);
+  return eta.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }

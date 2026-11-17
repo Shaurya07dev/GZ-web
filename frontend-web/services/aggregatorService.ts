@@ -82,6 +82,10 @@ export interface HoldingDto {
   inboundShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
   inboundTrackingId?: string | null;
   inboundCarrier?: string | null;
+  cycleStartedAt?: string | null;
+  returnEligibleAt?: string | null;
+  canRequestArtistReturn?: boolean;
+  artistReturnRequestedAt?: string | null;
 }
 
 function toOffer(o: OfferDto): AggregatorOffer {
@@ -127,6 +131,10 @@ export function toHolding(h: HoldingDto): AggregatorHolding {
     inboundShiprocketStage: h.inboundShiprocketStage ?? null,
     inboundTrackingId: h.inboundTrackingId ?? null,
     inboundCarrier: h.inboundCarrier ?? null,
+    cycleStartedAt: h.cycleStartedAt ?? null,
+    returnEligibleAt: h.returnEligibleAt ?? null,
+    canRequestArtistReturn: h.canRequestArtistReturn ?? false,
+    artistReturnRequestedAt: h.artistReturnRequestedAt ?? null,
   };
 }
 
@@ -281,6 +289,7 @@ export const aggregatorService = {
       deliveryMode: payload.deliveryMode,
       paymentRoute: payload.paymentRoute,
       ...(address ? { deliveryAddress: address } : {}),
+      ...(payload.couponCode ? { couponCode: payload.couponCode } : {}),
     });
     const updated = await http.get<HoldingDto>(`/v1/aggregator/holdings/${encodeURIComponent(active.id)}`);
     return toHolding(updated);

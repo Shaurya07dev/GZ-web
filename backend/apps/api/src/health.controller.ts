@@ -1,5 +1,5 @@
 import { Controller, Get, Inject } from "@nestjs/common";
-import { Public } from "./auth/roles.decorator.ts";
+import { Public, Roles } from "./auth/roles.decorator.ts";
 import { Emails } from "./mail/emails.ts";
 import type { AppEnv } from "@galleryzone/config";
 import { ENV } from "./db.module.ts";
@@ -23,12 +23,15 @@ export class HealthController {
   }
 
   /**
-   * Public config-readiness probe. No secrets leaked — just booleans and
-   * actionable hints. Used by the operator to debug "my client isn't
-   * getting the OTP email" / "Razorpay isn't opening" from outside the
-   * container with no auth needed.
+   * Admin-only config-readiness probe. No secrets leaked — just booleans
+   * and actionable hints. Used by the operator to debug "my client isn't
+   * getting the OTP email" / "Razorpay isn't opening". Was public before
+   * 14 Nov 2026; pre-launch audit I3 flagged that the booleans
+   * (paymentsMode, smsConfigured, publicSiteUrl, …) give an attacker a
+   * free reconnaissance surface for little operator benefit — ops can
+   * easily sign in as admin to debug.
    */
-  @Public()
+  @Roles("admin")
   @Get("config")
   config(): Record<string, unknown> {
     return {

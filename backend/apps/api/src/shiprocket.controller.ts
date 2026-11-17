@@ -14,6 +14,7 @@ import { SkipThrottle } from "@nestjs/throttler";
 import { DB } from "./db.module.ts";
 import {
   stageFromWebhook,
+  verifyWebhookHmac,
   verifyWebhookSignature,
   type WebhookPayload,
 } from "./shiprocket.ts";
@@ -44,7 +45,14 @@ export class ShiprocketController {
   ) {
     const raw = req.rawBody ?? Buffer.from(JSON.stringify(body ?? {}));
     const token = apiKey ?? legacySignature;
-    if (!verifyWebhookSignature(raw, token ?? null)) {
+    // Accept either verification shape so Shiprocket's dashboard can be
+    // flipped between "shared token" (current, standard plan) and HMAC
+    // (enterprise plan) without a redeploy. Pre-launch audit M1 called
+    // for HMAC specifically; dual-accept gives us HMAC-when-available
+    // and the shared-token fallback so nothing breaks today.
+    const okHmac = verifyWebhookHmac(raw, legacySignature ?? null);
+    const okToken = verifyWebhookSignature(raw, token ?? null);
+    if (!okHmac && !okToken) {
       // 200 so ShipRocket stops retrying but we don't act on it. Logged so
       // ops can see if a real event is failing on signature config.
       this.logger.warn(`shiprocket webhook token mismatch for order ${body.order_id}`);

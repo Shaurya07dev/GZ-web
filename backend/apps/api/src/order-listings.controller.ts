@@ -1,17 +1,32 @@
 import { Controller, Get, HttpCode, Inject, NotFoundException, Param, Post, Req } from "@nestjs/common";
-import { abandonPendingOrder, listCustomerOrders, getOrder, repricePendingOrder, type Db } from "@galleryzone/db";
+import { abandonPendingOrder, listCustomerOrders, getOrder, providerOrderIdForOrder, repricePendingOrder, sweepStalePendingOrders, type Db } from "@galleryzone/db";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB } from "./db.module.ts";
+import { Razorpay } from "./payments/razorpay.ts";
 import { resolveShippingQuote } from "./shipping-quote.ts";
 
 @Controller("v1")
 export class OrderListingsController {
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly razorpay: Razorpay,
+  ) {}
 
   @Roles("customer")
   @Get("orders")
-  listMine(@Req() req: AuthenticatedRequest) {
+  async listMine(@Req() req: AuthenticatedRequest) {
+    // Lazy cleanup: sweep stale pending orders into abandoned+back-to-cart
+    // on every list fetch. Pre-check each order with Razorpay before
+    // abandoning — client incident 14 Nov 2026 pm had a stale pending row
+    // whose money was already captured on Razorpay's side; the old sweep
+    // raced the webhook and cancelled the order while the money sat.
+    await sweepStalePendingOrders(this.db, req.authUser.uid, {
+      hasCapturedPayment: async (providerOrderId: string) => {
+        const payments = await this.razorpay.fetchPayments(providerOrderId);
+        return payments.some((p) => p.status === "captured");
+      },
+    }).catch(() => undefined);
     return listCustomerOrders(this.db, req.authUser.uid);
   }
 
@@ -70,12 +85,60 @@ export class OrderListingsController {
    * without paying. Cancels the pending order and drops the artwork back
    * into the buyer's cart, so the orders history stays a list of real
    * purchases rather than a graveyard of abandoned checkouts (client flag
-   * 14 Nov 2026). Idempotent + silent on non-pending orders.
+   * 14 Nov 2026).
+   *
+   * CRITICAL (client flag 14 Nov 2026 pm): the client wrote in after a real
+   * payment was captured by Razorpay but the order showed as "cancelled"
+   * in the UI. Root cause: the mobile/web client called /abandon right
+   * after /payment/verify returned a non-"paid" status — but Razorpay's
+   * order-status is eventually consistent on their side; a successful
+   * capture can read back as "attempted" for up to a few seconds before
+   * flipping to "paid". Our abandon then raced the webhook, we cancelled,
+   * the real webhook arrived to a cancelled order, state machine refused
+   * cancelled → paid, money captured by Razorpay sat with no paid order.
+   *
+   * Hard rule: before we cancel, DOUBLE-CHECK with Razorpay. If any
+   * payment under the order is captured, refuse to abandon and let the
+   * webhook settle. Idempotent + silent on non-pending orders stays.
    */
   @Roles("customer")
   @HttpCode(204)
   @Post("orders/:id/abandon")
   async abandon(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
+    const providerOrderId = await providerOrderIdForOrder(this.db, id);
+    if (providerOrderId) {
+      try {
+        const payments = await this.razorpay.fetchPayments(providerOrderId);
+        const captured = payments.find((p) => p.status === "captured");
+        if (captured) {
+          // Payment IS captured. Do NOT abandon — the webhook will settle
+          // this into "paid" within seconds. Returning 204 silently so the
+          // client flow doesn't spin on an error; the buyer sees "paid" on
+          // the next order list fetch.
+          console.warn(
+            JSON.stringify({
+              event: "orders.abandon.refused_payment_captured",
+              orderId: id,
+              providerOrderId,
+              razorpayPaymentId: captured.id,
+            }),
+          );
+          return;
+        }
+      } catch (error) {
+        // If Razorpay is unreachable, be conservative: do NOT abandon.
+        // Better a pending order the sweeper picks up in 30 min than a
+        // cancelled one with real money sitting in Razorpay.
+        console.error(
+          JSON.stringify({
+            event: "orders.abandon.razorpay_check_failed",
+            orderId: id,
+            error: String(error),
+          }),
+        );
+        return;
+      }
+    }
     await abandonPendingOrder(this.db, id, req.authUser.uid);
   }
 }

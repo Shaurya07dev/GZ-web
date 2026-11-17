@@ -18,6 +18,8 @@ import {
   type PricingRates, artistSettlementOf } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { getArtistSale, postArtistSale } from "./artist-sales.ts";
+import { redeemCouponTx, releaseCouponRedemption } from "./coupons.ts";
+import { claimReservation, clearReservation } from "./artwork-reservations.ts";
 import { Collections, artworkPricingCol, orderStatusEventsCol, type ArtworkPricingDoc, type OrderDoc, type PaymentDoc } from "./collections.ts";
 import { appendArtworkStatus, latestStatusOf, refreshListing } from "./listing-projection.ts";
 import { recordSaleTransfer } from "./ownership.ts";
@@ -40,6 +42,15 @@ export interface CreateOrderInput {
    * on the order so the UI can render an "estimated" badge.
    */
   deliveryQuote?: ShippingQuoteSnapshot | undefined;
+  /**
+   * Admin-created marketplace discount code the buyer applied. The caller
+   * MUST have already called validateCoupon() with the same artwork so
+   * `couponDiscountPaise` is a trusted number. createOrder just stamps it;
+   * markOrderPaid passes it into the settlement posting (and the discount
+   * is absorbed by platform_revenue there).
+   */
+  couponCode?: string | undefined;
+  couponDiscountPaise?: number | undefined;
 }
 
 /** Snapshotted on the order so re-visits never show a different number. */
@@ -55,7 +66,16 @@ export interface CreateOrderResult {
   totalPaise: number;
 }
 
-export async function createOrder({ db, customerId, artworkId, addressId, idempotencyKey, deliveryQuote }: CreateOrderInput): Promise<CreateOrderResult> {
+export async function createOrder({
+  db,
+  customerId,
+  artworkId,
+  addressId,
+  idempotencyKey,
+  deliveryQuote,
+  couponCode,
+  couponDiscountPaise,
+}: CreateOrderInput): Promise<CreateOrderResult> {
   // Guard against duplicate orders for the same (customer, artwork) that
   // happen when the client generates a fresh idempotencyKey on each tap
   // (double-tap, React-retry after a flaky network, mobile tap+touch).
@@ -109,6 +129,37 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     throw new CheckoutError("This artwork is not available to buy");
   }
 
+  // Concurrent-buyer protection: claim the reservation atomically. Any
+  // other buyer trying to hit createOrder for the same artwork in the
+  // next 10 minutes will get a 409 and see "another collector is
+  // completing checkout". Idempotent for the same (artwork, customer)
+  // pair — a buyer re-opening their own checkout renews their hold.
+  // Added 16 Nov 2026 after the "two buyers one painting" scenario was
+  // flagged as the last pre-launch open risk. ReservationError is caught
+  // and re-wrapped as a CheckoutError so the controller can surface its
+  // 409 the same way it does for other race conditions.
+  try {
+    await claimReservation(db, artworkId, customerId);
+  } catch (error) {
+    throw new CheckoutError(error instanceof Error ? error.message : "This artwork is reserved by another collector");
+  }
+
+  // Buyer must have a verified mobile number on file. Shiprocket's booking
+  // API rejects without billing_phone, so without this gate the order
+  // would charge the card AND then fail to book the courier — buyer
+  // stranded with no artwork and a pending refund. Checked here so the
+  // error happens BEFORE Razorpay opens, not after. 16 Nov 2026.
+  const buyerSnap = await db.collection(Collections.users).doc(customerId).get();
+  const buyer = buyerSnap.data() as { phone?: string; name?: string } | undefined;
+  if (!buyer?.phone?.trim()) {
+    throw new CheckoutError(
+      "Please add and verify your mobile number in Profile → Account before checking out — the courier needs it to call about delivery.",
+    );
+  }
+  if (!buyer?.name?.trim()) {
+    throw new CheckoutError("Please add your name in Profile → Account before checking out.");
+  }
+
   // An addressId belonging to somebody else would ship the piece to a
   // stranger and leak their address onto this order.
   const addressSnap = await db.collection(Collections.addresses).doc(addressId).get();
@@ -141,6 +192,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   // show "estimated — final at dispatch".
   const checkout = checkoutTotal(displayPrice, rates, deliveryQuote?.ratePaise);
   const gstPaise = gstIncludedIn(displayPrice, rates);
+  const discount = Math.max(0, Math.min(checkout.total, Math.round(couponDiscountPaise ?? 0)));
 
   const orderRef = db.collection(Collections.orders).doc();
   const orderDoc: OrderDoc = {
@@ -152,7 +204,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     deliveryChargePaise: checkout.deliveryCharge,
     convenienceFeePaise: checkout.convenienceFee,
     convenienceGstPaise: checkout.convenienceGst,
-    totalPaise: checkout.total,
+    totalPaise: checkout.total - discount,
     status: "pending",
     rateConfigVersionId: activeVersion.id,
     artistId: pricing.artistId,
@@ -162,6 +214,8 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     // UI can render an "estimated" badge.
     shippingQuote: deliveryQuote ?? null,
     createdAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+    couponCode: couponCode ? couponCode.trim().toLowerCase() : null,
+    couponDiscountPaise: discount > 0 ? discount : null,
   };
   await orderRef.set(orderDoc);
   await db.collection(orderStatusEventsCol(orderRef.id)).add({ status: "pending", changedAt: FieldValue.serverTimestamp() });
@@ -171,7 +225,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
     provider: "razorpay",
     providerPaymentId: null,
     method: "simulated",
-    amountPaise: checkout.total,
+    amountPaise: checkout.total - discount,
     idempotencyKey,
     status: "pending",
     rawWebhookPayload: null,
@@ -182,7 +236,7 @@ export async function createOrder({ db, customerId, artworkId, addressId, idempo
   // creating a second payment record.
   await db.collection(Collections.payments).doc(idempotencyKey).create(paymentDoc);
 
-  return { orderId: orderRef.id, totalPaise: checkout.total };
+  return { orderId: orderRef.id, totalPaise: checkout.total - discount };
 }
 
 /**
@@ -365,12 +419,31 @@ export async function markOrderRefunded(
   detail: { providerRefundId: string; reason: string },
 ): Promise<void> {
   const ref = db.collection(Collections.orders).doc(orderId);
+  const snap = await ref.get();
+  const order = snap.data() as OrderDoc | undefined;
   await ref.update({
     status: "cancelled",
     refundedAt: FieldValue.serverTimestamp(),
     providerRefundId: detail.providerRefundId,
     refundReason: detail.reason.slice(0, 500),
   });
+  // Give the coupon slot back so a capped code can be used again, and the
+  // per-user cap decrements for the buyer. Idempotent on refId — a second
+  // refund on an already-released order is a no-op.
+  if (order?.couponCode) {
+    try {
+      await releaseCouponRedemption(db, { code: order.couponCode, refId: orderId });
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          event: "coupon.release.failed",
+          orderId,
+          code: order.couponCode,
+          error: String(error),
+        }),
+      );
+    }
+  }
 }
 
 /**
@@ -421,6 +494,12 @@ export async function abandonPendingOrder(
       { merge: true },
     );
   }
+
+  // Release the reservation so other collectors can checkout the same
+  // piece immediately. Otherwise they'd have to wait out the 10-minute
+  // window even though this buyer has given up. Idempotent + silent.
+  await clearReservation(db, order.artworkId);
+
   return { abandoned: true };
 }
 
@@ -430,12 +509,29 @@ export async function abandonPendingOrder(
  * checkout doesn't see a growing wall of "pending" clutter in their orders
  * list. Shared implementation with explicit abandonPendingOrder so there is
  * one place where the pending → cancelled transition is written.
+ *
+ * CRITICAL (14 Nov 2026 pm incident): the sweep used to abandon any pending
+ * order >staleMinutes old without checking whether Razorpay had actually
+ * captured the money. That is how buyer yatashivakumar16@gmail.com's order
+ * fZSH5H5jc16HmhJOx9p0 ended up cancelled 41 minutes after their ₹260.21
+ * UPI payment was successfully captured by Razorpay — the webhook hadn't
+ * propagated yet, we saw a stale "pending" row and abandoned it.
+ *
+ * The `hasCapturedPayment` callback is passed in by the controller that
+ * knows how to talk to Razorpay. When set, we ask it per-order before
+ * abandoning; when it returns true we SKIP that order and let the webhook
+ * catch up. Omitted means dev/test mode (no live Razorpay to talk to), in
+ * which case the old behaviour applies.
  */
 export async function sweepStalePendingOrders(
   db: Firestore,
   customerId: string,
-  staleMinutes = 30,
+  options: {
+    staleMinutes?: number;
+    hasCapturedPayment?: (providerOrderId: string) => Promise<boolean>;
+  } = {},
 ): Promise<number> {
+  const staleMinutes = options.staleMinutes ?? 30;
   const cutoff = Date.now() - staleMinutes * 60 * 1000;
   const snap = await db
     .collection(Collections.orders)
@@ -447,6 +543,47 @@ export async function sweepStalePendingOrders(
     const order = doc.data() as OrderDoc;
     const createdMs = order.createdAt?.toMillis?.() ?? 0;
     if (createdMs > cutoff) continue;
+
+    // Before abandoning, double-check with Razorpay that the money wasn't
+    // actually captured. If the capture is real, the webhook will settle
+    // the order within seconds — do NOT race it to cancellation.
+    if (options.hasCapturedPayment) {
+      const paymentDocSnap = await db
+        .collection(Collections.payments)
+        .where("orderId", "==", doc.id)
+        .limit(1)
+        .get();
+      const providerOrderId = paymentDocSnap.docs[0]?.get("providerOrderId") as
+        | string
+        | undefined;
+      if (providerOrderId) {
+        try {
+          const captured = await options.hasCapturedPayment(providerOrderId);
+          if (captured) {
+            console.warn(
+              JSON.stringify({
+                event: "orders.sweep.refused_payment_captured",
+                orderId: doc.id,
+                providerOrderId,
+              }),
+            );
+            continue;
+          }
+        } catch (error) {
+          // Razorpay unreachable — same conservative stance as the manual
+          // /abandon endpoint: do NOT cancel. Try again next sweep.
+          console.error(
+            JSON.stringify({
+              event: "orders.sweep.razorpay_check_failed",
+              orderId: doc.id,
+              error: String(error),
+            }),
+          );
+          continue;
+        }
+      }
+    }
+
     const { abandoned } = await abandonPendingOrder(db, doc.id, customerId);
     if (abandoned) count += 1;
   }
@@ -484,11 +621,32 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   if (!orderSnap.exists) throw new CheckoutError(`No order ${orderId}`);
   const order = orderSnap.data() as OrderDoc;
 
-  if (order.status !== "pending") {
-    if (order.status === "cancelled") throw new CheckoutError(`Order ${orderId} was cancelled`);
+  if (order.status === "paid" || order.status === "confirmed" || order.status === "packed" || order.status === "transit" || order.status === "delivered") {
+    // Already settled — idempotent re-entry (webhook arrived after verify).
     return confirmationFor(db, orderId, order, null);
   }
+  // Both pending AND cancelled are valid entry points. Cancelled means the
+  // client-driven /abandon ran faster than Razorpay's capture-webhook and
+  // marked the row cancelled while Razorpay had actually already captured
+  // the money (client incident 14 Nov 2026 pm). When the real webhook
+  // arrives, un-cancel and settle — the state machine's cancelled → paid
+  // transition only exists for this recovery path.
   orderStateMachine.assertTransition(order.status, "paid");
+  if (order.status === "cancelled") {
+    // Clear the abandon marker so the record doesn't keep claiming it was
+    // cancelled. The subsequent paid status event is appended below, so
+    // the history reads: ... → cancelled (abandoned_at_payment) → paid.
+    await orderRef.update({
+      refundReason: null,
+    });
+    console.warn(
+      JSON.stringify({
+        event: "orders.paid.revived_from_cancelled",
+        orderId,
+        providerPaymentId: capture.providerPaymentId,
+      }),
+    );
+  }
 
   const pricingSnap = await db.collection(artworkPricingCol(order.artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new CheckoutError(`No artwork ${order.artworkId}`);
@@ -497,6 +655,58 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
   const rateStore = new FirestoreRateConfigStore(db);
   const version = await rateStore.getActiveVersion(order.createdAt.toDate());
   if (!version) throw new CheckoutError("Order references a rate_config_version that is no longer resolvable");
+
+  const couponDiscountPaise = order.couponDiscountPaise ?? 0;
+  // Atomically claim the coupon's slot BEFORE posting the sale, so a race
+  // past usageCap / perUserCap refuses this capture instead of over-
+  // redeeming. The redemption doc is keyed on orderId, making the claim
+  // idempotent on a replayed webhook. If the redemption already exists
+  // (e.g. a slow webhook retrying) we reuse the recorded discount — the
+  // sale is settling for exactly what the buyer saw.
+  if (order.couponCode) {
+    try {
+      const { discountPaise } = await db.runTransaction(async (tx) =>
+        redeemCouponTx(db, tx, {
+          code: order.couponCode!,
+          refId: orderId,
+          subtotalPaise: order.displayPricePaise,
+          context: {
+            channel: "marketplace",
+            artistId: pricing.artistId,
+            userId: order.customerId,
+          },
+        }),
+      );
+      if (discountPaise !== couponDiscountPaise) {
+        // Should never happen — createOrder validated and froze the amount.
+        // If the admin edited the coupon between order creation and capture,
+        // honour the ORIGINAL stamp (the buyer saw that price) and log.
+        console.warn(
+          JSON.stringify({
+            event: "coupon.discount_drift",
+            orderId,
+            code: order.couponCode,
+            stamped: couponDiscountPaise,
+            recomputed: discountPaise,
+          }),
+        );
+      }
+    } catch (error) {
+      // Cap-exceeded, status flipped to paused, or validity window closed
+      // between order creation and capture. The customer already paid via
+      // Razorpay for the discounted total; refusing here would strand the
+      // sale. Log loudly, honour the stamped discount anyway (so the
+      // settlement still makes sense), and leave reconciliation to admin.
+      console.error(
+        JSON.stringify({
+          event: "coupon.redeem.failed",
+          orderId,
+          code: order.couponCode,
+          error: String(error),
+        }),
+      );
+    }
+  }
 
   // TDS depends on what the artist has already sold this financial year, so
   // it is decided inside the same transaction that posts the ledger entries.
@@ -508,13 +718,24 @@ export async function markOrderPaid(db: Firestore, orderId: string, capture: Pay
     saleKey: `order:${orderId}`,
     orderId,
     build: (tdsApplies) =>
-      marketplaceCheckoutPostings({ artistId: pricing.artistId, artistPricePaise: pricing.artistPricePaise, rates: version.rates, tdsApplies }),
+      marketplaceCheckoutPostings({
+        artistId: pricing.artistId,
+        artistPricePaise: pricing.artistPricePaise,
+        rates: version.rates,
+        tdsApplies,
+        couponDiscountPaise,
+      }),
   });
 
   await orderRef.update({ status: "paid" });
   await db.collection(orderStatusEventsCol(orderId)).add({ status: "paid", changedAt: FieldValue.serverTimestamp() });
 
   // Title passes on payment (user decision 2026-09-13; plan.md §3.2 said
+  // Clear the reservation now that the sale is settled — defensive, since
+  // the artwork is also about to flip to "sold" which hides it from the
+  // marketplace anyway. Idempotent; silent on a missing doc.
+  await clearReservation(db, order.artworkId);
+
   // delivery). Idempotent on orderId. The artwork leaves the marketplace
   // at the same moment — a one-of-a-kind original can't be bought twice.
   await recordSaleTransfer(db, { artworkId: order.artworkId, orderId, buyerId: order.customerId });

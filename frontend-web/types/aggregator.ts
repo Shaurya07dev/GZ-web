@@ -44,6 +44,17 @@ export interface AggregatorHolding {
   inboundShiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
   inboundTrackingId?: string | null;
   inboundCarrier?: string | null;
+  /** When the first aggregator took this piece — the clock start for the
+   *  6-month listing period. Null on the aggregator portal view. */
+  cycleStartedAt?: string | null;
+  /** cycleStartedAt + 180 days. The earliest the artist may request the
+   *  piece back. Null when cycleStartedAt is null. */
+  returnEligibleAt?: string | null;
+  /** True when the piece is still with an aggregator, the 180-day window
+   *  has elapsed, and the artist hasn't already requested it back. */
+  canRequestArtistReturn?: boolean;
+  /** Stamped once the artist has asked for the piece back. */
+  artistReturnRequestedAt?: string | null;
 }
 
 export interface HoldingExtensionRequest {
@@ -72,6 +83,7 @@ export interface RecordSalePayload {
   };
   deliveryMode: "courier" | "self_pickup";
   paymentRoute: "direct_to_galleryzone" | "cash_at_premises";
+  couponCode?: string;
 }
 
 // Persisted result of recordSale() — buyer/price/delivery details Orders &

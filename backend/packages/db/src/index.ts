@@ -1,5 +1,7 @@
 export * from "./errors.ts";
+export * from "./field-encryption.ts";
 export * from "./collections.ts";
+export * from "./artwork-reservations.ts";
 export * from "./client.ts";
 export * from "./auth.ts";
 export * from "./in-memory/rate-config-store.ts";
@@ -56,3 +58,4 @@ export * from "./notifications.ts";
 export * from "./notification-preferences.ts";
 export * from "./holding-claim.ts";
 export * from "./invoices.ts";
+export * from "./coupons.ts";

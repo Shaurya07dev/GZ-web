@@ -12,6 +12,7 @@ import { InvoicesController } from "./invoices.controller.ts";
 import { AggregatorController } from "./aggregator.controller.ts";
 import { ModerationController } from "./moderation.controller.ts";
 import { ArtistArtworksController } from "./artist-artworks.controller.ts";
+import { CouponsController } from "./coupons.controller.ts";
 import { WithdrawalsController, AdminWithdrawalsController } from "./withdrawals.controller.ts";
 import { ArtistWalletController, AggregatorWalletController } from "./wallets.controller.ts";
 import { AdminController } from "./admin.controller.ts";
@@ -89,6 +90,7 @@ import { DbModule } from "./db.module.ts";
     AggregatorController,
     ModerationController,
     ArtistArtworksController,
+    CouponsController,
     WithdrawalsController,
     AdminWithdrawalsController,
     ArtistWalletController,

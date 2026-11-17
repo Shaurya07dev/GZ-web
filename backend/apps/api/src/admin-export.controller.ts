@@ -32,9 +32,15 @@ export class AdminExportController {
   @Roles("admin")
   @Get("orders.xlsx")
   @Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-  @Header("Content-Disposition", `attachment; filename="orders-${isoDay()}.xlsx"`)
-  async orders(@Res({ passthrough: true }) _res: Response): Promise<StreamableFile> {
-    const orders = await listOrdersAdmin(this.db);
+  async orders(
+    @Query("from") from: string | undefined,
+    @Query("to") to: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const range = parseDateRange(from, to);
+    res.setHeader("Content-Disposition", `attachment; filename="${filenameFor("orders", range)}"`);
+    const all = await listOrdersAdmin(this.db);
+    const orders = range ? all.filter((o) => inRange(o.createdAt, range)) : all;
 
     const wb = new ExcelJS.Workbook();
     wb.creator = "GalleryZone Admin";
@@ -88,9 +94,15 @@ export class AdminExportController {
   @Roles("admin")
   @Get("settlements.xlsx")
   @Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-  @Header("Content-Disposition", `attachment; filename="settlements-${isoDay()}.xlsx"`)
-  async settlements(): Promise<StreamableFile> {
-    const rows = await listSettlements(this.db);
+  async settlements(
+    @Query("from") from: string | undefined,
+    @Query("to") to: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const range = parseDateRange(from, to);
+    res.setHeader("Content-Disposition", `attachment; filename="${filenameFor("settlements", range)}"`);
+    const all = await listSettlements(this.db);
+    const rows = range ? all.filter((r) => inRange(r.createdAt, range)) : all;
     const wb = new ExcelJS.Workbook();
     wb.creator = "GalleryZone Admin";
     wb.created = new Date();
@@ -187,6 +199,45 @@ function paiseToRupees(paise: number | null | undefined): number | "" {
 
 function isoDay(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Admin's date-range filter (?from=YYYY-MM-DD&to=YYYY-MM-DD) for the Excel
+ * exports. Returns null when either side is missing or malformed — the
+ * caller then returns the full dataset. We don't throw on bad input so a
+ * broken bookmark still produces a usable file instead of a 400.
+ *
+ * `to` is end-of-day inclusive (23:59:59.999), the UX reads "include that
+ * day's sales too". `from` is start-of-day.
+ */
+function parseDateRange(from: string | undefined, to: string | undefined): { start: Date; end: Date } | null {
+  if (!from || !to) return null;
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T23:59:59.999Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  if (end.getTime() < start.getTime()) return null;
+  return { start, end };
+}
+
+function inRange(createdAt: unknown, range: { start: Date; end: Date }): boolean {
+  // Firestore Timestamp rows have a toDate() method; previously-serialised
+  // ones are ISO strings; some older rows might be Date already.
+  const t =
+    createdAt && typeof createdAt === "object" && "toDate" in createdAt
+      ? (createdAt as { toDate(): Date }).toDate()
+      : typeof createdAt === "string"
+        ? new Date(createdAt)
+        : createdAt instanceof Date
+          ? createdAt
+          : null;
+  if (!t || Number.isNaN(t.getTime())) return false;
+  return t >= range.start && t <= range.end;
+}
+
+function filenameFor(prefix: string, range: { start: Date; end: Date } | null): string {
+  if (!range) return `${prefix}-${isoDay()}.xlsx`;
+  const d = (x: Date) => x.toISOString().slice(0, 10);
+  return `${prefix}-${d(range.start)}-to-${d(range.end)}.xlsx`;
 }
 
 function capitalize(s: string): string {

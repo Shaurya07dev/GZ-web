@@ -1,6 +1,7 @@
 import '../models/artist.dart';
 import '../models/artwork.dart';
 import '../models/artwork_filters.dart';
+import '../models/artwork_reservation.dart';
 import '../models/marketplace.dart';
 
 /// The public catalogue: the marketplace listing, one piece, an artist and
@@ -33,4 +34,9 @@ abstract class ArtworkRepository {
   /// The artists directory: artists with at least one live listing, with how
   /// many and a cover image.
   Future<List<ArtistCard>> listArtistCards();
+
+  /// Live concurrent-buyer reservation state for one artwork. Polled from
+  /// the artwork detail screen so the Buy Now disabled state reflects what
+  /// another collector is doing right now. Added 16 Nov 2026.
+  Future<ArtworkReservation> reservation(String artworkId);
 }

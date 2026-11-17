@@ -21,7 +21,6 @@ import {
   CreditCard,
   ExternalLink,
   TriangleAlert,
-  Palette,
   Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -642,25 +641,10 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           )}
         </div>
 
-        <div className="flex items-start gap-3 rounded-lg border border-dashed border-gold/40 bg-card p-5 sm:p-6">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
-            <Palette className="size-4 text-gold-bright" strokeWidth={1.75} />
-          </span>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-base font-semibold text-foreground">
-                Custom artwork requests
-              </h2>
-              <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[11px] font-medium text-gold-bright">
-                Coming soon
-              </span>
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Let collectors request a custom piece directly from you, start to
-              finish, through GalleryZone.
-            </p>
-          </div>
-        </div>
+        {/* "Custom artwork requests · Coming soon" tile removed pre-launch
+            (audit N2, 14 Nov 2026). The feature isn't shipping in v1, and an
+            unlabelled "Coming soon" badge on the dashboard reads as
+            unfinished. Re-add this block when the feature is live. */}
       </div>
 
       {/* Its own card, and its own save, because it is the opposite of the one

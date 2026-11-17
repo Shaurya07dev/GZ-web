@@ -6,7 +6,7 @@
 
 import { Controller, Get, Header, Inject, NotFoundException, Param, Query } from "@nestjs/common";
 import { z } from "zod";
-import { FirestoreRateConfigStore, getPublicArtwork, loadMarketplace, queryMarketplace, toMarketplaceView, type Db, type MarketplacePage } from "@galleryzone/db";
+import { FirestoreRateConfigStore, getPublicArtwork, loadMarketplace, queryMarketplace, readActiveReservation, toMarketplaceView, type Db, type MarketplacePage } from "@galleryzone/db";
 import { checkoutTotal } from "@galleryzone/domain";
 import type { CustomerArtworkDto } from "@galleryzone/contracts";
 import { Public } from "./auth/roles.decorator.ts";
@@ -101,5 +101,32 @@ export class ArtworksController {
     const artwork = await this.cache.getOrFill(CacheKeys.artwork(id), TTL.artwork, () => getPublicArtwork(this.db, id));
     if (!artwork) throw new NotFoundException({ type: "about:blank", title: "Artwork not found", status: 404, code: "not_found" });
     return toMarketplaceView(artwork);
+  }
+
+  /**
+   * Live reservation state for one artwork. Uncached — the UI polls this
+   * every few seconds while the detail page is open, so stale data would
+   * show "available" for a piece someone else is actively buying. Returns
+   * null fields when nothing is reserved.
+   */
+  @Public()
+  @Get(":id/reservation")
+  @Header("Cache-Control", "no-store")
+  async reservation(@Param("id") id: string): Promise<{
+    reserved: boolean;
+    heldByCustomerId: string | null;
+    expiresAt: string | null;
+    secondsRemaining: number;
+  }> {
+    const r = await readActiveReservation(this.db, id);
+    if (!r) {
+      return { reserved: false, heldByCustomerId: null, expiresAt: null, secondsRemaining: 0 };
+    }
+    return {
+      reserved: true,
+      heldByCustomerId: r.customerId,
+      expiresAt: r.expiresAt,
+      secondsRemaining: r.secondsRemaining,
+    };
   }
 }

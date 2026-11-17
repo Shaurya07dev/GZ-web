@@ -1,7 +1,8 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Req } from "@nestjs/common";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 import { NotFoundException } from "@nestjs/common";
-import { FirestoreRateConfigStore, getArtworkForAdmin, listArtworksForAdmin, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
+import { FirestoreRateConfigStore, clearReservation, getArtworkForAdmin, listArtworksForAdmin, readActiveReservation, setArtworkRarity, delistArtwork, getAuditLog, artworkRarityValues, reindexAllListings, refreshListing, Collections, type Db } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { activeHoldingForArtwork, adminPullBackHolding, decideHoldingExtension, listAggregatorHoldings, listPendingExtensionRequests, AggregatorReadError, HoldingLifecycleError } from "@galleryzone/db";
 import { NfcError, adminUnlinkNfcTag, getNfcOverview, nfcStateViewOf, overrideShipmentGate, type ArtworkDoc } from "@galleryzone/db";
@@ -16,6 +17,18 @@ import { Emails } from "./mail/emails.ts";
 
 const raritySchema = z.object({ rarity: z.enum([...artworkRarityValues]) }).strict();
 type RarityBody = z.infer<typeof raritySchema>;
+
+const promoteSchema = z
+  .object({
+    /** ISO-8601 timestamp when the pin expires, or null to clear. */
+    promotedUntil: z.string().datetime().nullable(),
+  })
+  .strict()
+  .refine(
+    (v) => v.promotedUntil === null || new Date(v.promotedUntil).getTime() > Date.now(),
+    { message: "promotedUntil must be in the future" },
+  );
+type PromoteBody = z.infer<typeof promoteSchema>;
 
 @Controller("v1/admin")
 export class AdminArtworksController {
@@ -49,6 +62,44 @@ export class AdminArtworksController {
     return { rarity: body.rarity };
   }
 
+  /**
+   * Admin pins (or unpins) a piece to the top of the marketplace grid.
+   * `promotedUntil` is an ISO string; null clears the pin. The read-cache
+   * is busted so the next marketplace fetch sees the new order.
+   */
+  @Roles("admin")
+  @Post("artworks/:id/promote")
+  async promote(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(promoteSchema)) body: PromoteBody,
+  ) {
+    const ref = this.db.collection(Collections.artworks).doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      throw new NotFoundException({
+        type: "about:blank",
+        title: "Artwork not found",
+        status: 404,
+        code: "not_found",
+      });
+    }
+    await ref.update({
+      promotedUntil: body.promotedUntil ? Timestamp.fromDate(new Date(body.promotedUntil)) : null,
+    });
+    await this.db.collection(Collections.auditLog).add({
+      adminId: req.authUser.uid,
+      action: body.promotedUntil ? "artwork.promoted" : "artwork.unpromoted",
+      entityType: "artwork",
+      entityId: id,
+      entityLabel: null,
+      detail: body.promotedUntil ? `until ${body.promotedUntil}` : null,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    this.cache.clear();
+    return { promotedUntil: body.promotedUntil };
+  }
+
   @Roles("admin")
   @Post("artworks/:id/delist")
   async delist(@Req() req: AuthenticatedRequest, @Param("id") id: string) {
@@ -74,6 +125,48 @@ export class AdminArtworksController {
     const listing = await refreshListing(this.db, id);
     this.cache.clear();
     return { reindexed: listing ? 1 : 0 };
+  }
+
+  // --- Reservations (concurrent-buyer protection) -------------------------
+  // Added 16 Nov 2026 alongside the artworkReservations collection. An
+  // admin may need to force-clear a reservation when a buyer's payment
+  // flow stalled past the 10-minute window but the client-driven abandon
+  // never fired (phone died, browser crashed, Razorpay silently hung).
+  // Normally the next successful claim overwrites, but a different buyer
+  // still has to actually try — meanwhile the piece looks "reserved" on
+  // the marketplace. This endpoint gives admin an immediate unlock.
+
+  @Roles("admin")
+  @Get("artworks/:id/reservation")
+  async currentReservation(@Param("id") id: string) {
+    const r = await readActiveReservation(this.db, id);
+    return {
+      reserved: Boolean(r),
+      heldByCustomerId: r?.customerId ?? null,
+      expiresAt: r?.expiresAt ?? null,
+      secondsRemaining: r?.secondsRemaining ?? 0,
+    };
+  }
+
+  @Roles("admin")
+  @HttpCode(204)
+  @Post("artworks/:id/reservation/clear")
+  async clearReservation(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+  ) {
+    await clearReservation(this.db, id);
+    // Audit so a cleared-then-re-locked piece is traceable to who did the
+    // unblock. Same shape as the other admin audit rows.
+    await this.db.collection(Collections.auditLog).add({
+      adminId: req.authUser.uid,
+      action: "artwork.reservation_cleared",
+      entityType: "artwork",
+      entityId: id,
+      entityLabel: null,
+      detail: null,
+      createdAt: new Date(),
+    });
   }
 
   // --- NFC (NFC_IMPLEMENTATION.md §4.3, §4.4, §13) ------------------------------

@@ -34,6 +34,7 @@ export interface ArtworkDto {
   createdAt: string;
   artistLocation?: string | null;
   sizeBand?: "small" | "medium" | "large" | null;
+  promotedUntil?: string | null;
 }
 
 /** Mirrors backend MarketplacePage (packages/db/public-artworks.ts). */
@@ -154,6 +155,7 @@ export function toArtworkSummary(dto: ArtworkDto): ArtworkSummary {
     dimensions: a.dimensions,
     sizeBand: dto.sizeBand ?? null,
     artistLocation: dto.artistLocation ?? null,
+    promotedUntil: dto.promotedUntil ?? null,
   };
 }
 
@@ -210,6 +212,18 @@ export interface OrderDto {
   artwork?: { title: string; artistName: string; artistId: string; thumbnailUrl: string | null; productCode: string } | null;
   artistNetPaise?: number;
   nfc?: { linked: boolean; locked: boolean; gateOverridden: boolean };
+  // Shipping snapshot — populated after Shiprocket books the shipment. All
+  // fields optional because older orders predate the booking flow.
+  shiprocketStage?: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
+  shiprocketTrackingId?: string | null;
+  shiprocketCarrier?: string | null;
+  shiprocketTrackedAt?: FirestoreTimestampLike | string | null;
+  shippingQuote?: {
+    carrier: string;
+    ratePaise: number;
+    courierCompanyId: number;
+    estimatedDeliveryDays: number | null;
+  } | null;
 }
 
 export interface FirestoreTimestampLike {
@@ -249,6 +263,13 @@ export function toOrder(dto: OrderDto): Order {
             simulated: dto.payment.method === "simulated",
           }
         : null,
+    ...(dto.shiprocketStage !== undefined ? { shiprocketStage: dto.shiprocketStage } : {}),
+    ...(dto.shiprocketTrackingId !== undefined ? { trackingId: dto.shiprocketTrackingId } : {}),
+    ...(dto.shiprocketCarrier !== undefined ? { carrier: dto.shiprocketCarrier } : {}),
+    ...(dto.shiprocketTrackedAt ? { shiprocketTrackedAt: timestampToIso(dto.shiprocketTrackedAt) } : {}),
+    ...(dto.shippingQuote?.estimatedDeliveryDays != null
+      ? { estimatedDeliveryDays: dto.shippingQuote.estimatedDeliveryDays }
+      : {}),
   };
 }
 

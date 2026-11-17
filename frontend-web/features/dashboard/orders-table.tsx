@@ -15,18 +15,32 @@ import type { Order, OrderStatus } from "@/types/order";
 
 type ArtistOrderRow = Order & { artistPayout: number };
 
+// Artist-side filter: pending is a transient checkout state that the
+// customer sees in their own cart flow; cancelled is a buyer-abandoned
+// attempt. Neither is a sale the artist made — showing them on the Sales
+// table is confusing dead weight. Client flag 16 Nov 2026.
 const STATUSES: OrderStatus[] = [
-  "pending",
   "paid",
   "confirmed",
   "packed",
   "transit",
   "delivered",
-  "cancelled",
 ];
 
+const VISIBLE_TO_ARTIST = new Set<OrderStatus>(STATUSES);
+
+/** Human label for the four Shiprocket courier stages, shown in the
+ *  artist's Shipping column so they can see where the parcel is. */
+const STAGE_LABEL: Record<string, string> = {
+  pickup: "Awaiting pickup",
+  in_transit: "In transit",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+};
+
 export function OrdersTable() {
-  const { data: orders, isPending } = useArtistOrders();
+  const { data: raw, isPending } = useArtistOrders();
+  const orders = raw?.filter((o) => VISIBLE_TO_ARTIST.has(o.status));
 
   const columns: AdminDataTableColumn<ArtistOrderRow>[] = [
     {
@@ -47,6 +61,35 @@ export function OrdersTable() {
       },
       sortable: true,
       sortValue: (row) => row.artwork?.title ?? row.artworkId,
+    },
+    // Shipping column — the AWB + carrier so the artist can look up the
+    // pickup window with the courier directly. Client flag 16 Nov 2026:
+    // the artist portal had no visibility into any shipping fact (AWB,
+    // courier, stage, ETA) even though the whole backend tracker was
+    // being built on the customer's side.
+    {
+      key: "shipping",
+      header: "Shipping",
+      render: (row) => {
+        if (!row.shiprocketStage) {
+          return <span className="text-xs text-muted-foreground">Not booked</span>;
+        }
+        return (
+          <div className="min-w-0 text-xs">
+            <p className="truncate text-foreground">
+              {row.carrier ?? "—"}
+              {row.trackingId ? (
+                <span className="ml-1.5 font-mono text-muted-foreground">
+                  AWB {row.trackingId}
+                </span>
+              ) : null}
+            </p>
+            <p className="text-muted-foreground">
+              {STAGE_LABEL[row.shiprocketStage] ?? row.shiprocketStage}
+            </p>
+          </div>
+        );
+      },
     },
     {
       key: "status",

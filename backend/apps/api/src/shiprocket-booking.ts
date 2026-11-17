@@ -9,15 +9,78 @@
 
 import { Timestamp } from "firebase-admin/firestore";
 import { Collections, type AddressDoc, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type Db, type OrderDoc, type ProfileDoc, type UserDoc } from "@galleryzone/db";
-import { bookShipment, isShiprocketConfigured } from "./shiprocket.ts";
+import { invoiceUrlForShiprocket } from "./invoices.controller.ts";
+import { bookShipment, isShiprocketConfigured, pickupNicknameFor, registerPickupLocation } from "./shiprocket.ts";
+
+/**
+ * Lazily register a vendor's (artist or aggregator) address as a
+ * Shiprocket pickup location if we haven't already. Stores the resulting
+ * nickname on their profile so subsequent orders don't re-register.
+ *
+ * The pickup_location nickname is what Shiprocket actually uses to decide
+ * the pickup address; without this every pickup would default to the
+ * account-level nickname (GalleryZone HQ) and the courier would go to
+ * the wrong place.
+ *
+ * Works for both roles because the ProfileDoc shape is the same for
+ * artists and aggregators (both carry pickup* fields + the
+ * shiprocketPickupNickname stash). Called from every outbound booking
+ * (inbound uses the artist as pickup; aggregator sale + return use the
+ * aggregator as pickup; outbound order uses the artist as pickup).
+ */
+async function ensurePickupNickname(
+  db: Db,
+  role: "artist" | "aggregator",
+  userId: string,
+  user: UserDoc | undefined,
+  profile: ProfileDoc | undefined,
+): Promise<string> {
+  const existing = profile?.shiprocketPickupNickname;
+  if (existing) return existing;
+  if (!profile?.pickupLine1 || !profile.pickupPincode) {
+    throw new Error(`${role} ${userId} has no pickup address`);
+  }
+  if (!user?.phone) {
+    throw new Error(`${role} ${userId} has no phone on file`);
+  }
+  const nickname = pickupNicknameFor(role, userId);
+  await registerPickupLocation({
+    nickname,
+    name: profile.companyName ?? user?.name ?? `GalleryZone ${role}`,
+    email: user?.email ?? "support@galleryzone.in",
+    phone: user.phone,
+    addressLine1: profile.pickupLine1,
+    addressLine2: profile.pickupLine2 ?? "",
+    city: profile.pickupCity ?? "",
+    state: profile.pickupState ?? "",
+    pincode: profile.pickupPincode,
+  });
+  // Persist so next time we skip the API call.
+  await db
+    .collection(`users/${userId}/profile`)
+    .doc("data")
+    .set({ shiprocketPickupNickname: nickname }, { merge: true });
+  return nickname;
+}
+
+/**
+ * Build the signed public invoice URL for Shiprocket to fetch and print
+ * onto the parcel label. Returns undefined if the env isn't configured —
+ * shipment still books, just without the invoice attached, which is the
+ * old behaviour.
+ */
+function outboundInvoiceUrl(orderId: string): string | undefined {
+  const publicApiUrl = process.env.PUBLIC_API_URL?.trim();
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
+  if (!publicApiUrl || !secret) return undefined;
+  return invoiceUrlForShiprocket({ publicApiUrl, orderId, secret });
+}
 
 export async function bookInboundShipment(db: Db, holdingId: string, artworkId: string, aggregatorId: string): Promise<void> {
   // Without credentials there is nothing to book (the wrapper no longer fakes a
   // demo id), so stop before reading anything. Callers log this; the
   // reservation itself still stands.
   if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured; inbound booking was not created");
-  // Resolve the three parties: artwork → artist, artist profile → studio
-  // address, aggregator profile → gallery address.
   const [artworkSnap, aggProfileSnap, aggUserSnap] = await Promise.all([
     db.collection(Collections.artworks).doc(artworkId).get(),
     db.collection(`users/${aggregatorId}/profile`).doc("data").get(),
@@ -25,27 +88,86 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
   ]);
   const artwork = artworkSnap.data() as ArtworkDoc | undefined;
   if (!artwork) throw new Error(`booking: no artwork ${artworkId}`);
-  const [artistProfileSnap, artistUserSnap] = await Promise.all([
-    db.collection(`users/${artwork.artistId}/profile`).doc("data").get(),
-    db.collection(Collections.users).doc(artwork.artistId).get(),
-  ]);
-  const artistProfile = artistProfileSnap.data() as ProfileDoc | undefined;
-  const artistUser = artistUserSnap.data() as UserDoc | undefined;
+
+  // Where does the piece physically live right now?
+  // If a previous aggregator held it (and either returned it or had their
+  // 30-day cycle expire without returning), it is still at THAT aggregator's
+  // gallery. The courier must pickup from the previous holder, not the
+  // artist. Client-flagged 16 Nov 2026 as a workflow truth: "After 30 days
+  // the piece stays at the aggregator. When another aggregator reserves,
+  // pickup goes from the first aggregator to the new one."
+  const priorHoldingsSnap = await db
+    .collection(Collections.aggregatorHoldings)
+    .where("artworkId", "==", artworkId)
+    .get();
+  const priorAggregators = priorHoldingsSnap.docs
+    .map((d) => d.data() as { aggregatorId?: string; assignedAt?: FirebaseFirestore.Timestamp })
+    .filter((h) => h.aggregatorId && h.aggregatorId !== aggregatorId)
+    .sort((a, b) => (b.assignedAt?.toMillis() ?? 0) - (a.assignedAt?.toMillis() ?? 0));
+  const priorAggregatorId = priorAggregators[0]?.aggregatorId;
+
   const aggProfile = aggProfileSnap.data() as ProfileDoc | undefined;
   const aggUser = aggUserSnap.data() as UserDoc | undefined;
-  if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
-    throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
+
+  // Resolve the pickup party — previous aggregator OR the artist for the
+  // first ever reservation on this piece.
+  type PickupResolution = {
+    role: "artist" | "aggregator";
+    userId: string;
+    user: UserDoc | undefined;
+    profile: ProfileDoc | undefined;
+  };
+  let pickup: PickupResolution;
+  if (priorAggregatorId) {
+    const [pSnap, uSnap] = await Promise.all([
+      db.collection(`users/${priorAggregatorId}/profile`).doc("data").get(),
+      db.collection(Collections.users).doc(priorAggregatorId).get(),
+    ]);
+    pickup = {
+      role: "aggregator",
+      userId: priorAggregatorId,
+      user: uSnap.data() as UserDoc | undefined,
+      profile: pSnap.data() as ProfileDoc | undefined,
+    };
+  } else {
+    const [pSnap, uSnap] = await Promise.all([
+      db.collection(`users/${artwork.artistId}/profile`).doc("data").get(),
+      db.collection(Collections.users).doc(artwork.artistId).get(),
+    ]);
+    pickup = {
+      role: "artist",
+      userId: artwork.artistId,
+      user: uSnap.data() as UserDoc | undefined,
+      profile: pSnap.data() as ProfileDoc | undefined,
+    };
   }
+
+  if (!pickup.profile?.pickupLine1 || !pickup.profile.pickupPincode) {
+    throw new Error(`booking: ${pickup.role} ${pickup.userId} has no pickup address`);
+  }
+  // Register the pickup party as a Shiprocket warehouse. Works for both
+  // artists AND aggregators via ensurePickupNickname.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    pickup.role,
+    pickup.userId,
+    pickup.user,
+    pickup.profile,
+  );
   const booked = await bookShipment({
     orderReference: `holding-${holdingId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
-      name: artistUser?.name ?? "GalleryZone Artist",
-      phone: artistUser?.phone ?? "0000000000",
-      line1: artistProfile.pickupLine1,
-      line2: artistProfile.pickupLine2,
-      city: artistProfile.pickupCity ?? "",
-      state: artistProfile.pickupState ?? "",
-      pincode: artistProfile.pickupPincode,
+      name:
+        pickup.profile?.companyName ??
+        pickup.user?.name ??
+        (pickup.role === "artist" ? "GalleryZone Artist" : "GalleryZone Aggregator"),
+      phone: pickup.user?.phone ?? "0000000000",
+      line1: pickup.profile.pickupLine1,
+      line2: pickup.profile.pickupLine2,
+      city: pickup.profile.pickupCity ?? "",
+      state: pickup.profile.pickupState ?? "",
+      pincode: pickup.profile.pickupPincode,
     },
     dropoff: {
       name: aggProfile?.companyName ?? aggUser?.name ?? "Aggregator",
@@ -117,8 +239,26 @@ export async function bookOutboundOrderShipment(db: Db, orderId: string): Promis
     throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
   }
 
+  // Lazy-register the artist as a Shiprocket pickup location if we haven't
+  // already. Without this the courier would be routed to GalleryZone HQ.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    "artist",
+    artwork.artistId,
+    artistUser,
+    artistProfile,
+  );
+
   const booked = await bookShipment({
     orderReference: `order-${orderId}`,
+    pickupLocationNickname: pickupNickname,
+    // Price-drift mitigation: use the exact courier from the quote the
+    // buyer paid against. Within a few seconds of settlement this courier
+    // is almost always still available at the same rate; passing the id
+    // forces Shiprocket to use it rather than re-picking cheapest.
+    ...(order.shippingQuote?.courierCompanyId
+      ? { preferredCourierId: order.shippingQuote.courierCompanyId }
+      : {}),
     pickup: {
       name: artistUser?.name ?? "GalleryZone Artist",
       phone: artistUser?.phone ?? "0000000000",
@@ -140,6 +280,12 @@ export async function bookOutboundOrderShipment(db: Db, orderId: string): Promis
     weightKg: artwork.physical?.weightKg ?? 2,
     artworkTitle: artwork.title,
     valueInr: Math.max(1, Math.round(order.totalPaise / 100)),
+    // Tax invoice URL — Shiprocket fetches + prints it onto the label
+    // sheet so the courier attaches it to the box. Optional: if PUBLIC_API_URL
+    // or the webhook secret isn't set, the shipment books without an
+    // invoice attached (legacy behaviour — admin can download and attach
+    // manually).
+    ...(outboundInvoiceUrl(orderId) ? { invoiceUrl: outboundInvoiceUrl(orderId)! } : {}),
   });
 
   // Same mirror pattern as the inbound booking — the webhook will push
@@ -191,9 +337,19 @@ export async function bookOutboundAggregatorSaleShipment(db: Db, saleId: string)
   if (!aggProfile?.pickupLine1 || !aggProfile.pickupPincode) {
     throw new Error(`booking: aggregator ${holding.aggregatorId} has no pickup address`);
   }
+  // Pickup is the aggregator's gallery — register them as a Shiprocket
+  // pickup warehouse if we haven't already.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    "aggregator",
+    holding.aggregatorId,
+    aggUser,
+    aggProfile,
+  );
 
   const booked = await bookShipment({
     orderReference: `sale-${saleId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
       name: aggProfile.companyName ?? aggUser?.name ?? "GalleryZone Aggregator",
       phone: aggUser?.phone ?? "0000000000",
@@ -263,17 +419,50 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
   if (!aggProfile?.pickupLine1 || !aggProfile.pickupPincode) {
     throw new Error(`booking: aggregator ${holding.aggregatorId} has no pickup address`);
   }
-  if (!artistProfile?.pickupLine1 || !artistProfile.pickupPincode) {
-    throw new Error(`booking: artist ${artwork.artistId} has no pickup address`);
+  // Drop: the artist's chosen address from the return request — stamped on
+  // the holding when the Razorpay quote was taken. Falls back to the
+  // artist's default pickup profile if, for any reason, the stamp is
+  // absent (e.g. an admin manually revived a return).
+  const dropAddress = holding.returnDropAddress
+    ? {
+        name: holding.returnDropAddress.name,
+        phone: holding.returnDropAddress.phone ?? "0000000000",
+        line1: holding.returnDropAddress.line1,
+        line2: holding.returnDropAddress.line2,
+        city: holding.returnDropAddress.city,
+        state: holding.returnDropAddress.state,
+        pincode: holding.returnDropAddress.pincode,
+      }
+    : artistProfile?.pickupLine1 && artistProfile.pickupPincode
+      ? {
+          name: artistUser?.name ?? "GalleryZone Artist",
+          phone: artistUser?.phone ?? "0000000000",
+          line1: artistProfile.pickupLine1,
+          line2: artistProfile.pickupLine2 ?? null,
+          city: artistProfile.pickupCity ?? "",
+          state: artistProfile.pickupState ?? "",
+          pincode: artistProfile.pickupPincode,
+        }
+      : null;
+  if (!dropAddress) {
+    throw new Error(`booking: no drop address for return on holding ${holdingId}`);
   }
+  // Pickup is the aggregator's gallery (they're returning the piece).
+  // Register them as a Shiprocket pickup warehouse if we haven't already.
+  const pickupNickname = await ensurePickupNickname(
+    db,
+    "aggregator",
+    holding.aggregatorId,
+    aggUser,
+    aggProfile,
+  );
 
   // Keyed `return-<holdingId>` so the webhook controller can distinguish
-  // it from the inbound and advance a return-specific state if we add
-  // one later. For now it won't match any existing prefix and the
-  // controller falls through — the AWB is still issued, the artist has
-  // tracking in their inbox via email. Worth hardening later.
+  // it from the inbound and advance the return-specific state field on
+  // the holding (handled in shiprocket.controller.ts).
   const booked = await bookShipment({
     orderReference: `return-${holdingId}`,
+    pickupLocationNickname: pickupNickname,
     pickup: {
       name: aggProfile.companyName ?? aggUser?.name ?? "GalleryZone Aggregator",
       phone: aggUser?.phone ?? "0000000000",
@@ -283,15 +472,7 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
       state: aggProfile.pickupState ?? "",
       pincode: aggProfile.pickupPincode,
     },
-    dropoff: {
-      name: artistUser?.name ?? "GalleryZone Artist",
-      phone: artistUser?.phone ?? "0000000000",
-      line1: artistProfile.pickupLine1,
-      line2: artistProfile.pickupLine2,
-      city: artistProfile.pickupCity ?? "",
-      state: artistProfile.pickupState ?? "",
-      pincode: artistProfile.pickupPincode,
-    },
+    dropoff: dropAddress,
     weightKg: artwork.physical?.weightKg ?? 2,
     artworkTitle: artwork.title,
     valueInr: Math.max(1, Math.round(holding.displayPricePaise / 100)),

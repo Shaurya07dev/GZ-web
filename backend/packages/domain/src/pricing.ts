@@ -316,6 +316,33 @@ export interface CheckoutTotal {
 // slowly bled it on the delivery leg. The base uses displayPrice as-is (GST
 // included) because that is the number Razorpay actually processes; stripping
 // GST here would under-count the base by the GST portion too.
+export interface ReturnShippingTotal {
+  /** Shiprocket's quoted reverse-pickup rate, pre-fees. */
+  shippingBasePaise: number;
+  /** 2% Razorpay gateway fee on the shipping base. */
+  convenienceFeePaise: number;
+  /** 18% service GST on the convenience fee. */
+  convenienceGstPaise: number;
+  /** The amount the artist actually pays through Razorpay. */
+  totalPaise: number;
+}
+
+// Artist-initiated return at the end of the 6-month listing. The artist
+// pays the reverse courier leg themselves, through Razorpay — same 2% +
+// 18% GST pass-through as every other checkout here, applied to the
+// Shiprocket quote. GalleryZone is never out-of-pocket on Shiprocket.
+export function returnShippingTotal(baseShippingPaise: number, rates: PricingRates): ReturnShippingTotal {
+  const base = Math.max(0, Math.round(baseShippingPaise));
+  const convenienceFeePaise = Math.round(base * rates.customerConvenienceRate);
+  const convenienceGstPaise = Math.round(convenienceFeePaise * rates.serviceGstRate);
+  return {
+    shippingBasePaise: base,
+    convenienceFeePaise,
+    convenienceGstPaise,
+    totalPaise: base + convenienceFeePaise + convenienceGstPaise,
+  };
+}
+
 export function checkoutTotal(
   displayPrice: number,
   rates: PricingRates,

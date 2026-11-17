@@ -162,6 +162,21 @@ export interface AggregatorHoldingView {
   inboundShiprocketStage: "pickup" | "in_transit" | "out_for_delivery" | "delivered" | null;
   inboundTrackingId: string | null;
   inboundCarrier: string | null;
+  /** When the first aggregator in this piece's cycle took it. Null for
+   *  callers that don't need the field (aggregator portal, admin). The
+   *  artist view fills it so the dashboard can decide whether the
+   *  "Request return" button is eligible yet. */
+  cycleStartedAt: string | null;
+  /** Earliest moment the artist may request the piece back: cycleStart +
+   *  aggregatorListingDays. Null when cycleStartedAt is null. */
+  returnEligibleAt: string | null;
+  /** True when (a) the holding is still active (reserved), (b) the
+   *  listing cycle has run its 180 days, and (c) the artist hasn't
+   *  already raised a return. The UI hides the button otherwise. */
+  canRequestArtistReturn: boolean;
+  /** Stamp if the artist has already asked for the piece back on this
+   *  holding — the UI shows "Return requested" instead of the button. */
+  artistReturnRequestedAt: string | null;
 }
 
 async function holdingArtworkOf(db: Firestore, artworkId: string): Promise<{ view: HoldingArtworkView | null; overridden: boolean }> {
@@ -174,8 +189,23 @@ async function holdingArtworkOf(db: Firestore, artworkId: string): Promise<{ vie
   };
 }
 
-async function toHoldingView(db: Firestore, id: string, h: AggregatorHoldingDoc): Promise<AggregatorHoldingView> {
+async function toHoldingView(
+  db: Firestore,
+  id: string,
+  h: AggregatorHoldingDoc,
+  eligibility?: { cycleStartedAt: Date; rates: PricingRates },
+): Promise<AggregatorHoldingView> {
   const { view: artwork, overridden } = await holdingArtworkOf(db, h.artworkId);
+  const cycleStartedAt = eligibility?.cycleStartedAt ?? null;
+  const returnEligibleAt = eligibility
+    ? new Date(eligibility.cycleStartedAt.getTime() + eligibility.rates.aggregatorListingDays * 86_400_000)
+    : null;
+  const artistReturnRequestedAt = h.artistReturnRequestedAt?.toDate() ?? null;
+  const canRequestArtistReturn =
+    h.status === "reserved" &&
+    !artistReturnRequestedAt &&
+    returnEligibleAt !== null &&
+    Date.now() >= returnEligibleAt.getTime();
   return {
     id,
     artworkId: h.artworkId,
@@ -207,6 +237,10 @@ async function toHoldingView(db: Firestore, id: string, h: AggregatorHoldingDoc)
     inboundShiprocketStage: h.inboundShiprocketStage ?? null,
     inboundTrackingId: h.inboundTrackingId ?? null,
     inboundCarrier: h.inboundCarrier ?? null,
+    cycleStartedAt: cycleStartedAt?.toISOString() ?? null,
+    returnEligibleAt: returnEligibleAt?.toISOString() ?? null,
+    canRequestArtistReturn,
+    artistReturnRequestedAt: artistReturnRequestedAt?.toISOString() ?? null,
   };
 }
 
@@ -217,7 +251,11 @@ async function toHoldingView(db: Firestore, id: string, h: AggregatorHoldingDoc)
  * perspective. Reads every holding whose underlying artwork belongs to this
  * artist. Newest first.
  */
-export async function listHoldingsForArtist(db: Firestore, artistId: string): Promise<AggregatorHoldingView[]> {
+export async function listHoldingsForArtist(
+  db: Firestore,
+  artistId: string,
+  rates: PricingRates,
+): Promise<AggregatorHoldingView[]> {
   const artworksSnap = await db.collection(Collections.artworks).where("artistId", "==", artistId).get();
   if (artworksSnap.empty) return [];
   const artworkIds = artworksSnap.docs.map((d) => d.id);
@@ -228,7 +266,25 @@ export async function listHoldingsForArtist(db: Firestore, artistId: string): Pr
     batches.map((batch) => db.collection(Collections.aggregatorHoldings).where("artworkId", "in", batch).get()),
   );
   const docs = chunked.flatMap((snap) => snap.docs);
-  const views = await Promise.all(docs.map((d) => toHoldingView(db, d.id, d.data() as AggregatorHoldingDoc)));
+  // cycleStartedAt per artwork = earliest holding assignedAt among the ones
+  // we already have in hand. No extra Firestore reads — the full set is
+  // loaded above because an artist can have multiple holdings per artwork
+  // across the 6-month cycle.
+  const cycleStartByArtwork = new Map<string, Date>();
+  for (const d of docs) {
+    const h = d.data() as AggregatorHoldingDoc;
+    const t = h.assignedAt?.toDate();
+    if (!t) continue;
+    const prev = cycleStartByArtwork.get(h.artworkId);
+    if (!prev || t.getTime() < prev.getTime()) cycleStartByArtwork.set(h.artworkId, t);
+  }
+  const views = await Promise.all(
+    docs.map((d) => {
+      const h = d.data() as AggregatorHoldingDoc;
+      const cycleStartedAt = cycleStartByArtwork.get(h.artworkId);
+      return toHoldingView(db, d.id, h, cycleStartedAt ? { cycleStartedAt, rates } : undefined);
+    }),
+  );
   return views.sort((a, b) => b.assignedAt.localeCompare(a.assignedAt));
 }
 
@@ -280,6 +336,67 @@ export async function listPendingExtensionRequests(db: Firestore): Promise<Aggre
     .get();
   const views = await Promise.all(snap.docs.map((d) => toHoldingView(db, d.id, d.data() as AggregatorHoldingDoc)));
   return views.sort((a, b) => a.assignedAt.localeCompare(b.assignedAt));
+}
+
+/**
+ * Artist-initiated return at the end of the listing period. The artist
+ * pays return shipping (handled upstream by the controller / payment flow);
+ * this function just marks the active holding returned so the pickup can
+ * be booked from the current aggregator to the artist. Idempotent on an
+ * already-returned holding. Added 16 Nov 2026.
+ *
+ * Returns the holding doc id so the caller can wire `bookReturnShipment`
+ * at that id and persist the courier AWB on the row.
+ */
+/**
+ * Validates that an artist may raise a return on this artwork right now:
+ * the artwork is theirs, the 6-month window has elapsed, an aggregator
+ * still holds it, and no earlier request is already in flight. Returns
+ * the holding id and the current holder — the caller is responsible for
+ * quoting Shiprocket, creating a Razorpay order for the return-shipping
+ * fee, and stamping `artistReturnRequestedAt` only after the artist's
+ * payment is captured. No writes here.
+ */
+export async function requestArtistReturn(
+  db: Firestore,
+  artistId: string,
+  artworkId: string,
+  rates: PricingRates,
+): Promise<{ holdingId: string; aggregatorId: string; returnEligibleAt: Date }> {
+  const artworkSnap = await db.collection(Collections.artworks).doc(artworkId).get();
+  if (!artworkSnap.exists) throw new AggregatorReadError(`No artwork ${artworkId}`);
+  const art = artworkSnap.data() as ArtworkDoc;
+  if (art.artistId !== artistId) {
+    throw new AggregatorReadError("That artwork is not yours.");
+  }
+  const allHoldings = await holdingsFor(db, artworkId);
+  const first = allHoldings[0];
+  if (!first) {
+    throw new AggregatorReadError("No aggregator has held this piece yet.");
+  }
+  const cycleStartedAt = first.assignedAt.toDate();
+  const returnEligibleAt = new Date(cycleStartedAt.getTime() + rates.aggregatorListingDays * 86_400_000);
+  if (Date.now() < returnEligibleAt.getTime()) {
+    const err = new AggregatorReadError(
+      `The 6-month listing period ends on ${returnEligibleAt.toISOString().slice(0, 10)}. You can request your piece back then.`,
+    );
+    (err as AggregatorReadError & { code?: string; eligibleAt?: string }).code = "too_early";
+    (err as AggregatorReadError & { code?: string; eligibleAt?: string }).eligibleAt = returnEligibleAt.toISOString();
+    throw err;
+  }
+  const holding = await activeHoldingForArtwork(db, artworkId);
+  if (!holding) {
+    throw new AggregatorReadError("No aggregator currently holds this piece.");
+  }
+  const rawSnap = await db.collection(Collections.aggregatorHoldings).doc(holding.id).get();
+  const raw = rawSnap.data() as AggregatorHoldingDoc | undefined;
+  if (!raw?.aggregatorId) {
+    throw new AggregatorReadError("Could not resolve the aggregator for this holding.");
+  }
+  if (raw.artistReturnRequestedAt) {
+    throw new AggregatorReadError("You already requested this piece back; it's being arranged.");
+  }
+  return { holdingId: holding.id, aggregatorId: raw.aggregatorId, returnEligibleAt };
 }
 
 /** Unsold return: the advance goes back to the aggregator's wallet, the delivery deposit is forfeited, the artwork goes back on the marketplace. */

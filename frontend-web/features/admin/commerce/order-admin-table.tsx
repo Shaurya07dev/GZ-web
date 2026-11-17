@@ -33,6 +33,15 @@ function orderTotal(order: Order): number {
   return order.amount + order.gstAmount + order.deliveryCharge;
 }
 
+/** Human labels for the four Shiprocket courier stages, shown in the
+ *  admin Shipping column so support can tell at a glance where a parcel is. */
+const SHIPPING_STAGE_LABEL: Record<string, string> = {
+  pickup: "Awaiting pickup",
+  in_transit: "In transit",
+  out_for_delivery: "Out for delivery",
+  delivered: "Delivered",
+};
+
 export function OrderAdminTable() {
   const { data: orders, isPending } = useAdminOrders();
 
@@ -86,6 +95,30 @@ export function OrderAdminTable() {
       ),
       sortable: true,
       sortValue: (row) => orderTotal(row),
+    },
+    {
+      key: "shipping",
+      header: "Shipping",
+      render: (row) => {
+        if (!row.shiprocketStage) {
+          return <span className="text-xs text-muted-foreground">Not booked</span>;
+        }
+        return (
+          <div className="min-w-0 text-xs">
+            <p className="truncate text-foreground">
+              {row.carrier ?? "—"}
+              {row.trackingId ? (
+                <span className="ml-1.5 font-mono text-muted-foreground">
+                  {row.trackingId}
+                </span>
+              ) : null}
+            </p>
+            <p className="text-muted-foreground">
+              {SHIPPING_STAGE_LABEL[row.shiprocketStage] ?? row.shiprocketStage}
+            </p>
+          </div>
+        );
+      },
     },
     {
       key: "placed",

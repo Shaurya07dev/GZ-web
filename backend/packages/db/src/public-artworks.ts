@@ -48,6 +48,10 @@ export interface PublicArtworkView {
   createdAt: string;
   artistLocation: string | null;
   sizeBand: "small" | "medium" | "large" | null;
+  /** When present and in the future, this piece is pinned above the rest
+   *  of the marketplace grid until the deadline. Public so the UI can
+   *  render a "Featured" badge if we want one. Admin-set. */
+  promotedUntil: string | null;
 }
 
 /**
@@ -103,6 +107,7 @@ async function toPublicView(
     createdAt: artwork.createdAt?.toDate().toISOString() ?? new Date(0).toISOString(),
     artistLocation: listing.artistLocation ?? null,
     sizeBand: listing.sizeBand ?? null,
+    promotedUntil: artwork.promotedUntil?.toDate().toISOString() ?? null,
   };
 }
 
@@ -185,17 +190,38 @@ export function queryMarketplace(all: PublicArtworkView[], query: MarketplaceQue
     return true;
   });
 
+  // Pin: when `promotedUntil` is in the future, this piece floats to the
+  // top regardless of the user's chosen sort. Within the pinned band, the
+  // later deadline comes first (so an admin's freshly-pinned piece bubbles
+  // above older pins). Below the pinned band, the normal sort applies.
+  const now = Date.now();
+  const isPinned = (a: PublicArtworkView) =>
+    a.promotedUntil !== null && new Date(a.promotedUntil).getTime() > now;
   const sorted = [...filtered];
-  switch (query.sort) {
-    case "price_asc":
-      sorted.sort((a, b) => a.displayPricePaise - b.displayPricePaise);
-      break;
-    case "price_desc":
-      sorted.sort((a, b) => b.displayPricePaise - a.displayPricePaise);
-      break;
-    default:
-      sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
+  const compareBody = (() => {
+    switch (query.sort) {
+      case "price_asc":
+        return (a: PublicArtworkView, b: PublicArtworkView) =>
+          a.displayPricePaise - b.displayPricePaise;
+      case "price_desc":
+        return (a: PublicArtworkView, b: PublicArtworkView) =>
+          b.displayPricePaise - a.displayPricePaise;
+      default:
+        return (a: PublicArtworkView, b: PublicArtworkView) =>
+          b.createdAt.localeCompare(a.createdAt);
+    }
+  })();
+  sorted.sort((a, b) => {
+    const aPinned = isPinned(a);
+    const bPinned = isPinned(b);
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    if (aPinned && bPinned) {
+      // Later deadline wins — admin's most recent pin surfaces first.
+      return (b.promotedUntil ?? "").localeCompare(a.promotedUntil ?? "");
+    }
+    return compareBody(a, b);
+  });
 
   const pageSize = Math.min(Math.max(query.pageSize ?? 24, 1), MAX_PAGE_SIZE);
   const page = Math.max(query.page ?? 1, 1);

@@ -115,6 +115,15 @@ export const Collections = {
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
   /**
+   * Short-lived hold on a one-of-a-kind artwork while a buyer walks to
+   * Razorpay. One doc per artworkId. Added 16 Nov 2026 to prevent two
+   * buyers racing to pay for the same original: whoever reserves first
+   * has ~10 minutes to complete payment, everyone else sees a "reserved
+   * by another collector" notice. Expired docs get cleared lazily by
+   * createOrder's own transaction.
+   */
+  artworkReservations: "artworkReservations",
+  /**
    * Per-user wishlist (saved artworks). One doc per uid, same shape as
    * carts: owned by the user, read/write only by them. Added 8 Nov 2026 —
    * client-only wishlist on web+mobile was not syncing across devices.
@@ -131,6 +140,13 @@ export const Collections = {
    * replaces the pending code and takes its attempt count with it.
    */
   otps: "otps",
+  /**
+   * Admin-created marketplace discount codes. Doc id is the lowercased
+   * code so the lookup is a direct `get()` — codes are case-insensitive
+   * by convention (e.g. "DIWALI25" and "diwali25" are the same coupon).
+   * Discount is absorbed by platform_revenue; artist payouts never move.
+   */
+  coupons: "coupons",
 } as const;
 
 // Subcollection path helpers — Firestore subcollections are addressed as
@@ -141,6 +157,9 @@ export const artworkImagesCol = (artworkId: string) => `artworks/${artworkId}/im
 export const artworkStatusEventsCol = (artworkId: string) => `artworks/${artworkId}/statusEvents`;
 export const artworkOwnershipEventsCol = (artworkId: string) => `artworks/${artworkId}/ownershipEvents`;
 export const orderStatusEventsCol = (orderId: string) => `orders/${orderId}/statusEvents`;
+
+/** Per-coupon redemption ledger. */
+export const couponRedemptionsCol = (code: string) => `coupons/${code}/redemptions`;
 export const userProfileCol = (userId: string) => `users/${userId}/profile`;
 export const userFinancialCol = (userId: string) => `users/${userId}/financial`;
 
@@ -234,6 +253,16 @@ export interface ProfileDoc {
   /** ISO 3166-1 alpha-2 country code. Null on profiles written before
    *  the field existed — those are all Indian and read as "IN". */
   pickupCountry: string | null;
+  /**
+   * The Shiprocket pickup-location nickname registered for this artist.
+   * Each artist is their own Shiprocket warehouse so the courier is
+   * routed to THEIR studio, not GalleryZone HQ. Lazy-created on first
+   * sale inside `ensureArtistPickupNickname` (apps/api/src/shiprocket-
+   * booking.ts). Null until their first order's booking runs. Clear
+   * this field + re-register if the artist's pickup address changes.
+   * Added 16 Nov 2026 after a live order went out routed to HQ.
+   */
+  shiprocketPickupNickname?: string | null;
   earningsAbove5L: boolean;
   socialProofVideoUrl: string | null;
   companyName: string | null;
@@ -360,6 +389,14 @@ export interface ArtworkDoc {
   createdAt: FirebaseFirestore.Timestamp;
   /** Denormalised read model (listing-projection.ts). Absent on docs written before it existed — reindex fills it. */
   listing?: ListingProjection;
+  /**
+   * Admin-set pin-to-top deadline. When this is in the future, the piece
+   * floats above the rest of the marketplace grid, sorted by this field
+   * descending then createdAt descending. Cleared by setting to null;
+   * expires naturally when the deadline passes. Independent of status —
+   * pinning a sold piece is pointless but not forbidden. 16 Nov 2026.
+   */
+  promotedUntil?: FirebaseFirestore.Timestamp | null;
 }
 
 /**
@@ -572,6 +609,13 @@ export interface OrderDoc {
   shiprocketTrackingId?: string | null;
   shiprocketCarrier?: string | null;
   shiprocketTrackedAt?: FirebaseFirestore.Timestamp | null;
+  /** Admin-created discount code the buyer applied at checkout, lowercased
+   *  to match the coupons/{code} doc id. Absent when no code was used. */
+  couponCode?: string | null;
+  /** The discount this coupon took off the customer total. Paise.
+   *  GalleryZone's platform revenue absorbs it — artist/aggregator
+   *  payouts are untouched. Absent when no coupon was used. */
+  couponDiscountPaise?: number | null;
 }
 
 /** Lives on the order doc so the invoice number can't drift across reads. */
@@ -765,6 +809,39 @@ export interface AggregatorHoldingDoc {
   returnTrackingId?: string | null;
   returnCarrier?: string | null;
   returnTrackedAt?: FirebaseFirestore.Timestamp | null;
+  /** Artist asked for the piece back (end-of-6-month-listing path). Stamp
+   *  so the UI can hide the button while the return is being arranged and
+   *  admin can see artist-initiated vs system-return cases in the audit
+   *  log. Stamped only AFTER the Razorpay payment is captured (not when
+   *  the quote is created) — until then the artist can walk away without
+   *  leaving dangling state. 16 Nov 2026. */
+  artistReturnRequestedAt?: FirebaseFirestore.Timestamp | null;
+  /** The last return-shipping quote we created for this holding. Kept
+   *  so the UI can resume a half-paid attempt without re-quoting, and
+   *  so the verify endpoint can tell which order it's verifying. */
+  returnRazorpayOrderId?: string | null;
+  /** Captured once the artist pays. Audit record for the reverse leg. */
+  returnRazorpayPaymentId?: string | null;
+  /** The Shiprocket quote this order was priced against. Paise. */
+  returnShippingBasePaise?: number | null;
+  /** 2% Razorpay gateway fee on the base. */
+  returnConvenienceFeePaise?: number | null;
+  /** 18% service GST on the convenience fee. */
+  returnConvenienceGstPaise?: number | null;
+  /** base + convenience + GST — what we charged Razorpay to collect. */
+  returnShippingTotalPaise?: number | null;
+  /** Where the artist asked to have the piece delivered. Mirrors the
+   *  pickup-address shape the system uses elsewhere so the Shiprocket
+   *  booking can lift it unchanged. */
+  returnDropAddress?: {
+    name: string;
+    phone: string | null;
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  } | null;
 }
 
 export interface HoldingExtensionRequest {
@@ -855,6 +932,10 @@ export interface AggregatorSaleDoc {
    *  rewrites what was billed. Absent on sales recorded before the slab
    *  feature existed; readers fall back to rates.aggregatorCommissionRate. */
   commissionRate?: number;
+  /** Admin coupon the aggregator applied at the counter. */
+  couponCode?: string | null;
+  /** Discount the coupon took off this sale, paise. Absorbed by platform revenue. */
+  couponDiscountPaise?: number | null;
 }
 
 /**
@@ -1191,4 +1272,63 @@ export interface ReservationIntentDoc {
   paidAt: FirebaseFirestore.Timestamp | null;
   finalizedAt: FirebaseFirestore.Timestamp | null;
   refundedAt: FirebaseFirestore.Timestamp | null;
+}
+
+/**
+ * Admin-created marketplace coupon. Doc id is the code, lowercased, so
+ * lookups are case-insensitive without a second index.
+ *
+ * Only marketplace checkout honours these in the MVP. Aggregator sales
+ * are untouched because their price is already discounted through the
+ * aggregator pricing ladder. Artists and aggregators never see a cut
+ * to their payouts — the discount comes entirely out of GalleryZone's
+ * platform revenue, which is the margin we have to give.
+ */
+export interface CouponDoc {
+  /** Lowercased code, equal to the doc id. */
+  code: string;
+  /** "percent" takes value as a percent (0-100); "flat" takes value as paise. */
+  kind: "percent" | "flat";
+  /** Percent (0-100) or paise, by `kind`. */
+  value: number;
+  /** Floor: if the artwork's displayPrice is below this, the coupon refuses. Paise. Null = no floor. */
+  minOrderPaise: number | null;
+  /** Ceiling: a percent coupon never takes more than this. Paise. Null = no cap. */
+  maxDiscountPaise: number | null;
+  /** When the code goes live. */
+  validFrom: FirebaseFirestore.Timestamp;
+  /** When it expires. */
+  validUntil: FirebaseFirestore.Timestamp;
+  /** Total redemptions the code is good for, across all customers. */
+  usageCap: number | null;
+  /** How many times each customer may use this code. Null = unlimited per user. */
+  perUserCap: number | null;
+  /** Bumped inside the checkout transaction on a successful redemption. */
+  usedCount: number;
+  /** Which checkouts the code is honoured on. "both" works on either. */
+  scope: "marketplace" | "aggregator" | "both";
+  /** When present, restricts the coupon to pieces by these artists.
+   *  Null = any artist. Case-sensitive uids. */
+  artistIds: string[] | null;
+  /** "active" (live), "paused" (admin took it offline), "expired" (past validUntil). */
+  status: "active" | "paused" | "expired";
+  /** Admin uid who created it. */
+  createdBy: string;
+  createdAt: FirebaseFirestore.Timestamp;
+}
+
+/**
+ * A single redemption of a coupon. Lives at
+ * `coupons/{code}/redemptions/{orderOrHoldingId}`. One doc per sale;
+ * created inside the payment-capture transaction so usedCount and the
+ * per-user-cap query stay in sync.
+ */
+export interface CouponRedemptionDoc {
+  userId: string;
+  channel: "marketplace" | "aggregator";
+  /** paise taken off this sale. */
+  discountPaise: number;
+  redeemedAt: FirebaseFirestore.Timestamp;
+  /** The order id (marketplace) or holding id (aggregator sale) this redemption belongs to. */
+  refId: string;
 }

@@ -5,17 +5,24 @@
 
 import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Inject, Logger, NotFoundException, Param, Post, Query, Req } from "@nestjs/common";
 import {
+  Collections,
+  CouponError,
   createOrder,
   confirmSimulatedPayment,
   FirestoreRateConfigStore,
+  artworkPricingCol,
   getOrder,
   getPublicArtwork,
+  validateCoupon,
   CheckoutError,
+  type ArtworkDoc,
+  type ArtworkPricingDoc,
   type Db,
 } from "@galleryzone/db";
 import { createOrderInputSchema, type CreateOrderInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
-import { checkoutTotal, IllegalTransitionError } from "@galleryzone/domain";
+import { checkoutTotal, displayPriceOf, IllegalTransitionError } from "@galleryzone/domain";
+import { loadActiveRates } from "@galleryzone/config";
 import { Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB, ENV } from "./db.module.ts";
@@ -151,6 +158,53 @@ export class OrdersController {
       });
     }
 
+    // Coupon re-validation happens on this server, not from any frontend
+    // claim: /coupons/apply only queries, it never reserves. A code that
+    // was valid at /apply time could be paused in the seconds before this
+    // request lands. Refusing here means the buyer sees an error BEFORE
+    // Razorpay opens, instead of being charged full price silently.
+    let couponCode: string | undefined;
+    let couponDiscountPaise: number | undefined;
+    if (body.couponCode) {
+      try {
+        const artworkSnap = await this.db
+          .collection(Collections.artworks)
+          .doc(body.artworkId)
+          .get();
+        const pricingSnap = await this.db
+          .collection(artworkPricingCol(body.artworkId))
+          .doc("data")
+          .get();
+        if (!artworkSnap.exists || !pricingSnap.exists) throw new NotFoundException();
+        const artwork = artworkSnap.data() as ArtworkDoc;
+        const pricing = pricingSnap.data() as ArtworkPricingDoc;
+        const rates = await loadActiveRates(new FirestoreRateConfigStore(this.db));
+        const subtotalPaise =
+          artwork.listing?.displayPricePaise ?? displayPriceOf(pricing.artistPricePaise, rates);
+        const { discountPaise, coupon } = await validateCoupon(this.db, {
+          code: body.couponCode,
+          subtotalPaise,
+          context: {
+            channel: "marketplace",
+            artistId: pricing.artistId,
+            userId: req.authUser.uid,
+          },
+        });
+        couponCode = coupon.code;
+        couponDiscountPaise = discountPaise;
+      } catch (error) {
+        if (error instanceof CouponError) {
+          throw new BadRequestException({
+            type: "about:blank",
+            title: error.message,
+            status: 400,
+            code: error.code,
+          });
+        }
+        throw error;
+      }
+    }
+
     try {
       return await createOrder({
         db: this.db,
@@ -159,6 +213,8 @@ export class OrdersController {
         addressId: body.addressId,
         idempotencyKey: body.idempotencyKey,
         deliveryQuote: resolution.quote,
+        ...(couponCode ? { couponCode } : {}),
+        ...(couponDiscountPaise !== undefined ? { couponDiscountPaise } : {}),
       });
     } catch (error) {
       if (error instanceof CheckoutError) {

@@ -58,12 +58,20 @@ export function marketplaceCheckoutPostings({
   artistPricePaise,
   rates,
   tdsApplies = false,
+  couponDiscountPaise = 0,
 }: {
   artistId: string;
   artistPricePaise: number;
   rates: PricingRates;
   /** Drives the §194-O TDS leg: true once this sale takes the artist's year past the threshold. */
   tdsApplies?: boolean;
+  /**
+   * Discount the customer got off the total via an admin-created coupon.
+   * Absorbed by platform_revenue — artist and GST legs never move, so
+   * the artist still gets their full settlement and the government still
+   * gets its GST. We eat the difference. Paise. Default 0 (no coupon).
+   */
+  couponDiscountPaise?: number;
 }): Posting[] {
   const displayPrice = Math.round(artistPricePaise * (1 + rates.platformMarkup) * (1 + rates.gstRate));
   const checkout = checkoutTotal(displayPrice, rates);
@@ -75,12 +83,14 @@ export function marketplaceCheckoutPostings({
   // GST owed to the government: the 5% inside the artwork price, plus 18%
   // on the customer's convenience fee. Both are statutory liabilities, never
   // GalleryZone's revenue, so they leave escrow on the same leg.
+  const discount = Math.max(0, Math.round(couponDiscountPaise));
+  const gatewayCapture = checkout.total - discount;
   const gstLiability = checkout.gstIncluded + checkout.convenienceGst;
-  const platformResidual = checkout.total - gstLiability - settlement.tdsDeduction - settlement.net;
+  const platformResidual = gatewayCapture - gstLiability - settlement.tdsDeduction - settlement.net;
 
   return assertBalanced(
     [
-      { accountType: "gateway_escrow", amountPaise: checkout.total, reason: "checkout_capture" },
+      { accountType: "gateway_escrow", amountPaise: gatewayCapture, reason: "checkout_capture" },
       { accountType: "gst_payable", amountPaise: -gstLiability, reason: "gst_liability" },
       { accountType: "tds_payable", amountPaise: -settlement.tdsDeduction, reason: "artist_tds_withheld" },
       { accountType: "artist_payable", ownerId: artistId, amountPaise: -settlement.net, reason: "marketplace_settlement" },
@@ -111,6 +121,7 @@ export function aggregatorSalePostings({
   otherChargesPaise,
   deliveryChargePaise,
   commissionRate,
+  couponDiscountPaise = 0,
 }: {
   artistId: string;
   aggregatorId: string;
@@ -128,6 +139,10 @@ export function aggregatorSalePostings({
    *  commissionRateForPreviousMonthSales(). Omitted callers fall back to the
    *  flat rate on PricingRates. */
   commissionRate?: number;
+  /** Admin coupon discount applied at the counter. Absorbed by
+   *  platform_revenue — artist settlement and aggregator commission are
+   *  untouched, the buyer paid displayPrice − discount into escrow. */
+  couponDiscountPaise?: number;
 }): Posting[] {
   const gstIncluded = displayPricePaise - exGst(displayPricePaise, rates);
   const settlement = artistSettlementOf(artistPricePaise, "aggregator", rates, {
@@ -155,8 +170,10 @@ export function aggregatorSalePostings({
   // artwork GST on the gst_payable leg rather than sitting in GalleryZone's
   // margin.
   const gstLiability = gstIncluded + settlement.serviceGstDeduction;
+  const discount = Math.max(0, Math.round(couponDiscountPaise));
+  const gatewayCapture = displayPricePaise - discount;
   const platformResidual =
-    displayPricePaise - gstLiability - settlement.tdsDeduction - settlement.net - commission;
+    gatewayCapture - gstLiability - settlement.tdsDeduction - settlement.net - commission;
 
   return assertBalanced(
     [
@@ -164,7 +181,7 @@ export function aggregatorSalePostings({
       // isn't new money: it is the aggregatorHoldPostings legs, reversed.
       { accountType: "aggregator_held", ownerId: aggregatorId, amountPaise: heldPaise, reason: "hold_released_on_sale" },
       { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: -heldPaise, reason: "hold_returned_to_wallet" },
-      { accountType: "gateway_escrow", amountPaise: displayPricePaise, reason: "aggregator_sale_capture" },
+      { accountType: "gateway_escrow", amountPaise: gatewayCapture, reason: "aggregator_sale_capture" },
       { accountType: "gst_payable", amountPaise: -gstLiability, reason: "gst_liability" },
       { accountType: "tds_payable", amountPaise: -settlement.tdsDeduction, reason: "artist_tds_withheld" },
       { accountType: "artist_payable", ownerId: artistId, amountPaise: -settlement.net, reason: "aggregator_settlement" },

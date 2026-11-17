@@ -12,7 +12,21 @@ import { PaymentDismissedError, openRazorpayCheckout, type RazorpaySession } fro
 export interface CreateOrderPayload {
   artworkId: string;
   addressId: string;
+  /** Optional discount code the buyer entered; the API re-validates. */
+  couponCode?: string;
 }
+
+export interface CouponApplyResult {
+  code: string;
+  discountPaise: number;
+  kind: "percent" | "flat";
+  value: number;
+}
+
+export const couponService = {
+  apply: (input: { code: string; artworkId: string }): Promise<CouponApplyResult> =>
+    http.post<CouponApplyResult>("/v1/coupons/apply", input),
+};
 
 export const orderService = {
   list: async (): Promise<Order[]> => {
@@ -44,6 +58,7 @@ export const orderService = {
       // One key per checkout attempt: a double-tap or retried request can't
       // create two orders (the API enforces uniqueness).
       idempotencyKey: crypto.randomUUID(),
+      ...(payload.couponCode ? { couponCode: payload.couponCode } : {}),
     });
     const base = `/v1/orders/${encodeURIComponent(orderId)}`;
     const session = await http.post<{ mode: "simulated" } | RazorpaySession>(`${base}/payment/session`);

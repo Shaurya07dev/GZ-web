@@ -159,8 +159,9 @@ class _KycBody extends ConsumerWidget {
               const SizedBox(height: 16),
               const _IdentityDocumentsCard(),
               const SizedBox(height: 16),
-              const _CommissionsCard(),
-              const SizedBox(height: 16),
+              // "Custom artwork requests · Coming soon" card removed
+              // pre-launch (audit N1, 14 Nov 2026). Re-add when the
+              // commission-request feature ships.
               _PickupForm(profile: profile),
               const SizedBox(height: 16),
               _PayoutForm(profile: profile),
@@ -930,13 +931,9 @@ class _PublicProfileFormState extends ConsumerState<_PublicProfileForm> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        const ComingSoonTile(
-          icon: LucideIcons.circlePlay,
-          title: 'GST application guide',
-          text: 'A short walkthrough of registering for GST goes here. Coming soon.',
-        ),
         const SizedBox(height: 18),
+        // "GST application guide · Coming soon" tile removed pre-launch
+        // (audit N1, 14 Nov 2026). Re-add when the walkthrough video exists.
         _SaveRow(
           label: 'Save profile',
           busy: _saving,
@@ -1124,72 +1121,8 @@ class _IdentityDocumentsCard extends StatelessWidget {
   }
 }
 
-class _CommissionsCard extends StatelessWidget {
-  const _CommissionsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Icon(
-              LucideIcons.palette,
-              size: 16,
-              color: theme.colorScheme.tertiary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      'Custom artwork requests',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    StatusPill(
-                      label: 'Coming soon',
-                      color: theme.colorScheme.tertiary,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Let collectors request a custom piece directly from you, start to finish, through '
-                  'GalleryZone.',
-                  style: theme.textTheme.labelSmall?.copyWith(height: 1.45),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// _CommissionsCard removed pre-launch (audit N1, 14 Nov 2026) — re-add the
+// widget here and its usage in build() when the custom-request feature ships.
 
 // --- Pickup address ------------------------------------------------------------------------------------------------
 

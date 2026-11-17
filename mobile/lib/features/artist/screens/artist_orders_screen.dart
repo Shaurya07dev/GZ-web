@@ -56,8 +56,17 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
           );
         }
         final needle = _query.trim().toLowerCase();
+        // Hide pending + cancelled from the artist's view — pending is a
+        // checkout attempt in progress on the buyer's device, cancelled
+        // is a buyer who abandoned payment. Neither is a sale the artist
+        // made (client flag 16 Nov 2026, matches the web filter).
+        final visible = list.where(
+          (entry) =>
+              entry.order.status != OrderStatus.pending &&
+              entry.order.status != OrderStatus.cancelled,
+        );
         final shown = [
-          for (final entry in list)
+          for (final entry in visible)
             if ((_status == null || entry.order.status == _status) &&
                 (needle.isEmpty ||
                     '${entry.order.id} ${entry.order.artwork?.title ?? ''}'
@@ -96,15 +105,20 @@ class _ArtistOrdersTabState extends ConsumerState<ArtistOrdersTab> {
                             selected: _status == null,
                             onTap: () => setState(() => _status = null),
                           ),
+                          // Only the statuses that represent a real sale.
+                          // pending + cancelled are filtered above and so
+                          // their chips would never match anything.
                           for (final status in OrderStatus.values)
-                            _StatusChip(
-                              label: OrderStatusStyle.of(status).label,
-                              selected: _status == status,
-                              onTap: () => setState(
-                                () =>
-                                    _status = _status == status ? null : status,
+                            if (status != OrderStatus.pending &&
+                                status != OrderStatus.cancelled)
+                              _StatusChip(
+                                label: OrderStatusStyle.of(status).label,
+                                selected: _status == status,
+                                onTap: () => setState(
+                                  () =>
+                                      _status = _status == status ? null : status,
+                                ),
                               ),
-                            ),
                         ],
                       ),
                     ),
