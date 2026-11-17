@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -139,21 +141,39 @@ final artworkProvider = FutureProvider.autoDispose.family<Artwork?, String>((
 /// Mirrors the web useArtworkReservation hook; backend endpoint at
 /// GET /v1/artworks/:id/reservation. Added 16 Nov 2026 for the
 /// concurrent-buyer protection feature.
-final artworkReservationProvider =
-    StreamProvider.autoDispose.family<ArtworkReservation, String>((ref, id) async* {
-  final repo = ref.watch(artworkRepositoryProvider);
-  // Emit immediately so the UI doesn't have to wait 10s for first render.
-  yield await repo.reservation(id);
-  while (true) {
-    await Future<void>.delayed(const Duration(seconds: 10));
-    try {
-      yield await repo.reservation(id);
-    } catch (_) {
-      // On transient failure keep the previous state visible rather than
-      // flashing an error — a 10s retry is the next poll.
-    }
-  }
-});
+final artworkReservationProvider = StreamProvider.autoDispose
+    .family<ArtworkReservation, String>((ref, id) {
+      final repo = ref.watch(artworkRepositoryProvider);
+      final controller = StreamController<ArtworkReservation>();
+      Timer? next;
+      var closed = false;
+
+      // A Timer rather than a delayed loop: leaving the screen cancels the
+      // pending poll at once instead of letting it wake up for nobody.
+      Future<void> poll({required bool first}) async {
+        try {
+          final state = await repo.reservation(id);
+          if (!closed) controller.add(state);
+        } catch (error, stack) {
+          // The first read failing is the screen's to show. After that, a
+          // transient failure keeps the previous state visible rather than
+          // flashing an error: a 10s retry is the next poll.
+          if (first && !closed) controller.addError(error, stack);
+        }
+        if (!closed) {
+          next = Timer(const Duration(seconds: 10), () => poll(first: false));
+        }
+      }
+
+      ref.onDispose(() {
+        closed = true;
+        next?.cancel();
+        controller.close();
+      });
+      // Emit immediately so the UI doesn't have to wait 10s for first render.
+      poll(first: true);
+      return controller.stream;
+    });
 
 /// A set of artwork ids, compared by content so it can key a provider family:
 /// the same ids in any order are the same question.

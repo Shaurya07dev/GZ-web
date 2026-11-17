@@ -9,6 +9,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/artwork.dart';
 import '../../../data/models/passport.dart';
 import '../../coa/coa_inputs.dart';
+import '../../coa/display_card_view.dart';
 import '../../coa/download_coa_button.dart';
 import '../../ownership/providers/ownership_providers.dart';
 import '../providers/marketplace_providers.dart';
@@ -109,8 +110,13 @@ class PassportBody extends ConsumerWidget {
         passport?.ownerName ??
         custody.legalOwnerName ??
         custodyPartyLabel[custody.legalOwner]!;
+    // The server only sends the certificate to the piece's current owner, its
+    // artist and admins (the app's sign-in token rides on this request). For
+    // everyone else the number is absent, and the page shows the Display card
+    // instead of a certificate, as the website's tag page does.
     final coaNumber = passport?.coaCertificateNumber ?? '';
     final coaIssued = passport?.coaIssuedAt ?? '';
+    final hasCertificate = coaNumber.isNotEmpty;
     final artist = ref.watch(artistProfileProvider(artwork.artistId)).value;
 
     // Whether a tag is linked and locked comes from the public record, never
@@ -211,15 +217,28 @@ class PassportBody extends ConsumerWidget {
             child: ArtworkQr(artworkId: artwork.id, size: 128, showUrl: true),
           ),
           const SizedBox(height: 16),
-          Center(
-            child: DownloadCoaButton(
-              certificate: coaInputFor(
-                artwork,
-                passport,
-                ownerName: ownerName,
+          if (hasCertificate)
+            Center(
+              child: DownloadCoaButton(
+                certificate: coaInputFor(
+                  artwork,
+                  passport,
+                  ownerName: ownerName,
+                ),
               ),
+            )
+          else ...[
+            Text(
+              'Display card',
+              key: const Key('passport-display-card-heading'),
+              style: theme.textTheme.titleLarge,
             ),
-          ),
+            const SizedBox(height: 12),
+            DisplayCardView(
+              key: const Key('passport-display-card'),
+              input: displayCardInputFor(artwork, passport),
+            ),
+          ],
           if (artwork.artistId.isNotEmpty) ...[
             const SizedBox(height: 40),
             Divider(color: theme.colorScheme.outline),
@@ -455,49 +474,50 @@ class _PassportCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          if (coaNumber.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    LucideIcons.badgeCheck,
+                    size: 16,
+                    color: theme.colorScheme.tertiary,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'CERTIFICATE OF AUTHENTICITY',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 10,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        Text(
+                          coaNumber,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                            color: theme.colorScheme.tertiary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  LucideIcons.badgeCheck,
-                  size: 16,
-                  color: theme.colorScheme.tertiary,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'CERTIFICATE OF AUTHENTICITY',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontSize: 10,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      Text(
-                        coaNumber.isEmpty ? 'Pending issuance' : coaNumber,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                          color: theme.colorScheme.tertiary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
           // That a physical tag is linked is public; which chip it is stays
           // between the artist and GalleryZone - a cloned tag is only as good
           // as the identifier it can copy.

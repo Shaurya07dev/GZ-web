@@ -16,7 +16,6 @@ Artwork _artwork({ArtworkStatus status = ArtworkStatus.marketplace}) => Artwork(
   medium: 'Oil on canvas',
   customerPrice: 48000,
   thumbnailUrl: '/artworks/bird.png',
-  insured: true,
   status: status,
   listingType: ListingType.marketplaceOnly,
   description: 'A study in rain light.',

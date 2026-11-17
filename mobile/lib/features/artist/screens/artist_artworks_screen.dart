@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -198,37 +199,14 @@ class _Board extends ConsumerWidget {
                     ),
                   ),
                 const SizedBox(height: 10),
-                // Wrap, not a horizontal ScrollView — a second Scrollable in
-                // the tree breaks tester.scrollUntilVisible's default lookup
-                // (it expects exactly one), and wrapping reads fine at every
-                // phone width anyway. Empty buckets stay visible so the artist
-                // learns the vocabulary.
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final option in ArtworkBucket.values)
-                      ChoiceChip(
-                        label: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(option.label),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${countOf(option)}',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontFeatures: const [
-                                  FontFeature.liningFigures(),
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        selected: bucket == option,
-                        onSelected: (_) => onBucketChanged(option),
-                      ),
-                  ],
+                // A grid of tiles, not a horizontal ScrollView: a second Scrollable
+                // in the tree breaks tester.scrollUntilVisible's default lookup (it
+                // expects exactly one), and every status stays in view at once.
+                // Empty buckets stay visible so the artist learns the vocabulary.
+                _BucketTiles(
+                  selected: bucket,
+                  countOf: countOf,
+                  onChanged: onBucketChanged,
                 ),
               ],
             ),
@@ -268,6 +246,147 @@ class _Board extends ConsumerWidget {
   }
 }
 
+/// The status filters as a grid of tiles: the count large, the name under it.
+/// Four to a row on a phone and all eight in one row from tablet width, so the
+/// whole set is in view without scrolling sideways and the counts read at a
+/// glance.
+class _BucketTiles extends StatelessWidget {
+  const _BucketTiles({
+    required this.selected,
+    required this.countOf,
+    required this.onChanged,
+  });
+
+  final ArtworkBucket selected;
+  final int Function(ArtworkBucket bucket) countOf;
+  final ValueChanged<ArtworkBucket> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        const gap = 8.0;
+        final columns = box.maxWidth >= 560 ? 8 : 4;
+        // Floored so four tiles and three gaps never add up to a hair more
+        // than the row and push the fourth onto a line of its own.
+        final width = ((box.maxWidth - gap * (columns - 1)) / columns)
+            .floorToDouble();
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final option in ArtworkBucket.values)
+              SizedBox(
+                width: width,
+                child: _BucketTile(
+                  label: option.label,
+                  count: countOf(option),
+                  selected: selected == option,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onChanged(option);
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _BucketTile extends StatefulWidget {
+  const _BucketTile({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_BucketTile> createState() => _BucketTileState();
+}
+
+class _BucketTileState extends State<_BucketTile> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final gold = theme.colorScheme.primary;
+    final selected = widget.selected;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${widget.label}, ${widget.count}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        onTapDown: (_) => setState(() => _down = true),
+        onTapUp: (_) => setState(() => _down = false),
+        onTapCancel: () => setState(() => _down = false),
+        child: PressScale(
+          pressed: _down,
+          child: AnimatedContainer(
+            duration: AppMotion.medium,
+            curve: AppMotion.standard,
+            constraints: const BoxConstraints(minHeight: 62),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+            decoration: BoxDecoration(
+              color: selected
+                  ? gold.withValues(alpha: 0.14)
+                  : theme.cardTheme.color,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: selected ? gold : theme.colorScheme.outline,
+                width: selected ? 1.4 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedDefaultTextStyle(
+                  duration: AppMotion.medium,
+                  curve: AppMotion.standard,
+                  style: theme.textTheme.titleLarge!.copyWith(
+                    color: selected
+                        ? theme.colorScheme.tertiary
+                        : theme.colorScheme.onSurface,
+                    fontFeatures: const [
+                      FontFeature.liningFigures(),
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                  child: Text('${widget.count}'),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10.5,
+                    height: 1.15,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Empty extends StatelessWidget {
   const _Empty({
     required this.hasAny,
@@ -287,7 +406,7 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!hasAny) {
       return const EmptyState(
-        icon: LucideIcons.frame,
+        icon: LucideIcons.palette,
         title: "You haven't listed anything yet.",
         description:
             'Add your paintings here to get them listed on the marketplace.',

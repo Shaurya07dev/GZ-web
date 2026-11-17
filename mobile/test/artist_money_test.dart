@@ -167,6 +167,38 @@ class _Network implements ArtistNetworkRepository {
 }
 
 class _Auth implements AuthRepository {
+  @override
+  Future<AuthAck> loginWithGoogle({Role? defaultRole, String? name}) =>
+      throw UnimplementedError('not used here');
+
+  @override
+  Future<void> sendEmailOtp({
+    required String email,
+    required String purpose,
+  }) async {}
+
+  @override
+  Future<void> verifyEmailOtp({
+    required String email,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> sendPhoneOtp({required String phone}) async {}
+
+  @override
+  Future<void> verifyPhoneOtp({
+    required String phone,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  }) async {}
+
   final resets = <String>[];
   Object? failWith;
 

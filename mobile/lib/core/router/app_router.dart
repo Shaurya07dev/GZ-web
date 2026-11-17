@@ -71,6 +71,7 @@ import '../../features/ownership/screens/transfer_accept_screen.dart';
 import '../../features/ownership/screens/transfer_pay_fee_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../theme/app_theme.dart';
+import 'web_paths.dart';
 
 /// Sections a signed-in role owns. Port of `proxy.ts`'s `GUARDED_PREFIXES`
 /// minus `/admin`, which never mounts on mobile.
@@ -96,6 +97,10 @@ String? _prefixOf(String path, List<String> prefixes) {
 /// section bounces to that role's own home rather than a blank guard.
 @visibleForTesting
 String? redirectFor(Role? role, String location) {
+  // A website address the server wrote into a notification or a link goes to
+  // the same screen in the app, then the guards below judge that address.
+  final inApp = appPathFor(location);
+  if (inApp != location) return inApp;
   final path = Uri.tryParse(location)?.path ?? location;
   final signInFirst = _prefixOf(path, _signInFirstPrefixes) != null;
   final prefix = _prefixOf(path, _guardedPrefixes);

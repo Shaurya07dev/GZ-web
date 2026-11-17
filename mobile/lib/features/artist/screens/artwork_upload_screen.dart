@@ -21,6 +21,7 @@ import '../artwork_form_data.dart';
 import '../painting_styles.dart';
 import '../providers/artist_providers.dart';
 import '../widgets/artist_widgets.dart';
+import '../widgets/artwork_type_picker.dart';
 import '../widgets/painting_style_picker.dart';
 
 enum _SubmitMode { draft, review }
@@ -295,6 +296,14 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         ),
       );
     }
+  }
+
+  // --- Type of artwork ---------------------------------------------------------------
+
+  Future<void> _pickType() async {
+    final pick = await showArtworkTypePicker(context, selected: _type);
+    if (pick == null || !mounted) return;
+    setState(() => _type = pick.value ?? '');
   }
 
   // --- Painting style ----------------------------------------------------------------
@@ -828,11 +837,24 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           onChanged: (value) => setState(() => _medium = value),
         ),
         const SizedBox(height: 14),
-        _OptionField(
-          label: 'Type of artwork',
-          value: _type,
-          options: artworkTypes,
-          onChanged: (value) => setState(() => _type = value),
+        InkWell(
+          onTap: _pickType,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: 'Type of artwork',
+              suffixIcon: const Icon(LucideIcons.chevronsUpDown, size: 16),
+              helperText:
+                  'An Indian tradition by state, one of ${paintingStyles.length} world art forms, or your own.',
+              helperMaxLines: 2,
+            ),
+            isEmpty: _type.isEmpty,
+            child: Text(
+              artworkTypeLabel(_type),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ),
         if (_type == 'other') ...[
           const SizedBox(height: 10),

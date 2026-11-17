@@ -82,7 +82,7 @@ String landingAfterLogin(Role role, {String? next}) {
   if (target != null) return target;
   return switch (role) {
     Role.artist => '/marketplace',
-    Role.aggregator => '/aggregator/profile',
+    Role.aggregator => '/aggregator/dashboard/profile',
     Role.customer => role.home,
   };
 }
@@ -92,7 +92,7 @@ String landingAfterLogin(Role role, {String? next}) {
 /// useful, so land there instead of an empty dashboard.
 String landingAfterRegister(Role role) => switch (role) {
   Role.artist => '/dashboard/profile',
-  Role.aggregator => '/aggregator/profile',
+  Role.aggregator => '/aggregator/dashboard/profile',
   Role.customer => role.home,
 };
 

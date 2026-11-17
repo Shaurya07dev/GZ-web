@@ -53,7 +53,7 @@ class _Checkout implements CheckoutRepository {
   final placed = <({String artworkId, String addressId})>[];
 
   @override
-  Future<CheckoutQuote> getQuote(String artworkId) async {
+  Future<CheckoutQuote> getQuote(String artworkId, {String? addressId}) async {
     if (failQuote) {
       failQuote = false;
       throw Exception('offline');
