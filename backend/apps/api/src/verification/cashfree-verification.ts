@@ -204,18 +204,27 @@ export class CashfreeVerification {
    * the outcome arrives on the Secure ID webhook, never inline.
    */
   async createDigiLockerSession(input: { verificationId: string; redirectPath: string }): Promise<DigiLockerSession> {
+    const redirectUrl = `${this.siteUrl}${input.redirectPath}`;
     const res = await fetch(`${this.baseUrl}/digilocker`, {
       method: "POST",
       headers: this.headers(),
       body: JSON.stringify({
         verification_id: input.verificationId,
         document_requested: ["AADHAAR"],
-        redirect_url: `${this.siteUrl}${input.redirectPath}`,
+        redirect_url: redirectUrl,
       }),
     });
     const body = (await res.json().catch(() => ({}))) as { reference_id?: string | number; url?: string; verification_id?: string; message?: string; code?: string };
     if (!res.ok || !body.url) {
-      this.logger.error(`cashfree digilocker session failed: ${res.status} ${body.code ?? ""} ${body.message ?? ""}`);
+      // Logging the redirect_url too: Cashfree's `redirect_url_value_invalid`
+      // rejection means the URL we built is malformed from their side, and
+      // seeing the exact string we sent is the fastest way to tell whether
+      // PUBLIC_SITE_URL or redirectPath carried whitespace, a wrong scheme or
+      // an unexpected character.
+      this.logger.error(
+        `cashfree digilocker session failed: ${res.status} ${body.code ?? ""} ${body.message ?? ""} ` +
+          `(redirect_url sent: ${JSON.stringify(redirectUrl)})`,
+      );
       throw new ServiceUnavailableException({ type: "about:blank", title: "Could not start Aadhaar verification", status: 503, code: twoFactorCode(body) });
     }
     return {
