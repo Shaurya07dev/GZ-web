@@ -434,6 +434,9 @@ export interface ListingProjection {
   sizeBand: "small" | "medium" | "large" | null;
   coverImageUrl: string | null;
   coverThumbnailUrl: string | null;
+  /** Every photo, cover first (up to 8), so a list card can be swiped through without a request per piece.
+   *  Absent on listings written before 18 Nov 2026 until they are rebuilt (reindexAllListings). */
+  images?: { url: string; thumbnailUrl: string | null }[];
   imageCount: number;
   updatedAt: FirebaseFirestore.Timestamp;
 }

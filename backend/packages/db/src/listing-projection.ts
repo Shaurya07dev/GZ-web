@@ -103,6 +103,10 @@ export async function refreshListing(db: Firestore, artworkId: string, rates?: P
     sizeBand: sizeBandOf(artwork.dimensions),
     coverImageUrl: cover?.url ?? null,
     coverThumbnailUrl: cover?.thumbnailUrl ?? null,
+    images: imagesSnap.docs.slice(0, 8).map((d) => {
+      const image = d.data() as ArtworkImageDoc;
+      return { url: image.url, thumbnailUrl: image.thumbnailUrl ?? null };
+    }),
     imageCount: imagesSnap.size,
     updatedAt: FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
   } satisfies ListingProjection;

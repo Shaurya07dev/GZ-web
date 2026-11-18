@@ -93,9 +93,12 @@ async function toPublicView(
     medium: artwork.medium,
     dimensions: artwork.dimensions,
     yearCreated: artwork.yearCreated,
-    images: listing.coverImageUrl
-      ? [{ url: listing.coverImageUrl, thumbnailUrl: listing.coverThumbnailUrl, altText: artwork.title, sortOrder: 0 }]
-      : [],
+    // Every photo when the projection carries them; the cover alone for a listing not yet rebuilt.
+    images: listing.images?.length
+      ? listing.images.map((image, i) => ({ url: image.url, thumbnailUrl: image.thumbnailUrl, altText: artwork.title, sortOrder: i }))
+      : listing.coverImageUrl
+        ? [{ url: listing.coverImageUrl, thumbnailUrl: listing.coverThumbnailUrl, altText: artwork.title, sortOrder: 0 }]
+        : [],
     displayPricePaise: listing.displayPricePaise,
     insured: artwork.insuranceStatus === "approved",
     exclusive: artwork.exclusive ?? false,

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { PhotoSwiper, sortedPhotos } from "@/components/shared/photo-swiper";
 import Link from "next/link";
 import { Heart, Pin, ShoppingBag } from "lucide-react";
 import { cn, humanize } from "@/lib/utils";
@@ -85,13 +85,13 @@ export function ArtworkCard({ artwork, className }: ArtworkCardProps) {
           {isPlaceholderImage(artwork.thumbnailUrl) ? (
             <ArtworkImagePlaceholder />
           ) : (
-            <Image
-              src={artwork.thumbnailUrl}
+            <PhotoSwiper
+              photos={sortedPhotos(artwork.images)}
               alt={artwork.title}
-              fill
+              fallbackSrc={artwork.thumbnailUrl}
               sizes="(min-width: 1280px) 20vw, (min-width: 768px) 30vw, 48vw"
-              className={cn(
-                "object-cover transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.03]",
+              imageClassName={cn(
+                "transition-transform duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-[1.03]",
                 !isAvailable && "opacity-75 grayscale-[45%]",
               )}
             />

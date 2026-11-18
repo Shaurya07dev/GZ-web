@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
+import { PhotoSwiper, sortedPhotos } from "@/components/shared/photo-swiper";
 import Link from "next/link";
 import { PackageSearch, Heart, LayoutGrid, List, SearchX } from "lucide-react";
 import { toast } from "sonner";
@@ -287,12 +287,11 @@ function InventoryArtworkCard({
         className="relative flex aspect-[4/5] w-full items-center justify-center bg-muted/30 p-4 sm:p-5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <div className="relative h-full w-full overflow-hidden rounded-md border border-border/50 bg-muted shadow-sm transition-transform duration-500 ease-out group-hover:scale-[1.02]">
-          <Image
-            src={artwork.thumbnailUrl}
+          <PhotoSwiper
+            photos={sortedPhotos(artwork.images)}
             alt={artwork.title}
-            fill
+            fallbackSrc={artwork.thumbnailUrl}
             sizes="(min-width: 1280px) 22vw, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
-            className="object-cover"
           />
         </div>
         
@@ -375,12 +374,12 @@ function InventoryArtworkListRow({
         target="_blank"
         className="relative w-28 shrink-0 overflow-hidden rounded-lg bg-muted sm:w-32 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
       >
-        <Image
-          src={artwork.thumbnailUrl}
+        <PhotoSwiper
+          photos={sortedPhotos(artwork.images)}
           alt={artwork.title}
-          fill
+          fallbackSrc={artwork.thumbnailUrl}
           sizes="128px"
-          className="object-cover"
+          compact
         />
       </Link>
 
