@@ -36,6 +36,7 @@ import {
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
 import { useVerifyGstinMutation } from "@/hooks/useVerification";
+import { usePincodeAutofill } from "@/hooks/usePincodeAutofill";
 import { Button } from "@/components/ui/button";
 import {
   COUNTRY_CODES,
@@ -262,6 +263,25 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
 
   const coordinatorEmailField = register("coordinatorEmail");
   const emailValue = watch("coordinatorEmail");
+
+  // India Post → autofill city + state when a 6-digit PIN is typed. Keeps the
+  // aggregator address form in sync with the artist pickup form and the
+  // customer checkout, so every address capture on the site behaves the
+  // same. Only fills fields that are currently blank.
+  const addressPincode = watch("addressPincode") ?? "";
+  const addressCity = watch("addressCity") ?? "";
+  const addressState = watch("addressState") ?? "";
+  const addressCountry = watch("country") ?? "IN";
+  const addressPincodeAutofill = usePincodeAutofill({
+    pincode: addressPincode,
+    country: addressCountry,
+    city: addressCity,
+    state: addressState,
+    onFill: (next) => {
+      if (next.city) setValue("addressCity", next.city, { shouldValidate: true, shouldDirty: true });
+      if (next.state) setValue("addressState", next.state, { shouldValidate: true, shouldDirty: true });
+    },
+  });
   const emailSuggestions = useMemo(() => {
     const at = emailValue?.indexOf("@") ?? -1;
     if (at <= 0) return [];
@@ -519,7 +539,14 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
               <FieldError errors={[errors.addressState]} />
             </Field>
             <Field data-invalid={Boolean(errors.addressPincode)}>
-              <FieldLabel htmlFor="addressPincode">PIN code</FieldLabel>
+              <FieldLabel htmlFor="addressPincode" className="flex items-center gap-2">
+                PIN code
+                {addressPincodeAutofill.isFetching ? (
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    looking up…
+                  </span>
+                ) : null}
+              </FieldLabel>
               <Input id="addressPincode" className="h-10" inputMode="numeric" maxLength={6} autoComplete="postal-code" {...register("addressPincode")} aria-invalid={Boolean(errors.addressPincode)} />
               <FieldError errors={[errors.addressPincode]} />
             </Field>
