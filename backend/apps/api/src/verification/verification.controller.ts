@@ -19,7 +19,7 @@
 //      session WE issued. An id we never issued matches nobody, so a forged
 //      webhook cannot attach a "verified" identity to an arbitrary account.
 
-import { Controller, Headers, HttpCode, Inject, Post, Req } from "@nestjs/common";
+import { Controller, Headers, HttpCode, Inject, Logger, Post, Req } from "@nestjs/common";
 import { SkipThrottle, Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { randomUUID } from "node:crypto";
@@ -51,6 +51,8 @@ interface DigiLockerWebhook {
 
 @Controller("v1")
 export class VerificationController {
+  private readonly logger = new Logger(VerificationController.name);
+
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly verification: CashfreeVerification,
@@ -119,6 +121,18 @@ export class VerificationController {
     @Headers("x-webhook-timestamp") timestamp: string | undefined,
   ) {
     const raw = req.rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
+    // TEMPORARY DIAGNOSTIC (18 Nov 2026): Cashfree Secure ID says the webhook
+    // URL is valid, but real DigiLocker completions are not arriving on prod.
+    // Log every inbound hit so we can see whether Cashfree is actually calling,
+    // which headers they attach (signature + timestamp + their IP), and the
+    // first slice of the body so the event `type` is visible. Trim this
+    // back to the one-line probe/rejected log once the root cause is known.
+    const bodyString = raw.toString("utf8");
+    const bodyPreview = bodyString.slice(0, 400);
+    const sourceIp = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
+    this.logger.log(
+      `digilocker webhook hit: ip=${sourceIp} sig=${signature ? "present" : "MISSING"} ts=${timestamp ? "present" : "MISSING"} bytes=${bodyString.length} body=${bodyPreview}`,
+    );
     const check = classifyWebhook({
       source: "verification",
       rawBody: raw,
