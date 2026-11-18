@@ -35,6 +35,8 @@ import {
   useAggregatorProfile,
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
+import { useVerifyGstinMutation } from "@/hooks/useVerification";
+import { Button } from "@/components/ui/button";
 import {
   COUNTRY_CODES,
   DEFAULT_COUNTRY_DIAL,
@@ -184,6 +186,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
   const updateBankMutation = useUpdateAggregatorProfileMutation();
   const updateIdentityMutation = useUpdateAggregatorProfileMutation();
+  const verifyGstinMutation = useVerifyGstinMutation();
 
   const initialPhone = splitPhone(profile.coordinatorPhone);
   const initialCompanyPhone = splitPhone(profile.phone);
@@ -404,33 +407,62 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
           <Controller
             control={control}
             name="gstNumber"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="sm:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <FieldLabel htmlFor="gstNumber">
-                    GST number{" "}
-                    <span className="font-normal text-muted-foreground">
-                      (required to reserve)
-                    </span>
-                  </FieldLabel>
-                  <GstStatusBadge status={profile.gstStatus} />
-                </div>
-                <ReviewNote status={profile.gstStatus} note={profile.gstReviewNote} />
-                <Input
-                  id="gstNumber"
-                  maxLength={15}
-                  className="h-10 font-mono uppercase sm:max-w-xs"
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                  onBlur={field.onBlur}
-                  aria-invalid={fieldState.invalid}
-                />
-                <p className="text-xs text-muted-foreground">
-                  GalleryZone reviews it before you can reserve artwork.
-                </p>
-                <FieldError errors={[fieldState.error]} />
-              </Field>
-            )}
+            render={({ field, fieldState }) => {
+              const typedGstin = (field.value ?? "").trim().toUpperCase();
+              const savedGstin = (profile.gstNumber ?? "").trim().toUpperCase();
+              const hasUnsavedEdits = typedGstin !== savedGstin;
+              const savedIsValid = savedGstin.length > 0 && GSTIN_PATTERN.test(savedGstin);
+              return (
+                <Field data-invalid={fieldState.invalid} className="sm:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <FieldLabel htmlFor="gstNumber">
+                      GST number{" "}
+                      <span className="font-normal text-muted-foreground">
+                        (required to reserve)
+                      </span>
+                    </FieldLabel>
+                    <GstStatusBadge status={profile.gstStatus} />
+                  </div>
+                  <ReviewNote status={profile.gstStatus} note={profile.gstReviewNote} />
+                  <Input
+                    id="gstNumber"
+                    maxLength={15}
+                    className="h-10 font-mono uppercase sm:max-w-xs"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                    onBlur={field.onBlur}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {/* Live GST-registry check via Cashfree Secure ID. Same
+                      pattern as the artist profile (profile-kyc-form.tsx) —
+                      the API reads the SAVED gstin, not what's typed, so an
+                      unsaved edit has to be saved before the check fires. */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => verifyGstinMutation.mutate()}
+                      disabled={!savedIsValid || hasUnsavedEdits || verifyGstinMutation.isPending}
+                    >
+                      <ShieldCheck className="size-3.5" />
+                      {verifyGstinMutation.isPending
+                        ? "Checking the registry…"
+                        : "Verify with the GST registry"}
+                    </Button>
+                    {hasUnsavedEdits && typedGstin.length > 0 ? (
+                      <span className="text-[11px] text-muted-foreground">
+                        Save your profile first, then check it.
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    GalleryZone reviews it before you can reserve artwork.
+                  </p>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              );
+            }}
           />
 
           <Field data-invalid={Boolean(errors.phone)}>
