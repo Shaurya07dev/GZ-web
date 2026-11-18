@@ -53,13 +53,9 @@ export interface EnquiryList {
 export const enquiryService = {
   submit: (input: NewEnquiry) => http.post<{ id: string }>("/v1/contact", input),
 
-  list: (filter: { type?: EnquiryType | null; status?: EnquiryStatus | null } = {}) => {
-    const params = new URLSearchParams();
-    if (filter.type) params.set("type", filter.type);
-    if (filter.status) params.set("status", filter.status);
-    const query = params.toString();
-    return http.get<EnquiryList>(`/v1/admin/enquiries${query ? `?${query}` : ""}`);
-  },
+  // A plain path with params: the client-routes check reads the path as written, and axios leaves out what is undefined.
+  list: (filter: { type?: EnquiryType | null; status?: EnquiryStatus | null } = {}) =>
+    http.get<EnquiryList>("/v1/admin/enquiries", { params: { type: filter.type ?? undefined, status: filter.status ?? undefined } }),
 
   setStatus: (id: string, status: EnquiryStatus) => http.patch<{ id: string; status: EnquiryStatus }>(`/v1/admin/enquiries/${encodeURIComponent(id)}`, { status }),
 };
