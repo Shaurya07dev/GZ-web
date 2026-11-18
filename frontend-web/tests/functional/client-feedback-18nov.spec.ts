@@ -58,14 +58,6 @@ test('About names both founders as Co-founders; the Artist Terms say when they t
   await expect(page.getByText('Co-founder', { exact: true })).toHaveCount(2);
   await expect(page.getByText('Founder', { exact: true })).toHaveCount(0);
 
-  // The footer's Our Mission link lands on the mission statement itself, not the top of the page.
-  await page.goto('/');
-  const mission = page.getByRole('contentinfo').getByRole('link', { name: 'Our Mission', exact: true });
-  expect(await mission.getAttribute('href')).toBe('/about#mission');
-  await mission.click();
-  await expect(page).toHaveURL(/\/about#mission$/);
-  await expect(page.locator('section#mission').getByRole('heading', { name: /Welcome to/ })).toBeInViewport();
-
   await page.goto('/artist-terms');
   await expect(page.getByText('Effective Date: 18 August 2026')).toBeVisible();
 });
@@ -114,3 +106,25 @@ test('a marketplace card holds every photo of the piece, and the arrows move bet
 
 // The product page's swipe and arrows (ArtworkGallery) render on the server, so the API has to be real or a stub
 // server; they are covered by hand in the PR notes rather than here.
+
+test("the footer's Our Mission is its own page, with the Vision and the Mission as supplied", async ({ page }) => {
+  await open(page, '/');
+  const link = page.getByRole('contentinfo').getByRole('link', { name: 'Our Mission', exact: true });
+  expect(await link.getAttribute('href')).toBe('/our-mission');
+  await link.click();
+  await expect(page).toHaveURL(/\/our-mission$/, { timeout: 30_000 }); // the first visit compiles the page in dev
+
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Vision');
+  await expect(page.getByRole('heading', { name: 'Vision', exact: true })).toBeVisible();
+  await expect(page.getByText("India's most trusted art ecosystem", { exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Mission', exact: true })).toBeVisible();
+  await expect(page.getByText('GalleryZone is committed to building a technology-driven platform')).toBeVisible();
+  // The five commitments, in order.
+  await expect(page.locator('main ul li')).toHaveText([
+    'Support artists by providing greater visibility and market access.',
+    'Offer customers authentic, high-quality artwork through a transparent purchasing experience.',
+    'Build partnerships with businesses that showcase original art in commercial spaces.',
+    'Deliver professional services covering artwork verification, logistics, documentation, and customer support.',
+    'Promote sustainable growth within the art community through ethical business practices.',
+  ]);
+});
