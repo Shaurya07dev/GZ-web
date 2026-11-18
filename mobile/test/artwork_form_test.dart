@@ -201,6 +201,16 @@ Future<void> _pickType(WidgetTester tester, String option) async {
   await tester.pumpAndSettle();
 }
 
+/// Three photos from the camera: the least a piece needs to go to review.
+Future<void> _addPhotos(
+  WidgetTester tester, [
+  int count = minArtworkImages,
+]) async {
+  for (var i = 0; i < count; i++) {
+    await _tap(tester, find.text('Camera'));
+  }
+}
+
 Future<void> _type(WidgetTester tester, String label, String text) async {
   final field = find.widgetWithText(TextFormField, label);
   await tester.ensureVisible(field);
@@ -681,8 +691,53 @@ void main() {
 
       await _type(tester, 'Title', 'Monsoon');
       await _tap(tester, find.text('Submit for review'));
-      expect(find.text('Add at least one photo of the piece'), findsOneWidget);
+      expect(find.textContaining('You can still save a draft'), findsOneWidget);
       expect(repository.submissions, isEmpty);
+    });
+
+    testWidgets(
+      'three photos are needed for review, two are not enough, and a draft needs none',
+      (tester) async {
+        final repository = _Artist();
+        await _open(
+          tester,
+          repository,
+          picker: _Picker(camera: _photo('shot.jpg')),
+        );
+        await _fillBasics(tester);
+        await _type(tester, 'Weight (kg)', '3.5');
+
+        // Two photos: the hint says how many more, and review is refused.
+        await _addPhotos(tester, 2);
+        expect(find.byKey(const Key('photos-required')), findsOneWidget);
+        expect(find.text('Add 1 more (required to submit)'), findsOneWidget);
+        await _tap(tester, find.text('Submit for review'));
+        expect(
+          find.textContaining('You can still save a draft'),
+          findsOneWidget,
+        );
+        expect(repository.submissions, isEmpty);
+
+        // The third photo clears the hint and the piece goes to review.
+        await _addPhotos(tester, 1);
+        expect(find.byKey(const Key('photos-required')), findsNothing);
+        await _tap(tester, find.text('Submit for review'));
+        expect(repository.submissions, hasLength(1));
+        expect(repository.submissions.single.asDraft, isFalse);
+      },
+    );
+
+    testWidgets('a draft can be saved with no photos at all', (tester) async {
+      final repository = _Artist();
+      await _open(tester, repository);
+      await _tap(tester, find.text('Marketplace'));
+      await _choose(tester, 'Category', 'Textile Art');
+      await _choose(tester, 'Medium', 'Ceramic & Mixed Media');
+      await _type(tester, 'Your rate (₹)', '18000');
+      await _type(tester, 'Title', 'Work in progress');
+      await _tap(tester, find.text('Save as draft'));
+      expect(repository.submissions, hasLength(1));
+      expect(repository.submissions.single.asDraft, isTrue);
     });
 
     testWidgets('sends what was typed, in the shapes the API reads', (
@@ -703,7 +758,7 @@ void main() {
       await _type(tester, 'Height', '2.5');
       await _choose(tester, 'Unit', 'cm');
       await _type(tester, 'Weight (kg)', '3.5');
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
 
       final sent = repository.submissions.single;
@@ -714,13 +769,22 @@ void main() {
       expect(sent.dimensions, '24 x 36 x 2.5 cm');
       expect(sent.physical!.weightKg, 3.5);
       expect(sent.asDraft, isFalse);
-      expect(sent.images.single.url, '/device/shot.jpg');
       expect(
-        sent.images.single.id,
-        isNull,
-        reason: 'a new photo, still to upload',
+        sent.images,
+        hasLength(3),
+        reason: 'the three photos a review needs',
       );
-      expect(sent.images.single.altText, 'Monsoon Over Madurai, photo 1');
+      expect(sent.images.first.url, '/device/shot.jpg');
+      expect(
+        sent.images.every((image) => image.id == null),
+        isTrue,
+        reason: 'new photos, still to upload',
+      );
+      expect(sent.images.map((i) => i.altText), [
+        'Monsoon Over Madurai, photo 1',
+        'Monsoon Over Madurai, photo 2',
+        'Monsoon Over Madurai, photo 3',
+      ]);
       expect(find.text('Submitted for review.'), findsOneWidget);
       expect(find.text('View it on the marketplace'), findsNothing);
     });
@@ -735,7 +799,7 @@ void main() {
         picker: _Picker(camera: _photo('shot.jpg')),
       );
       await _fillBasics(tester);
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
 
       expect(find.text('Approved and live.'), findsOneWidget);
@@ -754,7 +818,7 @@ void main() {
       await _fillBasics(tester);
       expect(find.byType(Switch), findsNothing);
       expect(find.text('Policy / certificate number'), findsNothing);
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
 
       final sent = repository.submissions.single;
@@ -772,7 +836,7 @@ void main() {
         tester,
         find.text('List this piece exclusively on GalleryZone'),
       );
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
       expect(repository.submissions.single.exclusive, isTrue);
     });
@@ -808,7 +872,7 @@ void main() {
           picker: _Picker(camera: _photo('shot.jpg')),
         );
         await _fillBasics(tester);
-        await _tap(tester, find.text('Camera'));
+        await _addPhotos(tester);
         await _tap(tester, find.text('Submit for review'));
 
         expect(find.text('Saved as draft.'), findsOneWidget);

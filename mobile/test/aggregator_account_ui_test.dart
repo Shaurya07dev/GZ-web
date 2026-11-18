@@ -16,8 +16,10 @@ import 'package:gallery_zone/features/aggregator/screens/aggregator_dashboard_sc
 import 'package:gallery_zone/features/aggregator/screens/aggregator_profile_screen.dart';
 import 'package:gallery_zone/features/shell/chart_widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:gallery_zone/core/pricing.dart' show AdvanceBasis;
 
 import 'support/aggregator_harness.dart';
+import 'support/catalog_fixtures.dart';
 
 // --- Fixtures --------------------------------------------------------------------
 
@@ -84,6 +86,35 @@ MessageThread _message(String id, String subject, {bool unread = true}) =>
     );
 
 /// An in-memory aggregator service for the account-side screens.
+/// The account fake with a shelf of reservable pieces behind it.
+class _AcctWithStock extends _Acct {
+  _AcctWithStock(this.stock);
+
+  final List<ReservableArtwork> stock;
+
+  @override
+  Future<List<ReservableArtwork>> listReservableInventory() async => stock;
+}
+
+ReservableArtwork _listed(String id, String title, double price) =>
+    ReservableArtwork(
+      artwork: fixtureArtwork(id: id, title: title),
+      offer: AggregatorOffer(
+        artworkId: id,
+        month: 1,
+        offerPrice: price,
+        marketplacePrice: price,
+        advance: 0,
+        advanceRate: 0.05,
+        advanceBase: price,
+        advanceBasis: AdvanceBasis.sellingPrice,
+        canSetPrice: true,
+        daysLeftInListing: 150,
+        deliveryCharge: 0,
+        payable: 0,
+      ),
+    );
+
 class _Acct
     implements AggregatorRepository, AggregatorProfileVerificationRepository {
   _Acct({
@@ -422,6 +453,53 @@ void main() {
         expect(find.text('Yesterday'), findsOneWidget);
         expect(find.text('3 days ago'), findsOneWidget);
         expect(find.text('Display price ₹1,36,500 · 5% advance'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'with no reservations yet, the card shows what was listed most recently',
+      (tester) async {
+        await pumpAggregator(
+          tester,
+          _AcctWithStock([
+            _listed('a1', 'Monsoon Light', 48000),
+            _listed('a2', 'Blue Hour', 91000),
+            _listed('a3', 'Tiger Panel', 30000),
+            _listed('a4', 'Fourth, not shown', 10000),
+          ]),
+          AggregatorDashboardScreen.path,
+        );
+        await tester.scrollUntilVisible(
+          find.text('Browse Inventory'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(
+          find.text(
+            'No reservations yet. These pieces were listed most recently:',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Monsoon Light'), findsOneWidget);
+        expect(find.text('Blue Hour'), findsOneWidget);
+        expect(find.text('Tiger Panel'), findsOneWidget);
+        expect(
+          find.text('Fourth, not shown'),
+          findsNothing,
+          reason: 'the newest three',
+        );
+        expect(
+          find.textContaining('48,000'),
+          findsOneWidget,
+          reason: 'with the price this aggregator would pay',
+        );
+        // The old empty line is gone while there is something to show.
+        expect(
+          find.text(
+            'No activity yet. Reserve an artwork from Inventory to get started.',
+          ),
+          findsNothing,
+        );
       },
     );
 

@@ -20,7 +20,14 @@ class RoleOption {
   final IconData icon;
 }
 
+// Order is the client's (18 Nov 2026): Customer first, then Artist, then Aggregator.
 const roleOptions = <RoleOption>[
+  RoleOption(
+    role: Role.customer,
+    label: 'Customer',
+    description: 'Discover and collect verified original artwork.',
+    icon: LucideIcons.compass,
+  ),
   RoleOption(
     role: Role.artist,
     label: 'Artist',
@@ -32,12 +39,6 @@ const roleOptions = <RoleOption>[
     label: 'Aggregator',
     description: 'Reserve, display, and distribute verified art through your gallery or space.',
     icon: LucideIcons.building2,
-  ),
-  RoleOption(
-    role: Role.customer,
-    label: 'Customer',
-    description: 'Discover and collect verified original artwork.',
-    icon: LucideIcons.compass,
   ),
 ];
 
@@ -104,7 +105,9 @@ String? safeNextPath(String? next) {
   if (next == null || next.isEmpty) return null;
   final uri = Uri.tryParse(next);
   if (uri == null || uri.hasScheme || uri.hasAuthority) return null;
-  if (!next.startsWith('/') || next.startsWith('//') || next.startsWith(r'/\')) {
+  if (!next.startsWith('/') ||
+      next.startsWith('//') ||
+      next.startsWith(r'/\')) {
     return null;
   }
   if (next.contains(RegExp(r'[\u0000-\u001f\u007f\\]'))) return null;

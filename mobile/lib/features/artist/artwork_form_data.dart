@@ -202,9 +202,11 @@ const listingChoices = [
 
 const maxArtworkImages = 8;
 
-/// Guidance, not a rule: the full piece, a close-up of the detail, and the
-/// signature or back. Matches the website's RECOMMENDED_ARTWORK_IMAGES.
-const recommendedArtworkImages = 3;
+/// Client (18 Nov 2026): at least three photos are required to submit a piece
+/// for review, from as many different angles as possible. A draft can still be
+/// saved with fewer, and the server enforces it when a piece moves to review.
+/// Matches the website's MIN_ARTWORK_IMAGES.
+const minArtworkImages = 3;
 
 /// What the API takes for a photo; the repository enforces the same limits when
 /// it uploads, this is so the artist hears about a bad file when they pick it.

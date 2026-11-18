@@ -431,6 +431,23 @@ class _Empty extends StatelessWidget {
 /// Shows both prices side by side. This is the type wall in action: the row
 /// takes an [ArtistArtwork], the only shape carrying `artistPrice`, so a
 /// customer-facing screen physically cannot render this widget.
+/// Statuses whose piece has a public page worth opening from the artist's own
+/// list. The public endpoint serves any status, but a draft or a returned piece
+/// has nothing to show. Same set as the website's HAS_PUBLIC_PAGE.
+const _hasPublicPage = {
+  ArtworkStatus.marketplace,
+  ArtworkStatus.reserved,
+  ArtworkStatus.withAggregator,
+  ArtworkStatus.sold,
+  ArtworkStatus.settlementComplete,
+  ArtworkStatus.delivered,
+  ArtworkStatus.completed,
+};
+
+/// Whether tapping this artist's piece opens its public page.
+bool opensPublicPage(Artwork artwork) =>
+    _hasPublicPage.contains(artwork.status);
+
 class ArtistArtworkRow extends ConsumerWidget {
   const ArtistArtworkRow({super.key, required this.entry});
 
@@ -441,78 +458,88 @@ class ArtistArtworkRow extends ConsumerWidget {
     final theme = Theme.of(context);
     final artwork = entry.artwork;
     final editState = artworkEditState(artwork);
+    final opensPage = opensPublicPage(artwork);
     return PortalCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                child: SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: ArtworkImageView(url: artwork.thumbnailUrl),
+          // A live piece opens its public page, as a buyer sees it; a draft or
+          // a returned one has nothing to show yet.
+          InkWell(
+            key: opensPage ? Key('open-${artwork.id}') : null,
+            onTap: opensPage
+                ? () => context.push('/marketplace/${artwork.id}')
+                : null,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: ArtworkImageView(url: artwork.thumbnailUrl),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        artwork.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        [
+                          humanize(artwork.medium),
+                          if (artwork.yearCreated != null)
+                            '${artwork.yearCreated}',
+                        ].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          ArtworkStatusPill(status: artwork.status),
+                          if (artwork.rarityType != null)
+                            RarityBadge(rarity: artwork.rarityType!),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
+                    Text('Your price', style: theme.textTheme.labelSmall),
                     Text(
-                      artwork.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      formatInr(entry.artistPrice),
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.tertiary,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Text('Listed price', style: theme.textTheme.labelSmall),
                     Text(
-                      [
-                        humanize(artwork.medium),
-                        if (artwork.yearCreated != null)
-                          '${artwork.yearCreated}',
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ArtworkStatusPill(status: artwork.status),
-                        if (artwork.rarityType != null)
-                          RarityBadge(rarity: artwork.rarityType!),
-                      ],
+                      formatInr(artwork.customerPrice),
+                      style: theme.textTheme.bodySmall,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Your price', style: theme.textTheme.labelSmall),
-                  Text(
-                    formatInr(entry.artistPrice),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.tertiary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('Listed price', style: theme.textTheme.labelSmall),
-                  Text(
-                    formatInr(artwork.customerPrice),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
           const Divider(height: 20),
           Text(

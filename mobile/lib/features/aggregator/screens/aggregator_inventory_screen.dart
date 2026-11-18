@@ -15,6 +15,7 @@ import '../../account/widgets/notification_bell.dart';
 import '../../marketplace/providers/marketplace_providers.dart'
     show wishlistProvider;
 import '../../marketplace/widgets/artwork_card.dart';
+import '../../marketplace/widgets/photo_pager.dart';
 import '../../shell/portal_widgets.dart';
 import '../inventory_filters.dart';
 import '../providers/aggregator_providers.dart';
@@ -604,7 +605,7 @@ class _ReservableCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    child: ArtworkImageView(url: artwork.thumbnailUrl),
+                    child: PhotoPager(urls: photoUrlsOf(artwork)),
                   ),
                   Positioned(
                     top: 6,
@@ -700,7 +701,7 @@ class _ReservableRow extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    child: ArtworkImageView(url: artwork.thumbnailUrl),
+                    child: PhotoPager(urls: photoUrlsOf(artwork)),
                   ),
                   Positioned(
                     top: 6,
@@ -734,7 +735,7 @@ class _ReservableRow extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      artwork.medium,
+                      humanize(artwork.medium),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall,

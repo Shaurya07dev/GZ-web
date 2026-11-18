@@ -19,6 +19,7 @@ import '../../auth/providers/auth_providers.dart'
     show accountProvider, authErrorMessage;
 import '../../account/widgets/cart_action.dart';
 import '../providers/marketplace_providers.dart';
+import '../widgets/photo_pager.dart';
 import '../widgets/artwork_card.dart';
 import '../widgets/social_glyphs.dart';
 
@@ -605,6 +606,13 @@ class _Gallery extends StatefulWidget {
 
 class _GalleryState extends State<_Gallery> {
   int _activeIndex = 0;
+  final _pager = PageController();
+
+  @override
+  void dispose() {
+    _pager.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -632,20 +640,14 @@ class _GalleryState extends State<_Gallery> {
                   tag: widget.heroTag,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.lg),
-                    // A thumbnail tap cross-fades the photo instead of
-                    // swapping it in a single frame.
-                    child: AnimatedSwitcher(
-                      duration: motionOf(context)
-                          ? AppMotion.medium
-                          : Duration.zero,
-                      layoutBuilder: (current, previous) => Stack(
-                        fit: StackFit.expand,
-                        children: [...previous, ?current],
-                      ),
-                      child: ArtworkImageView(
-                        key: ValueKey(activeUrl),
-                        url: activeUrl,
-                      ),
+                    // Swipe the big photo, or tap a thumbnail: either moves the
+                    // other, so every angle is one gesture away.
+                    child: PhotoPager(
+                      urls: sorted.isEmpty
+                          ? [widget.fallbackUrl]
+                          : [for (final image in sorted) image.url],
+                      controller: _pager,
+                      onPageChanged: (i) => setState(() => _activeIndex = i),
                     ),
                   ),
                 ),
@@ -693,7 +695,11 @@ class _GalleryState extends State<_Gallery> {
                 onTap: () {
                   if (index == _activeIndex) return;
                   HapticFeedback.selectionClick();
-                  setState(() => _activeIndex = index);
+                  _pager.animateToPage(
+                    index,
+                    duration: motionOf(context) ? AppMotion.medium : Duration.zero,
+                    curve: AppMotion.standard,
+                  );
                 },
                 child: AnimatedContainer(
                   duration: AppMotion.fast,

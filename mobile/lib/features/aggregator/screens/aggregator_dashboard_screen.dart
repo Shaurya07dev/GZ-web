@@ -7,8 +7,12 @@ import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/motion.dart';
 import '../../../data/models/aggregator.dart';
+import '../../../data/repositories/aggregator_repository.dart'
+    show ReservableArtwork;
+import '../../../core/theme/app_theme.dart' show AppRadius;
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/auth.dart';
+import '../../marketplace/widgets/artwork_card.dart' show ArtworkImageView;
 import '../../shell/display_clock.dart';
 import '../../account/widgets/notification_bell.dart';
 import '../../shell/portal_menu.dart';
@@ -445,6 +449,70 @@ class _SalesConversion extends StatelessWidget {
 
 /// The newest five reservations, sales and returns, read off the live holdings - no
 /// stored feed.
+/// One recently listed piece: its photo, title, artist and the price this
+/// aggregator would pay. A tap opens the piece.
+class _NewPieceRow extends StatelessWidget {
+  const _NewPieceRow({required this.item});
+
+  final ReservableArtwork item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final artwork = item.artwork;
+    return Pressable(
+      onTap: () => context.push('/marketplace/${artwork.id}'),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      color: theme.cardTheme.color,
+      side: BorderSide(color: theme.colorScheme.outline),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: ArtworkImageView(url: artwork.thumbnailUrl),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    artwork.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    artwork.artistName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              formatInr(item.offer.offerPrice),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontFeatures: const [FontFeature.liningFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RecentActivity extends ConsumerWidget {
   const _RecentActivity();
 
@@ -468,6 +536,12 @@ class _RecentActivity extends ConsumerWidget {
             ))
             .take(5)
             .toList();
+    // The API sends the inventory newest first.
+    final newest =
+        (ref.watch(aggregatorInventoryProvider).value ??
+                const <ReservableArtwork>[])
+            .take(3)
+            .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -490,11 +564,21 @@ class _RecentActivity extends ConsumerWidget {
             ),
           )
         else if (recent.isEmpty) ...[
+          // Nothing reserved yet: show what was listed most recently instead of an
+          // empty box, so the card is a way in, not a dead end.
           Text(
-            'No activity yet. Reserve an artwork from Inventory to get started.',
+            newest.isEmpty
+                ? 'No activity yet. Reserve an artwork from Inventory to get started.'
+                : 'No reservations yet. These pieces were listed most recently:',
             style: theme.textTheme.bodySmall,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          for (final item in newest)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _NewPieceRow(item: item),
+            ),
+          const SizedBox(height: 2),
           Align(
             alignment: Alignment.centerLeft,
             child: OutlinedButton(

@@ -353,10 +353,15 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       _revealFirstError();
       return;
     }
-    // A listing with nothing to look at is the one thing a review can't use.
-    // Drafts, and edits, are the artist's own business.
-    if (mode == _SubmitMode.review && !_isEdit && _images.isEmpty) {
-      setState(() => _error = 'Add at least one photo of the piece');
+    // Three photos before a new piece goes to review, from as many angles as
+    // possible. Drafts, and edits, are the artist's own business.
+    if (mode == _SubmitMode.review &&
+        !_isEdit &&
+        _images.length < minArtworkImages) {
+      setState(
+        () => _error =
+            'Add at least $minArtworkImages photos (as many different angles as you can) to submit for review. You can still save a draft.',
+      );
       return;
     }
 
@@ -734,8 +739,8 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         ),
         const SizedBox(height: 6),
         Text(
-          'We recommend at least $recommendedArtworkImages photos: the full piece, a close-up of the detail, and the '
-          'signature or back. Listings with more photos earn more trust from buyers.',
+          'Add at least $minArtworkImages photos to submit for review, and as many different angles as you can: the full piece, close-ups of the detail, and the '
+          'signature and back. Buyers and galleries can swipe through every photo.',
           style: theme.textTheme.labelSmall?.copyWith(
             color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
             height: 1.4,
@@ -771,12 +776,12 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           '${_images.length} / $maxArtworkImages uploaded',
           style: theme.textTheme.labelSmall,
         ),
-        if (_images.length < recommendedArtworkImages)
+        if (_images.length < minArtworkImages)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
-              'Add ${recommendedArtworkImages - _images.length} more (recommended)',
-              key: const Key('photos-recommended'),
+              'Add ${minArtworkImages - _images.length} more (required to submit)',
+              key: const Key('photos-required'),
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.tertiary,
               ),
