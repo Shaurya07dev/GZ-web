@@ -34,3 +34,26 @@ Future<void> openExternal(BuildContext context, String url) async {
   if (opened) return;
   messenger.showSnackBar(SnackBar(content: Text("Couldn't open $url")));
 }
+
+/// The website's step-by-step guide to linking an NFC tag, with a voiceover. It
+/// is a page of the site (the same one the artist dashboard offers), so it opens
+/// in the app's browser view and any later change to it reaches the app with
+/// no update.
+const nfcGuideUrl = '$galleryZoneSite/guides/link-nfc.html';
+
+/// Opens [url] in a browser view that sits inside the app (a Custom Tab on
+/// Android, a Safari view on iPhone), so a guide can be read and closed without
+/// leaving the app. Falls back to the phone's browser, then to a message.
+Future<void> openInApp(BuildContext context, String url) async {
+  final messenger = ScaffoldMessenger.of(context);
+  var opened = false;
+  try {
+    opened = await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
+  } catch (_) {
+    opened = false;
+  }
+  if (opened || !context.mounted) return;
+  await openExternal(context, url);
+  messenger.hideCurrentSnackBar();
+  // openExternal shows its own message if that failed too.
+}

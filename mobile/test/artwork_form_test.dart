@@ -8,6 +8,7 @@ import 'package:gallery_zone/data/models/pricing_rules.dart';
 import 'package:gallery_zone/data/repositories/artist_repository.dart';
 import 'package:gallery_zone/data/storage/mock_db.dart';
 import 'package:gallery_zone/features/artist/artwork_form_data.dart';
+import 'package:gallery_zone/features/artist/painting_styles.dart';
 import 'package:gallery_zone/features/artist/providers/artist_providers.dart';
 import 'package:gallery_zone/features/artist/screens/artwork_upload_screen.dart';
 import 'package:gallery_zone/features/auth/providers/auth_providers.dart';
@@ -45,7 +46,6 @@ PricingRules _rules({double markup = 0.3, double gst = 0.05}) => PricingRules(
   nfcTagCharge: 500,
   subscriptionFee: 0,
   deliveryCharge: 2500,
-  insuranceThreshold: 20000,
 );
 
 class _Artist implements ArtistRepository {
@@ -190,6 +190,27 @@ Future<void> _choose(WidgetTester tester, String label, String option) async {
   await tester.pumpAndSettle();
 }
 
+/// "Type of artwork" is a searchable sheet, not a dropdown: open it and tap the type.
+Future<void> _pickType(WidgetTester tester, String option) async {
+  final field = find.text('Type of artwork');
+  await tester.ensureVisible(field);
+  await tester.pumpAndSettle();
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await tester.pumpAndSettle();
+}
+
+/// Three photos from the camera: the least a piece needs to go to review.
+Future<void> _addPhotos(
+  WidgetTester tester, [
+  int count = minArtworkImages,
+]) async {
+  for (var i = 0; i < count; i++) {
+    await _tap(tester, find.text('Camera'));
+  }
+}
+
 Future<void> _type(WidgetTester tester, String label, String text) async {
   final field = find.widgetWithText(TextFormField, label);
   await tester.ensureVisible(field);
@@ -277,14 +298,39 @@ void main() {
       },
     );
 
-    test('the type of artwork uses the 28 regional traditions, or the artist\'s own words', () {
+    test('the type of artwork offers Indian and world art, or the artist\'s own words', () {
+      final india = artworkTypeOptions.where(
+        (o) => o.group == ArtworkTypeGroup.india,
+      );
+      final world = artworkTypeOptions.where(
+        (o) => o.group == ArtworkTypeGroup.world,
+      );
+      expect(india, hasLength(28), reason: 'the survey traditions, by state');
+      expect(
+        world,
+        hasLength(paintingStyles.length),
+        reason: 'every world art form',
+      );
+      expect(paintingStyles, hasLength(97));
       expect(
         artworkTypes,
-        hasLength(29),
-        reason: '28 survey traditions plus Other',
+        hasLength(28 + 97 + 1),
+        reason: 'Indian, world and Other, as on the website',
       );
       expect(artworkTypes.first.label, 'Andhra Pradesh: Kalamkari');
+      expect(
+        artworkTypes[28].label,
+        paintingStyles.first.name,
+        reason: 'world forms follow the Indian ones',
+      );
       expect(artworkTypes.last.label, 'Other');
+      expect(artworkTypeLabel('other'), 'Other');
+      expect(artworkTypeLabel(''), '');
+      expect(artworkTypeLabel('Warli Painting'), 'Warli Painting');
+      expect(artworkTypeFields(paintingStyles.first.name), (
+        type: paintingStyles.first.name,
+        other: '',
+      ), reason: 'a world form is a known type, not "Other"');
       expect(artworkTypeFields('Rajasthan: Phad Painting'), (
         type: 'Rajasthan: Phad Painting',
         other: '',
@@ -403,10 +449,7 @@ void main() {
       (tester) async {
         await _open(tester, _Artist(pan: null));
 
-        expect(
-          find.text('Finish KYC before this can go live'),
-          findsOneWidget,
-        );
+        expect(find.text('Finish KYC before this can go live'), findsOneWidget);
         expect(_enabled(tester, 'Submit for review'), isFalse);
         expect(_enabled(tester, 'Save as draft'), isTrue);
       },
@@ -604,7 +647,6 @@ void main() {
         expect(sent.dimensions, isNull);
         expect(sent.artworkType, isNull);
         expect(sent.paintingStyle, isNull);
-        expect(sent.insuranceNumber, isNull);
         expect(find.text('Saved as draft.'), findsOneWidget);
         expect(
           find.textContaining('continue editing it any time from My Artworks'),
@@ -649,8 +691,53 @@ void main() {
 
       await _type(tester, 'Title', 'Monsoon');
       await _tap(tester, find.text('Submit for review'));
-      expect(find.text('Add at least one photo of the piece'), findsOneWidget);
+      expect(find.textContaining('You can still save a draft'), findsOneWidget);
       expect(repository.submissions, isEmpty);
+    });
+
+    testWidgets(
+      'three photos are needed for review, two are not enough, and a draft needs none',
+      (tester) async {
+        final repository = _Artist();
+        await _open(
+          tester,
+          repository,
+          picker: _Picker(camera: _photo('shot.jpg')),
+        );
+        await _fillBasics(tester);
+        await _type(tester, 'Weight (kg)', '3.5');
+
+        // Two photos: the hint says how many more, and review is refused.
+        await _addPhotos(tester, 2);
+        expect(find.byKey(const Key('photos-required')), findsOneWidget);
+        expect(find.text('Add 1 more (required to submit)'), findsOneWidget);
+        await _tap(tester, find.text('Submit for review'));
+        expect(
+          find.textContaining('You can still save a draft'),
+          findsOneWidget,
+        );
+        expect(repository.submissions, isEmpty);
+
+        // The third photo clears the hint and the piece goes to review.
+        await _addPhotos(tester, 1);
+        expect(find.byKey(const Key('photos-required')), findsNothing);
+        await _tap(tester, find.text('Submit for review'));
+        expect(repository.submissions, hasLength(1));
+        expect(repository.submissions.single.asDraft, isFalse);
+      },
+    );
+
+    testWidgets('a draft can be saved with no photos at all', (tester) async {
+      final repository = _Artist();
+      await _open(tester, repository);
+      await _tap(tester, find.text('Marketplace'));
+      await _choose(tester, 'Category', 'Textile Art');
+      await _choose(tester, 'Medium', 'Ceramic & Mixed Media');
+      await _type(tester, 'Your rate (₹)', '18000');
+      await _type(tester, 'Title', 'Work in progress');
+      await _tap(tester, find.text('Save as draft'));
+      expect(repository.submissions, hasLength(1));
+      expect(repository.submissions.single.asDraft, isTrue);
     });
 
     testWidgets('sends what was typed, in the shapes the API reads', (
@@ -664,14 +751,14 @@ void main() {
       );
       await _fillBasics(tester);
       await _type(tester, 'Description', 'Cast in 2024.');
-      await _choose(tester, 'Type of artwork', 'Rajasthan: Phad Painting');
+      await _pickType(tester, 'Rajasthan: Phad Painting');
       await _type(tester, 'Year created', '2024');
       await _type(tester, 'Length', '24');
       await _type(tester, 'Width', '36.0');
       await _type(tester, 'Height', '2.5');
       await _choose(tester, 'Unit', 'cm');
       await _type(tester, 'Weight (kg)', '3.5');
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
 
       final sent = repository.submissions.single;
@@ -682,13 +769,22 @@ void main() {
       expect(sent.dimensions, '24 x 36 x 2.5 cm');
       expect(sent.physical!.weightKg, 3.5);
       expect(sent.asDraft, isFalse);
-      expect(sent.images.single.url, '/device/shot.jpg');
       expect(
-        sent.images.single.id,
-        isNull,
-        reason: 'a new photo, still to upload',
+        sent.images,
+        hasLength(3),
+        reason: 'the three photos a review needs',
       );
-      expect(sent.images.single.altText, 'Monsoon Over Madurai, photo 1');
+      expect(sent.images.first.url, '/device/shot.jpg');
+      expect(
+        sent.images.every((image) => image.id == null),
+        isTrue,
+        reason: 'new photos, still to upload',
+      );
+      expect(sent.images.map((i) => i.altText), [
+        'Monsoon Over Madurai, photo 1',
+        'Monsoon Over Madurai, photo 2',
+        'Monsoon Over Madurai, photo 3',
+      ]);
       expect(find.text('Submitted for review.'), findsOneWidget);
       expect(find.text('View it on the marketplace'), findsNothing);
     });
@@ -703,7 +799,7 @@ void main() {
         picker: _Picker(camera: _photo('shot.jpg')),
       );
       await _fillBasics(tester);
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
 
       expect(find.text('Approved and live.'), findsOneWidget);
@@ -722,12 +818,10 @@ void main() {
       await _fillBasics(tester);
       expect(find.byType(Switch), findsNothing);
       expect(find.text('Policy / certificate number'), findsNothing);
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
 
       final sent = repository.submissions.single;
-      expect(sent.insuranceOpted, isFalse);
-      expect(sent.insuranceNumber, isNull);
     });
 
     testWidgets('exclusivity is explicit and submitted', (tester) async {
@@ -742,7 +836,7 @@ void main() {
         tester,
         find.text('List this piece exclusively on GalleryZone'),
       );
-      await _tap(tester, find.text('Camera'));
+      await _addPhotos(tester);
       await _tap(tester, find.text('Submit for review'));
       expect(repository.submissions.single.exclusive, isTrue);
     });
@@ -778,7 +872,7 @@ void main() {
           picker: _Picker(camera: _photo('shot.jpg')),
         );
         await _fillBasics(tester);
-        await _tap(tester, find.text('Camera'));
+        await _addPhotos(tester);
         await _tap(tester, find.text('Submit for review'));
 
         expect(find.text('Saved as draft.'), findsOneWidget);
@@ -896,9 +990,6 @@ void main() {
                 listingType: ListingType.marketplaceOnly,
                 artworkType: 'Rajasthan: Phad Painting',
                 paintingStyle: 'Warli Painting',
-                insuranceNumber: 'HD-1',
-                insuranceStatus: ReviewStatus.submitted,
-                insured: true,
                 dimensions: '24 x 36 in',
                 images: const [
                   ArtworkImage(
@@ -984,7 +1075,6 @@ void main() {
       expect(patch.medium, 'oil-on-canvas');
       expect(patch.artworkType, 'Rajasthan: Phad Painting');
       expect(patch.paintingStyle, 'Warli Painting');
-      expect(patch.insuranceNumber, isNull);
       expect(find.text('Changes saved.'), findsOneWidget);
     });
 
@@ -996,10 +1086,7 @@ void main() {
       );
       await _open(tester, _Artist(existing: exclusive), artworkId: 'aw-9');
 
-      expect(
-        find.text('Listed exclusively on GalleryZone'),
-        findsOneWidget,
-      );
+      expect(find.text('Listed exclusively on GalleryZone'), findsOneWidget);
       expect(
         tester.widget<Checkbox>(find.byType(Checkbox).last).onChanged,
         isNull,

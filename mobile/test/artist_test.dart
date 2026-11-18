@@ -26,7 +26,6 @@ SubmitArtworkInput _input({
   medium: 'Oil on Canvas',
   artistPrice: price,
   listingType: ListingType.marketplaceOnly,
-  insuranceOpted: false,
   images: const [
     ArtworkImage(
       url: '/artworks/bird.png',

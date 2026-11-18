@@ -1,5 +1,6 @@
 import 'package:gallery_zone/data/models/artist.dart';
 import 'package:gallery_zone/data/models/artwork.dart';
+import 'package:gallery_zone/data/models/artwork_reservation.dart';
 import 'package:gallery_zone/data/models/artwork_filters.dart';
 import 'package:gallery_zone/data/models/marketplace.dart';
 import 'package:gallery_zone/data/models/passport.dart';
@@ -30,6 +31,16 @@ class FakeCatalog implements ArtworkRepository {
   @override
   Future<Artwork?> get(String id) async =>
       artworks.where((a) => a.id == id).firstOrNull;
+
+  /// Nobody holds anything in these tests.
+  @override
+  Future<ArtworkReservation> reservation(String artworkId) async =>
+      const ArtworkReservation(
+        reserved: false,
+        heldByCustomerId: null,
+        expiresAt: null,
+        secondsRemaining: 0,
+      );
 
   @override
   Future<List<Artwork>> getMany(Iterable<String> ids) async => [

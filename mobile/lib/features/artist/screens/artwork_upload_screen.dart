@@ -21,6 +21,7 @@ import '../artwork_form_data.dart';
 import '../painting_styles.dart';
 import '../providers/artist_providers.dart';
 import '../widgets/artist_widgets.dart';
+import '../widgets/artwork_type_picker.dart';
 import '../widgets/painting_style_picker.dart';
 
 enum _SubmitMode { draft, review }
@@ -297,6 +298,14 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
     }
   }
 
+  // --- Type of artwork ---------------------------------------------------------------
+
+  Future<void> _pickType() async {
+    final pick = await showArtworkTypePicker(context, selected: _type);
+    if (pick == null || !mounted) return;
+    setState(() => _type = pick.value ?? '');
+  }
+
   // --- Painting style ----------------------------------------------------------------
 
   Future<void> _pickStyle() async {
@@ -344,10 +353,15 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
       _revealFirstError();
       return;
     }
-    // A listing with nothing to look at is the one thing a review can't use.
-    // Drafts, and edits, are the artist's own business.
-    if (mode == _SubmitMode.review && !_isEdit && _images.isEmpty) {
-      setState(() => _error = 'Add at least one photo of the piece');
+    // Three photos before a new piece goes to review, from as many angles as
+    // possible. Drafts, and edits, are the artist's own business.
+    if (mode == _SubmitMode.review &&
+        !_isEdit &&
+        _images.length < minArtworkImages) {
+      setState(
+        () => _error =
+            'Add at least $minArtworkImages photos (as many different angles as you can) to submit for review. You can still save a draft.',
+      );
       return;
     }
 
@@ -502,9 +516,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         profile.hasValue &&
         profile.requireValue.aadhaarStatus == ReviewStatus.approved;
     final kycMissing =
-        !_isEdit &&
-        profile.hasValue &&
-        (panMissing || !aadhaarApproved);
+        !_isEdit && profile.hasValue && (panMissing || !aadhaarApproved);
     final panPending = !_isEdit && profile.isLoading;
 
     // Two different things, and conflating them is what made the old banner
@@ -725,6 +737,15 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           'you save.',
           style: theme.textTheme.labelSmall,
         ),
+        const SizedBox(height: 6),
+        Text(
+          'Add at least $minArtworkImages photos to submit for review, and as many different angles as you can: the full piece, close-ups of the detail, and the '
+          'signature and back. Buyers and galleries can swipe through every photo.',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+            height: 1.4,
+          ),
+        ),
         const SizedBox(height: 12),
         _ImageGrid(
           images: _images,
@@ -755,6 +776,17 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           '${_images.length} / $maxArtworkImages uploaded',
           style: theme.textTheme.labelSmall,
         ),
+        if (_images.length < minArtworkImages)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              'Add ${minArtworkImages - _images.length} more (required to submit)',
+              key: const Key('photos-required'),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.tertiary,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -828,11 +860,24 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           onChanged: (value) => setState(() => _medium = value),
         ),
         const SizedBox(height: 14),
-        _OptionField(
-          label: 'Type of artwork',
-          value: _type,
-          options: artworkTypes,
-          onChanged: (value) => setState(() => _type = value),
+        InkWell(
+          onTap: _pickType,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: 'Type of artwork',
+              suffixIcon: const Icon(LucideIcons.chevronsUpDown, size: 16),
+              helperText:
+                  'An Indian tradition by state, one of ${paintingStyles.length} world art forms, or your own.',
+              helperMaxLines: 2,
+            ),
+            isEmpty: _type.isEmpty,
+            child: Text(
+              artworkTypeLabel(_type),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ),
         if (_type == 'other') ...[
           const SizedBox(height: 10),

@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/content.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../marketplace/widgets/artwork_card.dart' show EmptyState;
+import '../important_buys.dart';
 import '../providers/content_providers.dart';
 
 class ArtSuppliesScreen extends ConsumerStatefulWidget {
@@ -27,17 +28,6 @@ class _ArtSuppliesScreenState extends ConsumerState<ArtSuppliesScreen> {
   void dispose() {
     _search.dispose();
     super.dispose();
-  }
-
-  bool _matches(AffiliateProduct product) {
-    if (_category != null && product.category != _category) return false;
-    final words = _search.text
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((word) => word.isNotEmpty);
-    final text = '${product.title} ${product.brand ?? ''} ${product.category}'
-        .toLowerCase();
-    return words.every(text.contains);
   }
 
   @override
@@ -107,80 +97,7 @@ class _ArtSuppliesScreenState extends ConsumerState<ArtSuppliesScreen> {
                         child: const Text('Try again'),
                       ),
                     ),
-                    data: (all) {
-                      final categories =
-                          all.map((item) => item.category).toSet().toList()
-                            ..sort();
-                      final shown = all.where(_matches).toList();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (categories.length > 1)
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  ChoiceChip(
-                                    label: Text('All ${all.length}'),
-                                    selected: _category == null,
-                                    onSelected: (_) =>
-                                        setState(() => _category = null),
-                                  ),
-                                  for (final category in categories) ...[
-                                    const SizedBox(width: 8),
-                                    ChoiceChip(
-                                      label: Text(
-                                        '$category ${all.where((item) => item.category == category).length}',
-                                      ),
-                                      selected: _category == category,
-                                      onSelected: (_) => setState(
-                                        () => _category = _category == category
-                                            ? null
-                                            : category,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          const SizedBox(height: 14),
-                          if (shown.isEmpty)
-                            EmptyState(
-                              icon: LucideIcons.packageSearch,
-                              title: all.isEmpty
-                                  ? 'The shelf is being stocked'
-                                  : 'Nothing matches that',
-                              description: all.isEmpty
-                                  ? 'Our recommended supplies will appear here soon.'
-                                  : 'Try a shorter search, or show every category.',
-                            )
-                          else
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final columns = constraints.maxWidth >= 900
-                                    ? 4
-                                    : constraints.maxWidth >= 600
-                                    ? 3
-                                    : 2;
-                                return GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: shown.length,
-                                  gridDelegate:
-                                      SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: columns,
-                                        childAspectRatio: 0.65,
-                                        crossAxisSpacing: 10,
-                                        mainAxisSpacing: 10,
-                                      ),
-                                  itemBuilder: (context, index) =>
-                                      _SupplyCard(product: shown[index]),
-                                );
-                              },
-                            ),
-                        ],
-                      );
-                    },
+                    data: (all) => _shelf(context, all),
                   ),
                 ],
               ),
@@ -188,6 +105,171 @@ class _ArtSuppliesScreenState extends ConsumerState<ArtSuppliesScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _shelf(BuildContext context, List<AffiliateProduct> all) {
+    final theme = Theme.of(context);
+    final shown = shelfProducts(all, pill: _category, query: _search.text);
+    final hasImportant = all.any((p) => p.category == importantBuysCategory);
+    final others = ({
+      for (final item in all)
+        if (item.category != importantBuysCategory) item.category,
+    }).toList()..sort();
+    final segment = showsImportantSegment(
+      shown,
+      pill: _category,
+      query: _search.text,
+    );
+    final important = segment
+        ? [
+            for (final p in shown)
+              if (p.category == importantBuysCategory) p,
+          ]
+        : const <AffiliateProduct>[];
+    final rest = segment
+        ? [
+            for (final p in shown)
+              if (p.category != importantBuysCategory) p,
+          ]
+        : shown;
+
+    Widget pill(String label, String? value) => Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: _category == value,
+        onSelected: (_) =>
+            setState(() => _category = _category == value ? null : value),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (others.isNotEmpty || hasImportant)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: Text('All ${all.length}'),
+                  selected: _category == null,
+                  onSelected: (_) => setState(() => _category = null),
+                ),
+                const SizedBox(width: 8),
+                if (hasImportant)
+                  pill(
+                    '$importantBuysCategory ${all.where((p) => p.category == importantBuysCategory).length}',
+                    importantBuysCategory,
+                  ),
+                pill('Newest', newestPill),
+                for (final category in others)
+                  pill(
+                    '$category ${all.where((item) => item.category == category).length}',
+                    category,
+                  ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 14),
+        if (shown.isEmpty)
+          EmptyState(
+            icon: LucideIcons.packageSearch,
+            title: all.isEmpty
+                ? 'The shelf is being stocked'
+                : 'Nothing matches that',
+            description: all.isEmpty
+                ? 'Our recommended supplies will appear here soon.'
+                : 'Try a shorter search, or show every category.',
+          )
+        else ...[
+          if (important.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          importantBuysCategory,
+                          style: theme.textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'What every artist needs to pack and send a piece out.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _SupplyGrid(products: important),
+                ],
+              ),
+            ),
+          if (rest.isNotEmpty) ...[
+            if (important.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              Text('All supplies', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 10),
+            ],
+            _SupplyGrid(products: rest),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// The products as a grid: two to a row on a phone, more as the window widens.
+/// A card's height follows its width and the text size, so the note about local
+/// shops never overflows a narrow phone or a large font.
+class _SupplyGrid extends StatelessWidget {
+  const _SupplyGrid({required this.products});
+
+  final List<AffiliateProduct> products;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900
+            ? 4
+            : constraints.maxWidth >= 600
+            ? 3
+            : 2;
+        const gap = 10.0;
+        final cardWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        final textScale = MediaQuery.textScalerOf(context)
+            .scale(1)
+            .clamp(1.0, 1.6);
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: products.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: gap,
+            mainAxisSpacing: gap,
+            mainAxisExtent: 214 * textScale + cardWidth * 0.8,
+          ),
+          itemBuilder: (context, index) =>
+              _SupplyCard(product: products[index]),
+        );
+      },
     );
   }
 }
@@ -254,6 +336,19 @@ class _SupplyCard extends StatelessWidget {
               color: theme.colorScheme.tertiary,
             ),
           ),
+          if (buyableLocally(product))
+            Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Text(
+                localShopNote,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontSize: 10.5,
+                  height: 1.25,
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: product.url.isEmpty

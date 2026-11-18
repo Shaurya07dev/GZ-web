@@ -134,6 +134,76 @@ void main() {
   );
 
   testWidgets(
+    'Important buys leads the shelf in the client\'s order, and all but the NFC tag say they can be bought locally',
+    (tester) async {
+      // The client's six, added in the wrong order on purpose.
+      const nfc = 'Anti-Metal NFC Tags (NTAG213) 25 mm Round Stickers';
+      const hook = 'A. Y .S Metal Hooks for MDF Board, Pack of 24';
+      const nail = 'JIALTO Nail Free Seamless Adhesive Wall Hook';
+      const paper = 'White Paper Roll 24 Inch X 5 Meter';
+      const bubble = 'Bubble Wrap Roll, Heavy Duty 40 GSM';
+      const tube = 'Cardboard Mailing Tube, Pack of 2';
+      const blockNote = 'What every artist needs to pack and send a piece out.';
+      await _show(
+        tester,
+        const ArtSuppliesScreen(),
+        _Content(
+          products: [
+            _product('1', 'Studio brush set', 'Brushes'),
+            _product('2', tube, 'Important buys'),
+            _product('3', bubble, 'Important buys'),
+            _product('4', paper, 'Important buys'),
+            _product('5', nail, 'Important buys'),
+            _product('6', hook, 'Important buys'),
+            _product('7', nfc, 'Important buys'),
+          ],
+        ),
+      );
+
+      expect(
+        find.text(blockNote),
+        findsOneWidget,
+        reason: 'the block is on the shelf',
+      );
+      expect(find.text('All supplies'), findsOneWidget);
+
+      // Row by row, left to right: NFC, hanger, sticky nail, paper roll, bubble wrap, packaging tube.
+      final titles = [nfc, hook, nail, paper, bubble, tube];
+      // A card's title sits a little higher or lower depending on its note, so a row
+      // is "within 200 dp", not "the same y".
+      final order = [...titles]
+        ..sort((a, b) {
+          final pa = tester.getTopLeft(find.text(a));
+          final pb = tester.getTopLeft(find.text(b));
+          final rowA = (pa.dy / 200).floor();
+          final rowB = (pb.dy / 200).floor();
+          return rowA != rowB ? rowA.compareTo(rowB) : pa.dx.compareTo(pb.dx);
+        });
+      expect(order, titles);
+      expect(
+        tester.getTopLeft(find.text('Studio brush set')).dy,
+        greaterThan(tester.getTopLeft(find.text(tube)).dy),
+        reason: 'the rest of the shelf comes after the block',
+      );
+
+      expect(
+        find.text('You can purchase them locally to save time'),
+        findsNWidgets(5),
+        reason: 'every important buy but the NFC tag',
+      );
+
+      // A pill, like a search, lists products without the block.
+      await tester.ensureVisible(find.text('Newest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Newest'));
+      await tester.pumpAndSettle();
+      expect(find.text(blockNote), findsNothing);
+      expect(find.text('All supplies'), findsNothing);
+      expect(find.text(nfc), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'artist blog form enforces the API minimums and submits trimmed text',
     (tester) async {
       final repository = _Content();

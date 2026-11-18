@@ -7,8 +7,12 @@ import '../../../core/adaptive.dart';
 import '../../../core/format.dart';
 import '../../../core/motion.dart';
 import '../../../data/models/aggregator.dart';
+import '../../../data/repositories/aggregator_repository.dart'
+    show ReservableArtwork;
+import '../../../core/theme/app_theme.dart' show AppRadius;
 import '../../../data/models/artist_portal.dart';
 import '../../../data/models/auth.dart';
+import '../../marketplace/widgets/artwork_card.dart' show ArtworkImageView;
 import '../../shell/display_clock.dart';
 import '../../account/widgets/notification_bell.dart';
 import '../../shell/portal_menu.dart';
@@ -80,40 +84,14 @@ class AggregatorDashboardScreen extends ConsumerWidget {
                     style: theme.textTheme.bodySmall,
                   ),
                   const SizedBox(height: 20),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: compact ? 1 : 3,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: compact ? 3.4 : 1.7,
-                    children: [
-                      _Kpi(
-                        icon: LucideIcons.bookmarkCheck,
-                        label: 'Active reservations',
-                        value: figures == null
-                            ? null
-                            : '${figures.activeReservations}',
-                        failed: failed,
-                      ),
-                      _Kpi(
-                        icon: LucideIcons.indianRupee,
-                        label: 'Commission earned',
-                        value: figures == null
-                            ? null
-                            : formatInr(figures.commissionEarned),
-                        failed: failed,
-                        gold: true,
-                      ),
-                      _Kpi(
-                        icon: LucideIcons.banknote,
-                        label: 'Pending settlements',
-                        value: figures == null
-                            ? null
-                            : '${figures.pendingSettlements}',
-                        failed: failed,
-                      ),
-                    ],
+                  Reveal(
+                    index: 2,
+                    key: const ValueKey('dashboard-kpis'),
+                    child: _KpiBlock(
+                      compact: compact,
+                      figures: figures,
+                      failed: failed,
+                    ),
                   ),
                   if (failed)
                     Align(
@@ -147,6 +125,75 @@ class AggregatorDashboardScreen extends ConsumerWidget {
   }
 }
 
+/// The three headline figures. On a phone the money one leads as a card of its
+/// own, large and gold, with the two counts side by side under it; from tablet
+/// width all three sit in a row. Each number counts up to its value, and the
+/// block rises into place as the page loads.
+class _KpiBlock extends StatelessWidget {
+  const _KpiBlock({
+    required this.compact,
+    required this.figures,
+    required this.failed,
+  });
+
+  final bool compact;
+  final AggregatorDashboardSummary? figures;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) {
+    final reservations = _Kpi(
+      icon: LucideIcons.bookmarkCheck,
+      label: 'Active reservations',
+      value: figures == null ? null : '${figures!.activeReservations}',
+      failed: failed,
+    );
+    final commission = _Kpi(
+      icon: LucideIcons.indianRupee,
+      label: 'Commission earned',
+      value: figures == null ? null : formatInr(figures!.commissionEarned),
+      failed: failed,
+      gold: true,
+      hero: compact,
+    );
+    final settlements = _Kpi(
+      icon: LucideIcons.banknote,
+      label: 'Pending settlements',
+      value: figures == null ? null : '${figures!.pendingSettlements}',
+      failed: failed,
+    );
+    if (!compact) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: reservations),
+          const SizedBox(width: 12),
+          Expanded(child: commission),
+          const SizedBox(width: 12),
+          Expanded(child: settlements),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        commission,
+        const SizedBox(height: 12),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: reservations),
+              const SizedBox(width: 12),
+              Expanded(child: settlements),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _Kpi extends StatelessWidget {
   const _Kpi({
     required this.icon,
@@ -154,6 +201,7 @@ class _Kpi extends StatelessWidget {
     required this.value,
     required this.failed,
     this.gold = false,
+    this.hero = false,
   });
 
   final IconData icon;
@@ -164,39 +212,70 @@ class _Kpi extends StatelessWidget {
   final bool failed;
   final bool gold;
 
+  /// The lead card of the phone layout: a larger figure with more room round it.
+  final bool hero;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent = theme.colorScheme.tertiary;
     return PortalCard(
+      gold: gold,
+      padding: EdgeInsets.all(hero ? 18 : 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
             children: [
-              Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
-              Icon(icon, size: 15, color: theme.colorScheme.tertiary),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                ),
+                child: Icon(icon, size: 15, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: hero ? 16 : 12),
           if (value == null && !failed)
-            const Shimmer(child: SkeletonBlock(width: 84, height: 26))
+            Shimmer(
+              child: SkeletonBlock(
+                width: hero ? 140 : 84,
+                height: hero ? 36 : 26,
+              ),
+            )
           else
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: CountUpText(
                 value ?? '—',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: const [
-                    FontFeature.liningFigures(),
-                    FontFeature.tabularFigures(),
-                  ],
-                  color: value == null
-                      ? theme.colorScheme.onSurfaceVariant
-                      : (gold ? theme.colorScheme.tertiary : null),
-                ),
+                style:
+                    (hero
+                            ? theme.textTheme.headlineLarge
+                            : theme.textTheme.headlineSmall)
+                        ?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [
+                            FontFeature.liningFigures(),
+                            FontFeature.tabularFigures(),
+                          ],
+                          color: value == null
+                              ? theme.colorScheme.onSurfaceVariant
+                              : (gold ? accent : null),
+                        ),
               ),
             ),
         ],
@@ -370,6 +449,70 @@ class _SalesConversion extends StatelessWidget {
 
 /// The newest five reservations, sales and returns, read off the live holdings - no
 /// stored feed.
+/// One recently listed piece: its photo, title, artist and the price this
+/// aggregator would pay. A tap opens the piece.
+class _NewPieceRow extends StatelessWidget {
+  const _NewPieceRow({required this.item});
+
+  final ReservableArtwork item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final artwork = item.artwork;
+    return Pressable(
+      onTap: () => context.push('/marketplace/${artwork.id}'),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      color: theme.cardTheme.color,
+      side: BorderSide(color: theme.colorScheme.outline),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: ArtworkImageView(url: artwork.thumbnailUrl),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    artwork.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    artwork.artistName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              formatInr(item.offer.offerPrice),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontFeatures: const [FontFeature.liningFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _RecentActivity extends ConsumerWidget {
   const _RecentActivity();
 
@@ -393,6 +536,12 @@ class _RecentActivity extends ConsumerWidget {
             ))
             .take(5)
             .toList();
+    // The API sends the inventory newest first.
+    final newest =
+        (ref.watch(aggregatorInventoryProvider).value ??
+                const <ReservableArtwork>[])
+            .take(3)
+            .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -415,11 +564,21 @@ class _RecentActivity extends ConsumerWidget {
             ),
           )
         else if (recent.isEmpty) ...[
+          // Nothing reserved yet: show what was listed most recently instead of an
+          // empty box, so the card is a way in, not a dead end.
           Text(
-            'No activity yet. Reserve an artwork from Inventory to get started.',
+            newest.isEmpty
+                ? 'No activity yet. Reserve an artwork from Inventory to get started.'
+                : 'No reservations yet. These pieces were listed most recently:',
             style: theme.textTheme.bodySmall,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          for (final item in newest)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _NewPieceRow(item: item),
+            ),
+          const SizedBox(height: 2),
           Align(
             alignment: Alignment.centerLeft,
             child: OutlinedButton(

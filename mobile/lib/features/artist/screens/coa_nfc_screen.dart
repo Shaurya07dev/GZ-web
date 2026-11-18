@@ -75,6 +75,8 @@ class CoaNfcScreen extends ConsumerWidget {
                       'NFC/QR tag linked to it.',
                       style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                     ),
+                    const SizedBox(height: 14),
+                    const _NfcGuideCard(),
                     const SizedBox(height: 16),
                     if (!hasNfc) ...[
                       const _Banner(
@@ -127,6 +129,61 @@ class CoaNfcScreen extends ConsumerWidget {
 String _unlockedSentence(int count) =>
     '${count == 1 ? '1 piece has' : '$count pieces have'} a tag that isn’t locked. Lock '
     '${count == 1 ? 'it' : 'each one'}: a piece can’t be dispatched to a buyer or a gallery until its tag is locked.';
+
+/// "How to link NFC to your artwork": the website's ten-step guide with a
+/// voiceover, opened inside the app.
+class _NfcGuideCard extends StatelessWidget {
+  const _NfcGuideCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Pressable(
+      key: const Key('nfc-guide-link'),
+      onTap: () => openInApp(context, nfcGuideUrl),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      color: theme.colorScheme.primary.withValues(alpha: 0.05),
+      side: BorderSide(
+        color: theme.colorScheme.primary.withValues(alpha: 0.35),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(
+              LucideIcons.circlePlay,
+              size: 22,
+              color: theme.colorScheme.tertiary,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'How to link NFC to your artwork',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Buy the tag, write it, check it, lock it and stick it behind the signature. 10 steps with a voiceover.',
+                    style: theme.textTheme.labelSmall?.copyWith(height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              LucideIcons.externalLink,
+              size: 15,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _Banner extends StatelessWidget {
   const _Banner({

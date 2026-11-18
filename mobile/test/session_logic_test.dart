@@ -10,6 +10,38 @@ import 'package:gallery_zone/features/auth/role_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Auth implements AuthRepository {
+  @override
+  Future<AuthAck> loginWithGoogle({Role? defaultRole, String? name}) =>
+      throw UnimplementedError('not used here');
+
+  @override
+  Future<void> sendEmailOtp({
+    required String email,
+    required String purpose,
+  }) async {}
+
+  @override
+  Future<void> verifyEmailOtp({
+    required String email,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> sendPhoneOtp({required String phone}) async {}
+
+  @override
+  Future<void> verifyPhoneOtp({
+    required String phone,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String password,
+  }) async {}
+
   _Auth({this.user});
 
   CurrentUser? user;
@@ -84,7 +116,10 @@ void main() {
   group('where a sign-in lands', () {
     test('an artist goes to the marketplace, an aggregator to their profile, a collector home', () {
       expect(landingAfterLogin(Role.artist), '/marketplace');
-      expect(landingAfterLogin(Role.aggregator), '/aggregator/profile');
+      expect(
+        landingAfterLogin(Role.aggregator),
+        '/aggregator/dashboard/profile',
+      );
       expect(landingAfterLogin(Role.customer), '/account');
     });
 
@@ -101,7 +136,10 @@ void main() {
 
     test('a new account lands where the work to do is', () {
       expect(landingAfterRegister(Role.artist), '/dashboard/profile');
-      expect(landingAfterRegister(Role.aggregator), '/aggregator/profile');
+      expect(
+        landingAfterRegister(Role.aggregator),
+        '/aggregator/dashboard/profile',
+      );
       expect(landingAfterRegister(Role.customer), '/account');
     });
   });

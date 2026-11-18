@@ -67,7 +67,6 @@ void main() {
         final artwork = Artwork.fromJson(_artworkJson());
         expect(artwork.coaCertificateNumber, '');
         expect(artwork.coaIssueDate, '');
-        expect(artwork.insuranceStatus, ReviewStatus.notSubmitted);
         expect(artwork.productCode, isNull);
       },
     );

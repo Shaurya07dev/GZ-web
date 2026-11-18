@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gallery_zone/core/theme/app_theme.dart';
 import 'package:gallery_zone/data/models/artist.dart';
 import 'package:gallery_zone/data/models/artwork.dart';
+import 'package:gallery_zone/data/models/artwork_reservation.dart';
 import 'package:gallery_zone/data/models/artwork_filters.dart';
 import 'package:gallery_zone/data/models/marketplace.dart';
 import 'package:gallery_zone/data/repositories/artwork_repository.dart';
@@ -35,7 +36,6 @@ Artwork _artwork({
     medium: medium,
     customerPrice: price,
     thumbnailUrl: thumbnail,
-    insured: true,
     status: status,
     listingType: ListingType.marketplaceOnly,
     description: 'A study in rain light.',
@@ -83,6 +83,10 @@ ArtistProfile _artist({
 }
 
 class _Catalog implements ArtworkRepository {
+  @override
+  Future<ArtworkReservation> reservation(String artworkId) async =>
+      ArtworkReservation.unreserved();
+
   _Catalog({
     this.artworks = const [],
     this.artists = const [],
