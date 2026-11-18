@@ -2,7 +2,7 @@
 
 import "@/lib/motion-config";
 import { motion } from "framer-motion";
-import { Check, Eye, Target } from "lucide-react";
+import { Eye, Target } from "lucide-react";
 
 // The company's own statement, as supplied by the client (18 Nov 2026): its Vision and its Mission, word for
 // word. Only "Galleryzone" is written "GalleryZone" to match the brand spelling used everywhere on this site.
@@ -22,83 +22,113 @@ const MISSION_COMMITMENTS = [
   "Promote sustainable growth within the art community through ethical business practices.",
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
+const rise = {
+  hidden: { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0 },
+};
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
 };
 
 export function OurMissionSection() {
   return (
-    <section className="relative overflow-hidden py-16 sm:py-20 md:py-28">
-      <div className="mx-auto max-w-[1100px] px-6 lg:px-10">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={fadeUp}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="max-w-2xl"
-        >
-          <span className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+    <section className="relative overflow-hidden">
+      {/* A warm light behind the heading, so the page opens like a gallery wall rather than a form. */}
+      <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[60rem] -translate-x-1/2 rounded-full bg-gold/10 blur-3xl" />
+
+      <div className="relative mx-auto max-w-[1200px] px-6 py-16 sm:py-20 md:py-28 lg:px-10">
+        {/* ── Opening ─────────────────────────────────────────────────────── */}
+        <motion.header initial="hidden" animate="visible" variants={stagger} className="max-w-3xl">
+          <motion.span
+            variants={rise}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1 text-xs font-medium tracking-[0.16em] text-gold-bright uppercase"
+          >
             Our Mission
+          </motion.span>
+          <motion.h1
+            variants={rise}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="mt-6 text-balance font-display text-5xl leading-[1.05] font-semibold sm:text-6xl md:text-7xl"
+          >
+            Vision{" "}
+            <span className="bg-gradient-to-r from-gold-deep via-gold to-gold-bright bg-clip-text text-transparent">&amp; Mission.</span>
+          </motion.h1>
+          <motion.div variants={rise} transition={{ duration: 0.6, ease: "easeOut" }} className="mt-8 h-px w-24 bg-gradient-to-r from-gold to-transparent" />
+        </motion.header>
+
+        {/* ── Vision: one sentence, set large ──────────────────────────────── */}
+        <motion.section
+          aria-labelledby="vision-heading"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-12%" }}
+          variants={rise}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="relative mt-16 overflow-hidden rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/[0.12] via-card to-card p-7 sm:p-10 md:mt-24 md:p-14"
+        >
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-6 right-6 select-none font-display text-[10rem] leading-none text-gold/10 sm:text-[14rem]"
+          >
+            &rdquo;
           </span>
-          <h1 className="mt-4 text-balance font-display text-4xl leading-[1.15] font-semibold sm:text-5xl">
-            Vision &amp; <span className="text-gold-bright">Mission.</span>
-          </h1>
-        </motion.div>
+          <div className="relative flex items-center gap-3">
+            <span className="flex size-11 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
+              <Eye className="size-5 text-gold-bright" strokeWidth={1.75} />
+            </span>
+            <h2 id="vision-heading" className="text-sm font-semibold tracking-[0.2em] text-gold-bright uppercase">
+              Vision
+            </h2>
+          </div>
+          <p className="relative mt-7 max-w-4xl text-pretty font-display text-2xl leading-snug font-medium text-foreground sm:text-3xl md:text-[2.15rem] md:leading-[1.3]">
+            {VISION}
+          </p>
+        </motion.section>
 
-        <div className="mt-12 flex flex-col gap-8 md:mt-16">
-          <motion.section
-            aria-labelledby="vision-heading"
+        {/* ── Mission: the promise on the left, the five commitments on the right ── */}
+        <section aria-labelledby="mission-heading" className="mt-20 grid grid-cols-1 gap-10 md:mt-28 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+          <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-10%" }}
-            variants={fadeUp}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="rounded-xl border border-gold/30 bg-card p-6 sm:p-8 md:p-10"
+            viewport={{ once: true, margin: "-12%" }}
+            variants={rise}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="lg:sticky lg:top-28 lg:self-start"
           >
             <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-                <Eye className="size-5 text-gold-bright" strokeWidth={1.75} />
-              </span>
-              <h2 id="vision-heading" className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
-                Vision
-              </h2>
-            </div>
-            <p className="mt-5 max-w-3xl text-pretty text-lg leading-relaxed text-foreground/90 sm:text-xl">{VISION}</p>
-          </motion.section>
-
-          <motion.section
-            aria-labelledby="mission-heading"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-10%" }}
-            variants={fadeUp}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="rounded-xl border border-border bg-card p-6 sm:p-8 md:p-10"
-          >
-            <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
+              <span className="flex size-11 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
                 <Target className="size-5 text-gold-bright" strokeWidth={1.75} />
               </span>
-              <h2 id="mission-heading" className="font-display text-2xl font-semibold text-foreground sm:text-3xl">
+              <h2 id="mission-heading" className="text-sm font-semibold tracking-[0.2em] text-gold-bright uppercase">
                 Mission
               </h2>
             </div>
-            <p className="mt-5 max-w-3xl text-pretty text-base leading-relaxed text-foreground/90 sm:text-lg">{MISSION_LEAD}</p>
+            <p className="mt-6 text-pretty font-display text-2xl leading-snug font-medium text-foreground sm:text-3xl">{MISSION_LEAD}</p>
+            <h3 className="mt-8 text-sm font-semibold tracking-[0.2em] text-muted-foreground uppercase">We strive to</h3>
+          </motion.div>
 
-            <h3 className="mt-8 text-sm font-semibold tracking-[0.14em] text-gold-bright uppercase">We strive to</h3>
-            <ul className="mt-4 flex max-w-3xl flex-col gap-3.5">
-              {MISSION_COMMITMENTS.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-base leading-relaxed text-foreground/90">
-                  <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-gold/15">
-                    <Check className="size-3 text-gold-bright" strokeWidth={2.5} />
-                  </span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </motion.section>
-        </div>
+          <motion.ul
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-8%" }}
+            variants={stagger}
+            className="flex flex-col gap-4 [counter-reset:commitment]"
+          >
+            {MISSION_COMMITMENTS.map((item) => (
+              <motion.li
+                key={item}
+                variants={rise}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="group relative rounded-xl border border-border bg-card px-6 py-5 pl-20 text-base leading-relaxed text-foreground/90 transition-[border-color,transform,background-color] duration-300 [counter-increment:commitment] before:absolute before:top-5 before:left-6 before:font-display before:text-3xl before:leading-none before:font-semibold before:text-gold/70 before:content-[counter(commitment,decimal-leading-zero)] hover:-translate-y-0.5 hover:border-gold/40 hover:bg-gold/[0.04] sm:text-lg sm:before:text-4xl sm:pl-24"
+              >
+                {item}
+              </motion.li>
+            ))}
+          </motion.ul>
+        </section>
       </div>
     </section>
   );
