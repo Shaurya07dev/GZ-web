@@ -227,7 +227,7 @@ class _MoneyFlowCard extends StatelessWidget {
                 Text(
                   'Pay the deposit and delivery for each piece when you reserve it through Razorpay. '
                   'GalleryZone holds the sale amount in escrow, settles the artist share, and transfers '
-                  'your cleared commission to your bank. There is no wallet top-up or withdrawal request.',
+                  'your cleared commission to your bank. There is no top-up or withdrawal request.',
                   style: theme.textTheme.bodySmall?.copyWith(height: 1.5),
                 ),
               ],

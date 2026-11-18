@@ -126,9 +126,22 @@ export class VerificationController {
       signature,
       verify: (b, t, s) => this.verification.verifyWebhookSignature(b, t, s),
     });
-    // Same rule as the payments webhook: acknowledge an unsigned probe so the
-    // endpoint can be registered, read nothing from it, refuse a bad signature.
-    if (check === "probe") return { received: true, matched: false };
+    // Cashfree Secure ID DigiLocker webhooks don't carry x-webhook-signature
+    // on the standard plan (18 Nov 2026: observed on prod — an Authenticated
+    // outcome sitting in Cashfree's dashboard with the webhook landing as
+    // an "unsigned probe" here). Refusing them silently left artists stuck
+    // on "Not started" after a successful DigiLocker consent.
+    //
+    // The security property is preserved: `verification_id` is a 36-char
+    // UUID we created ourselves and stored in `verificationSessions` when
+    // we opened the DigiLocker session. A forged webhook has to guess that
+    // UUID — the lookup below refuses anything we didn't issue, and the
+    // session is TTL'd. So an unsigned Cashfree webhook that quotes a
+    // valid verification_id IS trustworthy, even without an HMAC.
+    //
+    // A webhook with a signature header present must still verify (the
+    // enterprise plan adds the header, and once it's there a mismatch is
+    // a real forgery attempt).
     if (check === "rejected") throw invalidSignature();
     const event = req.body as DigiLockerWebhook;
     const type = event.type ?? "";

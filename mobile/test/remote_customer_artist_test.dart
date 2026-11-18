@@ -133,7 +133,6 @@ SubmitArtworkInput _input({
   medium: 'oil',
   artistPrice: 100000,
   listingType: ListingType.marketplaceAndAggregator,
-  insuranceOpted: true,
   images: images,
   asDraft: asDraft,
   dimensions: '24 x 36 in',
@@ -141,7 +140,6 @@ SubmitArtworkInput _input({
   artworkType: 'original',
   paintingStyle: 'tanjore',
   exclusive: true,
-  insuranceNumber: 'POL-1',
   physical: const ArtworkPhysical(
     weightKg: 2.5,
     framing: FramingState.framed,
@@ -358,21 +356,18 @@ void main() {
       },
     );
 
-    test(
-      'collector wallet: no API route, so it fails plainly; withdrawal is refused',
-      () async {
-        // There is no /v1/customer/wallet on the API, so nothing is stubbed:
-        // the repository must not call it at all.
-        final api = FakeApi();
-        final repo = RemoteCustomerRepository(api.client());
-        await expectLater(repo.getWallet(), throwsA(isA<UnsupportedError>()));
-        expect(await repo.listWalletTransactions(), isEmpty);
-        await expectLater(
-          repo.requestWithdrawal(1000),
-          throwsA(isA<Exception>()),
-        );
-      },
-    );
+    test('collector wallet: no API route, so it fails plainly; withdrawal is refused', () async {
+      // There is no /v1/customer/wallet on the API, so nothing is stubbed:
+      // the repository must not call it at all.
+      final api = FakeApi();
+      final repo = RemoteCustomerRepository(api.client());
+      await expectLater(repo.getWallet(), throwsA(isA<UnsupportedError>()));
+      expect(await repo.listWalletTransactions(), isEmpty);
+      await expectLater(
+        repo.requestWithdrawal(1000),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 
   group('RemoteArtistRepository', () {
@@ -392,10 +387,8 @@ void main() {
       expect(owned.artistNetMarketplace, 100000);
       expect(owned.artistNetAggregator, 95050);
       expect(owned.editableUntil, '2026-09-23T00:00:00.000Z');
-      expect(owned.insuranceOpted, isTrue);
       expect(owned.artwork.customerPrice, 136500);
       expect(owned.artwork.rarityType, ArtworkRarity.rare);
-      expect(owned.artwork.insuranceStatus, ReviewStatus.submitted);
       expect(owned.artwork.paintingStyle, 'tanjore');
       expect(owned.artwork.exclusive, isTrue);
       expect(owned.artwork.physical!.framing, FramingState.framed);
@@ -1000,7 +993,6 @@ void main() {
       expect(rules.artistListingFeeRate, 0.01);
       expect(rules.nfcTagCharge, 100);
       expect(rules.deliveryCharge, 2500);
-      expect(rules.insuranceThreshold, 20000);
       expect(api.requests.single.headers.containsKey('Authorization'), isFalse);
     });
 

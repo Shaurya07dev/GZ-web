@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gallery_zone/core/theme/app_theme.dart';
 import 'package:gallery_zone/data/models/artist.dart';
 import 'package:gallery_zone/data/models/artwork.dart';
+import 'package:gallery_zone/data/models/artwork_reservation.dart';
 import 'package:gallery_zone/data/models/auth.dart' show Role;
 import 'package:gallery_zone/features/auth/providers/auth_providers.dart';
 import 'package:gallery_zone/data/models/artwork_filters.dart';
@@ -38,7 +39,6 @@ Artwork _artwork(
     medium: medium,
     customerPrice: price,
     thumbnailUrl: '',
-    insured: insured,
     status: status,
     listingType: ListingType.marketplaceOnly,
     description: 'A study in rain light.',
@@ -63,6 +63,10 @@ const _facets = MarketplaceFacets(
 
 /// Serves pages the way the API does and records what it was asked.
 class _Catalog implements ArtworkRepository {
+  @override
+  Future<ArtworkReservation> reservation(String artworkId) async =>
+      ArtworkReservation.unreserved();
+
   _Catalog(this.artworks);
 
   final List<Artwork> artworks;

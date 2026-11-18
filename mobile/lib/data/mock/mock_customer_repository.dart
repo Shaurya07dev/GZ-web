@@ -549,7 +549,9 @@ class MockCustomerRepository implements CustomerRepository {
   final Set<String> _follows = <String>{};
 
   @override
-  Future<Set<String>> getWishlist() => mockDelay(() => Set.of(_wishlist));
+  // Reads answer at once, like the inbox: they run when a screen is built, and
+  // a simulated delay behind them left a timer pending in every widget test.
+  Future<Set<String>> getWishlist() async => Set.of(_wishlist);
 
   @override
   Future<void> addToWishlist(String artworkId) =>
@@ -560,7 +562,7 @@ class MockCustomerRepository implements CustomerRepository {
       mockDelay(() => _wishlist.remove(artworkId));
 
   @override
-  Future<Set<String>> getFollows() => mockDelay(() => Set.of(_follows));
+  Future<Set<String>> getFollows() async => Set.of(_follows);
 
   @override
   Future<void> followArtist(String artistId) =>
@@ -571,9 +573,12 @@ class MockCustomerRepository implements CustomerRepository {
       mockDelay(() => _follows.remove(artistId));
 
   // --- In-app notifications inbox (demo: static, nothing to mark) ---------
+  // No simulated delay: the bell sits on every portal's app bar and asks on
+  // open, and a 600 ms timer behind an empty list only left every widget test
+  // that draws a dashboard with a timer still pending when it ended.
   @override
-  Future<NotificationInbox> getNotifications() =>
-      mockDelay(() => const NotificationInbox());
+  Future<NotificationInbox> getNotifications() async =>
+      const NotificationInbox();
 
   @override
   Future<void> markNotificationRead(String id) => mockDelay(() {});

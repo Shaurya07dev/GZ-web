@@ -414,6 +414,50 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a stranger sees the Display card and no certificate; the owner sees the certificate',
+      (tester) async {
+        _phone(tester);
+        // The server sends no certificate number, date or signature to anyone
+        // but the owner, the artist and admins.
+        final stranger = FakeOwnership(
+          passports: {
+            'aw-1': fixturePassport(coaNumber: null, coaIssuedAt: null),
+          },
+        );
+        await tester.pumpWidget(
+          _app(const PassportScreen(artworkId: 'aw-1'), ownership: stranger),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('ARTWORK PASSPORT'), findsOneWidget);
+        expect(find.text('Monsoon, Madurai'), findsWidgets);
+        expect(find.text('CERTIFICATE OF AUTHENTICITY'), findsNothing);
+        expect(
+          find.text('Pending issuance'),
+          findsNothing,
+          reason: 'a stranger is not told a certificate is pending',
+        );
+        expect(find.textContaining('COA issued'), findsNothing);
+        expect(find.byType(DownloadCoaButton), findsNothing);
+        await tester.scrollUntilVisible(
+          find.byKey(const Key('passport-display-card')),
+          300,
+        );
+        expect(find.byKey(const Key('passport-display-card')), findsOneWidget);
+        expect(find.text('Print display card'), findsOneWidget);
+
+        // The owner's answer carries the certificate: the page shows it, with the download.
+        await tester.pumpWidget(_app(const PassportScreen(artworkId: 'aw-1')));
+        await tester.pumpAndSettle();
+        expect(find.text('CERTIFICATE OF AUTHENTICITY'), findsOneWidget);
+        expect(find.text('GZ-COA-2026-0001'), findsOneWidget);
+        await tester.scrollUntilVisible(find.byType(DownloadCoaButton), 300);
+        expect(find.byType(DownloadCoaButton), findsOneWidget);
+        expect(find.byKey(const Key('passport-display-card')), findsNothing);
+      },
+    );
+
     testWidgets('says a physical tag is linked, but never which chip', (
       tester,
     ) async {
@@ -477,25 +521,6 @@ void main() {
         expect(find.text('Download certificate (PDF)'), findsOneWidget);
         await tester.scrollUntilVisible(find.text('View portfolio'), 300);
         expect(find.text('Verified GalleryZone artist'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'before a number is issued the card says so and the download waits',
-      (tester) async {
-        _phone(tester);
-        final ownership = FakeOwnership(
-          passports: {
-            'aw-1': fixturePassport(coaNumber: null, coaIssuedAt: null),
-          },
-        );
-        await tester.pumpWidget(
-          _app(const PassportScreen(artworkId: 'aw-1'), ownership: ownership),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.text('Pending issuance'), findsOneWidget);
-        expect(find.textContaining('COA issued'), findsNothing);
       },
     );
 

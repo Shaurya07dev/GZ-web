@@ -98,7 +98,7 @@ class ArtistWalletTab extends ConsumerWidget {
                         title: 'Automatic bank payout',
                         body:
                             'GalleryZone sends eligible settlements to your verified bank account. There is no '
-                            'prepaid wallet or manual withdrawal request.',
+                            'manual withdrawal request.',
                       ),
                     ],
                   ),

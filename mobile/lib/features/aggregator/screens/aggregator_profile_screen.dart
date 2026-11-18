@@ -251,54 +251,7 @@ class _ProfileSummary extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 16),
-          Wrap(
-            runSpacing: 14,
-            children: [
-              for (final cell in cells)
-                FractionallySizedBox(
-                  widthFactor: 0.5,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              cell.icon,
-                              size: 13,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                cell.label,
-                                style: theme.textTheme.labelSmall,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            cell.value,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontFeatures: const [
-                                FontFeature.liningFigures(),
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          _StatGrid(cells: cells),
           if (stats.returned > 0) ...[
             const Divider(height: 28),
             Text(
@@ -306,6 +259,128 @@ class _ProfileSummary extends ConsumerWidget {
               style: theme.textTheme.bodySmall,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The profile's figures as a grid of small tiles: two to a row on a phone,
+/// three from a wide one. Each row is as tall as its tallest tile, so a label
+/// that wraps ("Held against reservations") never leaves its neighbour
+/// short, and a bigger text size just makes the tiles taller.
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.cells});
+
+  final List<({String label, String value, IconData icon})> cells;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final columns = box.maxWidth >= 520 ? 3 : 2;
+        const gap = 10.0;
+        final rows = <Widget>[];
+        for (var start = 0; start < cells.length; start += columns) {
+          final row = cells.skip(start).take(columns).toList();
+          rows.add(
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < columns; i++) ...[
+                    if (i > 0) const SizedBox(width: gap),
+                    Expanded(
+                      child: i < row.length
+                          ? _StatTile(cell: row[i])
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+        return Column(
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              if (i > 0) const SizedBox(height: gap),
+              rows[i],
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({required this.cell});
+
+  final ({String label, String value, IconData icon}) cell;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontFeatures: const [
+        FontFeature.liningFigures(),
+        FontFeature.tabularFigures(),
+      ],
+    );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.035),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  cell.icon,
+                  size: 13,
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Text(
+                    cell.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(height: 1.25),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            // Figures count up to their value; "3 / 10" is two numbers, so it stays put.
+            child: cell.value.contains('/')
+                ? Text(cell.value, style: style)
+                : CountUpText(cell.value, style: style),
+          ),
         ],
       ),
     );

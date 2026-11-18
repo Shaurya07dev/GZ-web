@@ -20,7 +20,6 @@ Artwork _listed(ArtworkStatus status, int daysAgo) => Artwork(
   medium: 'Oil on Canvas',
   customerPrice: 100000,
   thumbnailUrl: '',
-  insured: false,
   status: status,
   listingType: ListingType.marketplaceOnly,
   description: '',
@@ -47,7 +46,6 @@ SubmitArtworkInput _input({
   medium: 'Oil on Canvas',
   artistPrice: 20000,
   listingType: listingType,
-  insuranceOpted: false,
   images: const [
     ArtworkImage(
       url: '/artworks/bird.png',
@@ -154,8 +152,6 @@ void main() {
           _input(listingType: ListingType.aggregatorOnly),
         );
         expect(isMarketplaceListed(submitted.listingType), isFalse);
-        // Insurance was removed from listing and is never silently re-enabled.
-        expect(submitted.insured, isFalse);
 
         final browsable = await MockArtworkRepository().listAllLive();
         expect(browsable.map((a) => a.id), isNot(contains(submitted.id)));
@@ -251,11 +247,6 @@ void main() {
       );
       expect(updated.title, 'Renamed');
       expect(updated.listingType, ListingType.marketplaceAndAggregator);
-      expect(
-        updated.insured,
-        isFalse,
-        reason: 'aggregator listings no longer force insurance',
-      );
 
       // aw-4 is a delivered piece in the artist's own seed — past every window.
       final locked = (await artist.listArtworks())

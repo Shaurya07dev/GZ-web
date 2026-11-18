@@ -23,7 +23,6 @@ Artwork _artwork(String id) => Artwork(
   medium: 'Oil on canvas',
   customerPrice: 23400,
   thumbnailUrl: '/artworks/bird.png',
-  insured: true,
   status: ArtworkStatus.sold,
   listingType: ListingType.marketplaceOnly,
   description: 'A study in rain light.',

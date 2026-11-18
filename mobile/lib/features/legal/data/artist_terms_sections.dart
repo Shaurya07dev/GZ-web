@@ -10,7 +10,7 @@ const artistTermsSections = <LegalSection>[
     id: 'introduction',
     heading: 'Introduction',
     body: [
-      'Effective Date:  /  / __',
+      'Effective Date: 18 August 2026',
       'These Artist Terms & Conditions (“Terms”) govern the submission, verification, listing, promotion, exhibition, marketing, display, and sale of artworks through Galleryzone Private Limited (“Galleryzone”, “Company”, “we”, “us”, or “our”).',
       'By registering with Galleryzone, submitting an artwork, accepting a listing, or participating in any Galleryzone sales or promotional activity, the Artist (“Artist”, “you”, or “your”) acknowledges that they have read, understood, and agreed to these Terms.',
     ],

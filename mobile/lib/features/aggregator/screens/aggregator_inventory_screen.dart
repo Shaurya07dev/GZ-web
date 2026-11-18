@@ -8,11 +8,16 @@ import '../../../core/motion.dart';
 import '../../../core/pricing.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/aggregator.dart';
+import '../../../data/models/artwork.dart';
 import '../../../data/models/artist_portal.dart';
 import '../../../data/repositories/aggregator_repository.dart';
 import '../../account/widgets/notification_bell.dart';
+import '../../marketplace/providers/marketplace_providers.dart'
+    show wishlistProvider;
 import '../../marketplace/widgets/artwork_card.dart';
+import '../../marketplace/widgets/photo_pager.dart';
 import '../../shell/portal_widgets.dart';
+import '../inventory_filters.dart';
 import '../providers/aggregator_providers.dart';
 import '../reserve_requirements.dart';
 import '../widgets/aggregator_widgets.dart';
@@ -34,21 +39,12 @@ class AggregatorBrowseScreen extends ConsumerStatefulWidget {
       _AggregatorBrowseScreenState();
 }
 
-enum _Sort {
-  newest('Newest'),
-  priceAsc('Price: Low to High'),
-  priceDesc('Price: High to Low');
-
-  const _Sort(this.label);
-  final String label;
-}
-
 class _AggregatorBrowseScreenState
     extends ConsumerState<AggregatorBrowseScreen> {
   final _search = TextEditingController();
   String _query = '';
-  String? _category;
-  _Sort _sort = _Sort.newest;
+  InventoryFilters _filters = const InventoryFilters();
+  InventorySort _sort = InventorySort.newest;
   bool _grid = true;
 
   @override
@@ -57,30 +53,34 @@ class _AggregatorBrowseScreenState
     super.dispose();
   }
 
-  List<ReservableArtwork> _visible(List<ReservableArtwork> all) {
-    final query = _query.trim().toLowerCase();
-    final shown = [
-      for (final item in all)
-        if ((_category == null || item.artwork.category == _category) &&
-            (query.isEmpty ||
-                [
-                  item.artwork.title,
-                  item.artwork.artistName,
-                  item.artwork.medium,
-                  item.artwork.category,
-                  item.artwork.paintingStyle ?? '',
-                ].any((field) => field.toLowerCase().contains(query))))
-          item,
-    ];
-    switch (_sort) {
-      case _Sort.newest:
-        break; // the service's own order
-      case _Sort.priceAsc:
-        shown.sort((a, b) => a.offer.offerPrice.compareTo(b.offer.offerPrice));
-      case _Sort.priceDesc:
-        shown.sort((a, b) => b.offer.offerPrice.compareTo(a.offer.offerPrice));
-    }
-    return shown;
+  List<ReservableArtwork> _visible(
+    List<ReservableArtwork> all,
+    Set<String> saved,
+  ) => applyInventory(all, _query, _filters, _sort, saved: saved);
+
+  void _clearAll() {
+    _search.clear();
+    setState(() {
+      _query = '';
+      _filters = const InventoryFilters();
+    });
+  }
+
+  void _openFilters(List<ReservableArtwork> all, Set<String> saved) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => _FiltersSheet(
+        items: all,
+        query: _query,
+        sort: _sort,
+        saved: saved,
+        initial: _filters,
+        onChanged: (value) => setState(() => _filters = value),
+      ),
+    );
   }
 
   void _reserve(ReservableArtwork item) {
@@ -96,6 +96,7 @@ class _AggregatorBrowseScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final inventory = ref.watch(aggregatorInventoryProvider);
+    final saved = ref.watch(wishlistProvider);
     // What this aggregator holds or has sold is what "suggested for you" is
     // measured against. A returned piece wasn't theirs to show, so it doesn't count.
     final held = [
@@ -132,7 +133,11 @@ class _AggregatorBrowseScreenState
           final categories = ({
             for (final item in all) item.artwork.category,
           }..remove('')).toList()..sort();
-          final visible = _visible(all);
+          final visible = _visible(all, saved);
+          final savedOnShelf = all
+              .where((i) => saved.contains(i.artwork.id))
+              .length;
+          final badge = activeFilterCount(_filters);
 
           return RefreshIndicator.adaptive(
             onRefresh: () async {
@@ -166,49 +171,83 @@ class _AggregatorBrowseScreenState
                           ),
                           const SizedBox(height: 20),
                         ],
-                        TextField(
-                          controller: _search,
-                          textInputAction: TextInputAction.search,
-                          onChanged: (value) => setState(() => _query = value),
-                          decoration: InputDecoration(
-                            hintText: 'Search artworks, artists, or styles...',
-                            prefixIcon: const Icon(
-                              LucideIcons.search,
-                              size: 16,
-                            ),
-                            suffixIcon: _query.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Clear search',
-                                    icon: const Icon(LucideIcons.x, size: 16),
-                                    onPressed: () {
-                                      _search.clear();
-                                      setState(() => _query = '');
-                                    },
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _search,
+                                textInputAction: TextInputAction.search,
+                                onChanged: (value) =>
+                                    setState(() => _query = value),
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Search artworks, artists, or styles...',
+                                  prefixIcon: const Icon(
+                                    LucideIcons.search,
+                                    size: 16,
                                   ),
-                          ),
+                                  suffixIcon: _query.isEmpty
+                                      ? null
+                                      : IconButton(
+                                          tooltip: 'Clear search',
+                                          icon: const Icon(
+                                            LucideIcons.x,
+                                            size: 16,
+                                          ),
+                                          onPressed: () {
+                                            _search.clear();
+                                            setState(() => _query = '');
+                                          },
+                                        ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _FiltersButton(
+                              count: badge,
+                              onTap: () => _openFilters(all, saved),
+                            ),
+                          ],
                         ),
-                        if (categories.length > 1) ...[
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            height: 36,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              children: [
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 36,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              if (categories.length > 1)
                                 for (final category in [null, ...categories])
                                   Padding(
                                     padding: const EdgeInsets.only(right: 8),
                                     child: ChoiceChip(
                                       label: Text(category ?? 'All'),
-                                      selected: _category == category,
-                                      onSelected: (_) =>
-                                          setState(() => _category = category),
+                                      selected: _filters.category == category,
+                                      onSelected: (_) => setState(
+                                        () => _filters = _filters.copyWith(
+                                          category: category,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                              ],
-                            ),
+                              ChoiceChip(
+                                avatar: Icon(
+                                  savedOnShelf > 0 || _filters.savedOnly
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 14,
+                                  color: Theme.of(context).colorScheme.tertiary,
+                                ),
+                                label: Text('Saved $savedOnShelf'),
+                                selected: _filters.savedOnly,
+                                onSelected: (value) => setState(
+                                  () => _filters = _filters.copyWith(
+                                    savedOnly: value,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                         const SizedBox(height: 12),
                         _ResultsBar(
                           count: visible.length,
@@ -224,31 +263,64 @@ class _AggregatorBrowseScreenState
                   ),
                 ),
                 if (visible.isEmpty)
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: EmptyState(
                       icon: LucideIcons.packageSearch,
                       title: 'Nothing matches',
-                      description: 'Try a different search or category.',
+                      description: _filters.savedOnly && saved.isEmpty
+                          ? 'Tap the heart on a piece to save it for later.'
+                          : 'Try a different search or category.',
+                      action: isFiltering(_query, _filters)
+                          ? OutlinedButton(
+                              onPressed: _clearAll,
+                              child: const Text('Clear search and filters'),
+                            )
+                          : null,
                     ),
                   )
                 else if (_grid)
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                    sliver: SliverGrid(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 260,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 14,
-                            mainAxisExtent: 420,
+                    // The card's height follows its width and the phone's text size:
+                    // a narrow screen wraps more lines of text, and a fixed height
+                    // squeezed the photo (or overflowed) on the smallest phones.
+                    sliver: SliverLayoutBuilder(
+                      builder: (context, constraints) {
+                        const maxExtent = 260.0;
+                        const gap = 14.0;
+                        final columns =
+                            ((constraints.crossAxisExtent + gap) /
+                                    (maxExtent + gap))
+                                .ceil();
+                        final cardWidth =
+                            (constraints.crossAxisExtent -
+                                gap * (columns - 1)) /
+                            columns;
+                        final textScale = MediaQuery.textScalerOf(context)
+                            .scale(1)
+                            .clamp(1.0, 1.6);
+                        return SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: maxExtent,
+                                mainAxisSpacing: gap,
+                                crossAxisSpacing: gap,
+                                mainAxisExtent:
+                                    292 * textScale + cardWidth * 0.85,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => _ReservableCard(
+                              item: visible[index],
+                              onReserve: () => _reserve(visible[index]),
+                              saved: saved.contains(visible[index].artwork.id),
+                              onToggleSaved: () => ref
+                                  .read(wishlistProvider.notifier)
+                                  .toggle(visible[index].artwork.id),
+                            ),
+                            childCount: visible.length,
                           ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => _ReservableCard(
-                          item: visible[index],
-                          onReserve: () => _reserve(visible[index]),
-                        ),
-                        childCount: visible.length,
-                      ),
+                        );
+                      },
                     ),
                   )
                 else
@@ -263,6 +335,10 @@ class _AggregatorBrowseScreenState
                           _ReservableRow(
                             item: visible[index],
                             onReserve: () => _reserve(visible[index]),
+                            saved: saved.contains(visible[index].artwork.id),
+                            onToggleSaved: () => ref
+                                .read(wishlistProvider.notifier)
+                                .toggle(visible[index].artwork.id),
                           ),
                         ],
                       ),
@@ -289,9 +365,9 @@ class _ResultsBar extends StatelessWidget {
   });
 
   final int count;
-  final _Sort sort;
+  final InventorySort sort;
   final bool grid;
-  final ValueChanged<_Sort?> onSort;
+  final ValueChanged<InventorySort?> onSort;
   final VoidCallback onToggleView;
 
   @override
@@ -302,13 +378,13 @@ class _ResultsBar extends StatelessWidget {
       style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
     );
     final menu = DropdownButtonHideUnderline(
-      child: DropdownButton<_Sort>(
+      child: DropdownButton<InventorySort>(
         value: sort,
         isExpanded: true,
         isDense: true,
         style: theme.textTheme.labelLarge,
         items: [
-          for (final option in _Sort.values)
+          for (final option in InventorySort.values)
             DropdownMenuItem(
               value: option,
               child: Text(
@@ -447,25 +523,45 @@ class _CycleBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final line = monthLine(offer);
+    // "Month 1 of 5" leads in the ink colour; what it means for the price
+    // follows in gold. One Text, so a screen reader reads it as one sentence.
+    final split = line.indexOf(' · ');
+    final lead = split < 0 ? line : line.substring(0, split);
+    final rest = split < 0 ? '' : line.substring(split);
     return Container(
-      padding: const EdgeInsets.all(10),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
+        color: theme.colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.5),
+          color: theme.colorScheme.primary.withValues(alpha: 0.22),
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           CycleStepper(currentMonth: offer.month, small: true),
-          const SizedBox(height: 6),
-          Text(
-            monthLine(offer),
+          const SizedBox(height: 8),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: lead,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                ),
+                TextSpan(
+                  text: rest,
+                  style: TextStyle(color: theme.colorScheme.tertiary),
+                ),
+              ],
+            ),
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               fontSize: 10.5,
-              fontWeight: FontWeight.w500,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -475,10 +571,17 @@ class _CycleBox extends StatelessWidget {
 }
 
 class _ReservableCard extends StatelessWidget {
-  const _ReservableCard({required this.item, required this.onReserve});
+  const _ReservableCard({
+    required this.item,
+    required this.onReserve,
+    required this.saved,
+    required this.onToggleSaved,
+  });
 
   final ReservableArtwork item;
   final VoidCallback onReserve;
+  final bool saved;
+  final VoidCallback onToggleSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -502,7 +605,12 @@ class _ReservableCard extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    child: ArtworkImageView(url: artwork.thumbnailUrl),
+                    child: PhotoPager(urls: photoUrlsOf(artwork)),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: _SaveButton(saved: saved, onTap: onToggleSaved),
                   ),
                 ],
               ),
@@ -534,14 +642,22 @@ class _ReservableCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(fontSize: 10.5),
           ),
-          const SizedBox(height: 8),
-          _CycleBox(offer: offer),
           const SizedBox(height: 10),
+          _CycleBox(offer: offer),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 40,
+            height: 42,
             child: FilledButton(
               onPressed: onReserve,
-              child: const Text('Reserve Artwork'),
+              // One line at any card width: the label shrinks a touch rather
+              // than breaking into "Reserve / Artwork" on a narrow phone.
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Reserve Artwork', maxLines: 1, softWrap: false),
+              ),
             ),
           ),
         ],
@@ -551,10 +667,17 @@ class _ReservableCard extends StatelessWidget {
 }
 
 class _ReservableRow extends StatelessWidget {
-  const _ReservableRow({required this.item, required this.onReserve});
+  const _ReservableRow({
+    required this.item,
+    required this.onReserve,
+    required this.saved,
+    required this.onToggleSaved,
+  });
 
   final ReservableArtwork item;
   final VoidCallback onReserve;
+  final bool saved;
+  final VoidCallback onToggleSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -578,7 +701,12 @@ class _ReservableRow extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    child: ArtworkImageView(url: artwork.thumbnailUrl),
+                    child: PhotoPager(urls: photoUrlsOf(artwork)),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: _SaveButton(saved: saved, onTap: onToggleSaved),
                   ),
                 ],
               ),
@@ -607,7 +735,7 @@ class _ReservableRow extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      artwork.medium,
+                      humanize(artwork.medium),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.labelSmall,
@@ -634,6 +762,303 @@ class _ReservableRow extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The heart on a photo: a round, readable-on-any-picture target of its own,
+/// 40 dp for the thumb with the heart itself drawn smaller.
+class _SaveButton extends StatelessWidget {
+  const _SaveButton({required this.saved, required this.onTap});
+
+  final bool saved;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: saved ? 'Remove from saved' : 'Save for later',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.88),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: WishlistHeart(
+                  saved: saved,
+                  size: 16,
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FiltersButton extends StatelessWidget {
+  const _FiltersButton({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      button: true,
+      label: count == 0 ? 'Filters' : 'Filters, $count set',
+      excludeSemantics: true,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(LucideIcons.slidersHorizontal, size: 16),
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Filters'),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                constraints: const BoxConstraints(minWidth: 18),
+                height: 18,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  '$count',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+        ),
+      ),
+    );
+  }
+}
+
+String _bandLabel(int i) {
+  final band = inventoryPriceBands[i];
+  if (band.min == null) return 'Under ${formatInr(band.max!)}';
+  if (band.max == null) return 'Above ${formatInr(band.min!)}';
+  return '${formatInr(band.min!)} \u2013 ${formatInr(band.max!)}';
+}
+
+List<T> _toggled<T>(List<T> list, T value) {
+  final next = [...list];
+  if (!next.remove(value)) next.add(value);
+  return next;
+}
+
+/// Price, medium, size, rank and the artist/edition switches, with how many
+/// pieces each option has. Only what is on the shelf is offered, so no choice
+/// leads to an empty page. Changes apply to the page behind the sheet as they
+/// are made; "Show N artworks" just closes it.
+class _FiltersSheet extends StatefulWidget {
+  const _FiltersSheet({
+    required this.items,
+    required this.query,
+    required this.sort,
+    required this.saved,
+    required this.initial,
+    required this.onChanged,
+  });
+
+  final List<ReservableArtwork> items;
+  final String query;
+  final InventorySort sort;
+  final Set<String> saved;
+  final InventoryFilters initial;
+  final ValueChanged<InventoryFilters> onChanged;
+
+  @override
+  State<_FiltersSheet> createState() => _FiltersSheetState();
+}
+
+class _FiltersSheetState extends State<_FiltersSheet> {
+  late InventoryFilters _f = widget.initial;
+
+  void _set(InventoryFilters next) {
+    setState(() => _f = next);
+    widget.onChanged(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final facets = inventoryFacets(widget.items);
+    final matching = applyInventory(
+      widget.items,
+      widget.query,
+      _f,
+      widget.sort,
+      saved: widget.saved,
+    ).length;
+    final badge = activeFilterCount(_f);
+
+    Widget group(String title, List<Widget> chips) => Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: chips),
+        ],
+      ),
+    );
+
+    Widget chip(String label, int count, bool selected, VoidCallback onTap) =>
+        FilterChip(
+          label: Text('$label  $count'),
+          selected: selected,
+          onSelected: (_) => onTap(),
+        );
+
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.82,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 12, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Filters', style: theme.textTheme.titleLarge),
+                ),
+                TextButton(
+                  onPressed: badge == 0 ? null : () => _set(_f.clearedPanel()),
+                  child: const Text('Reset'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              children: [
+                if (facets.prices.any((n) => n > 0))
+                  group('Price', [
+                    for (var i = 0; i < inventoryPriceBands.length; i++)
+                      if (facets.prices[i] > 0 || _f.price == i)
+                        chip(
+                          _bandLabel(i),
+                          facets.prices[i],
+                          _f.price == i,
+                          () => _set(
+                            _f.copyWith(price: _f.price == i ? null : i),
+                          ),
+                        ),
+                  ]),
+                if (facets.mediums.isNotEmpty)
+                  group('Medium', [
+                    for (final (medium, count) in facets.mediums)
+                      chip(
+                        humanize(medium),
+                        count,
+                        _f.mediums.contains(medium),
+                        () => _set(
+                          _f.copyWith(mediums: _toggled(_f.mediums, medium)),
+                        ),
+                      ),
+                  ]),
+                if (facets.sizes.isNotEmpty)
+                  group('Size', [
+                    for (final size in ArtworkSizeBand.values)
+                      if (facets.sizes[size] != null)
+                        chip(
+                          artworkSizeBandLabel[size]!,
+                          facets.sizes[size]!,
+                          _f.size == size,
+                          () => _set(
+                            _f.copyWith(size: _f.size == size ? null : size),
+                          ),
+                        ),
+                  ]),
+                if (facets.ranks.isNotEmpty)
+                  group('Rank', [
+                    for (final rank in ArtworkRarity.values)
+                      if (facets.ranks[rank] != null)
+                        chip(
+                          artworkRarityLabel[rank]!,
+                          facets.ranks[rank]!,
+                          _f.ranks.contains(rank),
+                          () => _set(
+                            _f.copyWith(ranks: _toggled(_f.ranks, rank)),
+                          ),
+                        ),
+                  ]),
+                if (facets.verified > 0 || facets.exclusive > 0)
+                  group('Artist and edition', [
+                    if (facets.verified > 0)
+                      chip(
+                        'Verified artists only',
+                        facets.verified,
+                        _f.verifiedOnly,
+                        () => _set(_f.copyWith(verifiedOnly: !_f.verifiedOnly)),
+                      ),
+                    if (facets.exclusive > 0)
+                      chip(
+                        'Exclusive to GalleryZone',
+                        facets.exclusive,
+                        _f.exclusiveOnly,
+                        () =>
+                            _set(_f.copyWith(exclusiveOnly: !_f.exclusiveOnly)),
+                      ),
+                  ]),
+              ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(
+                    matching == 1
+                        ? 'Show 1 artwork'
+                        : 'Show $matching artworks',
+                  ),
+                ),
+              ),
             ),
           ),
         ],

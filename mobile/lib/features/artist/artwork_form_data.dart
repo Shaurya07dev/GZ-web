@@ -29,7 +29,7 @@ const artworkCategories = [
 /// The same 28 state-wise Indian traditions offered by the artist survey.
 /// Values are the complete labels because that is what the API stores and the
 /// COA prints. "Other" asks for free text.
-const artworkTypes = [
+const _indianArtworkTypes = [
   FormOption('Andhra Pradesh: Kalamkari', 'Andhra Pradesh: Kalamkari'),
   FormOption('Arunachal Pradesh: Thangka', 'Arunachal Pradesh: Thangka'),
   FormOption(
@@ -109,6 +109,56 @@ const artworkMediums = [
   FormOption('other', 'Other'),
 ];
 
+enum ArtworkTypeGroup { india, world, other }
+
+/// One choice in the "Type of artwork" picker. [keywords] are searched but not
+/// shown as the title: a world form's region and category.
+class ArtworkTypeOption {
+  const ArtworkTypeOption(
+    this.value,
+    this.label,
+    this.group, [
+    this.keywords = '',
+  ]);
+
+  final String value;
+  final String label;
+  final ArtworkTypeGroup group;
+  final String keywords;
+}
+
+/// Everything the "Type of artwork" field offers (client, 14 Nov 2026: not only
+/// Indian art): the Indian traditions by state, the world art forms, then
+/// "Other". Same list as the website's `ARTWORK_TYPES`, in the same order.
+final artworkTypeOptions = <ArtworkTypeOption>[
+  for (final option in _indianArtworkTypes)
+    if (option.value != 'other')
+      ArtworkTypeOption(option.value, option.label, ArtworkTypeGroup.india),
+  for (final style in paintingStyles)
+    ArtworkTypeOption(
+      style.name,
+      style.name,
+      ArtworkTypeGroup.world,
+      '${style.region} \u00b7 ${style.category}',
+    ),
+  const ArtworkTypeOption('other', 'Other', ArtworkTypeGroup.other),
+];
+
+/// [artworkTypeOptions] as plain value/label pairs.
+final artworkTypes = [
+  for (final option in artworkTypeOptions)
+    FormOption(option.value, option.label),
+];
+
+/// What the field shows for a stored value: the label, or `Other`.
+String artworkTypeLabel(String value) {
+  if (value.isEmpty) return '';
+  for (final option in artworkTypeOptions) {
+    if (option.value == value) return option.label;
+  }
+  return value;
+}
+
 /// The surface the work is made on. An aggregator needs to know what they are
 /// hanging, not a taxonomy.
 const artworkFormats = [
@@ -151,6 +201,12 @@ const listingChoices = [
 ];
 
 const maxArtworkImages = 8;
+
+/// Client (18 Nov 2026): at least three photos are required to submit a piece
+/// for review, from as many different angles as possible. A draft can still be
+/// saved with fewer, and the server enforces it when a piece moves to review.
+/// Matches the website's MIN_ARTWORK_IMAGES.
+const minArtworkImages = 3;
 
 /// What the API takes for a photo; the repository enforces the same limits when
 /// it uploads, this is so the artist hears about a bad file when they pick it.

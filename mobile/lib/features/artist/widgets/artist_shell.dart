@@ -17,7 +17,7 @@ import '../../shell/portal_widgets.dart';
 /// direct tab rather than living behind the avatar.
 const artistDestinations = <ShellDestination>[
   ShellDestination(icon: LucideIcons.layoutGrid, label: 'Dashboard'),
-  ShellDestination(icon: LucideIcons.frame, label: 'My Art'),
+  ShellDestination(icon: LucideIcons.palette, label: 'My Art'),
   ShellDestination(icon: LucideIcons.wallet, label: 'Sales'),
   ShellDestination(icon: LucideIcons.menu, label: 'More'),
 ];

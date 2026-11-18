@@ -35,6 +35,9 @@ import {
   useAggregatorProfile,
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
+import { useVerifyGstinMutation } from "@/hooks/useVerification";
+import { usePincodeAutofill } from "@/hooks/usePincodeAutofill";
+import { Button } from "@/components/ui/button";
 import {
   COUNTRY_CODES,
   DEFAULT_COUNTRY_DIAL,
@@ -184,6 +187,7 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
   const updateBankMutation = useUpdateAggregatorProfileMutation();
   const updateIdentityMutation = useUpdateAggregatorProfileMutation();
+  const verifyGstinMutation = useVerifyGstinMutation();
 
   const initialPhone = splitPhone(profile.coordinatorPhone);
   const initialCompanyPhone = splitPhone(profile.phone);
@@ -259,6 +263,25 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
 
   const coordinatorEmailField = register("coordinatorEmail");
   const emailValue = watch("coordinatorEmail");
+
+  // India Post → autofill city + state when a 6-digit PIN is typed. Keeps the
+  // aggregator address form in sync with the artist pickup form and the
+  // customer checkout, so every address capture on the site behaves the
+  // same. Only fills fields that are currently blank.
+  const addressPincode = watch("addressPincode") ?? "";
+  const addressCity = watch("addressCity") ?? "";
+  const addressState = watch("addressState") ?? "";
+  const addressCountry = watch("country") ?? "IN";
+  const addressPincodeAutofill = usePincodeAutofill({
+    pincode: addressPincode,
+    country: addressCountry,
+    city: addressCity,
+    state: addressState,
+    onFill: (next) => {
+      if (next.city) setValue("addressCity", next.city, { shouldValidate: true, shouldDirty: true });
+      if (next.state) setValue("addressState", next.state, { shouldValidate: true, shouldDirty: true });
+    },
+  });
   const emailSuggestions = useMemo(() => {
     const at = emailValue?.indexOf("@") ?? -1;
     if (at <= 0) return [];
@@ -404,33 +427,62 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
           <Controller
             control={control}
             name="gstNumber"
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className="sm:col-span-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <FieldLabel htmlFor="gstNumber">
-                    GST number{" "}
-                    <span className="font-normal text-muted-foreground">
-                      (required to reserve)
-                    </span>
-                  </FieldLabel>
-                  <GstStatusBadge status={profile.gstStatus} />
-                </div>
-                <ReviewNote status={profile.gstStatus} note={profile.gstReviewNote} />
-                <Input
-                  id="gstNumber"
-                  maxLength={15}
-                  className="h-10 font-mono uppercase sm:max-w-xs"
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                  onBlur={field.onBlur}
-                  aria-invalid={fieldState.invalid}
-                />
-                <p className="text-xs text-muted-foreground">
-                  GalleryZone reviews it before you can reserve artwork.
-                </p>
-                <FieldError errors={[fieldState.error]} />
-              </Field>
-            )}
+            render={({ field, fieldState }) => {
+              const typedGstin = (field.value ?? "").trim().toUpperCase();
+              const savedGstin = (profile.gstNumber ?? "").trim().toUpperCase();
+              const hasUnsavedEdits = typedGstin !== savedGstin;
+              const savedIsValid = savedGstin.length > 0 && GSTIN_PATTERN.test(savedGstin);
+              return (
+                <Field data-invalid={fieldState.invalid} className="sm:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <FieldLabel htmlFor="gstNumber">
+                      GST number{" "}
+                      <span className="font-normal text-muted-foreground">
+                        (required to reserve)
+                      </span>
+                    </FieldLabel>
+                    <GstStatusBadge status={profile.gstStatus} />
+                  </div>
+                  <ReviewNote status={profile.gstStatus} note={profile.gstReviewNote} />
+                  <Input
+                    id="gstNumber"
+                    maxLength={15}
+                    className="h-10 font-mono uppercase sm:max-w-xs"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                    onBlur={field.onBlur}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {/* Live GST-registry check via Cashfree Secure ID. Same
+                      pattern as the artist profile (profile-kyc-form.tsx) —
+                      the API reads the SAVED gstin, not what's typed, so an
+                      unsaved edit has to be saved before the check fires. */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => verifyGstinMutation.mutate()}
+                      disabled={!savedIsValid || hasUnsavedEdits || verifyGstinMutation.isPending}
+                    >
+                      <ShieldCheck className="size-3.5" />
+                      {verifyGstinMutation.isPending
+                        ? "Checking the registry…"
+                        : "Verify with the GST registry"}
+                    </Button>
+                    {hasUnsavedEdits && typedGstin.length > 0 ? (
+                      <span className="text-[11px] text-muted-foreground">
+                        Save your profile first, then check it.
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    GalleryZone reviews it before you can reserve artwork.
+                  </p>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              );
+            }}
           />
 
           <Field data-invalid={Boolean(errors.phone)}>
@@ -487,7 +539,14 @@ function ProfileFormBody({ profile }: { profile: AggregatorProfileData }) {
               <FieldError errors={[errors.addressState]} />
             </Field>
             <Field data-invalid={Boolean(errors.addressPincode)}>
-              <FieldLabel htmlFor="addressPincode">PIN code</FieldLabel>
+              <FieldLabel htmlFor="addressPincode" className="flex items-center gap-2">
+                PIN code
+                {addressPincodeAutofill.isFetching ? (
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    looking up…
+                  </span>
+                ) : null}
+              </FieldLabel>
               <Input id="addressPincode" className="h-10" inputMode="numeric" maxLength={6} autoComplete="postal-code" {...register("addressPincode")} aria-invalid={Boolean(errors.addressPincode)} />
               <FieldError errors={[errors.addressPincode]} />
             </Field>

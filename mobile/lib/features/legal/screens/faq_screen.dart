@@ -43,6 +43,10 @@ class _FaqScreenState extends State<FaqScreen>
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,
+          // Material 3 pads a scrollable bar's first tab by 52dp (startOffset)
+          // to line it up with a title next to a back button; here that read as
+          // an empty gap, so the first tab starts at the page's own gutter.
+          tabAlignment: TabAlignment.start,
           tabs: [
             for (final audience in FaqAudience.values)
               Tab(text: faqAudienceLabel[audience]),

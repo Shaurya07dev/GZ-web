@@ -1,3 +1,4 @@
+import 'photo_pager.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -345,7 +346,11 @@ class _ArtworkCardState extends ConsumerState<ArtworkCard> {
 
     final photo = Opacity(
       opacity: isAvailable ? 1 : 0.65,
-      child: ArtworkImageView(url: artwork.thumbnailUrl),
+      // Swipe through every photo; in a sideways rail (a fixed width) the drag scrolls the rail instead.
+      child: PhotoPager(
+        urls: photoUrlsOf(artwork),
+        swipeable: widget.width == null,
+      ),
     );
 
     return SizedBox(

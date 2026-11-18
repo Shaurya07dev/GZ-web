@@ -3,6 +3,7 @@
 import { UserAvatar } from "@/components/shared/user-avatar";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePincodeAutofill } from "@/hooks/usePincodeAutofill";
 
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -170,6 +171,24 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
     setPickupForm((prev) => ({ ...prev, [field]: value }));
     setPickupSaved(false);
   }
+
+  // India Post → autofill city + state when a full 6-digit PIN is typed. The
+  // hook only touches fields that are currently blank, so an artist who
+  // already typed "Mumbai" won't have it replaced by India Post's district
+  // name (often "Mumbai Suburban" or similar — unfamiliar to buyers).
+  const pincodeAutofill = usePincodeAutofill({
+    pincode: pickupForm.pickupPincode,
+    country: pickupForm.pickupCountry,
+    city: pickupForm.pickupCity,
+    state: pickupForm.pickupState,
+    onFill: (next) => {
+      setPickupForm((prev) => ({
+        ...prev,
+        pickupCity: next.city ?? prev.pickupCity,
+        pickupState: next.state ?? prev.pickupState,
+      }));
+    },
+  });
 
   // The postal rule follows the pickup country — six digits for India, the
   // country's own format for the rest, and a loose 3–12 alphanumeric fallback
@@ -726,7 +745,14 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="pickupPincode">{postalFormat.label}</Label>
+            <Label htmlFor="pickupPincode" className="flex items-center gap-2">
+              {postalFormat.label}
+              {pincodeAutofill.isFetching ? (
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  looking up…
+                </span>
+              ) : null}
+            </Label>
             <Input
               id="pickupPincode"
               inputMode={pickupForm.pickupCountry === "IN" ? "numeric" : "text"}

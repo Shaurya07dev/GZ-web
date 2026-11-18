@@ -5,6 +5,7 @@ import 'package:gallery_zone/core/format.dart';
 import 'package:gallery_zone/core/theme/app_theme.dart';
 import 'package:gallery_zone/data/models/artist.dart';
 import 'package:gallery_zone/data/models/artwork.dart';
+import 'package:gallery_zone/data/models/artwork_reservation.dart';
 import 'package:gallery_zone/features/auth/providers/auth_providers.dart';
 import 'package:gallery_zone/data/models/artwork_filters.dart';
 import 'package:gallery_zone/data/models/marketplace.dart';
@@ -30,7 +31,6 @@ Artwork _artwork({
     medium: 'Oil on canvas',
     customerPrice: price,
     thumbnailUrl: '/artworks/bird.png',
-    insured: true,
     status: status,
     listingType: ListingType.marketplaceOnly,
     description: 'A study in rain light.',
@@ -45,6 +45,10 @@ Artwork _artwork({
 /// Returns whatever it is given, and records the filters it was called with
 /// so the screen's filter plumbing can be asserted on.
 class _FakeArtworkRepository implements ArtworkRepository {
+  @override
+  Future<ArtworkReservation> reservation(String artworkId) async =>
+      ArtworkReservation.unreserved();
+
   _FakeArtworkRepository(this.artworks);
 
   final List<Artwork> artworks;
