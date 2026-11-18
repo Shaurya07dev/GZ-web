@@ -155,6 +155,10 @@ void main() {
         ]);
         await _open(tester, world);
 
+        // The website's step-by-step guide is one tap away, whatever state the pieces are in.
+        expect(find.byKey(const Key('nfc-guide-link')), findsOneWidget);
+        expect(find.text('How to link NFC to your artwork'), findsOneWidget);
+
         expect(find.text('Not yet tagged'), findsOneWidget);
         expect(find.text('Tag linked · unlocked'), findsOneWidget);
         expect(find.text('Tag locked'), findsOneWidget);
