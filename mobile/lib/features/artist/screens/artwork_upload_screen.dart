@@ -511,9 +511,7 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
         profile.hasValue &&
         profile.requireValue.aadhaarStatus == ReviewStatus.approved;
     final kycMissing =
-        !_isEdit &&
-        profile.hasValue &&
-        (panMissing || !aadhaarApproved);
+        !_isEdit && profile.hasValue && (panMissing || !aadhaarApproved);
     final panPending = !_isEdit && profile.isLoading;
 
     // Two different things, and conflating them is what made the old banner
@@ -734,6 +732,15 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           'you save.',
           style: theme.textTheme.labelSmall,
         ),
+        const SizedBox(height: 6),
+        Text(
+          'We recommend at least $recommendedArtworkImages photos: the full piece, a close-up of the detail, and the '
+          'signature or back. Listings with more photos earn more trust from buyers.',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+            height: 1.4,
+          ),
+        ),
         const SizedBox(height: 12),
         _ImageGrid(
           images: _images,
@@ -764,6 +771,17 @@ class _ArtworkUploadScreenState extends ConsumerState<ArtworkUploadScreen> {
           '${_images.length} / $maxArtworkImages uploaded',
           style: theme.textTheme.labelSmall,
         ),
+        if (_images.length < recommendedArtworkImages)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              'Add ${recommendedArtworkImages - _images.length} more (recommended)',
+              key: const Key('photos-recommended'),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.tertiary,
+              ),
+            ),
+          ),
       ],
     );
   }

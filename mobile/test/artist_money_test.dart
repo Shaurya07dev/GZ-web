@@ -407,7 +407,7 @@ void main() {
         await _show(tester, const ArtistWalletTab(), artist: artist);
         expect(find.text('Automatic bank payout'), findsOneWidget);
         expect(
-          find.textContaining('no prepaid wallet or manual withdrawal'),
+          find.textContaining('no manual withdrawal request'),
           findsOneWidget,
         );
         expect(find.text('Withdraw'), findsNothing);

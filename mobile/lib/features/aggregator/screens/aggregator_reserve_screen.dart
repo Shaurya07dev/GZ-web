@@ -449,7 +449,7 @@ class _ReserveFormState extends ConsumerState<_ReserveForm> {
                       title: 'Secure reservation checkout',
                       body:
                           'You will pay through Razorpay. GalleryZone keeps the advance against this reservation; '
-                          'there is no prepaid app wallet to top up.',
+                          'there is no balance in the app to top up.',
                     ),
                     // Only the offline mock can lose a race on demand.
                     if (!remote) ...[

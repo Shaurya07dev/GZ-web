@@ -861,7 +861,7 @@ void main() {
         final agg = _Agg(free: 0);
         await _show(tester, agg, at: '/aggregator/inventory/aw-1/reserve');
         expect(find.text('Secure reservation checkout'), findsOneWidget);
-        expect(find.textContaining('no prepaid app wallet'), findsOneWidget);
+        expect(find.textContaining('no balance in the app to top up'), findsOneWidget);
         expect(
           tester
               .widget<FilledButton>(

@@ -202,6 +202,10 @@ const listingChoices = [
 
 const maxArtworkImages = 8;
 
+/// Guidance, not a rule: the full piece, a close-up of the detail, and the
+/// signature or back. Matches the website's RECOMMENDED_ARTWORK_IMAGES.
+const recommendedArtworkImages = 3;
+
 /// What the API takes for a photo; the repository enforces the same limits when
 /// it uploads, this is so the artist hears about a bad file when they pick it.
 const maxImageBytes = 15 * 1024 * 1024;
