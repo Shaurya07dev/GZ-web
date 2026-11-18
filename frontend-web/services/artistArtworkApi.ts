@@ -203,8 +203,12 @@ export const artistArtworkApi = {
   async update(input: { artworkId: string; patch: ArtworkWritePayload; mode?: "draft" | "review" }): Promise<OwnerArtwork> {
     const current = await artistArtworkApi.get(input.artworkId);
     const { images, ...rest } = input.patch;
-    await http.patch<OwnerArtworkDto>(`/v1/artist/artworks/${encodeURIComponent(input.artworkId)}`, toBody(rest, input.mode));
+    // Photos go up before a piece moves to review: the server counts them (three are required) when it does.
+    await http.patch<OwnerArtworkDto>(`/v1/artist/artworks/${encodeURIComponent(input.artworkId)}`, toBody(rest, undefined));
     await syncImages(input.artworkId, images, current.imageIds);
+    if (input.mode === "review") {
+      await http.patch(`/v1/artist/artworks/${encodeURIComponent(input.artworkId)}`, { mode: "review" });
+    }
     return artistArtworkApi.get(input.artworkId);
   },
 };

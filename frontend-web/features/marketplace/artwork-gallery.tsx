@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
-import { Expand } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isPlaceholderImage } from "@/lib/api-mappers";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -23,14 +23,31 @@ export function ArtworkGallery({ images, title }: ArtworkGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const active = sorted[activeIndex] ?? sorted[0];
+  const touchStart = useRef<number | null>(null);
 
   if (!active) return null;
+
+  // Swipe the big photo (or use the arrows): every angle is one gesture away, not a tap on a small thumbnail.
+  const go = (step: number) => setActiveIndex((i) => (i + step + sorted.length) % sorted.length);
 
   const isPlaceholder = isPlaceholderImage(active.url);
 
   return (
     <div className="flex flex-col gap-3">
       <Dialog open={zoomOpen} onOpenChange={isPlaceholder ? undefined : setZoomOpen}>
+        <div
+          className="relative"
+          onTouchStart={(e) => {
+            touchStart.current = e.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            const start = touchStart.current;
+            touchStart.current = null;
+            if (start === null || sorted.length < 2) return;
+            const dx = (e.changedTouches[0]?.clientX ?? start) - start;
+            if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+          }}
+        >
         <button
           type="button"
           disabled={isPlaceholder}
@@ -56,6 +73,30 @@ export function ArtworkGallery({ images, title }: ArtworkGalleryProps) {
             </>
           )}
         </button>
+          {sorted.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous photo"
+                onClick={() => go(-1)}
+                className="absolute top-1/2 left-3 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur-sm hover:bg-background"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next photo"
+                onClick={() => go(1)}
+                className="absolute top-1/2 right-3 flex size-9 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-sm backdrop-blur-sm hover:bg-background"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+              <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-background/90 px-2.5 py-1 text-xs font-medium text-foreground tabular-nums backdrop-blur-sm">
+                {activeIndex + 1} / {sorted.length}
+              </span>
+            </>
+          )}
+        </div>
 
         <DialogContent className="max-w-3xl border-none bg-transparent p-0 shadow-none ring-0 sm:max-w-3xl">
           <DialogTitle className="sr-only">

@@ -18,7 +18,7 @@ const TEAM: TeamMember[] = [
   {
     name: "Manish Khandarkar",
     initials: "MK",
-    role: "Founder",
+    role: "Co-founder",
     imageUrl: "/team/manish-khandarkar.jpg",
   },
   {

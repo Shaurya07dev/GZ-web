@@ -91,6 +91,8 @@ export interface ArtworkSummary {
   medium: string;
   customerPrice: number;
   thumbnailUrl: string;
+  /** Every photo, cover first. Lists carry them so a card can be swiped through; absent on older records. */
+  images?: ArtworkImage[];
   /** Marked one-of-a-kind at submission — the piece is exclusive to
    *  GalleryZone and not sold on any other platform. Absent on fixture
    *  records = false. */

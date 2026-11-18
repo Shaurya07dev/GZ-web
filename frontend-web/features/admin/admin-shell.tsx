@@ -22,6 +22,7 @@ import {
   Users,
   Receipt,
   Scale,
+  Inbox,
   Megaphone,
   ScrollText,
   FileChartColumn,
@@ -189,6 +190,7 @@ const NAV_GROUPS: AdminNavGroup[] = [
   {
     heading: "System",
     items: [
+      { label: "Enquiries", href: "/admin/enquiries", icon: Inbox },
       { label: "Broadcasts", href: "/admin/broadcasts", icon: Megaphone },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ScrollText, tourId: "admin-audit-logs" },
       { label: "Reports", href: "/admin/reports", icon: FileChartColumn },

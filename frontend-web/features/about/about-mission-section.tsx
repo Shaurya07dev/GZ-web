@@ -55,7 +55,7 @@ const columnStagger = {
 
 export function AboutMissionSection() {
   return (
-    <section className="relative overflow-hidden py-14 sm:py-20 md:py-28">
+    <section id="mission" className="relative scroll-mt-20 overflow-hidden py-14 sm:py-20 md:py-28">
       <div className="mx-auto max-w-[1400px] px-6 lg:px-10">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16">
           {/* LEFT: origin story */}

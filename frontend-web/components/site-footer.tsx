@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { BrandMark } from "@/components/shared/brand-mark";
 import { FOOTER_COLUMNS, SOCIAL_LINKS } from "./site-footer-data";
@@ -8,13 +9,22 @@ import type { FooterLink } from "./site-footer-data";
 
 function FooterLinkItem({ link }: { link: FooterLink }) {
   if (link.comingSoon) {
+    // Not a dead label: a tap says so, with a friendly note, instead of doing nothing.
     return (
-      <span className="text-sm text-foreground/40 cursor-default select-none">
+      <button
+        type="button"
+        onClick={() =>
+          toast(`${link.label} is coming soon`, {
+            description: "We are still building this. Check back shortly.",
+          })
+        }
+        className="cursor-pointer text-left text-sm text-foreground/50 transition-colors hover:text-foreground/80"
+      >
         {link.label}
         <span className="ml-2 inline-block rounded-sm bg-gold/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold tracking-[0.1em] text-gold uppercase leading-none">
           Soon
         </span>
-      </span>
+      </button>
     );
   }
   return (

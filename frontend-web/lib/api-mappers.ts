@@ -147,6 +147,7 @@ export function toArtworkSummary(dto: ArtworkDto): ArtworkSummary {
     medium: a.medium,
     customerPrice: a.customerPrice,
     thumbnailUrl: a.thumbnailUrl,
+    images: a.images,
     exclusive: a.exclusive,
     status: a.status,
     listingType: a.listingType,

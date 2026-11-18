@@ -8,6 +8,9 @@ import * as Sentry from "@sentry/node";
 import { z } from "zod";
 import {
   ArtistArtworkError,
+  ArtworkPhotosError,
+  ArtworkWeightError,
+  minPhotosMessage,
   FirestoreRateConfigStore,
   NfcError,
   approveArtwork,
@@ -470,8 +473,9 @@ export class ArtistArtworksController {
     // UI gate (owner-reported 31 Oct 2026: the frontend-only guard could
     // be bypassed by hitting the API directly).
     if (body.mode !== "draft") {
-      await this.assertListingReady(req.authUser.uid);
-      this.assertWeightOnSubmit(body);
+      // A brand-new piece has no photos yet (they are uploaded after it exists), so it cannot go straight to
+      // review: the client creates a draft, uploads the photos, then moves it to review (checked on that PATCH).
+      throw new BadRequestException({ type: "about:blank", title: minPhotosMessage(0), status: 400, code: "photos_required" });
     }
     const rates = await this.rates();
     const result = await submitArtwork({ db: this.db, artistId: req.authUser.uid, ...body, rates });
@@ -494,18 +498,6 @@ export class ArtistArtworksController {
     });
   }
 
-  private assertWeightOnSubmit(body: SubmitArtworkBody): void {
-    const weight = body.physical?.weightKg;
-    if (!weight || weight <= 0) {
-      throw new BadRequestException({
-        type: "about:blank",
-        title: "Enter the artwork's weight in kg before submitting — the courier needs it to price the shipment.",
-        status: 400,
-        code: "weight_missing",
-      });
-    }
-  }
-
   @Roles("artist")
   @Patch("artist/artworks/:id")
   async update(@Req() req: AuthenticatedRequest, @Param("id") id: string, @Body(new ZodValidationPipe(updateArtworkSchema)) body: UpdateArtworkBody) {
@@ -517,6 +509,12 @@ export class ArtistArtworksController {
     try {
       await updateArtwork(this.db, { artistId: req.authUser.uid, artworkId: id, patch: body, rates });
     } catch (error) {
+      if (error instanceof ArtworkPhotosError) {
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "photos_required" });
+      }
+      if (error instanceof ArtworkWeightError) {
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "weight_missing" });
+      }
       if (error instanceof ArtistArtworkError) {
         if (error.message.startsWith("No artwork")) throw notFound();
         throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "artwork_not_editable" });
