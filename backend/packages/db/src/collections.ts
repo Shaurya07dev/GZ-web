@@ -100,6 +100,7 @@ export const Collections = {
   rateConfigVersions: "rateConfigVersions",
   messageThreads: "messageThreads",
   broadcasts: "broadcasts",
+  enquiries: "enquiries",
   artistReviews: "artistReviews",
   resaleListings: "resaleListings",
   artistSales: "artistSales",
@@ -1104,6 +1105,19 @@ export interface RateConfigVersionDoc {
   // filters on this plain boolean instead.
   approved: boolean;
   reason: string;
+}
+
+/** One message from the public "Get in touch" form. See enquiries.ts. */
+export interface EnquiryDoc {
+  type: "advertisement" | "collaboration" | "general" | "support";
+  name: string;
+  email: string;
+  senderRole: string;
+  message: string;
+  status: "new" | "handled";
+  createdAt: FirebaseFirestore.Timestamp;
+  handledAt: FirebaseFirestore.Timestamp | null;
+  handledBy: string | null;
 }
 
 /** One admin announcement to a whole audience (artists, aggregators or both). See broadcasts.ts. */

@@ -36,7 +36,7 @@ const AD = {
   headline: "Your brand, in front of art lovers",
   body: "This slot sits between the passport story and the rank guide on every marketplace visit. Tell us about your gallery, frame shop or studio and we will send rates.",
   cta: "Advertise with us",
-  href: "/contact",
+  href: "/contact?type=advertisement",
   images: ["/artworks/landscape.png", "/artworks/portrait-woman.png", "/artworks/bird.png"],
 };
 

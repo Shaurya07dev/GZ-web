@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { User, Mail, Send, Check, Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,24 +14,43 @@ import {
   LinkedinGlyph,
 } from "@/components/social-icons";
 import { ROLE_OPTIONS, CONTACT_EMAIL } from "./contact-data";
+import { useSubmitEnquiryMutation } from "@/hooks/useEnquiries";
+import { ENQUIRY_MESSAGE_MAX, ENQUIRY_TYPES, enquiryTypeFrom, type EnquiryType } from "@/services/enquiryService";
 
 type ContactFormData = {
+  type: EnquiryType | "";
   fullName: string;
   email: string;
   role: string;
   message: string;
+  /** Hidden from people; a bot that fills every box fills this one too. */
+  website: string;
 };
 
 const EMPTY_FORM: ContactFormData = {
+  type: "",
   fullName: "",
   email: "",
   role: "",
   message: "",
+  website: "",
 };
 
+// One form for everything (client, 18 Nov 2026): advertisement, collaboration, a general question or support.
+// A button elsewhere on the site can open it with the kind already chosen, as /contact?type=advertisement.
 export function ContactSection() {
-  const [form, setForm] = useState<ContactFormData>(EMPTY_FORM);
+  return (
+    <Suspense>
+      <ContactForm />
+    </Suspense>
+  );
+}
+
+function ContactForm() {
+  const preselected = enquiryTypeFrom(useSearchParams().get("type"));
+  const [form, setForm] = useState<ContactFormData>({ ...EMPTY_FORM, type: preselected ?? "" });
   const [submitted, setSubmitted] = useState(false);
+  const submit = useSubmitEnquiryMutation();
 
   function updateField<K extends keyof ContactFormData>(
     field: K,
@@ -41,7 +61,18 @@ export function ContactSection() {
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    if (!form.type || !form.role) return;
+    submit.mutate(
+      {
+        type: form.type,
+        name: form.fullName,
+        email: form.email,
+        senderRole: form.role as "artist" | "aggregator" | "collector",
+        message: form.message,
+        website: form.website,
+      },
+      { onSuccess: () => setSubmitted(true) },
+    );
   }
 
   return (
@@ -83,6 +114,33 @@ export function ContactSection() {
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <div className="flex flex-col gap-2 sm:col-span-2">
+                    <Label>What is this about?</Label>
+                    <div role="radiogroup" aria-label="What is this about?" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {ENQUIRY_TYPES.map((option) => {
+                        const isSelected = form.type === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={isSelected}
+                            title={option.hint}
+                            onClick={() => updateField("type", option.value)}
+                            className={cn(
+                              "rounded-md border px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                              isSelected
+                                ? "border-gold/60 bg-gold/10 text-gold-bright"
+                                : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground",
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="fullName">Full name</Label>
                     <div className="relative">
@@ -152,19 +210,36 @@ export function ContactSection() {
                       id="message"
                       required
                       rows={5}
+                      maxLength={ENQUIRY_MESSAGE_MAX}
                       placeholder="Tell us more about your question or request."
                       value={form.message}
                       onChange={(e) => updateField("message", e.target.value)}
                       className="min-h-32 resize-none"
                     />
                   </div>
+
+                  {/* A trap for bots: invisible and unreachable for people, so only a script fills it in. */}
+                  <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                    <label htmlFor="website">Leave this empty</label>
+                    <input id="website" tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => updateField("website", e.target.value)} />
+                  </div>
                 </div>
+
+                {submit.isError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {submit.error instanceof Error ? submit.error.message : "We couldn't send your message. Please try again."}
+                  </p>
+                )}
+                {(!form.type || !form.role) && (
+                  <p className="text-xs text-muted-foreground">Choose what this is about and who you are, then send.</p>
+                )}
 
                 <button
                   type="submit"
-                  className="group inline-flex w-fit items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02]"
+                  disabled={submit.isPending || !form.type || !form.role}
+                  className="disabled:pointer-events-none disabled:opacity-60 group inline-flex w-fit items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02]"
                 >
-                  Send message
+                  {submit.isPending ? "Sending…" : "Send message"}
                   <Send className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
               </form>

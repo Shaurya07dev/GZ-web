@@ -30,9 +30,9 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Join GalleryZone", href: "/register?role=artist" },
       { label: "Early Artist Program", href: "/register?role=artist" },
       { label: "Artist Survey", href: "/artist-survey" },
-      { label: "Collaborations", href: "/contact" },
+      { label: "Collaborations", href: "/contact?type=collaboration" },
       { label: "How It Works", href: "/about" },
-      { label: "Artist Support", href: "/contact" },
+      { label: "Artist Support", href: "/contact?type=support" },
     ],
   },
   {
@@ -43,7 +43,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "How It Works", href: "/about" },
       { label: "Commission Art", comingSoon: true },
       { label: "FAQs", href: "/faq" },
-      { label: "Collector Support", href: "/contact" },
+      { label: "Collector Support", href: "/contact?type=support" },
     ],
   },
   {
@@ -61,7 +61,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Our Mission", href: "/about" },
       { label: "Careers", comingSoon: true },
       { label: "Newsroom", comingSoon: true },
-      { label: "Contact", href: "/contact" },
+      { label: "Contact", href: "/contact?type=general" },
     ],
   },
   {
