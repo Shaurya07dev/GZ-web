@@ -58,6 +58,14 @@ test('About names both founders as Co-founders; the Artist Terms say when they t
   await expect(page.getByText('Co-founder', { exact: true })).toHaveCount(2);
   await expect(page.getByText('Founder', { exact: true })).toHaveCount(0);
 
+  // The footer's Our Mission link lands on the mission statement itself, not the top of the page.
+  await page.goto('/');
+  const mission = page.getByRole('contentinfo').getByRole('link', { name: 'Our Mission', exact: true });
+  expect(await mission.getAttribute('href')).toBe('/about#mission');
+  await mission.click();
+  await expect(page).toHaveURL(/\/about#mission$/);
+  await expect(page.locator('section#mission').getByRole('heading', { name: /Welcome to/ })).toBeInViewport();
+
   await page.goto('/artist-terms');
   await expect(page.getByText('Effective Date: 18 August 2026')).toBeVisible();
 });
