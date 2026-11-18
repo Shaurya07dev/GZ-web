@@ -14,7 +14,15 @@ export interface RoleOption {
 // (empowerment + price privacy for artists, physical/digital reach for
 // aggregators, verified discovery for buyers) rather than invented —
 // exact language given in the plan.
+// Order is the client's (18 Nov 2026): Customer first, then Artist, then Aggregator.
 export const ROLE_OPTIONS: RoleOption[] = [
+  {
+    role: "customer",
+    label: "Customer",
+    description: "Discover and collect verified original artwork.",
+    icon: Compass,
+    redirectPath: ROLE_SECTION_HOME.customer,
+  },
   {
     role: "artist",
     label: "Artist",
@@ -29,12 +37,5 @@ export const ROLE_OPTIONS: RoleOption[] = [
       "Reserve, display, and distribute verified art through your gallery or space.",
     icon: Building2,
     redirectPath: ROLE_SECTION_HOME.aggregator,
-  },
-  {
-    role: "customer",
-    label: "Customer",
-    description: "Discover and collect verified original artwork.",
-    icon: Compass,
-    redirectPath: ROLE_SECTION_HOME.customer,
   },
 ];

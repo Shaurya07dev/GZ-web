@@ -17,9 +17,9 @@ export default function Home() {
         <IdentitySection />
         <EcosystemSection />
         <JourneySection />
+        <FaqSection />
         <EarlyProgramSection />
         <ClosingCtaSection />
-        <FaqSection />
       </main>
       <SiteFooter />
     </>

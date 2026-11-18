@@ -19,6 +19,18 @@ import { DbError } from "./errors.ts";
 
 export class ArtistArtworkError extends DbError {}
 
+/** Client (18 Nov 2026): a piece needs at least three photos, from as many different angles as possible, before it goes to review. */
+export const MIN_ARTWORK_IMAGES = 3;
+export class ArtworkPhotosError extends ArtistArtworkError {}
+export class ArtworkWeightError extends ArtistArtworkError {}
+
+export function minPhotosMessage(have: number): string {
+  const missing = Math.max(0, MIN_ARTWORK_IMAGES - have);
+  return `Add at least ${MIN_ARTWORK_IMAGES} photos before submitting for review (${missing} more needed), from as many different angles as you can.`;
+}
+
+export const WEIGHT_MISSING_MESSAGE = "Enter the artwork's weight in kg before submitting — the courier needs it to price the shipment.";
+
 export interface SubmitArtworkInput {
   db: Firestore;
   artistId: string;
@@ -148,6 +160,15 @@ export async function updateArtwork(
   const status = await latestStatusOf(db, artworkId);
   const editable = FREELY_EDITABLE.has(status) || (status === "marketplace" && Date.now() < artwork.editableUntil.toDate().getTime());
   if (!editable) throw new ArtistArtworkError(`An artwork that is ${status.replace("_", " ")} can no longer be edited`);
+
+  // Moving to review is the one gate: the courier needs a weight, and three photos must already be uploaded
+  // (the website and the app both upload before this call). Checked first, so a refusal writes nothing.
+  if (patch.mode === "review" && (status === "draft" || status === "returned")) {
+    const weight = patch.physical !== undefined ? patch.physical?.weightKg : artwork.physical?.weightKg;
+    if (!weight || weight <= 0) throw new ArtworkWeightError(WEIGHT_MISSING_MESSAGE);
+    const photos = (await listArtworkImages(db, artworkId)).length;
+    if (photos < MIN_ARTWORK_IMAGES) throw new ArtworkPhotosError(minPhotosMessage(photos));
+  }
 
   const fields: Partial<ArtworkDoc> = {};
   if (patch.title !== undefined) fields.title = patch.title;

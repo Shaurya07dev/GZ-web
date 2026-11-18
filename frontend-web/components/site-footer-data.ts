@@ -32,7 +32,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Artist Survey", href: "/artist-survey" },
       { label: "Collaborations", href: "/contact" },
       { label: "How It Works", href: "/about" },
-      { label: "MOU Agreement", href: "/artist-terms" },
       { label: "Artist Support", href: "/contact" },
     ],
   },
@@ -51,8 +50,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     title: "CATEGORIES",
     links: [
       { label: "Paintings", href: "/marketplace" },
-      { label: "Sculptures", href: "/marketplace" },
-      { label: "Digital Art", href: "/marketplace" },
       { label: "Other Art Works", comingSoon: true },
       { label: "Art Supplies", href: "/art-supplies" },
     ],
@@ -62,8 +59,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       { label: "About Us", href: "/about" },
       { label: "Our Mission", href: "/about" },
-      { label: "Careers", href: "/about" },
-      { label: "Newsroom", href: "/about" },
+      { label: "Careers", comingSoon: true },
+      { label: "Newsroom", comingSoon: true },
       { label: "Contact", href: "/contact" },
     ],
   },
@@ -74,8 +71,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Delete Account", href: "/account-deletion" },
       { label: "Cookie Policy", href: "/cookies" },
-      { label: "Artist Terms", href: "/artist-terms" },
-      { label: "Aggregator Terms", href: "/aggregator-terms" },
     ],
   },
 ];

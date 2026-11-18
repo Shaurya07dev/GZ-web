@@ -55,7 +55,7 @@ import {
   DIMENSION_UNITS,
   LISTING_TYPES,
   MAX_ARTWORK_IMAGES,
-  RECOMMENDED_ARTWORK_IMAGES,
+  MIN_ARTWORK_IMAGES,
   ARTWORK_FORMATS,
 
 } from "./artwork-submit-data";
@@ -346,6 +346,8 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
       ].filter((v): v is string => v !== null)
     : [];
   const aggregatorReady = missingForAggregator.length === 0;
+  // A new piece needs three photos before it can go to review; a draft, or an edit of an existing piece, does not.
+  const photosReady = isEdit || images.length >= MIN_ARTWORK_IMAGES;
   // The whole ladder, so the artist can see where every rupee of the
   // difference between their rate and the listed price goes.
   // The whole ladder is quoted from the rules an admin approved
@@ -401,6 +403,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
     e.preventDefault();
     // Drafts can be incomplete; a submission on the aggregator channel cannot.
     if (mode === "review" && !aggregatorReady) return;
+    if (mode === "review" && !photosReady) return;
     // PAN + verified Aadhaar must be on file before a new listing can go live.
     // Drafts and edits to an artwork that's already listed are unaffected.
     if (mode === "review" && !isEdit && !kycComplete) return;
@@ -625,9 +628,10 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
             WebP, 15 MB each. Photos upload when you save.
           </p>
           <p className="mt-2 text-xs text-foreground/80">
-            We recommend at least {RECOMMENDED_ARTWORK_IMAGES} photos: the full
-            piece, a close-up of the detail, and the signature or back.
-            Listings with more photos earn more trust from buyers.
+            Add at least {MIN_ARTWORK_IMAGES} photos to submit for review, and
+            as many different angles as you can: the full piece, close-ups of
+            the detail, and the signature and back. Buyers and galleries can
+            swipe through every photo.
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -672,14 +676,14 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
           <p
             className={cn(
               "mt-3 text-xs",
-              images.length < RECOMMENDED_ARTWORK_IMAGES
+              images.length < MIN_ARTWORK_IMAGES
                 ? "text-gold-bright"
                 : "text-muted-foreground",
             )}
           >
             {images.length} / {MAX_ARTWORK_IMAGES} uploaded
-            {images.length < RECOMMENDED_ARTWORK_IMAGES &&
-              ` · add ${RECOMMENDED_ARTWORK_IMAGES - images.length} more (recommended)`}
+            {images.length < MIN_ARTWORK_IMAGES &&
+              ` · add ${MIN_ARTWORK_IMAGES - images.length} more (required)`}
           </p>
         </section>
 
@@ -1239,6 +1243,13 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
           </p>
         )}
 
+        {!photosReady && (
+          <p className="text-sm text-muted-foreground">
+            Add at least {MIN_ARTWORK_IMAGES} photos (as many angles as you can) to submit for review. You can still
+            save this as a draft.
+          </p>
+        )}
+
         {(submitMutation.isError || updateMutation.isError) && (
           <p className="text-sm text-destructive">
             {(submitMutation.error ?? updateMutation.error) instanceof Error
@@ -1255,6 +1266,7 @@ export function ArtworkSubmitForm({ artwork }: { artwork?: EditableArtwork }) {
               submitMutation.isPending ||
               updateMutation.isPending ||
               !aggregatorReady ||
+              !photosReady ||
               (!isEdit && !kycComplete)
             }
             className="group inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-gold-bright to-gold px-6 py-3 text-sm font-semibold text-[#171310] shadow-[0_18px_40px_-14px_rgba(200,154,74,0.55)] transition-transform hover:scale-[1.02] disabled:pointer-events-none disabled:opacity-60"
