@@ -88,10 +88,17 @@ interface AdminKpiDto {
 interface AuditLogDto {
   id: string;
   adminId: string;
+  /** Joined on the backend from users/{adminId}.name. Falls back to a short-form
+   *  of the uid when the user doc is missing. Was absent on older responses
+   *  that only sent the raw adminId — kept optional so a stale API still works. */
+  adminName?: string;
   action: string;
   entityType: string;
   entityId: string;
   entityLabel: string | null;
+  /** Human name/title for the subject row (users/artworks/orders). Preferred
+   *  over the raw entityId. Backend joins it at read time since 19 Nov 2026. */
+  subjectLabel?: string;
   detail: unknown;
   createdAt: { _seconds: number } | string;
 }
@@ -144,11 +151,17 @@ function toAudit(a: AuditLogDto): AuditLogEntry {
   const detail = a.detail && typeof a.detail === "object" ? (a.detail as Record<string, unknown>) : null;
   return {
     id: a.id,
-    adminName: a.adminId,
+    // Prefer the backend-joined name; fall back to the raw uid if an older API
+    // revision ever responds without it. Showing "xYVwIZKMHrTPF3aiAeYjRRpCU9d2"
+    // as the "By" value scared the client on 19 Nov 2026 — joined names now.
+    adminName: a.adminName ?? a.adminId,
     action: a.action as AuditLogEntry["action"],
     entityType: a.entityType as AuditLogEntry["entityType"],
     entityId: a.entityId,
-    entityLabel: a.entityLabel ?? a.entityId,
+    // Same three-tier fallback for the Subject column: joined label from the
+    // right collection (users/artworks/orders) > the stored entityLabel >
+    // the raw uid as a last resort.
+    entityLabel: a.subjectLabel ?? a.entityLabel ?? a.entityId,
     ...(detail && typeof detail.reason === "string" ? { detail: detail.reason } : {}),
     createdAt,
   };

@@ -72,7 +72,102 @@ export async function delistArtwork(db: Firestore, artworkId: string, adminId: s
   });
 }
 
-export async function getAuditLog(db: Firestore, limit = 100): Promise<(AuditLogDoc & { id: string })[]> {
+export interface AuditLogView extends AuditLogDoc {
+  id: string;
+  /** Human-readable admin name joined at read time from users/{adminId}.name.
+   *  Falls back to a short-form of the uid when the user doc is missing. */
+  adminName: string;
+  /** Human-readable subject name joined at read time from the right collection
+   *  based on entityType ("user" → users, "artwork" → artworks.title, "order"
+   *  → "Order <shortId>", etc.). Prefers the stored entityLabel when set. */
+  subjectLabel: string;
+}
+
+/**
+ * Admin audit log, enriched with human-readable names so the UI doesn't show
+ * raw uids in the Subject and By columns (client flag 19 Nov 2026 — "what are
+ * these random numbers"). Joins happen at read time in two batched passes:
+ * one for admin names, one for subject names grouped by entityType. The audit
+ * log is append-only and bounded (we load `limit` rows), so this stays well
+ * under Firestore's 500-doc query limit for any realistic admin console view.
+ */
+export async function getAuditLog(db: Firestore, limit = 100): Promise<AuditLogView[]> {
   const snap = await db.collection(Collections.auditLog).orderBy("createdAt", "desc").limit(limit).get();
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as AuditLogDoc) }));
+  const rows: Array<AuditLogDoc & { id: string }> = snap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as AuditLogDoc),
+  }));
+
+  // 1) Admin names — every entry has an adminId, dedup to a small set.
+  const adminIds = Array.from(new Set(rows.map((r) => r.adminId).filter(Boolean)));
+  const adminNames = await bulkLookupUserNames(db, adminIds);
+
+  // 2) Subject names — collect ids per entityType, look them up in the right
+  //    collection. User subjects use the same users lookup as admins (merged
+  //    into one Firestore round-trip below).
+  const userSubjectIds = rows.filter((r) => r.entityType === "user").map((r) => r.entityId);
+  const artworkSubjectIds = rows.filter((r) => r.entityType === "artwork").map((r) => r.entityId);
+
+  // Fold user subject lookups into the same batch as admin lookups — they all
+  // land in the users collection, so one pass is cheaper than two.
+  const extraUserIds = userSubjectIds.filter((id) => !adminNames.has(id));
+  if (extraUserIds.length > 0) {
+    const extras = await bulkLookupUserNames(db, Array.from(new Set(extraUserIds)));
+    for (const [k, v] of extras) adminNames.set(k, v);
+  }
+
+  const artworkTitles = await bulkLookupArtworkTitles(db, Array.from(new Set(artworkSubjectIds)));
+
+  return rows.map((row) => {
+    const adminName = adminNames.get(row.adminId) ?? shortUid(row.adminId);
+    let subjectLabel = row.entityLabel ?? "";
+    if (!subjectLabel) {
+      if (row.entityType === "user") {
+        subjectLabel = adminNames.get(row.entityId) ?? shortUid(row.entityId);
+      } else if (row.entityType === "artwork") {
+        subjectLabel = artworkTitles.get(row.entityId) ?? shortUid(row.entityId);
+      } else if (row.entityType === "order") {
+        subjectLabel = `Order ${shortUid(row.entityId)}`;
+      } else {
+        subjectLabel = shortUid(row.entityId);
+      }
+    }
+    return { ...row, adminName, subjectLabel };
+  });
+}
+
+async function bulkLookupUserNames(db: Firestore, ids: readonly string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (ids.length === 0) return out;
+  // Firestore's getAll is up to 10x cheaper than N parallel .get()s for the
+  // ~100 doc batch an audit page returns — no composite index needed.
+  const refs = ids.map((id) => db.collection(Collections.users).doc(id));
+  const snaps = await db.getAll(...refs);
+  for (const snap of snaps) {
+    if (!snap.exists) continue;
+    const data = snap.data() as { name?: string; email?: string } | undefined;
+    const label = data?.name?.trim() || data?.email || shortUid(snap.id);
+    out.set(snap.id, label);
+  }
+  return out;
+}
+
+async function bulkLookupArtworkTitles(db: Firestore, ids: readonly string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (ids.length === 0) return out;
+  const refs = ids.map((id) => db.collection(Collections.artworks).doc(id));
+  const snaps = await db.getAll(...refs);
+  for (const snap of snaps) {
+    if (!snap.exists) continue;
+    const data = snap.data() as { title?: string } | undefined;
+    out.set(snap.id, data?.title ?? shortUid(snap.id));
+  }
+  return out;
+}
+
+/** "abcdef12…" — first 8 chars of a Firestore doc id, with an ellipsis so
+ *  even the fallback reads as "an id, truncated for display" rather than a
+ *  random run of characters. */
+function shortUid(id: string): string {
+  return id.length <= 8 ? id : `${id.slice(0, 8)}…`;
 }
