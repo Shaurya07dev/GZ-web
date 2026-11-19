@@ -39,11 +39,32 @@ import { CashfreeVerification } from "./cashfree-verification.ts";
 import { classifyWebhook, invalidSignature } from "../payments/webhook-signature.ts";
 
 interface DigiLockerWebhook {
+  /** Cashfree Secure ID sends this as `event_type`; the legacy aliased
+   *  `type` field is still accepted as a compatibility fallback for any
+   *  older webhook format. 19 Nov 2026 incident: real webhook payload
+   *  landed with `event_type` only, and the handler was keying on `type`
+   *  → dropped every real success as an unknown event. */
+  event_type?: string;
   type?: string;
+  event_time?: string;
   data?: {
     verification_id?: string;
     reference_id?: string | number;
+    /** "AUTHENTICATED" on success, "DECLINED"/"FAILED" otherwise. */
+    status?: string;
     name?: string;
+    /** Cashfree's actual shape: user_details.{name,dob,gender,mobile,eaadhaar}.
+     *  The "eaadhaar" flag is just a presence marker (Y/N) — the webhook does
+     *  NOT include the Aadhaar number (masked or otherwise). We store the
+     *  verified name and treat the Aadhaar as confirmed. */
+    user_details?: {
+      name?: string;
+      dob?: string;
+      gender?: string;
+      mobile?: string;
+      eaadhaar?: string;
+    };
+    /** Older (and docs-sample) shapes — kept as fallbacks. */
     aadhaar?: { masked_aadhaar_number?: string; name?: string };
     document?: { aadhaar?: { masked_aadhaar_number?: string; name?: string } };
   };
@@ -158,7 +179,15 @@ export class VerificationController {
     // a real forgery attempt).
     if (check === "rejected") throw invalidSignature();
     const event = req.body as DigiLockerWebhook;
-    const type = event.type ?? "";
+    // Cashfree Secure ID sends `event_type` on real DigiLocker webhooks, not
+    // `type`. The 19 Nov 2026 incident was this exact mismatch: webhook
+    // landed, signature verified, handler looked up `event.type`, found
+    // nothing, silently bailed as "unknown event" with HTTP 200. Artist's
+    // profile stayed on "Not started" even though Cashfree had marked the
+    // verification Authenticated. Both field names are honoured now so an
+    // eventual Cashfree dashboard-format change in either direction doesn't
+    // break us again.
+    const type = event.event_type ?? event.type ?? "";
     if (!type.startsWith("DIGILOCKER_VERIFICATION")) return { received: true, matched: false };
 
     const verificationId = event.data?.verification_id;
@@ -166,14 +195,34 @@ export class VerificationController {
     const uid = verificationId ? await userForVerification(this.db, verificationId) : null;
     if (!uid) return { received: true, matched: false };
 
+    // Success is signalled by either the event name (SUCCESS suffix) or the
+    // `data.status` field ("AUTHENTICATED" on the real webhook). Both agree
+    // on actual Cashfree payloads; the OR keeps us working if either path
+    // changes later.
+    const dataStatus = (event.data?.status ?? "").toUpperCase();
+    const success = type === "DIGILOCKER_VERIFICATION_SUCCESS" || dataStatus === "AUTHENTICATED";
+
+    // The real Cashfree payload carries user_details.name; older/sample
+    // formats used aadhaar.name or a top-level name. Try all three.
     const aadhaar = event.data?.aadhaar ?? event.data?.document?.aadhaar;
+    const verifiedName =
+      event.data?.user_details?.name ?? aadhaar?.name ?? event.data?.name ?? null;
+    // Masked Aadhaar is not in the Cashfree webhook — they only pass an
+    // `eaadhaar: "Y"` presence flag. Keep the aadhaar-masked slot free of
+    // invented data; the admin knows the artist is verified via the
+    // success flag. If older sample payloads with masked numbers ever
+    // arrive, we'll still capture them.
+    const aadhaarMasked = aadhaar?.masked_aadhaar_number ?? null;
+
     await recordDigiLockerOutcome(this.db, uid, {
-      success: type === "DIGILOCKER_VERIFICATION_SUCCESS",
+      success,
       referenceId: event.data?.reference_id === undefined ? null : String(event.data.reference_id),
-      verifiedName: aadhaar?.name ?? event.data?.name ?? null,
-      aadhaarMasked: aadhaar?.masked_aadhaar_number ?? null,
-      // The event name is kept; the payload is not, so nothing from DigiLocker is stored wholesale.
-      detail: { event: type },
+      verifiedName,
+      aadhaarMasked,
+      // The event name is kept; the payload is not, so nothing from DigiLocker
+      // is stored wholesale. Includes dataStatus so support can tell
+      // AUTHENTICATED from a signal-only SUCCESS (both set success=true).
+      detail: { event: type, status: dataStatus || null },
       // Signed with the body, so it can be trusted to order events.
       eventAtMs: webhookTimestampMs(timestamp),
     });
