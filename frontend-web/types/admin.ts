@@ -38,6 +38,12 @@ export interface AdminUser {
   gstin?: string | null;
   gstStatus?: GstStatus;
   instagramHandle?: string | null;
+  /** Masked payout account ("XXXXXXXX1234") — null until the artist fills
+   *  the Payout section. Admin KYC approval is gated server-side on this
+   *  + ifsc being present, so the admin console can surface readiness
+   *  without needing to attempt the approval to find out. */
+  bankAccountMasked?: string | null;
+  ifsc?: string | null;
   /** TR partner — this artist lists through an external platform rather
    *  than natively on GalleryZone. Admin-only internal flag. */
   externalArtist?: boolean;

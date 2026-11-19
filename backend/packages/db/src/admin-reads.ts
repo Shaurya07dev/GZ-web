@@ -83,6 +83,9 @@ export interface AdminUserView {
   website: string | null;
   location: string | null;
   bankAccountMasked: string | null;
+  /** IFSC of the payout bank, when the artist has entered one. Admin KYC-
+   *  approval is gated on both bankAccountMasked + ifsc being present. */
+  ifsc: string | null;
   /** The §194-O TDS flag an admin has set by hand. */
   earningsAbove5L: boolean;
   /** True for artists who come from an external platform (TR partners). */
@@ -112,6 +115,7 @@ async function toAdminUser(db: Firestore, id: string, u: UserDoc): Promise<Admin
     website: profile?.website ?? null,
     location: profile?.location ?? null,
     bankAccountMasked: profile?.bankAccountMasked ?? null,
+    ifsc: profile?.ifsc ?? null,
     earningsAbove5L: profile?.earningsAbove5L ?? false,
     externalArtist: u.externalArtist ?? false,
     galleryzoneRating: profile?.galleryzoneRating ?? null,

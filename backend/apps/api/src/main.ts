@@ -31,6 +31,23 @@ async function bootstrap() {
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     next();
   });
+  // Admin console responses are per-admin, time-sensitive, and must never be
+  // served from a browser or intermediary cache. Client flag 19 Nov 2026:
+  // closing DevTools (which disables the HTTP cache) made admin detail pages
+  // start serving the first-fetched user to every subsequent click — browser
+  // was reusing cached /v1/admin/users/:id responses across different ids
+  // because our responses carried no Cache-Control and Chrome's freshness
+  // heuristic was happy to cache GET responses that lacked one. Blanket
+  // `no-store` on every admin route, applied at the middleware layer so no
+  // new admin controller can forget it.
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.path.startsWith("/v1/admin/")) {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Vary", "Authorization");
+    }
+    next();
+  });
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalPipes(new RouteParamPipe());
   // Bearer tokens, not cookies, so no credentials — keeps the allowlist the only CORS decision.

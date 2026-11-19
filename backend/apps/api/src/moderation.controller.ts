@@ -3,8 +3,8 @@
 // audit log write, state-machine-enforced) — verified directly in
 // packages/db/moderation.check.ts against real Postgres.
 
-import { Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
-import { decideGst, decideKyc, type Db } from "@galleryzone/db";
+import { BadRequestException, Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
+import { ModerationError, decideGst, decideKyc, type Db } from "@galleryzone/db";
 import { z } from "zod";
 import { Roles } from "./auth/roles.decorator.ts";
 import { Emails } from "./mail/emails.ts";
@@ -48,9 +48,20 @@ export class ModerationController {
   @Roles("admin")
   @Post("moderation/kyc/:userId/approve")
   async approveKyc(@Req() req: AuthenticatedRequest, @Param("userId") userId: string) {
-    const result = await decideKyc({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
-    this.mailCompliance(userId, "kyc", result.decisionId, true);
-    return result;
+    try {
+      const result = await decideKyc({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
+      this.mailCompliance(userId, "kyc", result.decisionId, true);
+      return result;
+    } catch (error) {
+      // Client-visible refusal when decideKyc's new bank-details gate rejects.
+      // The DbError message is written for the admin to act on directly ("ask
+      // them to complete the Payout section"), so surface it verbatim rather
+      // than a 500.
+      if (error instanceof ModerationError) {
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "kyc_bank_details_missing" });
+      }
+      throw error;
+    }
   }
 
   @Roles("admin")

@@ -45,6 +45,10 @@ interface AdminUserDto {
   website: string | null;
   location: string | null;
   bankAccountMasked: string | null;
+  /** IFSC of the payout bank — present only once the artist has filled the
+   *  Payout section. Admin KYC approval is gated on this + bankAccountMasked
+   *  being non-null (server-side: moderation.ts decideKyc). */
+  ifsc?: string | null;
   externalArtist: boolean;
   galleryzoneRating: number | null;
   /** From ProfileDoc on the artist. Optional because older user docs
@@ -122,6 +126,8 @@ function toAdminUser(u: AdminUserDto): AdminUser {
     gstin: u.gstin,
     gstStatus: GST[u.gstStatus ?? "not_submitted"] ?? "not_submitted",
     instagramHandle: u.instagram,
+    bankAccountMasked: u.bankAccountMasked,
+    ifsc: u.ifsc ?? null,
     externalArtist: u.externalArtist,
     galleryzoneRating: u.galleryzoneRating,
     earningsAbove5L: u.earningsAbove5L,

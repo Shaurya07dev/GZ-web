@@ -68,6 +68,22 @@ export async function decideKyc(input: DecisionInput & { userId: string }): Prom
     const profile = snap.data() as ProfileDoc;
     const current: ReviewStatus = profile.aadhaarStatus ?? "not_submitted";
     kycStateMachine.assertTransition(current, input.decision);
+    // Client flag 19 Nov 2026: approving KYC without bank details on file is
+    // premature. The artist can't be paid out later — admin would end up
+    // chasing them for the bank fields anyway, and the "verified" badge in
+    // the meantime misrepresents readiness. Refuse an approve when the
+    // profile doesn't have BOTH account mask + IFSC on file. Rejection is
+    // always allowed regardless of bank fields (it's a rejection, not an
+    // approval — withholding is the point).
+    if (input.decision === "approved") {
+      const hasBankAccount = Boolean(profile.bankAccountMasked?.trim());
+      const hasIfsc = Boolean(profile.ifsc?.trim());
+      if (!hasBankAccount || !hasIfsc) {
+        throw new ModerationError(
+          "Can't approve KYC yet — the artist hasn't added their bank account or IFSC. Ask them to complete the Payout section, then approve.",
+        );
+      }
+    }
 
     tx.update(profileRef, { aadhaarStatus: input.decision, aadhaarReviewNote: input.decision === "rejected" ? (input.reason?.trim() ?? null) : null });
     tx.set(auditRef, auditDoc(input.adminId, input.decision === "approved" ? "kyc.approved" : "kyc.rejected", "user", input.userId, input.reason));
