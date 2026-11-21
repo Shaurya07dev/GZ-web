@@ -1,68 +1,89 @@
-// Tax-invoice PDF renderer — audit §9. Server-side pdfkit so the backend
-// never needs to run a browser; the output is a single A4 page sized for
-// typical international postal/courier printers.
+// Tax-invoice PDF renderer — audit §9. Server-side pdfkit, one A4 page
+// per invoice.
 //
-// Layout mirrors an Amazon India-style GST tax invoice:
-//   - letterhead: black-on-white GalleryZone mark + seller legal name +
-//     address + GSTIN on the left, "TAX INVOICE" + invoice number + date
-//     + order id on the right.
-//   - billed-to / shipped-to blocks (equal columns, independent heights).
-//   - items table with proper cell borders and column headers, so an
-//     accountant can scan it like a spreadsheet.
-//   - totals block right-aligned, with tax split and amount payable.
-//   - footer: GST declarations + computer-generated-invoice disclaimer.
+// Layout follows the Amazon India tax-invoice reference the client sent
+// on 20 Nov 2026:
+//   • Top-right stack (right half of the page): Shipping Address (bold,
+//     big) → Sold By (medium) → Billing Address (small).
+//   • Top-left stack: order number + order date, invoice number + date,
+//     under the GalleryZone logo.
+//   • Items table with 10 columns: Sl, Description, Unit Price, Discount,
+//     Qty, Net Amount, Tax Rate, Tax Type, Tax Amount, Total Amount. The
+//     art line splits its GST into CGST + SGST (or UTGST) sub-rows for
+//     intra-state, IGST for inter-state. Shipping and Payment-Gateway
+//     lines show "nil" in every tax column (PG tax is already baked into
+//     the Net Amount / Total Amount per the "including tax" label).
+//   • TOTAL row, Amount in Words.
+//   • Signature block: "For GalleryZone Private Limited" + Sai Pawan's
+//     signature PNG + "Authorized Signatory" label.
+//   • Reverse-charge statement + Razorpay payment-transaction footer.
 //
-// Font note (18 Nov 2026): pdfkit's built-in Helvetica/Times fonts are
-// WinAnsi-encoded and cannot render the ₹ glyph — the renderer produces
-// a superscript "¹" substitute that looked broken on a buyer's invoice.
-// We now prefix every amount with "Rs." instead, which is unambiguous,
-// matches how Amazon India invoices read, and avoids shipping a TTF
-// in the Docker image. If the client wants the ₹ glyph later, embed a
-// Unicode-capable font (Noto Sans, DejaVu Sans) via doc.registerFont()
-// — the rest of the renderer already uses a central MONEY helper so a
-// one-line swap makes the whole invoice switch symbols.
+// EVERY `doc.text(...)` in this file passes explicit `x, y` and never
+// uses `{ continued: true }`. Any continued-flow leftover pushes the
+// cursor into the next-page break logic and spills the invoice across
+// multiple almost-empty pages (20 Nov 2026 regression). Don't add one.
+//
+// Font note: pdfkit's built-in Helvetica can't render the ₹ glyph, so
+// every amount flows through MONEY() which prefixes "Rs." instead.
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import PDFDocument from "pdfkit";
-import type { InvoiceSnapshot, OrderDoc } from "@galleryzone/db";
+import type { InvoiceLine, InvoiceSnapshot, OrderDoc } from "@galleryzone/db";
 
-/** Black-on-white GalleryZone logo (gz-logo-mark.png — the C-in-black + Z-in-gold
- *  version, visible on a white invoice background). Missing-file fallback is the
- *  text-only all-caps treatment. */
 const LOGO_PATH = resolve(import.meta.dirname, "..", "assets", "invoice-logo.png");
 const LOGO_EXISTS = existsSync(LOGO_PATH);
 
+const SIGNATURE_PATH = resolve(import.meta.dirname, "..", "assets", "invoice-signatory.png");
+const SIGNATURE_EXISTS = existsSync(SIGNATURE_PATH);
+
 export interface InvoiceLineInput {
-  /** Order being invoiced. */
   order: OrderDoc & { id: string };
-  /** Frozen snapshot — pulled from the order doc by the caller. */
   invoice: InvoiceSnapshot;
-  /** Shown on the single line item. */
   artworkTitle: string;
 }
 
-/** The currency marker every amount on this invoice uses. See font note above
- *  for why we don't print the ₹ glyph directly from the built-in pdfkit fonts. */
 const MONEY = (paise: number) => `Rs. ${formatPaise(paise)}`;
 
-// --- Layout constants (A4 page, 48pt margins) ------------------------------
-const PAGE_MARGIN = 40;
+const PAGE_MARGIN = 36;
 const COLOR_TEXT = "#111111";
 const COLOR_MUTED = "#555555";
-const COLOR_FAINT = "#888888";
-const COLOR_BORDER = "#cccccc";
-const COLOR_SHADED = "#f5f5f5";
+const COLOR_BORDER = "#9a9a9a";
+
+/** Thrown when drawing produced more than one page — a hard layout
+ *  regression. The invoice format is designed around a single A4 page;
+ *  if a change here starts producing a second page, we want to fail
+ *  loudly in CI and on the admin's screen, not ship a half-rendered
+ *  invoice to a buyer. */
+export class InvoicePageOverflowError extends Error {
+  constructor(pageCount: number) {
+    super(
+      `Invoice PDF rendered ${pageCount} pages; the template is designed for exactly one A4 page. Shorten the content or widen the layout.`,
+    );
+    this.name = "InvoicePageOverflowError";
+  }
+}
 
 export function renderInvoicePdf(input: InvoiceLineInput): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN });
+      // bufferPages lets us inspect the page count after drawing and
+      // fail fast if anything overflowed. autoFirstPage is implicit.
+      const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
       const chunks: Buffer[] = [];
       doc.on("data", (c) => chunks.push(c as Buffer));
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", reject);
       drawInvoice(doc, input);
+      const range = doc.bufferedPageRange();
+      if (range.count > 1) {
+        // Don't finish the PDF — abort so a 2-page half-invoice never
+        // reaches a buyer. The caller's try/catch in the controller
+        // turns this into a 500 + the guard script turns it into a
+        // red CI check.
+        reject(new InvoicePageOverflowError(range.count));
+        return;
+      }
       doc.end();
     } catch (err) {
       reject(err instanceof Error ? err : new Error(String(err)));
@@ -75,347 +96,788 @@ function drawInvoice(doc: PDFKit.PDFDocument, input: InvoiceLineInput): void {
   const pageLeft = doc.page.margins.left;
   const pageRight = doc.page.width - doc.page.margins.right;
   const pageWidth = pageRight - pageLeft;
-  const colGap = 14;
+  const pageTop = doc.page.margins.top;
 
-  // ─── Header: letterhead on the left, invoice meta on the right ──────────
-  const HEADER_TOP = doc.page.margins.top;
-  const letterheadLeft = pageLeft;
-  const letterheadWidth = pageWidth * 0.55;
-  const metaLeft = pageLeft + letterheadWidth + colGap;
-  const metaWidth = pageWidth - letterheadWidth - colGap;
+  const utgstLabel = invoice.usesUtgst ? "UTGST" : "SGST";
+  const lines: InvoiceLine[] =
+    invoice.lines ?? legacyLinesFromOrder(order, artworkTitle, invoice);
 
-  // Logo (top-left, fixed size, no inline text wrap) + company block below it.
-  let letterheadY = HEADER_TOP;
+  // ─── Header: logo (left) + title (right) ────────────────────────────────
   if (LOGO_EXISTS) {
-    doc.image(LOGO_PATH, letterheadLeft, letterheadY, { height: 46 });
-    letterheadY += 54;
-  }
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(12)
-    .fillColor(COLOR_TEXT)
-    .text(invoice.seller.legalName.toUpperCase(), letterheadLeft, letterheadY, {
-      width: letterheadWidth,
+    doc.image(LOGO_PATH, pageLeft, pageTop, { height: 36 });
+  } else {
+    textAt(doc, "GALLERYZONE", pageLeft, pageTop + 6, pageWidth * 0.5, "left", {
+      font: "Helvetica-Bold",
+      size: 16,
     });
-  letterheadY = doc.y + 2;
-  const sellerLines = [
-    invoice.seller.addressLine1,
-    invoice.seller.addressLine2,
-    `${invoice.seller.city}, ${invoice.seller.state} - ${invoice.seller.pincode}`,
-    invoice.seller.gstin ? `GSTIN: ${invoice.seller.gstin}` : null,
-    invoice.seller.stateCode ? `State Code: ${invoice.seller.stateCode}` : null,
-  ].filter(Boolean) as string[];
-  doc
-    .font("Helvetica")
-    .fontSize(9)
-    .fillColor(COLOR_MUTED)
-    .text(sellerLines.join("\n"), letterheadLeft, letterheadY, {
-      width: letterheadWidth,
-      lineGap: 2,
-    });
-  const letterheadBottom = doc.y;
-
-  // Right-column meta: title + invoice number + date + order id.
-  let metaY = HEADER_TOP;
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(20)
-    .fillColor(COLOR_TEXT)
-    .text("TAX INVOICE", metaLeft, metaY, { width: metaWidth, align: "right" });
-  metaY = doc.y + 8;
-  const metaRows: Array<[string, string]> = [
-    ["Invoice No", invoice.number],
-    ["Date", formatDate(invoice.issuedAt.toDate())],
-    ["Order ID", order.id],
-    ["Fiscal Year", invoice.fiscalYear],
-  ];
-  for (const [label, value] of metaRows) {
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor(COLOR_MUTED)
-      .text(`${label}:`, metaLeft, metaY, {
-        width: metaWidth * 0.45,
-        align: "right",
-        continued: false,
-      });
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(9)
-      .fillColor(COLOR_TEXT)
-      .text(value, metaLeft + metaWidth * 0.5, metaY, {
-        width: metaWidth * 0.5,
-        align: "right",
-      });
-    metaY = doc.y + 3;
   }
-  const metaBottom = metaY;
+  textAt(
+    doc,
+    "Tax Invoice/Bill of Supply/Cash Memo",
+    pageLeft,
+    pageTop,
+    pageWidth,
+    "right",
+    { font: "Helvetica-Bold", size: 12 },
+  );
+  textAt(
+    doc,
+    "(Original for Recipient)",
+    pageLeft,
+    pageTop + 14,
+    pageWidth,
+    "right",
+    { font: "Helvetica", size: 9, color: COLOR_MUTED },
+  );
 
-  // Advance below whichever column ended lower.
-  let y = Math.max(letterheadBottom, metaBottom) + 16;
-  hr(doc, y);
-  y += 12;
+  const headerBottom = pageTop + 40;
 
-  // ─── Billed-to / Shipped-to columns ─────────────────────────────────────
-  const partyColWidth = (pageWidth - colGap) / 2;
-  const billedLeft = pageLeft;
-  const shippedLeft = pageLeft + partyColWidth + colGap;
+  // ─── Parties strip ─────────────────────────────────────────────────────
+  // Three roles on this invoice — fixed semantics, confirmed by client
+  // 20 Nov 2026:
+  //   • Billed by = GalleryZone Private Limited (always). GalleryZone
+  //     is the party that collected the money and issues this invoice,
+  //     so its name, address, GSTIN and state code go here. Its state
+  //     also drives the CGST/SGST vs IGST split below.
+  //   • Sold By = the artist (marketplace channel) or aggregator
+  //     (aggregator channel). This is the origin of the actual art
+  //     piece. Shown informationally for the buyer; it is NOT the
+  //     taxable person for this invoice.
+  //   • Shipping Address = the customer's delivery address. For goods,
+  //     the place of supply equals this.
+  //
+  // Layout:
+  //   LEFT  : Billed by (GZ) → Sold By (artist/aggregator)
+  //   RIGHT : Shipping Address (big/bold) + state/place metadata
+  //   BELOW : order + invoice metadata band
+  //
+  // Every text() call is at explicit (x, y). No continued flows.
+  const colGap = 20;
+  const colW = (pageWidth - colGap) / 2;
+  const leftX = pageLeft;
+  const rightX = pageLeft + colW + colGap;
 
-  const billedLines = [
+  const buyerAddrLines = [
     invoice.buyer.name,
     invoice.buyer.addressLine1,
     invoice.buyer.addressLine2,
-    `${invoice.buyer.city}, ${invoice.buyer.state} - ${invoice.buyer.pincode}`,
-  ].filter(Boolean) as string[];
-  const shippedHeading = "Place of supply";
-  const shippedBody = `${invoice.buyer.state} (${stateDisplayCode(invoice.buyer.state)})`;
+    `${invoice.buyer.city}, ${invoice.buyer.state}, ${invoice.buyer.pincode}`,
+    "IN",
+  ].filter((s): s is string => Boolean(s && String(s).trim()));
 
-  const billedBottom = drawPartyBlock(doc, {
-    x: billedLeft,
-    y,
-    width: partyColWidth,
-    heading: "Billed to",
-    lines: billedLines,
-  });
-  const shippedBottom = drawPartyBlock(doc, {
-    x: shippedLeft,
-    y,
-    width: partyColWidth,
-    heading: shippedHeading,
-    lines: [shippedBody],
-  });
+  const buyerCode =
+    invoice.placeOfSupply?.numericCode ?? stateDisplayCode(invoice.buyer.state);
+  const soldBy = invoice.soldBy;
 
-  y = Math.max(billedBottom, shippedBottom) + 16;
-  hr(doc, y);
+  // --- LEFT: Billed by (GalleryZone) → Sold By (artist/aggregator) -------
+  let ly = headerBottom + 8;
+  textAt(doc, "Billed by :", leftX, ly, colW, "left", {
+    font: "Helvetica-Bold",
+    size: 10,
+  });
+  ly += 14;
+  const billedByLines = [
+    invoice.seller.legalName,
+    invoice.seller.addressLine1,
+    invoice.seller.addressLine2,
+    `${invoice.seller.city}, ${invoice.seller.state} - ${invoice.seller.pincode}`,
+    "IN",
+  ].filter((s): s is string => Boolean(s && String(s).trim()));
+  for (const line of billedByLines) {
+    textAt(doc, line, leftX, ly, colW, "left", { font: "Helvetica", size: 10 });
+    ly += 12;
+  }
+  if (invoice.seller.gstin) {
+    textAt(doc, `GSTIN: ${invoice.seller.gstin}`, leftX, ly, colW, "left", {
+      font: "Helvetica-Bold",
+      size: 10,
+    });
+    ly += 13;
+  }
+  if (invoice.seller.stateCode) {
+    textAt(doc, `State Code: ${invoice.seller.stateCode}`, leftX, ly, colW, "left", {
+      font: "Helvetica-Bold",
+      size: 9.5,
+    });
+    ly += 12;
+  }
+  ly += 6;
+
+  textAt(doc, "Sold By :", leftX, ly, colW, "left", {
+    font: "Helvetica-Bold",
+    size: 10,
+  });
+  ly += 14;
+  const soldByLines = soldBy
+    ? [
+        soldBy.legalName,
+        soldBy.addressLine1,
+        soldBy.addressLine2,
+        `${[soldBy.city, soldBy.state].filter(Boolean).join(", ")}${
+          soldBy.pincode ? ` - ${soldBy.pincode}` : ""
+        }`,
+        "IN",
+      ].filter((s): s is string => Boolean(s && s.trim()))
+    : ["(Seller details unavailable)"];
+  for (const line of soldByLines) {
+    textAt(doc, line, leftX, ly, colW, "left", { font: "Helvetica", size: 9.5 });
+    ly += 11;
+  }
+  if (soldBy?.pan) {
+    textAt(doc, `PAN No: ${soldBy.pan}`, leftX, ly, colW, "left", {
+      font: "Helvetica-Bold",
+      size: 9.5,
+    });
+    ly += 12;
+  }
+  if (soldBy?.gstin) {
+    textAt(doc, `GST Registration No: ${soldBy.gstin}`, leftX, ly, colW, "left", {
+      font: "Helvetica-Bold",
+      size: 9.5,
+    });
+    ly += 12;
+  }
+
+  // --- RIGHT: Shipping Address (big) + buyer GSTIN ----------------------
+  let ry = headerBottom + 8;
+  textAt(doc, "Shipping Address :", rightX, ry, colW, "right", {
+    font: "Helvetica-Bold",
+    size: 10,
+  });
+  ry += 14;
+  for (const line of buyerAddrLines) {
+    textAt(doc, line, rightX, ry, colW, "right", {
+      font: "Helvetica-Bold",
+      size: 10.5,
+    });
+    ry += 13;
+  }
+  if (buyerCode) {
+    textAt(doc, `State/UT Code: ${buyerCode}`, rightX, ry, colW, "right", {
+      font: "Helvetica-Bold",
+      size: 9.5,
+    });
+    ry += 12;
+  }
+  if (invoice.placeOfSupply) {
+    textAt(
+      doc,
+      `Place of supply: ${invoice.placeOfSupply.state.toUpperCase()}`,
+      rightX,
+      ry,
+      colW,
+      "right",
+      { font: "Helvetica-Bold", size: 9.5 },
+    );
+    ry += 12;
+  }
+  if (invoice.placeOfDelivery) {
+    textAt(
+      doc,
+      `Place of delivery: ${invoice.placeOfDelivery.state.toUpperCase()}`,
+      rightX,
+      ry,
+      colW,
+      "right",
+      { font: "Helvetica-Bold", size: 9.5 },
+    );
+    ry += 12;
+  }
+  // Buyer GSTIN (when they supplied one at checkout for ITC) — belongs
+  // next to the shipping address since it describes the buyer.
+  if (invoice.buyer.gstin) {
+    textAt(doc, `GSTIN: ${invoice.buyer.gstin}`, rightX, ry, colW, "right", {
+      font: "Helvetica-Bold",
+      size: 9.5,
+    });
+    ry += 12;
+  }
+
+  // Both columns ended independently; the metadata strip starts below
+  // whichever is deeper. 10pt breathing room above the metadata labels.
+  let y = Math.max(ry, ly) + 10;
+
+  // --- Metadata strip (Order on left, Invoice on right) ------------------
+  const orderDate = invoice.orderDate?.toDate() ?? order.createdAt?.toDate();
+  const leftMeta: Array<[string, string]> = [
+    ["Order Number", invoice.orderNumber ?? order.id],
+    ["Order Date", orderDate ? formatDate(orderDate) : "-"],
+  ];
+  const rightMeta: Array<[string, string]> = [
+    ["Invoice Number", invoice.number],
+    ["Invoice Details", `${invoice.fiscalYear} · ${invoice.number}`],
+    ["Invoice Date", formatDate(invoice.issuedAt.toDate())],
+  ];
+  let metaLeftY = y;
+  for (const [label, value] of leftMeta) {
+    textAt(doc, `${label}: ${value}`, leftX, metaLeftY, colW, "left", {
+      font: "Helvetica-Bold",
+      size: 10,
+    });
+    metaLeftY += 14;
+  }
+  let metaRightY = y;
+  for (const [label, value] of rightMeta) {
+    textAt(doc, `${label}: ${value}`, rightX, metaRightY, colW, "right", {
+      font: "Helvetica-Bold",
+      size: 10,
+    });
+    metaRightY += 14;
+  }
+  y = Math.max(metaLeftY, metaRightY) + 8;
+
+  // ─── Items table ───────────────────────────────────────────────────────
+  // One row per product (today: always a single art piece). PG and
+  // Shipping are not separate rows — they're their own columns on the
+  // same row, so one visual "line" shows everything paid for the piece
+  // (client call 20 Nov 2026 revision).
+  //
+  // Column widths sum to within A4 usable width (523pt). Font sizes
+  // chosen so "Rs. 50,000.00" at Helvetica 8pt (~52pt wide) fits in
+  // the 56pt money cells with 4pt padding.
+  const w = {
+    sno: 18,
+    unit: 56,
+    qty: 18,
+    net: 56,
+    rate: 22,
+    type: 26,
+    taxAmt: 54,
+    pg: 58,
+    ship: 46,
+    total: 60,
+  };
+  const descW =
+    pageWidth -
+    (w.sno + w.unit + w.qty + w.net + w.rate + w.type + w.taxAmt + w.pg + w.ship + w.total);
+  const x = {
+    sno: pageLeft,
+    desc: pageLeft + w.sno,
+    unit: pageLeft + w.sno + descW,
+    qty: pageLeft + w.sno + descW + w.unit,
+    net: pageLeft + w.sno + descW + w.unit + w.qty,
+    rate: pageLeft + w.sno + descW + w.unit + w.qty + w.net,
+    type: pageLeft + w.sno + descW + w.unit + w.qty + w.net + w.rate,
+    taxAmt: pageLeft + w.sno + descW + w.unit + w.qty + w.net + w.rate + w.type,
+    pg:
+      pageLeft + w.sno + descW + w.unit + w.qty + w.net + w.rate + w.type + w.taxAmt,
+    ship:
+      pageLeft +
+      w.sno +
+      descW +
+      w.unit +
+      w.qty +
+      w.net +
+      w.rate +
+      w.type +
+      w.taxAmt +
+      w.pg,
+    total:
+      pageLeft +
+      w.sno +
+      descW +
+      w.unit +
+      w.qty +
+      w.net +
+      w.rate +
+      w.type +
+      w.taxAmt +
+      w.pg +
+      w.ship,
+  };
+  const rightEdge = x.total + w.total;
+
+  // Header row.
+  const headerTop = y;
+  const headerH = 32;
+  drawHline(doc, pageLeft, rightEdge, headerTop);
+  drawHline(doc, pageLeft, rightEdge, headerTop + headerH);
+  const htY = headerTop + 5;
+  const hdrOpts = { font: "Helvetica-Bold", size: 7.5 };
+  textAt(doc, "Sl.\nNo", x.sno, htY, w.sno, "center", hdrOpts);
+  textAt(doc, "Description", x.desc + 2, htY, descW - 4, "left", hdrOpts);
+  textAt(doc, "Unit\nPrice", x.unit + 2, htY, w.unit - 4, "right", hdrOpts);
+  textAt(doc, "Qty", x.qty, htY, w.qty, "center", hdrOpts);
+  textAt(doc, "Net\nAmount", x.net + 2, htY, w.net - 4, "right", hdrOpts);
+  textAt(doc, "Tax\nRate", x.rate, htY, w.rate, "center", hdrOpts);
+  textAt(doc, "Tax\nType", x.type, htY, w.type, "center", hdrOpts);
+  textAt(doc, "Tax\nAmount", x.taxAmt + 2, htY, w.taxAmt - 4, "right", hdrOpts);
+  textAt(doc, "Payment\nGateway", x.pg + 2, htY, w.pg - 4, "right", hdrOpts);
+  textAt(doc, "Shipping\nCharges", x.ship + 2, htY, w.ship - 4, "right", hdrOpts);
+  textAt(doc, "Total\nAmount", x.total + 2, htY, w.total - 4, "right", hdrOpts);
+
+  y = headerTop + headerH;
+
+  // Extract the three canonical line kinds from the frozen snapshot.
+  // The data model keeps them as separate `lines[]` entries but the
+  // renderer collapses them into one row with PG + Shipping as columns.
+  const artLine =
+    lines.find((l) => l.gstRatePercent === 5 || l.hsnOrSac.startsWith("9701")) ??
+    lines[0];
+  const pgLine = lines.find((l) =>
+    l.description.toLowerCase().startsWith("payment gateway"),
+  );
+  const shipLine = lines.find((l) =>
+    l.description.toLowerCase().startsWith("shipping"),
+  );
+
+  // Render a single consolidated product row. `visibleTaxPaise` drives
+  // the TOTAL row's Tax Amount column — only the explicitly-shown tax,
+  // not PG's absorbed GST.
+  const consolidated = drawConsolidatedRow(doc, {
+    idx: 1,
+    y,
+    x,
+    w,
+    descW,
+    rightEdge,
+    intraStateLabel: utgstLabel,
+    art: artLine,
+    pg: pgLine,
+    ship: shipLine,
+    artworkId: order.artworkId,
+  });
+  y = consolidated.nextY;
+  const visibleTaxTotal = consolidated.visibleTaxPaise;
+
+  // Vertical column rules spanning header + body.
+  doc.strokeColor(COLOR_BORDER).lineWidth(0.5);
+  for (const vx of [
+    pageLeft,
+    x.desc,
+    x.unit,
+    x.qty,
+    x.net,
+    x.rate,
+    x.type,
+    x.taxAmt,
+    x.pg,
+    x.ship,
+    x.total,
+    rightEdge,
+  ]) {
+    doc.moveTo(vx, headerTop).lineTo(vx, y).stroke();
+  }
+
+  // ─── TOTAL row ─────────────────────────────────────────────────────────
+  const totalY = y;
+  const totalH = 20;
+  drawHline(doc, pageLeft, rightEdge, totalY);
+  drawHline(doc, pageLeft, rightEdge, totalY + totalH);
+  textAt(doc, "TOTAL:", x.sno + 4, totalY + 6, descW, "left", {
+    font: "Helvetica-Bold",
+    size: 10,
+  });
+  // wrap:false + 8pt bold — the money columns in the consolidated
+  // layout are ~54-60pt effective; a bigger font or wrap-enabled flow
+  // would split "Rs. 53,990.00" across two lines.
+  textAt(doc, MONEY(visibleTaxTotal), x.taxAmt + 2, totalY + 6, w.taxAmt - 4, "right", {
+    font: "Helvetica-Bold",
+    size: 8.5,
+    wrap: false,
+  });
+  textAt(doc, MONEY(order.totalPaise), x.total + 2, totalY + 6, w.total - 4, "right", {
+    font: "Helvetica-Bold",
+    size: 8.5,
+    wrap: false,
+  });
+  y = totalY + totalH;
+
+  // Amount in Words.
+  textAt(doc, "Amount in Words:", pageLeft + 4, y + 4, pageWidth, "left", {
+    font: "Helvetica-Bold",
+    size: 10,
+  });
+  textAt(
+    doc,
+    amountInWords(order.totalPaise),
+    pageLeft + 4,
+    y + 18,
+    pageWidth - 8,
+    "left",
+    { font: "Helvetica-Bold", size: 10 },
+  );
+  y += 38;
+
+  // ─── Signature block ───────────────────────────────────────────────────
+  const sigTop = y;
+  const sigH = 78;
+  drawHline(doc, pageLeft, rightEdge, sigTop);
+  drawHline(doc, pageLeft, rightEdge, sigTop + sigH);
+  textAt(
+    doc,
+    `For ${invoice.seller.legalName}:`,
+    pageLeft,
+    sigTop + 6,
+    pageWidth - 6,
+    "right",
+    { font: "Helvetica-Bold", size: 10 },
+  );
+  if (SIGNATURE_EXISTS) {
+    const sigImgH = 32;
+    const sigImgW = 110;
+    doc.image(SIGNATURE_PATH, rightEdge - sigImgW - 4, sigTop + 22, {
+      fit: [sigImgW, sigImgH],
+      align: "right",
+    });
+  }
+  textAt(
+    doc,
+    "Authorized Signatory",
+    pageLeft,
+    sigTop + sigH - 14,
+    pageWidth - 6,
+    "right",
+    { font: "Helvetica-Bold", size: 10 },
+  );
+  y = sigTop + sigH + 6;
+
+  textAt(
+    doc,
+    "Whether tax is payable under reverse charge - No",
+    pageLeft,
+    y,
+    pageWidth,
+    "left",
+    { font: "Helvetica", size: 9 },
+  );
   y += 16;
 
-  // ─── Items table ────────────────────────────────────────────────────────
-  // Columns (sum to pageWidth):
-  //   # | Description | HSN/SAC | Qty | Unit Price | Amount
-  const colWidths = {
-    sno: 28,
-    hsn: 58,
-    qty: 32,
-    unit: 86,
-    amount: 86,
-  };
-  colWidths.hsn;
-  const descWidth =
-    pageWidth - colWidths.sno - colWidths.hsn - colWidths.qty - colWidths.unit - colWidths.amount;
-
-  type ItemRow = { description: string; hsn: string; qty: number; unitPaise: number; amountPaise: number };
-  const items: ItemRow[] = [
-    {
-      description: artworkTitle,
-      hsn: "97019020", // paintings
-      qty: 1,
-      unitPaise: order.displayPricePaise,
-      amountPaise: order.displayPricePaise,
-    },
-  ];
-  if (order.deliveryChargePaise > 0) {
-    items.push({
-      description: "Delivery charges",
-      hsn: "996812",
-      qty: 1,
-      unitPaise: order.deliveryChargePaise,
-      amountPaise: order.deliveryChargePaise,
-    });
+  // ─── Payment transaction footer ────────────────────────────────────────
+  if (invoice.payment) {
+    drawPaymentBlock(doc, { invoice, order, x: pageLeft, y, width: pageWidth, rightEdge });
   }
-  if (order.convenienceFeePaise > 0) {
-    // Labelled "Payment gateway charge" (not "Convenience fee") per client
-    // direction 16 Nov 2026 — this line is the Razorpay processing fee
-    // passed through to the buyer, not an internal convenience markup. The
-    // wording matters on a tax invoice.
-    items.push({
-      description: "Payment gateway charge",
-      hsn: "998599",
-      qty: 1,
-      unitPaise: order.convenienceFeePaise,
-      amountPaise: order.convenienceFeePaise,
+}
+
+// ─── Consolidated product row ──────────────────────────────────────────
+//
+// One visual row per product. The art line owns the row; PG and
+// Shipping render as their own columns next to the art's tax columns.
+// Tax breakdown:
+//   - Intra-state art → two stacked sub-rows (CGST half + SGST / UTGST
+//     half) in the Tax Rate / Tax Type / Tax Amount columns.
+//   - Inter-state art → one IGST sub-row.
+//   - PG column → PG's gross price (base + 18% service GST baked in).
+//   - Shipping column → the courier pass-through.
+
+/** Column keys the X-position map has (all cells including description). */
+type XKey =
+  | "sno"
+  | "desc"
+  | "unit"
+  | "qty"
+  | "net"
+  | "rate"
+  | "type"
+  | "taxAmt"
+  | "pg"
+  | "ship"
+  | "total";
+
+/** Column keys the width map has (every column except description —
+ *  description width is tracked in its own `descW` variable since it
+ *  fills whatever space the fixed-width columns don't claim). */
+type WKey = Exclude<XKey, "desc">;
+
+interface ConsolidatedRowArgs {
+  idx: number;
+  y: number;
+  x: Record<XKey, number>;
+  w: Record<WKey, number>;
+  descW: number;
+  rightEdge: number;
+  intraStateLabel: "SGST" | "UTGST";
+  art: InvoiceLine | undefined;
+  pg: InvoiceLine | undefined;
+  ship: InvoiceLine | undefined;
+  artworkId: string;
+}
+
+function drawConsolidatedRow(
+  doc: PDFKit.PDFDocument,
+  a: ConsolidatedRowArgs,
+): { nextY: number; visibleTaxPaise: number } {
+  const { idx, x, w, descW, rightEdge, intraStateLabel, art, pg, ship, artworkId } = a;
+  const emptyLine: InvoiceLine = {
+    description: "(no data)",
+    hsnOrSac: "-",
+    qty: 0,
+    unitPricePaise: 0,
+    taxablePaise: 0,
+    gstRatePercent: 0,
+  };
+  const row = art ?? emptyLine;
+
+  // Tax trio sub-rows for the art line.
+  type SubRow = { label: string; rate: string; amount: string };
+  const subRows: SubRow[] = [];
+  let visibleTaxPaise = 0;
+  if (row.cgstPaise != null || row.sgstPaise != null) {
+    const half = row.gstRatePercent / 2;
+    if (row.cgstPaise != null) {
+      subRows.push({
+        label: "CGST",
+        rate: `${half}%`,
+        amount: row.cgstPaise > 0 ? MONEY(row.cgstPaise) : "nil",
+      });
+      visibleTaxPaise += row.cgstPaise;
+    }
+    if (row.sgstPaise != null) {
+      subRows.push({
+        label: intraStateLabel,
+        rate: `${half}%`,
+        amount: row.sgstPaise > 0 ? MONEY(row.sgstPaise) : "nil",
+      });
+      visibleTaxPaise += row.sgstPaise;
+    }
+  } else if (row.igstPaise != null) {
+    subRows.push({
+      label: "IGST",
+      rate: `${row.gstRatePercent}%`,
+      amount: row.igstPaise > 0 ? MONEY(row.igstPaise) : "nil",
     });
+    visibleTaxPaise += row.igstPaise;
+  } else {
+    subRows.push({ label: "nil", rate: "nil", amount: "nil" });
   }
 
-  const colX = {
-    sno: pageLeft,
-    desc: pageLeft + colWidths.sno,
-    hsn: pageLeft + colWidths.sno + descWidth,
-    qty: pageLeft + colWidths.sno + descWidth + colWidths.hsn,
-    unit: pageLeft + colWidths.sno + descWidth + colWidths.hsn + colWidths.qty,
-    amount: pageLeft + colWidths.sno + descWidth + colWidths.hsn + colWidths.qty + colWidths.unit,
-  };
-  const rightEdge = colX.amount + colWidths.amount;
+  // Description cell: title + HSN + Artwork ID. Artwork ID lets ops
+  // trace the piece back to the artworks collection.
+  const descRich = [
+    row.description,
+    `HSN: ${row.hsnOrSac}`,
+    `Artwork ID: ${artworkId}`,
+  ].join("\n");
 
-  // Header row with shaded background.
-  const headerRowY = y;
-  const headerHeight = 22;
-  doc.save();
-  doc.rect(pageLeft, headerRowY, pageWidth, headerHeight).fill(COLOR_SHADED);
-  doc.restore();
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(COLOR_TEXT);
-  const headerTextY = headerRowY + 7;
-  doc.text("#", colX.sno + 4, headerTextY, { width: colWidths.sno - 8, align: "center" });
-  doc.text("Description", colX.desc + 4, headerTextY, { width: descWidth - 8 });
-  doc.text("HSN/SAC", colX.hsn + 4, headerTextY, { width: colWidths.hsn - 8, align: "center" });
-  doc.text("Qty", colX.qty + 4, headerTextY, { width: colWidths.qty - 8, align: "center" });
-  doc.text("Unit price", colX.unit + 4, headerTextY, { width: colWidths.unit - 8, align: "right" });
-  doc.text("Amount", colX.amount + 4, headerTextY, { width: colWidths.amount - 8, align: "right" });
-  // Header top + bottom border.
-  doc
-    .strokeColor(COLOR_BORDER)
-    .lineWidth(0.5)
-    .moveTo(pageLeft, headerRowY)
-    .lineTo(rightEdge, headerRowY)
-    .stroke()
-    .moveTo(pageLeft, headerRowY + headerHeight)
-    .lineTo(rightEdge, headerRowY + headerHeight)
-    .stroke();
-  y = headerRowY + headerHeight;
+  const descHeight = doc.heightOfString(descRich, { width: descW - 4 });
+  const subH = subRows.length * 11;
+  const rowH = Math.max(descHeight + 10, subH + 10, 32);
+  const rowTop = a.y;
+  const textY = rowTop + 5;
 
-  // Data rows. Pre-measure row height from the (possibly multi-line) description
-  // so numbers stay vertically aligned and the row borders enclose the full cell.
-  doc.font("Helvetica").fontSize(10).fillColor(COLOR_TEXT);
-  items.forEach((row, index) => {
-    const descHeight = doc.heightOfString(row.description, { width: descWidth - 8 });
-    const rowHeight = Math.max(descHeight + 12, 24);
-    const rowTop = y;
-    const textY = rowTop + 6;
-    doc.text(String(index + 1), colX.sno + 4, textY, { width: colWidths.sno - 8, align: "center" });
-    doc.text(row.description, colX.desc + 4, textY, { width: descWidth - 8 });
-    doc.text(row.hsn, colX.hsn + 4, textY, { width: colWidths.hsn - 8, align: "center" });
-    doc.text(String(row.qty), colX.qty + 4, textY, { width: colWidths.qty - 8, align: "center" });
-    doc.text(MONEY(row.unitPaise), colX.unit + 4, textY, {
-      width: colWidths.unit - 8,
-      align: "right",
-    });
-    doc.text(MONEY(row.amountPaise), colX.amount + 4, textY, {
-      width: colWidths.amount - 8,
-      align: "right",
-    });
-    y = rowTop + rowHeight;
-    doc
-      .strokeColor(COLOR_BORDER)
-      .lineWidth(0.5)
-      .moveTo(pageLeft, y)
-      .lineTo(rightEdge, y)
-      .stroke();
+  const cellOpts = { font: "Helvetica", size: 8 } as const;
+
+  // Fixed cells (Sl / Description / Unit / Qty / Net / Total).
+  textAt(doc, String(idx), x.sno, textY, w.sno, "center", cellOpts);
+  textAt(doc, descRich, x.desc + 2, textY, descW - 4, "left", cellOpts);
+  textAt(doc, MONEY(row.unitPricePaise), x.unit + 2, textY, w.unit - 4, "right", {
+    ...cellOpts,
+    wrap: false,
+  });
+  textAt(doc, String(row.qty || 1), x.qty, textY, w.qty, "center", cellOpts);
+  textAt(doc, MONEY(row.taxablePaise), x.net + 2, textY, w.net - 4, "right", {
+    ...cellOpts,
+    wrap: false,
   });
 
-  // Vertical column separators across the full table.
-  const tableTop = headerRowY;
-  const tableBottom = y;
-  const dividers = [colX.desc, colX.hsn, colX.qty, colX.unit, colX.amount, rightEdge];
-  doc.strokeColor(COLOR_BORDER).lineWidth(0.5);
-  for (const x of [pageLeft, ...dividers]) {
-    doc.moveTo(x, tableTop).lineTo(x, tableBottom).stroke();
-  }
+  // Tax trio sub-rows for the art line, stacked.
+  subRows.forEach((sr, i) => {
+    const sy = textY + i * 11;
+    textAt(doc, sr.rate, x.rate, sy, w.rate, "center", cellOpts);
+    textAt(doc, sr.label, x.type, sy, w.type, "center", cellOpts);
+    textAt(doc, sr.amount, x.taxAmt + 2, sy, w.taxAmt - 4, "right", {
+      ...cellOpts,
+      wrap: false,
+    });
+  });
 
-  y += 18;
-
-  // ─── Totals block (right-aligned) ───────────────────────────────────────
-  const subtotalPaise =
-    order.displayPricePaise + order.deliveryChargePaise + order.convenienceFeePaise;
-  const totalsLeft = pageLeft + pageWidth * 0.55;
-  const totalsLabelX = totalsLeft;
-  const totalsValueX = pageLeft + pageWidth * 0.78;
-  const totalsLabelWidth = totalsValueX - totalsLabelX - 8;
-  const totalsValueWidth = rightEdge - totalsValueX;
-
-  const totalsRows: Array<{ label: string; value: string; bold?: boolean; separator?: boolean }> = [
-    { label: "Subtotal (taxable)", value: MONEY(subtotalPaise) },
-  ];
-  if (invoice.taxBreakdown.kind === "intra_state") {
-    totalsRows.push({ label: "CGST", value: MONEY(invoice.taxBreakdown.cgstPaise) });
-    totalsRows.push({ label: "SGST", value: MONEY(invoice.taxBreakdown.sgstPaise) });
+  // Payment Gateway column — gross price (service GST already inside).
+  // Adds the clarifier directly below the amount.
+  if (pg) {
+    textAt(doc, MONEY(pg.unitPricePaise), x.pg + 2, textY, w.pg - 4, "right", {
+      ...cellOpts,
+      wrap: false,
+    });
+    textAt(doc, "(incl. tax)", x.pg + 2, textY + 11, w.pg - 4, "right", {
+      font: "Helvetica",
+      size: 7,
+      color: COLOR_MUTED,
+    });
   } else {
-    totalsRows.push({ label: "IGST", value: MONEY(invoice.taxBreakdown.igstPaise) });
-  }
-  totalsRows.push({ label: "Total payable", value: MONEY(order.totalPaise), bold: true, separator: true });
-
-  for (const row of totalsRows) {
-    if (row.separator) {
-      doc
-        .strokeColor(COLOR_BORDER)
-        .lineWidth(0.75)
-        .moveTo(totalsLabelX, y - 2)
-        .lineTo(rightEdge, y - 2)
-        .stroke();
-      y += 4;
-    }
-    doc
-      .font(row.bold ? "Helvetica-Bold" : "Helvetica")
-      .fontSize(row.bold ? 11 : 10)
-      .fillColor(row.bold ? COLOR_TEXT : COLOR_MUTED)
-      .text(row.label, totalsLabelX, y, { width: totalsLabelWidth, align: "right" });
-    doc
-      .font(row.bold ? "Helvetica-Bold" : "Helvetica")
-      .fontSize(row.bold ? 11 : 10)
-      .fillColor(COLOR_TEXT)
-      .text(row.value, totalsValueX, y, { width: totalsValueWidth, align: "right" });
-    y += row.bold ? 18 : 14;
+    textAt(doc, "-", x.pg + 2, textY, w.pg - 4, "right", cellOpts);
   }
 
-  // Amount in words.
-  y += 6;
-  doc
-    .font("Helvetica-Oblique")
-    .fontSize(9)
-    .fillColor(COLOR_MUTED)
-    .text(`Amount in words: ${amountInWords(order.totalPaise)}`, pageLeft, y, {
-      width: pageWidth,
+  // Shipping column — courier pass-through. Zero-tax by GalleryZone's
+  // pure-agent treatment, so we just show the amount.
+  if (ship) {
+    textAt(doc, MONEY(ship.unitPricePaise), x.ship + 2, textY, w.ship - 4, "right", {
+      ...cellOpts,
+      wrap: false,
     });
+  } else {
+    textAt(doc, "-", x.ship + 2, textY, w.ship - 4, "right", cellOpts);
+  }
 
-  // ─── Footer ─────────────────────────────────────────────────────────────
-  const footerLines = [
-    "This is a computer-generated tax invoice; no signature is required.",
-    "Reverse charge: No. Supply made under Section 7 of the CGST Act, 2017.",
-    "For queries, contact support@galleryzone.in.",
-  ];
-  const footerY = doc.page.height - doc.page.margins.bottom - 48;
-  doc
-    .strokeColor(COLOR_BORDER)
-    .lineWidth(0.5)
-    .moveTo(pageLeft, footerY - 8)
-    .lineTo(rightEdge, footerY - 8)
-    .stroke();
-  doc
-    .font("Helvetica")
-    .fontSize(8)
-    .fillColor(COLOR_FAINT)
-    .text(footerLines.join("\n"), pageLeft, footerY, {
-      width: pageWidth,
-      align: "center",
-      lineGap: 2,
-    });
+  // Total column — art-with-tax + PG + Shipping.
+  const artTotal =
+    row.taxablePaise +
+    (row.cgstPaise ?? 0) +
+    (row.sgstPaise ?? 0) +
+    (row.igstPaise ?? 0);
+  const total = artTotal + (pg?.unitPricePaise ?? 0) + (ship?.unitPricePaise ?? 0);
+  textAt(doc, MONEY(total), x.total + 2, textY, w.total - 4, "right", {
+    ...cellOpts,
+    wrap: false,
+  });
+
+  const nextY = rowTop + rowH;
+  drawHline(doc, pageLeft(doc), rightEdge, nextY);
+  return { nextY, visibleTaxPaise };
 }
 
-// ─── Primitives ──────────────────────────────────────────────────────────
+// ─── Payment transaction footer ────────────────────────────────────────
 
-function hr(doc: PDFKit.PDFDocument, y: number): void {
-  doc
-    .strokeColor(COLOR_BORDER)
-    .lineWidth(0.5)
-    .moveTo(doc.page.margins.left, y)
-    .lineTo(doc.page.width - doc.page.margins.right, y)
-    .stroke();
-}
-
-function drawPartyBlock(
+function drawPaymentBlock(
   doc: PDFKit.PDFDocument,
-  opts: { x: number; y: number; width: number; heading: string; lines: string[] },
-): number {
+  args: {
+    invoice: InvoiceSnapshot;
+    order: OrderDoc & { id: string };
+    x: number;
+    y: number;
+    width: number;
+    rightEdge: number;
+  },
+): void {
+  const { invoice, order, x, y, width, rightEdge } = args;
+  const rowH = 30;
+  const gap = 8;
+  const c1 = width * 0.34;
+  const c2 = width * 0.26;
+  const c3 = width * 0.18;
+  const c4 = width - c1 - c2 - c3 - gap * 3;
+
+  drawHline(doc, x, rightEdge, y);
+  drawHline(doc, x, rightEdge, y + rowH);
+
+  textAt(doc, "Payment Transaction ID:", x + 4, y + 4, c1, "left", {
+    font: "Helvetica-Bold",
+    size: 9,
+  });
+  textAt(doc, invoice.payment?.transactionId ?? "-", x + 4, y + 16, c1, "left", {
+    font: "Helvetica",
+    size: 9,
+  });
+
+  const dt = invoice.payment?.paidAt?.toDate() ?? null;
+  textAt(doc, "Date & Time:", x + c1 + gap, y + 4, c2, "left", {
+    font: "Helvetica-Bold",
+    size: 9,
+  });
+  textAt(doc, dt ? formatDateTime(dt) : "-", x + c1 + gap, y + 16, c2, "left", {
+    font: "Helvetica",
+    size: 9,
+  });
+
+  textAt(doc, "Invoice Value:", x + c1 + c2 + gap * 2, y + 4, c3, "left", {
+    font: "Helvetica-Bold",
+    size: 9,
+  });
+  textAt(doc, MONEY(order.totalPaise), x + c1 + c2 + gap * 2, y + 16, c3, "left", {
+    font: "Helvetica",
+    size: 9,
+  });
+
+  textAt(doc, "Mode of Payment:", x + c1 + c2 + c3 + gap * 3, y + 4, c4, "left", {
+    font: "Helvetica-Bold",
+    size: 9,
+  });
+  textAt(
+    doc,
+    invoice.payment?.method ?? "Razorpay",
+    x + c1 + c2 + c3 + gap * 3,
+    y + 16,
+    c4,
+    "left",
+    { font: "Helvetica", size: 9 },
+  );
+}
+
+// ─── Primitives + helpers ──────────────────────────────────────────────
+
+interface TextOpts {
+  font?: string;
+  size?: number;
+  color?: string;
+  lineHeight?: number;
+  /** Set false to force the text onto one line regardless of width —
+   *  used for money cells where a wrap would split "Rs." from the
+   *  number and confuse an accountant. Default true. */
+  wrap?: boolean;
+}
+
+/** One-shot text placement. No continued flows, no implicit cursor
+ *  advancement — the caller stays in control of Y, which is what keeps
+ *  everything on a single page. */
+function textAt(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  align: "left" | "right" | "center",
+  opts: TextOpts = {},
+): void {
   doc
-    .font("Helvetica-Bold")
-    .fontSize(9)
-    .fillColor(COLOR_FAINT)
-    .text(opts.heading.toUpperCase(), opts.x, opts.y, { width: opts.width, characterSpacing: 0.4 });
-  const headingBottom = doc.y + 3;
-  doc
-    .font("Helvetica")
-    .fontSize(10)
-    .fillColor(COLOR_TEXT)
-    .text(opts.lines.join("\n"), opts.x, headingBottom, { width: opts.width, lineGap: 2 });
-  return doc.y;
+    .font(opts.font ?? "Helvetica")
+    .fontSize(opts.size ?? 10)
+    .fillColor(opts.color ?? COLOR_TEXT)
+    .text(text, x, y, { width, align, lineBreak: opts.wrap !== false });
+}
+
+function drawHline(doc: PDFKit.PDFDocument, x1: number, x2: number, y: number): void {
+  doc.strokeColor(COLOR_BORDER).lineWidth(0.5).moveTo(x1, y).lineTo(x2, y).stroke();
+}
+
+function pageLeft(doc: PDFKit.PDFDocument): number {
+  return doc.page.margins.left;
+}
+
+function legacyLinesFromOrder(
+  order: OrderDoc & { id: string },
+  artworkTitle: string,
+  invoice: InvoiceSnapshot,
+): InvoiceLine[] {
+  const artworkTaxable = order.displayPricePaise - order.gstPaise;
+  const out: InvoiceLine[] = [];
+  const kind = invoice.taxBreakdown.kind;
+  function split(gst: number) {
+    if (gst <= 0) return {};
+    if (kind === "intra_state") {
+      const half = Math.floor(gst / 2);
+      return { cgstPaise: half, sgstPaise: gst - half };
+    }
+    return { igstPaise: gst };
+  }
+  out.push({
+    description: artworkTitle,
+    hsnOrSac: "9701",
+    qty: 1,
+    unitPricePaise: artworkTaxable,
+    taxablePaise: artworkTaxable,
+    gstRatePercent: 5,
+    ...split(order.gstPaise),
+  });
+  if (order.convenienceFeePaise > 0) {
+    out.push({
+      description: "Payment gateway charge",
+      hsnOrSac: "997158",
+      qty: 1,
+      unitPricePaise: order.convenienceFeePaise + order.convenienceGstPaise,
+      taxablePaise: order.convenienceFeePaise + order.convenienceGstPaise,
+      gstRatePercent: 18,
+    });
+  }
+  if (order.deliveryChargePaise > 0) {
+    out.push({
+      description: "Shipping charges",
+      hsnOrSac: "996812",
+      qty: 1,
+      unitPricePaise: order.deliveryChargePaise,
+      taxablePaise: order.deliveryChargePaise,
+      gstRatePercent: 0,
+    });
+  }
+  return out;
 }
 
 function formatPaise(paise: number): string {
@@ -429,66 +891,71 @@ function formatPaise(paise: number): string {
 function formatDate(d: Date): string {
   return d.toLocaleDateString("en-IN", {
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
   });
 }
 
-/** Two-letter state code for a given full state name — falls back to "" if
- *  the state isn't in the lookup. Used to show "Maharashtra (MH)" in the
- *  Place-of-supply block. */
+function formatDateTime(d: Date): string {
+  return d.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
 function stateDisplayCode(state: string): string {
   const upper = state.trim().toUpperCase();
   const map: Record<string, string> = {
-    "ANDHRA PRADESH": "AP",
-    "ARUNACHAL PRADESH": "AR",
-    ASSAM: "AS",
-    BIHAR: "BR",
-    CHHATTISGARH: "CG",
-    GOA: "GA",
-    GUJARAT: "GJ",
-    HARYANA: "HR",
-    "HIMACHAL PRADESH": "HP",
-    JHARKHAND: "JH",
-    KARNATAKA: "KA",
-    KERALA: "KL",
-    "MADHYA PRADESH": "MP",
-    MAHARASHTRA: "MH",
-    MANIPUR: "MN",
-    MEGHALAYA: "ML",
-    MIZORAM: "MZ",
-    NAGALAND: "NL",
-    ODISHA: "OD",
-    PUNJAB: "PB",
-    RAJASTHAN: "RJ",
-    SIKKIM: "SK",
-    "TAMIL NADU": "TN",
-    TELANGANA: "TS",
-    TRIPURA: "TR",
-    "UTTAR PRADESH": "UP",
-    UTTARAKHAND: "UK",
-    "WEST BENGAL": "WB",
-    DELHI: "DL",
-    "JAMMU AND KASHMIR": "JK",
-    LADAKH: "LA",
-    PUDUCHERRY: "PY",
-    "ANDAMAN AND NICOBAR ISLANDS": "AN",
-    CHANDIGARH: "CH",
-    "DADRA AND NAGAR HAVELI AND DAMAN AND DIU": "DN",
-    LAKSHADWEEP: "LD",
+    "ANDHRA PRADESH": "37",
+    "ARUNACHAL PRADESH": "12",
+    ASSAM: "18",
+    BIHAR: "10",
+    CHHATTISGARH: "22",
+    GOA: "30",
+    GUJARAT: "24",
+    HARYANA: "06",
+    "HIMACHAL PRADESH": "02",
+    JHARKHAND: "20",
+    KARNATAKA: "29",
+    KERALA: "32",
+    "MADHYA PRADESH": "23",
+    MAHARASHTRA: "27",
+    MANIPUR: "14",
+    MEGHALAYA: "17",
+    MIZORAM: "15",
+    NAGALAND: "13",
+    ODISHA: "21",
+    PUNJAB: "03",
+    RAJASTHAN: "08",
+    SIKKIM: "11",
+    "TAMIL NADU": "33",
+    TELANGANA: "36",
+    TRIPURA: "16",
+    "UTTAR PRADESH": "09",
+    UTTARAKHAND: "05",
+    "WEST BENGAL": "19",
+    DELHI: "07",
+    "JAMMU AND KASHMIR": "01",
+    LADAKH: "38",
+    PUDUCHERRY: "34",
+    "ANDAMAN AND NICOBAR ISLANDS": "35",
+    CHANDIGARH: "04",
+    "DADRA AND NAGAR HAVELI AND DAMAN AND DIU": "26",
+    LAKSHADWEEP: "31",
   };
   return map[upper] ?? "";
 }
 
-/**
- * Indian-style words for ₹: "Twelve thousand three hundred fifty and 50/100
- * Rupees only." Intentionally compact — this is a glanceable line, not a
- * primary field. Supports values up to 99 crore.
- */
 function amountInWords(paise: number): string {
   const rupees = Math.floor(paise / 100);
   const subPaise = paise % 100;
   const rupeeWords = numberToIndianWords(rupees);
+  if (subPaise === 0) return `${rupeeWords} Rupees only`;
   return `${rupeeWords} Rupees and ${String(subPaise).padStart(2, "0")}/100 only`;
 }
 
@@ -510,9 +977,7 @@ function threeDigits(n: number): string {
   if (n < 100) return twoDigits(n);
   const h = Math.floor(n / 100);
   const rest = n % 100;
-  return rest === 0
-    ? `${ONES[h]} Hundred`
-    : `${ONES[h]} Hundred ${twoDigits(rest)}`;
+  return rest === 0 ? `${ONES[h]} Hundred` : `${ONES[h]} Hundred ${twoDigits(rest)}`;
 }
 
 function numberToIndianWords(n: number): string {

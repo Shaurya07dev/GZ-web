@@ -39,9 +39,9 @@ const DOCS = [
   },
   {
     party: "aggregator",
-    version: "2026.3",
-    source: "aggregator-mou-2026.3.txt",
-    original: "GalleryZone_Aggregator_MOU_Updated_22-10-2026.docx",
+    version: "2026.4",
+    source: "aggregator-mou-2026.4.txt",
+    original: "GalleryZone_Aggregator_MOU_Updated_20-11-2026.docx",
     out: "../features/aggregator/aggregator-mou-data.ts",
     dartOut: "../../mobile/lib/features/aggregator/aggregator_mou_data.dart",
     versionExport: "AGGREGATOR_MOU_VERSION",

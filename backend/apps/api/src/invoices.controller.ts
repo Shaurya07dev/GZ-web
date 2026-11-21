@@ -103,17 +103,21 @@ export class InvoicesController {
     }
 
     try {
-      const invoice = await getOrCreateInvoice(this.db, {
-        orderId: id,
-        seller: this.env.invoiceSeller,
-      });
-
+      // Pre-fetch the artwork title so the stamp can freeze it onto the
+      // invoice line description. Doing this before getOrCreateInvoice
+      // keeps the title stable across later artwork edits.
       const artworkSnap = await this.db
         .collection(Collections.artworks)
         .doc(order.artworkId)
         .get();
       const artworkTitle =
         (artworkSnap.data() as ArtworkDoc | undefined)?.title ?? "Artwork";
+
+      const invoice = await getOrCreateInvoice(this.db, {
+        orderId: id,
+        seller: this.env.invoiceSeller,
+        artworkTitle,
+      });
 
       const pdf = await renderInvoicePdf({
         order: { ...order, id },
@@ -184,16 +188,17 @@ export class InvoicesController {
     const order = orderSnap.data() as OrderDoc;
 
     try {
-      const invoice = await getOrCreateInvoice(this.db, {
-        orderId: id,
-        seller: this.env.invoiceSeller,
-      });
       const artworkSnap = await this.db
         .collection(Collections.artworks)
         .doc(order.artworkId)
         .get();
       const artworkTitle =
         (artworkSnap.data() as ArtworkDoc | undefined)?.title ?? "Artwork";
+      const invoice = await getOrCreateInvoice(this.db, {
+        orderId: id,
+        seller: this.env.invoiceSeller,
+        artworkTitle,
+      });
       const pdf = await renderInvoicePdf({
         order: { ...order, id },
         invoice,

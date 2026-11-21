@@ -13,7 +13,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { Timestamp } from "firebase-admin/firestore";
 import { renderInvoicePdf } from "../apps/api/src/invoice-pdf.ts";
-import type { OrderDoc, InvoiceSnapshot } from "@galleryzone/db";
+import type { OrderDoc, InvoiceSnapshot, InvoiceLine } from "@galleryzone/db";
 
 const order: OrderDoc & { id: string } = {
   id: "ord_SAMPLE_ABC123XYZ",
@@ -34,18 +34,73 @@ const order: OrderDoc & { id: string } = {
   createdAt: Timestamp.fromDate(new Date("2026-11-17T10:30:00.000Z")),
 };
 
+// Per-line breakdown. Inter-state (TN → MH) means every GST amount is
+// IGST; intra-state would split half CGST + half SGST (or UTGST).
+const artworkTaxable = order.displayPricePaise - order.gstPaise; // ₹50,000
+const lines: InvoiceLine[] = [
+  {
+    description: "Monsoon over the Deccan",
+    hsnOrSac: "9701",
+    qty: 1,
+    unitPricePaise: artworkTaxable,
+    taxablePaise: artworkTaxable,
+    gstRatePercent: 5,
+    igstPaise: order.gstPaise,
+  },
+  {
+    // Payment gateway charge is printed as a single "including tax"
+    // gross-price row — tax columns read nil on this line. Gross =
+    // base fee + 18% service GST = 1055 + 190 = 1245.
+    description: "Payment gateway charge",
+    hsnOrSac: "997158",
+    qty: 1,
+    unitPricePaise: order.convenienceFeePaise + order.convenienceGstPaise,
+    taxablePaise: order.convenienceFeePaise + order.convenienceGstPaise,
+    gstRatePercent: 18,
+  },
+  {
+    description: "Shipping charges",
+    hsnOrSac: "996812",
+    qty: 1,
+    unitPricePaise: order.deliveryChargePaise,
+    taxablePaise: order.deliveryChargePaise,
+    gstRatePercent: 0,
+  },
+];
+
 const invoice: InvoiceSnapshot = {
   number: "GZ/26-27/000142",
   fiscalYear: "FY2026-27",
+  // Billed by — pulled from Railway's INVOICE_SELLER_* env vars so this
+  // sample tracks the real production identity. If the registered office
+  // moves, update Railway and the next render here picks it up.
   seller: {
     legalName: "GalleryZone Private Limited",
-    addressLine1: "ESTANCIA TOWER 1, Potheri",
-    addressLine2: "SRM Nagar, Kattankulathur",
-    city: "Chennai",
-    state: "Tamil Nadu",
-    pincode: "603202",
-    gstin: "33AAICG1234F1Z5",
-    stateCode: "TN",
+    addressLine1: "H.No 5-117",
+    addressLine2: "Sangareddy, Annaram, Gummadidala",
+    city: "Hyderabad",
+    state: "Telangana",
+    pincode: "502313",
+    // Replace this with the real GSTIN before shipping any sample to a
+    // reviewer. Telangana's GST state code is 36, so a valid number
+    // starts with "36".
+    gstin: "36AANCG3346D1ZN",
+    stateCode: "TS",
+  },
+  // The actual artist who sold the piece. Fills the "Sold By" block on
+  // the left. Artist is registered → both PAN and GSTIN print; if she
+  // weren't GST-registered the GSTIN line would just be absent.
+  soldBy: {
+    legalName: "Devika Nair",
+    addressLine1: "Studio 14, Fort Kochi",
+    addressLine2: null,
+    city: "Kochi",
+    state: "Kerala",
+    pincode: "682001",
+    stateCode: "KL",
+    numericCode: "32",
+    pan: "ABCDE1234F",
+    gstin: "32ABCDE1234F1Z5",
   },
   buyer: {
     name: "Arjun Mehta",
@@ -54,10 +109,23 @@ const invoice: InvoiceSnapshot = {
     city: "Mumbai",
     state: "Maharashtra",
     pincode: "400060",
+    gstin: "27ABCDE1234F1Z5",
   },
-  // Inter-state (TN → MH) → IGST only. GST inside artwork ₹2,500 + 18% of
-  // convenience ₹190 = 2,690. Rounding into whole paise.
-  taxBreakdown: { kind: "inter_state", igstPaise: 2690_00 },
+  orderNumber: order.id,
+  orderDate: order.createdAt,
+  payment: {
+    transactionId: "pay_PhAaBbCc12345678",
+    method: "UPI",
+    paidAt: Timestamp.fromDate(new Date("2026-11-17T10:34:58.000Z")),
+  },
+  // Inter-state (TN → MH) → IGST only. Only the itemised GST (art 5%)
+  // lives in the breakdown; PG's 18% GST is already absorbed into the
+  // "including tax" gross price shown on its own line.
+  taxBreakdown: { kind: "inter_state", igstPaise: order.gstPaise },
+  lines,
+  usesUtgst: false,
+  placeOfSupply: { state: "Maharashtra", numericCode: "27", code: "MH" },
+  placeOfDelivery: { state: "Maharashtra", numericCode: "27", code: "MH" },
   issuedAt: Timestamp.fromDate(new Date("2026-11-17T10:35:00.000Z")),
 };
 
