@@ -39,7 +39,7 @@ export class HealthController {
       emailSetupHint: this.emails.setupHint,
       paymentsMode: this.env.paymentsMode,
       paymentsConfigured: Boolean(this.env.razorpayKeyId && this.env.razorpayKeySecret),
-      smsConfigured: this.env.msg91 !== null,
+      whatsappConfigured: this.env.whatsapp !== null,
       adminSeedConfigured: this.env.adminSeed !== null,
       otpSecretConfigured: Boolean(process.env.OTP_SECRET && process.env.OTP_SECRET.length >= 32),
       publicSiteUrl: process.env.PUBLIC_SITE_URL || null,

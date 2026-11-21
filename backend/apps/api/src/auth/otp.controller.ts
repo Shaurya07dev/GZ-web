@@ -40,7 +40,7 @@ import {
 } from "@galleryzone/db";
 import { DB } from "../db.module.ts";
 import { Emails } from "../mail/emails.ts";
-import { Msg91Sender } from "../sms/msg91.ts";
+import { WhatsAppSendError, WhatsAppSender } from "../sms/whatsapp.ts";
 import { Public, Roles } from "./roles.decorator.ts";
 import type { AuthenticatedRequest } from "./roles.guard.ts";
 import { ZodValidationPipe } from "../zod-validation.pipe.ts";
@@ -99,7 +99,7 @@ export class OtpController {
   constructor(
     @Inject(DB) private readonly db: Db,
     private readonly emails: Emails,
-    private readonly sms: Msg91Sender,
+    private readonly whatsapp: WhatsAppSender,
   ) {}
 
   /**
@@ -209,9 +209,22 @@ export class OtpController {
   }
 
   /**
-   * Issues a phone OTP for the signed-in user. Called after email is verified;
-   * the UI collects the phone number and posts it here. Refuses if MSG91 is
-   * not configured — see Msg91Sender.
+   * Issues a phone OTP for the signed-in user. Called after email is
+   * verified; the UI collects the phone number and posts it here.
+   *
+   * Response:
+   *   { accepted: true }                             — WhatsApp sent
+   *   { accepted: false, deferred: true, reason }   — WhatsApp failed;
+   *                                                   client renders a
+   *                                                   "verify later from
+   *                                                   profile" affordance
+   *                                                   and lets signup
+   *                                                   complete.
+   *   503 { code: "otp_channel_unavailable" }       — WhatsApp env not
+   *                                                   configured server-
+   *                                                   side (ops issue).
+   *   400 { code: "otp_rate_limited" }              — our own per-user
+   *                                                   OTP-issue throttle.
    */
   @Roles("customer", "artist", "aggregator", "admin")
   @Throttle({ burst: { limit: 3, ttl: 60_000 }, sustained: { limit: 10, ttl: 3_600_000 } })
@@ -221,9 +234,15 @@ export class OtpController {
     @Req() req: AuthenticatedRequest,
     @Body(new ZodValidationPipe(phoneOtpSendSchema)) body: PhoneOtpSendBody,
   ) {
-    if (!this.sms.enabled) {
+    // WhatsApp-only channel per 21 Nov 2026 client call. If the server
+    // isn't configured at all, that's a real misconfiguration — 503.
+    if (!this.whatsapp.enabled) {
       throw new ServiceUnavailableException(
-        problem(503, "SMS is not configured on this server. Please contact support.", "sms_unavailable"),
+        problem(
+          503,
+          "WhatsApp OTP is not configured on this server. Please contact support.",
+          "otp_channel_unavailable",
+        ),
       );
     }
     const normalised = body.phone.replace(/\D/g, "").slice(-10);
@@ -235,7 +254,25 @@ export class OtpController {
         purpose: "signup_phone",
         uid: req.authUser.uid,
       });
-      await this.sms.send({ phone: normalised, code });
+      try {
+        await this.whatsapp.send({ phone: normalised, code });
+      } catch (err) {
+        // WhatsApp send failed — soft-fail. Don't block signup. The
+        // response tells the client to show a "verify later from your
+        // profile" affordance; the user can finish signup now and come
+        // back to the Profile → Phone section to retry.
+        const kind = err instanceof WhatsAppSendError ? err.code : "upstream_error";
+        // eslint-disable-next-line no-console -- Nest logger needs a class context; stdout JSON is fine at the function-call level.
+        console.warn(
+          JSON.stringify({ event: "otp.phone.deferred", reason: kind }),
+        );
+        return {
+          accepted: false,
+          deferred: true,
+          reason:
+            "Phone verification is temporarily unavailable. You can continue signing up and verify your number later from your profile.",
+        };
+      }
     } catch (error) {
       if (error instanceof OtpError) {
         throw new BadRequestException(problem(400, error.message, "otp_rate_limited"));

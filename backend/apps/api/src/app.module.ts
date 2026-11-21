@@ -50,7 +50,7 @@ import { PincodeController } from "./pincode.controller.ts";
 import { FollowsController, WishlistController } from "./wishlist.controller.ts";
 import { OtpController } from "./auth/otp.controller.ts";
 import { AdminSeed } from "./admin-seed.ts";
-import { Msg91Sender } from "./sms/msg91.ts";
+import { WhatsAppSender } from "./sms/whatsapp.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
@@ -146,7 +146,7 @@ import { DbModule } from "./db.module.ts";
     Mailer,
     Emails,
     PushSender,
-    Msg91Sender,
+    WhatsAppSender,
     Razorpay,
     CashfreeVerification,
     AdminSeed,

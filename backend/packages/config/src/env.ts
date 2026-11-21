@@ -87,14 +87,18 @@ export interface AppEnv {
     supportEmail: string;
   };
   /**
-   * MSG91 — SMS gateway for phone-number OTPs. All three must be present to
-   * send a real SMS; absent, the phone-OTP endpoints answer 503 (no silent
-   * fallback: a sign-up that thinks the phone was verified when the SMS was
-   * never sent is worse than refusing). Register on
-   * https://msg91.com and get a DLT-approved template + sender header first
-   * (TRAI mandates this for every transactional SMS in India).
+   * WhatsApp Cloud API — the ONLY phone-OTP channel as of 21 Nov 2026
+   * (MSG91 was removed; client now treats phone verification as
+   * soft-optional on signup with a "verify later from profile" flow
+   * when WhatsApp can't deliver). All four must be present to activate
+   * WhatsApp; any one missing → `/v1/auth/phone-otp/send` answers 503.
    */
-  msg91: { authKey: string; templateId: string; senderId: string } | null;
+  whatsapp: {
+    accessToken: string;
+    phoneNumberId: string;
+    businessAccountId: string;
+    otpTemplateName: string;
+  } | null;
   /**
    * The one admin account GalleryZone operates with. The seed script runs on
    * every API boot: creates the Firebase Auth user if missing, writes the
@@ -297,12 +301,16 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
       cin: optional(source.INVOICE_SELLER_CIN?.trim()),
       supportEmail: source.INVOICE_SELLER_SUPPORT_EMAIL?.trim() || "support@galleryzone.in",
     },
-    msg91:
-      source.MSG91_AUTH_KEY && source.MSG91_TEMPLATE_ID && source.MSG91_SENDER_ID
+    whatsapp:
+      source.WHATSAPP_ACCESS_TOKEN &&
+      source.WHATSAPP_PHONE_NUMBER_ID &&
+      source.WHATSAPP_BUSINESS_ACCOUNT_ID &&
+      source.WHATSAPP_OTP_TEMPLATE_NAME
         ? {
-            authKey: source.MSG91_AUTH_KEY.trim(),
-            templateId: source.MSG91_TEMPLATE_ID.trim(),
-            senderId: source.MSG91_SENDER_ID.trim(),
+            accessToken: source.WHATSAPP_ACCESS_TOKEN.trim(),
+            phoneNumberId: source.WHATSAPP_PHONE_NUMBER_ID.trim(),
+            businessAccountId: source.WHATSAPP_BUSINESS_ACCOUNT_ID.trim(),
+            otpTemplateName: source.WHATSAPP_OTP_TEMPLATE_NAME.trim(),
           }
         : null,
     adminSeed:

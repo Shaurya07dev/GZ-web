@@ -234,8 +234,37 @@ export const authService = {
     return http.post("/v1/auth/email-otp/verify", input);
   },
 
-  sendPhoneOtp: async (input: { phone: string }): Promise<{ accepted: true }> => {
-    await http.post("/v1/auth/phone-otp/send", input);
+  /**
+   * Issues a phone OTP via WhatsApp (the only channel as of 21 Nov 2026).
+   *
+   * Two success shapes:
+   *   { accepted: true }
+   *     — WhatsApp sent; caller moves user to the code-entry screen.
+   *   { accepted: false, deferred: true, reason }
+   *     — WhatsApp failed (recipient not on WhatsApp, Meta rate limit,
+   *       network error, etc.). Caller should let signup continue,
+   *       surface `reason` as a friendly inline message, and point the
+   *       user to Profile → Phone to retry verification later.
+   */
+  sendPhoneOtp: async (input: {
+    phone: string;
+  }): Promise<
+    | { accepted: true }
+    | { accepted: false; deferred: true; reason: string }
+  > => {
+    const response = await http.post<
+      | { accepted: true }
+      | { accepted: false; deferred: true; reason?: string }
+    >("/v1/auth/phone-otp/send", input);
+    if (response.accepted === false && response.deferred) {
+      return {
+        accepted: false,
+        deferred: true,
+        reason:
+          response.reason ??
+          "Phone verification is temporarily unavailable. You can verify your number later from your profile.",
+      };
+    }
     return { accepted: true };
   },
 

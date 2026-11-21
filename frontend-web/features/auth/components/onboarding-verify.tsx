@@ -124,11 +124,20 @@ export function OnboardingVerify() {
     setError(null);
     setBusy(true);
     try {
-      await authService.sendPhoneOtp({ phone: digits });
-      setPhoneSent(true);
-      toast.success("Code sent via SMS");
+      const response = await authService.sendPhoneOtp({ phone: digits });
+      if (response.accepted) {
+        setPhoneSent(true);
+        toast.success("Code sent on WhatsApp");
+        return;
+      }
+      // Soft-fail: WhatsApp couldn't deliver (e.g. recipient not on
+      // WhatsApp, Meta rate limit, outage). Signup continues; the user
+      // is pushed straight to their dashboard and can verify the phone
+      // from Profile → Phone when it's working again. 21 Nov 2026.
+      toast.info(response.reason, { duration: 7_000 });
+      router.push(landingFor(role));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't send the SMS.");
+      setError(e instanceof Error ? e.message : "Couldn't send the code on WhatsApp.");
     } finally {
       setBusy(false);
     }
@@ -136,7 +145,7 @@ export function OnboardingVerify() {
 
   async function handleVerifyPhone() {
     if (!/^\d{6}$/.test(phoneCode)) {
-      setError("Enter the 6-digit code we SMS'd you.");
+      setError("Enter the 6-digit code we sent on WhatsApp.");
       return;
     }
     setError(null);
@@ -180,7 +189,7 @@ export function OnboardingVerify() {
             ? (sendError
               ? `We couldn't send a code to ${email}. See the error below, then tap Resend to try again.`
               : `We've sent a 6-digit code to ${email}. Enter it below to confirm this address.`)
-            : "A verified mobile means your order updates land directly. We'll send you a 6-digit SMS code."
+            : "A verified mobile means your order updates land directly. We'll send you a 6-digit code on WhatsApp."
         }
         icon={step === "email" ? Mail : Phone}
       />
@@ -246,7 +255,7 @@ export function OnboardingVerify() {
           </Field>
           <Button onClick={handleSendPhone} disabled={busy}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Phone className="size-4" />}
-            Send SMS code
+            Send WhatsApp code
           </Button>
           <button
             type="button"
@@ -262,7 +271,7 @@ export function OnboardingVerify() {
       {step === "phone" && phoneSent && (
         <div className="flex flex-col gap-4">
           <Field data-invalid={Boolean(error)}>
-            <FieldLabel htmlFor="phone-code">6-digit SMS code</FieldLabel>
+            <FieldLabel htmlFor="phone-code">6-digit WhatsApp code</FieldLabel>
             <Input
               id="phone-code"
               inputMode="numeric"
