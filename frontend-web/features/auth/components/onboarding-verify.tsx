@@ -161,13 +161,6 @@ export function OnboardingVerify() {
     }
   }
 
-  function handleSkipPhone() {
-    // Phone is useful (order SMS updates land there) but not a gate. A
-    // user can finish later from account settings.
-    toast.message("Add your mobile from Account later for order updates.");
-    router.push(landingFor(role));
-  }
-
   if (!email) {
     return (
       <div className="flex flex-col gap-6">
@@ -257,14 +250,12 @@ export function OnboardingVerify() {
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Phone className="size-4" />}
             Send WhatsApp code
           </Button>
-          <button
-            type="button"
-            onClick={handleSkipPhone}
-            disabled={busy}
-            className="text-xs text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
-          >
-            Skip for now
-          </button>
+          {/* No "Skip for now" button here any more — if WhatsApp can't
+              deliver (recipient not on WhatsApp, Meta rate limit, Meta
+              outage), the server returns { deferred: true } and
+              handleSendPhone automatically completes signup with a toast
+              pointing the user to Profile → Phone to verify later. 21
+              Nov 2026. */}
         </div>
       )}
 
