@@ -57,6 +57,12 @@ export class AdminController {
     return { users: await listModerationQueueWithReviews(this.db, "kyc", state === "reviewed" ? "reviewed" : "waiting") };
   }
 
+  @Roles("admin")
+  @Get("moderation/payout")
+  async payoutQueue(@Query("state") state?: string) {
+    return { users: await listModerationQueueWithReviews(this.db, "payout", state === "reviewed" ? "reviewed" : "waiting") };
+  }
+
   /** Artists on this list get a year of free access instead of six months, counted from when they joined. */
   @Roles("admin")
   @Post("early-access/survey-emails")

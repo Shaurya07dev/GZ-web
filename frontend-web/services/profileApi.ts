@@ -31,6 +31,13 @@ export interface OwnProfileDto {
   aadhaarMasked: string | null;
   bankAccountMasked: string | null;
   ifsc: string | null;
+  /** Payout approval status. Separate from KYC: an artist can be KYC-
+   *  verified (identity confirmed) without yet having payout approval
+   *  (bank account confirmed). Both are required before settlements
+   *  release. Older profiles may not carry the field at all — treat
+   *  that as "not_submitted". */
+  payoutStatus?: "not_submitted" | "submitted" | "approved" | "rejected" | null;
+  payoutReviewNote?: string | null;
   pickupLine1: string | null;
   pickupLine2: string | null;
   pickupCity: string | null;

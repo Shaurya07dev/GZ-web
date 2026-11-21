@@ -11,6 +11,7 @@ import {
   IdCard,
   FileCheck2,
   Banknote,
+  Wallet,
   UserMinus,
   ReceiptText,
   Frame,
@@ -64,7 +65,7 @@ import { useAdminKpis } from "@/hooks/useAdminDashboard";
 // `collapsed` state rather than lifting it into a shared component, same
 // reasoning as the rest of this file being a deliberate standalone copy.
 
-type BadgeKey = "artworks" | "kyc" | "gst" | "withdrawals";
+type BadgeKey = "artworks" | "kyc" | "gst" | "payouts" | "withdrawals";
 
 interface AdminNavItem {
   label: string;
@@ -119,7 +120,18 @@ const NAV_GROUPS: AdminNavGroup[] = [
         badge: "gst",
       },
       {
-        label: "Payouts",
+        // Bank-account approvals (separate from the identity KYC above) —
+        // every artist needs this approved before settlements can release.
+        // 19 Nov 2026.
+        label: "Payout approvals",
+        href: "/admin/moderation/payouts",
+        icon: Wallet,
+        badge: "payouts",
+      },
+      {
+        // Withdrawal queue (requests from approved payout accounts) —
+        // distinct from the Payout-approvals queue above.
+        label: "Withdrawals",
         href: "/admin/moderation/withdrawals",
         tourId: "admin-moderation-withdrawals",
         icon: Banknote,
@@ -259,6 +271,10 @@ function Sidebar({
     artworks: kpis?.pendingArtworkApprovals,
     kyc: kpis?.pendingKyc,
     gst: kpis?.pendingGst,
+    // Separate payout-approval queue (bank-account reviews) — the KPI
+    // endpoint doesn't carry a count for it yet, so no red dot; admin
+    // still gets the nav entry and sees the queue inside.
+    payouts: undefined,
     withdrawals: kpis?.pendingWithdrawals,
   };
 

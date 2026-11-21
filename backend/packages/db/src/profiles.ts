@@ -167,6 +167,10 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
     const ifsc = clean(patch.ifsc)?.toUpperCase() ?? null;
     if (ifsc && !IFSC_RE.test(ifsc)) throw new ProfileUpdateError("IFSC must look like HDFC0001234");
     set("ifsc", ifsc);
+    // Any change to IFSC resets payout approval — admin reviews the pair
+    // (bank account + IFSC) together. Keep rejection notes intact so the
+    // artist can see why their last attempt was refused.
+    if (ifsc !== current.ifsc) set("payoutStatus", ifsc ? "submitted" : "not_submitted");
   }
   if (patch.pickupCountry !== undefined) {
     const country = clean(patch.pickupCountry)?.toUpperCase() ?? null;
@@ -211,7 +215,13 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
     // tail is still stored unencrypted on the profile doc (that's what the
     // UI shows — "•••• 4521" is safe public-facing info).
     financialUpdate = { bankAccountEncrypted: encryptField(acct) };
-    set("bankAccountMasked", acct ? `•••• ${acct.slice(-4)}` : null);
+    const nextMasked = acct ? `•••• ${acct.slice(-4)}` : null;
+    set("bankAccountMasked", nextMasked);
+    // Same rule as the IFSC change above: any bank-account edit resets
+    // payout approval. "Approved" doesn't carry forward onto a new account.
+    if (nextMasked !== current.bankAccountMasked) {
+      set("payoutStatus", nextMasked ? "submitted" : "not_submitted");
+    }
   }
 
   const batch = db.batch();

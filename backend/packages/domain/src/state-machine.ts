@@ -139,6 +139,12 @@ function reviewQueueMachine(entity: string): StateMachine<ReviewStatus> {
 export const kycStateMachine = reviewQueueMachine("Kyc");
 export const gstStateMachine = reviewQueueMachine("Gst");
 export const insuranceStateMachine = reviewQueueMachine("Insurance");
+// Payout (bank-account + IFSC) approval. Independent of KYC so admins can
+// approve identity and payout separately — some artists complete identity
+// first and add bank details later. Client flag 19 Nov 2026 asked for the
+// two to be distinct admin decisions. Same 4-value vocabulary as the
+// other review queues so the admin UI patterns stay uniform.
+export const payoutStateMachine = reviewQueueMachine("Payout");
 
 // --- Withdrawal ----------------------------------------------------------------
 

@@ -143,6 +143,46 @@ export function useRejectGstMutation() {
   });
 }
 
+// --- Payout ----------------------------------------------------------------
+// Independent approval workflow — the admin decides whether the bank account
+// + IFSC the artist entered are safe to settle funds into. Introduced
+// 19 Nov 2026 after the client flagged that KYC approval was covering
+// everything; payout now has its own queue, state and decision history.
+
+export function useAdminPayoutQueue(view: QueueView = "waiting") {
+  return useQuery({
+    queryKey: ["admin-payout-queue", view],
+    queryFn: () => adminService.listPayoutQueue(view),
+  });
+}
+
+export function useApprovePayoutMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => adminService.approvePayout(userId),
+    onSuccess: (_data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-payout-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
+export function useRejectPayoutMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      adminService.rejectPayout(userId, reason),
+    onSuccess: (_data, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-payout-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-kpis"] });
+    },
+  });
+}
+
 // --- withdrawals -----------------------------------------------------------
 
 export function useAdminWithdrawals() {

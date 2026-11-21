@@ -46,9 +46,11 @@ interface AdminUserDto {
   location: string | null;
   bankAccountMasked: string | null;
   /** IFSC of the payout bank — present only once the artist has filled the
-   *  Payout section. Admin KYC approval is gated on this + bankAccountMasked
-   *  being non-null (server-side: moderation.ts decideKyc). */
+   *  Payout section. */
   ifsc?: string | null;
+  /** Payout approval status — separate from KYC. See AdminUser JSDoc. */
+  payoutStatus?: "not_submitted" | "submitted" | "approved" | "rejected" | null;
+  payoutReviewNote?: string | null;
   externalArtist: boolean;
   galleryzoneRating: number | null;
   /** From ProfileDoc on the artist. Optional because older user docs
@@ -128,6 +130,8 @@ function toAdminUser(u: AdminUserDto): AdminUser {
     instagramHandle: u.instagram,
     bankAccountMasked: u.bankAccountMasked,
     ifsc: u.ifsc ?? null,
+    payoutStatus: u.payoutStatus ?? null,
+    payoutReviewNote: u.payoutReviewNote ?? null,
     externalArtist: u.externalArtist,
     galleryzoneRating: u.galleryzoneRating,
     earningsAbove5L: u.earningsAbove5L,
@@ -319,6 +323,15 @@ export const adminApi = {
 
   async decideGst(userId: string, decision: "approve" | "reject", reason?: string): Promise<void> {
     await http.post(`/v1/admin/moderation/gst/${encodeURIComponent(userId)}/${decision}`, reason ? { reason } : {});
+  },
+
+  async listPayoutQueue(view: QueueView = "waiting"): Promise<AdminUser[]> {
+    const { users } = await http.get<{ users: AdminUserDto[] }>(`/v1/admin/moderation/payout?state=${view}`);
+    return users.map(toAdminUser);
+  },
+
+  async decidePayout(userId: string, decision: "approve" | "reject", reason?: string): Promise<void> {
+    await http.post(`/v1/admin/moderation/payout/${encodeURIComponent(userId)}/${decision}`, reason ? { reason } : {});
   },
 
   async listWithdrawals(): Promise<WithdrawalRequest[]> {

@@ -83,9 +83,14 @@ export interface AdminUserView {
   website: string | null;
   location: string | null;
   bankAccountMasked: string | null;
-  /** IFSC of the payout bank, when the artist has entered one. Admin KYC-
-   *  approval is gated on both bankAccountMasked + ifsc being present. */
+  /** IFSC of the payout bank, when the artist has entered one. */
   ifsc: string | null;
+  /** Payout approval status — separate from KYC. "not_submitted" when the
+   *  artist hasn't added bank details yet, "submitted" the moment they do
+   *  (auto-flip in profiles.ts), "approved" / "rejected" after an admin
+   *  decides. Defaults to null on docs written before the field existed. */
+  payoutStatus: string | null;
+  payoutReviewNote: string | null;
   /** The §194-O TDS flag an admin has set by hand. */
   earningsAbove5L: boolean;
   /** True for artists who come from an external platform (TR partners). */
@@ -116,6 +121,8 @@ async function toAdminUser(db: Firestore, id: string, u: UserDoc): Promise<Admin
     location: profile?.location ?? null,
     bankAccountMasked: profile?.bankAccountMasked ?? null,
     ifsc: profile?.ifsc ?? null,
+    payoutStatus: profile?.payoutStatus ?? null,
+    payoutReviewNote: profile?.payoutReviewNote ?? null,
     earningsAbove5L: profile?.earningsAbove5L ?? false,
     externalArtist: u.externalArtist ?? false,
     galleryzoneRating: profile?.galleryzoneRating ?? null,
@@ -186,24 +193,26 @@ export async function listWithdrawalsForAdmin(db: Firestore): Promise<AdminWithd
 export type ModerationUserView = AdminUserView & { review: ReviewStamp | null };
 
 /**
- * The GST or KYC queue with who reviewed each row. "waiting" is what needs a decision; "reviewed" is
- * everyone already approved or rejected. A waiting row can still carry an earlier review (rejected, then
- * submitted again).
+ * The GST, KYC or payout queue with who reviewed each row. "waiting" is what
+ * needs a decision; "reviewed" is everyone already approved or rejected. A
+ * waiting row can still carry an earlier review (rejected, then submitted
+ * again). Payout joined this function on 19 Nov 2026 when the client asked
+ * for payout approval to be a distinct admin workflow.
  */
-export async function listModerationQueueWithReviews(db: Firestore, kind: "gst" | "kyc", state: "waiting" | "reviewed"): Promise<ModerationUserView[]> {
+export async function listModerationQueueWithReviews(db: Firestore, kind: "gst" | "kyc" | "payout", state: "waiting" | "reviewed"): Promise<ModerationUserView[]> {
   const users = await listUsersForAdmin(db);
-  const field = kind === "gst" ? "gstStatus" : "aadhaarStatus";
+  const field = kind === "gst" ? "gstStatus" : kind === "kyc" ? "aadhaarStatus" : "payoutStatus";
   const wanted = (status: string | null) => (state === "waiting" ? status === "submitted" : status === "approved" || status === "rejected");
-  const rows = users.filter((u) => (u.role === "artist" || u.role === "aggregator") && wanted(u[field]));
+  const rows = users.filter((u) => (u.role === "artist" || u.role === "aggregator") && wanted(u[field] ?? null));
   const reviews = await loadReviews(db, [`${kind}.approved`, `${kind}.rejected`]);
   return rows.map((u) => ({ ...u, review: reviews.get(u.id) ?? null }));
 }
 
-/** Artists/aggregators whose GST or KYC is waiting on a decision. */
-export async function listModerationQueue(db: Firestore, kind: "gst" | "kyc"): Promise<AdminUserView[]> {
+/** Artists/aggregators whose GST, KYC or payout is waiting on a decision. */
+export async function listModerationQueue(db: Firestore, kind: "gst" | "kyc" | "payout"): Promise<AdminUserView[]> {
   const users = await listUsersForAdmin(db);
-  const field = kind === "gst" ? "gstStatus" : "aadhaarStatus";
-  return users.filter((u) => (u.role === "artist" || u.role === "aggregator") && u[field] === "submitted");
+  const field = kind === "gst" ? "gstStatus" : kind === "kyc" ? "aadhaarStatus" : "payoutStatus";
+  return users.filter((u) => (u.role === "artist" || u.role === "aggregator") && (u[field] ?? null) === "submitted");
 }
 
 export interface AdminKpiView {

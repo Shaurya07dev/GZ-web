@@ -848,11 +848,20 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-background">
             <Landmark className="size-4 text-gold-bright" strokeWidth={1.75} />
           </span>
-          <div>
-            <h2 className="font-display text-base font-semibold text-foreground">Payout account</h2>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-base font-semibold text-foreground">Payout account</h2>
+              <GstStatusBadge status={profile.payoutStatus} />
+            </div>
             <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
               Where your settlements are paid. {profile.bankAccountMasked ? `On file: ${profile.bankAccountMasked}${profile.ifsc ? ` · ${profile.ifsc}` : ""}.` : "Nothing on file yet — withdrawals need this."}
             </p>
+            {/* Separate from identity KYC — both have to clear admin review
+                before any settlement releases, so make that explicit here. */}
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              GalleryZone reviews your bank details separately from your identity KYC. Settlements release once both are approved.
+            </p>
+            <ReviewNote status={profile.payoutStatus} note={profile.payoutReviewNote} />
           </div>
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -896,19 +905,24 @@ function ProfileKycFormBody({ profile }: { profile: ArtistAccountProfile }) {
             {ifscInvalid && <p className="text-xs text-destructive">IFSC looks like HDFC0001234.</p>}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
             disabled={saveProfileMutation.isPending || bankNumberInvalid || bankNumberMismatch || bankNumberUnconfirmed || ifscInvalid || (!bankForm.bankAccountNumber && !bankForm.ifsc)}
             className="inline-flex items-center gap-2 rounded-md border border-gold/50 px-5 py-2.5 text-sm font-medium text-gold-bright transition-colors hover:border-gold hover:bg-gold/10 disabled:pointer-events-none disabled:opacity-40"
           >
-            Save payout account
+            {profile.payoutStatus === "approved" ? "Update bank details" : "Save payout account"}
           </button>
           {bankSaved && (
             <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-1.5 text-sm text-gold-bright">
               <Check className="size-3.5" />
-              Saved
+              Saved — sent for GalleryZone approval
             </motion.span>
+          )}
+          {profile.payoutStatus === "approved" && !bankSaved && (
+            <span className="text-xs text-muted-foreground">
+              Editing this will send the new details back for review.
+            </span>
           )}
         </div>
       </form>

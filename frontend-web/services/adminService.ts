@@ -235,6 +235,19 @@ export const adminService = {
     return { userId, gstStatus: "rejected" as const, reason };
   },
 
+  listPayoutQueue: (view: QueueView = "waiting"): Promise<AdminUser[]> => adminApi.listPayoutQueue(view),
+
+  approvePayout: async (userId: string): Promise<{ userId: string; payoutStatus: "approved" }> => {
+    await adminApi.decidePayout(userId, "approve");
+    return { userId, payoutStatus: "approved" as const };
+  },
+
+  rejectPayout: async (userId: string, reason: string): Promise<{ userId: string; payoutStatus: "rejected"; reason: string }> => {
+    if (!reason.trim()) throw new Error("A rejection reason is required");
+    await adminApi.decidePayout(userId, "reject", reason);
+    return { userId, payoutStatus: "rejected" as const, reason };
+  },
+
   listWithdrawals: (): Promise<WithdrawalRequest[]> => adminApi.listWithdrawals(),
 
   approveWithdrawal: (id: string): Promise<{ id: string; status: "completed" }> => adminApi.approveWithdrawal(id),

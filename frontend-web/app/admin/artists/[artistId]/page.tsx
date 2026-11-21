@@ -19,16 +19,28 @@ import { verifiedTierCount } from "@/types/artist";
 import { formatINR } from "@/lib/utils";
 import type { AdminUser } from "@/types/admin";
 
+
 const TIER_LABELS = [
   { key: "tier1SocialMedia", label: "Tier 1 · Social media linked" },
   { key: "tier2ActivePlan", label: "Tier 2 · Artist agreement" },
   { key: "tier3FirstSale", label: "Tier 3 · First confirmed sale" },
 ] as const;
 
+// Thin outer component so we can re-mount the inner body whenever
+// `artistId` changes. Navigating between two artist detail pages keeps
+// the same React tree alive (Next.js reuses the layout and page shell),
+// which meant a stale `data` from the previous artist could flash on
+// screen while the new fetch was in flight. Keyed inner component ->
+// full unmount -> React re-reads state and the Loader renders cleanly
+// until the new data arrives. Client flag 19 Nov 2026.
 export default function AdminArtistDetailPage(
   props: PageProps<"/admin/artists/[artistId]">,
 ) {
   const { artistId } = use(props.params);
+  return <AdminArtistDetailBody key={artistId} artistId={artistId} />;
+}
+
+function AdminArtistDetailBody({ artistId }: { artistId: string }) {
   const { data, isLoading } = useAdminArtistPortfolio(artistId);
 
   if (isLoading) return null;

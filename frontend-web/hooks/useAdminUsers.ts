@@ -24,11 +24,22 @@ export function useAdminUser(userId: string) {
 // Person-detail pages: bundles the AdminUser row with the role-specific
 // record their page actually renders (portfolio/holdings/orders), through
 // adminService instead of the page importing lib/mock-data/* fixtures.
+//
+// `refetchOnMount: "always"` + `staleTime: 0` on every admin detail hook:
+// client flag 19 Nov 2026 — browser was serving stale cached data when
+// navigating between artist detail pages (e.g. clicking Mouriyan Gandhi
+// opened Yata sai Pawan's page). The HTTP cache was one culprit (fixed
+// server-side with no-store on /v1/admin/*), but TanStack's default
+// 5-minute staleTime could still return cached results before refetching,
+// making the stale data flash on-screen. Forcing a refetch on every mount
+// kills the flash; the server's own cache hints (none) decide the rest.
 export function useAdminArtistPortfolio(userId: string) {
   return useQuery({
     queryKey: ["admin-artist-portfolio", userId],
     queryFn: () => adminService.getArtistPortfolio(userId),
     enabled: Boolean(userId),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 }
 
@@ -37,6 +48,8 @@ export function useAdminAggregatorPortfolio(userId: string) {
     queryKey: ["admin-aggregator-portfolio", userId],
     queryFn: () => adminService.getAggregatorPortfolio(userId),
     enabled: Boolean(userId),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 }
 
@@ -45,6 +58,8 @@ export function useAdminCustomerPortfolio(userId: string) {
     queryKey: ["admin-customer-portfolio", userId],
     queryFn: () => adminService.getCustomerPortfolio(userId),
     enabled: Boolean(userId),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 }
 

@@ -607,14 +607,23 @@ export function transferDeclined(i: { artworkId: string; title: string; toName: 
 
 // ── Compliance and agreements ───────────────────────────────────────────
 
-export function complianceDecided(i: { kind: "gst" | "kyc"; approved: boolean; reason?: string | undefined; role: string }, c: Ctx): Content {
+export function complianceDecided(i: { kind: "gst" | "kyc" | "payout"; approved: boolean; reason?: string | undefined; role: string }, c: Ctx): Content {
   const aggregator = i.role === "aggregator";
-  const label = i.kind === "gst" ? "GSTIN" : "KYC";
-  const approvedBody = i.kind === "gst" ? (aggregator ? "Your GSTIN is verified. You can now reserve artwork." : "Your GSTIN is verified. Invoices now carry it.") : "Your KYC is verified. You can now receive payouts.";
+  const label = i.kind === "gst" ? "GSTIN" : i.kind === "kyc" ? "KYC" : "Payout details";
+  const approvedBody =
+    i.kind === "gst"
+      ? aggregator
+        ? "Your GSTIN is verified. You can now reserve artwork."
+        : "Your GSTIN is verified. Invoices now carry it."
+      : i.kind === "kyc"
+        ? "Your KYC is verified."
+        : "Your bank account has been approved. Settlements can now release funds to it.";
   const rejectedBody =
     i.kind === "gst"
       ? `We couldn't verify your GSTIN. Correct the details in your profile and resubmit${aggregator ? ". You can't reserve artwork until it is approved." : ". Selling and settlements carry on in the meantime."}`
-      : "We couldn't verify your KYC documents. Withdrawals stay on hold until this is resolved. Re-upload from your profile and we'll review again.";
+      : i.kind === "kyc"
+        ? "We couldn't verify your KYC documents. Re-upload from your profile and we'll review again."
+        : "We couldn't approve your bank details. Correct them in your profile and resubmit — settlements won't release until they're approved.";
   return {
     subject: i.approved ? `${label} verified` : `${label} needs another look`,
     category: "transactional",

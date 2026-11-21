@@ -71,6 +71,13 @@ export interface ArtistProfileView {
   gstStatus: "not_submitted" | "submitted" | "approved" | "rejected";
   gstReviewNote: string | null;
   aadhaarReviewNote: string | null;
+  /** Payout approval status — separate from the identity KYC above.
+   *  "not_submitted" → artist hasn't saved bank + IFSC yet; "submitted"
+   *  → saved, awaiting admin; "approved" / "rejected" → admin decided.
+   *  Settlements only release once this is "approved" AND the identity
+   *  KYC is approved. */
+  payoutStatus: "not_submitted" | "submitted" | "approved" | "rejected";
+  payoutReviewNote: string | null;
   socialProofVideoUrl: string | null;
   pickupLine1: string;
   pickupLine2: string;
@@ -108,6 +115,8 @@ function toArtistProfileView(p: OwnProfileDto): ArtistProfileView {
     gstStatus: p.gstStatus,
     gstReviewNote: p.gstReviewNote ?? null,
     aadhaarReviewNote: p.aadhaarReviewNote ?? null,
+    payoutStatus: p.payoutStatus ?? "not_submitted",
+    payoutReviewNote: p.payoutReviewNote ?? null,
     socialProofVideoUrl: p.socialProofVideoUrl,
     pickupLine1: p.pickupLine1 ?? "",
     pickupLine2: p.pickupLine2 ?? "",

@@ -39,11 +39,18 @@ export interface AdminUser {
   gstStatus?: GstStatus;
   instagramHandle?: string | null;
   /** Masked payout account ("XXXXXXXX1234") — null until the artist fills
-   *  the Payout section. Admin KYC approval is gated server-side on this
-   *  + ifsc being present, so the admin console can surface readiness
-   *  without needing to attempt the approval to find out. */
+   *  the Payout section. Admin can see what's on file without needing to
+   *  attempt approval to find out. */
   bankAccountMasked?: string | null;
   ifsc?: string | null;
+  /** Payout approval status. Separate from KYC: an artist can be KYC-
+   *  verified (identity confirmed) without yet having payout approval
+   *  (bank account confirmed). Both are required before settlements
+   *  release. "not_submitted" when no bank/IFSC on file, "submitted"
+   *  once they fill both, "approved" / "rejected" after an admin
+   *  decides. */
+  payoutStatus?: "not_submitted" | "submitted" | "approved" | "rejected" | null;
+  payoutReviewNote?: string | null;
   /** TR partner — this artist lists through an external platform rather
    *  than natively on GalleryZone. Admin-only internal flag. */
   externalArtist?: boolean;
@@ -162,6 +169,8 @@ export type AuditAction =
   | "kyc.rejected"
   | "gst.approved"
   | "gst.rejected"
+  | "payout.approved"
+  | "payout.rejected"
   | "withdrawal.approved"
   | "withdrawal.rejected"
   | "payout.marked_paid"

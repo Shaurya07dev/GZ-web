@@ -246,6 +246,17 @@ export interface ProfileDoc {
   aadhaarVerification?: VerificationEvidence | null;
   bankAccountMasked: string | null;
   ifsc: string | null;
+  /**
+   * Payout approval — distinct from KYC. Set to "submitted" automatically
+   * every time bank account OR IFSC changes (profiles.ts). Admin approves
+   * or rejects via /v1/admin/moderation/payout. An artist can only be paid
+   * out when this is "approved". Client flag 19 Nov 2026: KYC approval
+   * previously covered everything, which meant an admin could mark a KYC
+   * approved without ever confirming the payout destination.
+   */
+  payoutStatus?: ReviewStatus | null;
+  /** Rejection reason from the admin, shown to the artist until they resubmit. */
+  payoutReviewNote?: string | null;
   pickupLine1: string | null;
   pickupLine2: string | null;
   pickupCity: string | null;
@@ -622,13 +633,41 @@ export interface OrderDoc {
   couponDiscountPaise?: number | null;
 }
 
+/** One row of the tax invoice — item name, HSN/SAC, taxable value, rate,
+ *  and the GST split the invoice chose for the whole supply. Intra-state
+ *  rows carry cgstPaise + sgstPaise; inter-state rows carry igstPaise.
+ *  Lines with gstRatePercent = 0 are pass-through (no GST collected on
+ *  the buyer, e.g. shipping handled as pure-agent reimbursement). */
+export interface InvoiceLine {
+  description: string;
+  /** HSN for goods (8 digits), SAC for services (6 digits). */
+  hsnOrSac: string;
+  qty: number;
+  /** Pre-tax unit price in paise. */
+  unitPricePaise: number;
+  /** qty × unitPricePaise. Pre-tax taxable value for this row. */
+  taxablePaise: number;
+  /** 0, 5, 12, 18, 28. 0 = non-taxable pass-through on the invoice. */
+  gstRatePercent: 0 | 5 | 12 | 18 | 28;
+  /** Intra-state only. Half of the line's GST (rounding remainder lands on sgst). */
+  cgstPaise?: number;
+  /** Intra-state only. Labelled SGST by default; relabelled UTGST on the
+   *  PDF when the seller is in a UT-without-legislature (see
+   *  `InvoiceSnapshot.usesUtgst`). */
+  sgstPaise?: number;
+  /** Inter-state only. Full GST amount for this row. */
+  igstPaise?: number;
+}
+
 /** Lives on the order doc so the invoice number can't drift across reads. */
 export interface InvoiceSnapshot {
   /** Human-readable invoice number, e.g. "GZ/26-27/000001". Globally unique. */
   number: string;
   /** Fiscal year the counter was drawn from, e.g. "FY2026-27". */
   fiscalYear: string;
-  /** Seller legal identity frozen at the moment the invoice was stamped. */
+  /** Issuer letterhead — GalleryZone itself. The invoice is issued by
+   *  GalleryZone (the marketplace / payment collector); the artist who
+   *  owns the piece appears separately under `soldBy`. */
   seller: {
     legalName: string;
     addressLine1: string;
@@ -639,6 +678,25 @@ export interface InvoiceSnapshot {
     gstin: string | null;
     stateCode: string;
   };
+  /** The artist who actually sold the art piece — printed as "Sold By"
+   *  on the invoice, with their PAN and (when registered) GSTIN. All
+   *  fields are frozen at stamp time: later profile edits never change
+   *  what was printed. Optional only to cover any order from before this
+   *  field was introduced (20 Nov 2026). */
+  soldBy?: {
+    legalName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    /** Two-letter postal abbreviation, e.g. "TS". */
+    stateCode: string;
+    /** Official two-digit GST state code, e.g. "36" (Telangana). */
+    numericCode: string;
+    pan: string | null;
+    gstin: string | null;
+  };
   /** Buyer identity + place of supply frozen at stamp time. */
   buyer: {
     name: string;
@@ -647,11 +705,54 @@ export interface InvoiceSnapshot {
     city: string;
     state: string;
     pincode: string;
+    /** Buyer's GSTIN when the supply is B2B — pulled from their profile
+     *  at stamp time. Null when the buyer has no GSTIN on file. */
+    gstin?: string | null;
   };
-  /** How the GST was split. Intra-state → cgst+sgst; inter-state → igst. */
+  /** Buyer-visible order id and the moment they placed it — the invoice
+   *  shows both alongside the invoice number/date so the buyer can tie
+   *  the invoice back to the order they placed. */
+  orderNumber?: string;
+  orderDate?: FirebaseFirestore.Timestamp;
+  /** Razorpay (or future gateway) payment capture details, frozen onto
+   *  the snapshot so the "Payment Transaction ID / Date & Time / Mode"
+   *  footer never drifts away from what the buyer actually paid. */
+  payment?: {
+    transactionId: string | null;
+    method: string | null;
+    paidAt: FirebaseFirestore.Timestamp | null;
+  };
+  /** Place of delivery (the buyer's shipping-address state) — for goods
+   *  the same as `placeOfSupply`, but kept as a distinct field in case a
+   *  future bill-to vs ship-to divergence has to be printed separately. */
+  placeOfDelivery?: {
+    state: string;
+    numericCode: string;
+    code: string;
+  };
+  /** How the GST was split in total across every line. Intra-state carries
+   *  cgst + sgst; inter-state carries igst. The per-line amounts in
+   *  `lines[]` sum to this (inter-state igst == sum of line igsts; intra
+   *  cgst/sgst likewise), so an accountant can audit top-down or line-up.
+   *  Older snapshots written before per-line breakdown may omit `lines`. */
   taxBreakdown:
     | { kind: "intra_state"; cgstPaise: number; sgstPaise: number }
     | { kind: "inter_state"; igstPaise: number };
+  /** Per-line breakdown. Optional on pre-November-2026 invoices. */
+  lines?: InvoiceLine[];
+  /** True when the seller is a union territory *without* its own
+   *  legislature (Chandigarh, Ladakh, A&N, Lakshadweep, DN&DD): the PDF
+   *  then labels the sgst halves as UTGST. SGST states leave it false. */
+  usesUtgst?: boolean;
+  /** Place of supply per Rule 46: for goods, the state the delivery is
+   *  made in (i.e. the buyer address). Optional on older snapshots. */
+  placeOfSupply?: {
+    state: string;
+    /** Official two-digit GST code, e.g. "36" for Telangana. */
+    numericCode: string;
+    /** Postal abbreviation, e.g. "TS". */
+    code: string;
+  };
   issuedAt: FirebaseFirestore.Timestamp;
 }
 

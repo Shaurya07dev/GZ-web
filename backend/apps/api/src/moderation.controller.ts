@@ -4,7 +4,7 @@
 // packages/db/moderation.check.ts against real Postgres.
 
 import { BadRequestException, Body, Controller, Inject, Param, Post, Req } from "@nestjs/common";
-import { ModerationError, decideGst, decideKyc, type Db } from "@galleryzone/db";
+import { ModerationError, decideGst, decideKyc, decidePayout, type Db } from "@galleryzone/db";
 import { z } from "zod";
 import { Roles } from "./auth/roles.decorator.ts";
 import { Emails } from "./mail/emails.ts";
@@ -25,7 +25,7 @@ export class ModerationController {
   // Every decision below gates something the user cares about, so each one
   // mails the person it affects. Fire-and-forget: a mail failure must never
   // roll back a moderation decision that already committed.
-  private mailCompliance(userId: string, kind: "gst" | "kyc", decisionId: string, approved: boolean, reason?: string) {
+  private mailCompliance(userId: string, kind: "gst" | "kyc" | "payout", decisionId: string, approved: boolean, reason?: string) {
     void this.emails.complianceDecided({ userId, kind, decisionId, approved, reason }).catch(this.emails.swallow(`${kind} decision mail`));
   }
 
@@ -48,20 +48,9 @@ export class ModerationController {
   @Roles("admin")
   @Post("moderation/kyc/:userId/approve")
   async approveKyc(@Req() req: AuthenticatedRequest, @Param("userId") userId: string) {
-    try {
-      const result = await decideKyc({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
-      this.mailCompliance(userId, "kyc", result.decisionId, true);
-      return result;
-    } catch (error) {
-      // Client-visible refusal when decideKyc's new bank-details gate rejects.
-      // The DbError message is written for the admin to act on directly ("ask
-      // them to complete the Payout section"), so surface it verbatim rather
-      // than a 500.
-      if (error instanceof ModerationError) {
-        throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "kyc_bank_details_missing" });
-      }
-      throw error;
-    }
+    const result = await decideKyc({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
+    this.mailCompliance(userId, "kyc", result.decisionId, true);
+    return result;
   }
 
   @Roles("admin")
@@ -72,4 +61,34 @@ export class ModerationController {
     return result;
   }
 
+  // --- Payout approval ------------------------------------------------------
+  // Separate workflow from KYC (identity). Admin confirms the bank account +
+  // IFSC the artist submitted before any settlement releases funds. Client
+  // flag 19 Nov 2026.
+
+  @Roles("admin")
+  @Post("moderation/payout/:userId/approve")
+  async approvePayout(@Req() req: AuthenticatedRequest, @Param("userId") userId: string) {
+    try {
+      const result = await decidePayout({ db: this.db, adminId: req.authUser.uid, userId, decision: "approved" });
+      this.mailCompliance(userId, "payout", result.decisionId, true);
+      return result;
+    } catch (error) {
+      // decidePayout refuses an approve if bank account or IFSC are missing.
+      // Surface that as a 400 so the admin console can show the exact reason
+      // instead of a generic 500.
+      if (error instanceof ModerationError) {
+        throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "payout_details_missing" });
+      }
+      throw error;
+    }
+  }
+
+  @Roles("admin")
+  @Post("moderation/payout/:userId/reject")
+  async rejectPayout(@Req() req: AuthenticatedRequest, @Param("userId") userId: string, @Body(new ZodValidationPipe(decisionBodySchema)) body: DecisionBody) {
+    const result = await decidePayout({ db: this.db, adminId: req.authUser.uid, userId, decision: "rejected", reason: body.reason });
+    this.mailCompliance(userId, "payout", result.decisionId, false, body.reason);
+    return result;
+  }
 }

@@ -230,14 +230,11 @@ function KycReviewDialog({
                 />
               </dl>
 
-              {/* Identity documents are never exposed in full to the console —
-                  only the fact that one was submitted, and its verification
-                  status. Matches the platform's own data-handling rule.
-                  Bank details are checked here (not just left to backend
-                  refusal) so the admin knows BEFORE clicking Approve that
-                  the artist still has to fill them out. Client flag 19 Nov
-                  2026 — "KYC was approvable without bank details, it
-                  shouldn't be." */}
+              {/* Identity-only now (19 Nov 2026) — payout is a separate
+                  admin workflow at /admin/moderation/payout, so this
+                  dialog's job is strictly to confirm the Aadhaar was
+                  consented via DigiLocker. Bank details are no longer
+                  checked here. */}
               <div className="space-y-3">
                 <div className="rounded-lg border border-border bg-muted/40 p-4">
                   <p className="text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
@@ -253,44 +250,19 @@ function KycReviewDialog({
                     </p>
                   )}
                 </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <p className="text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                    Bank account
-                  </p>
-                  {user.bankAccountMasked ? (
-                    <>
-                      <p className="mt-1 font-mono text-base tabular-nums text-foreground">
-                        {user.bankAccountMasked}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        IFSC {user.ifsc ?? "—"}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="mt-1 text-sm text-destructive">
-                      Not added yet — can&rsquo;t approve until the artist fills the Payout section
-                    </p>
-                  )}
-                </div>
 
                 <p className="flex items-start gap-2 rounded-md border border-border bg-card p-3 text-xs text-muted-foreground">
                   <ShieldCheck className="mt-px size-3.5 shrink-0 text-gold-bright" />
-                  Full identity numbers are never exposed to the console.
-                  Approve only once the submitted documents have been checked in
-                  the secure viewer.
+                  Identity only. The artist&rsquo;s bank account is approved
+                  separately in the Payout queue.
                 </p>
               </div>
 
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <Button
                   onClick={handleApprove}
-                  disabled={isBusy || !user.bankAccountMasked || !user.ifsc}
+                  disabled={isBusy}
                   className="flex-1"
-                  title={
-                    !user.bankAccountMasked || !user.ifsc
-                      ? "The artist hasn't added bank details yet — approval is gated on both bank account and IFSC."
-                      : undefined
-                  }
                 >
                   <Check className="size-4" />
                   {approveMutation.isPending ? "Approving…" : "Approve"}

@@ -11,10 +11,16 @@ import { useArtwork } from "@/hooks/useArtwork";
 import { formatINR } from "@/lib/utils";
 import type { Order } from "@/types/order";
 
+// Keyed inner body so navigating between customer detail pages fully
+// re-mounts. See AdminArtistDetailPage for the full note.
 export default function AdminCustomerDetailPage(
   props: PageProps<"/admin/customers/[customerId]">,
 ) {
   const { customerId } = use(props.params);
+  return <AdminCustomerDetailBody key={customerId} customerId={customerId} />;
+}
+
+function AdminCustomerDetailBody({ customerId }: { customerId: string }) {
   const { data, isLoading } = useAdminCustomerPortfolio(customerId);
 
   if (isLoading) return null;

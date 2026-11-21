@@ -402,7 +402,7 @@ export class Emails {
    * 30 Sep 2026). Keyed per decision, so a second rejection after a resubmission
    * is a new email and not a duplicate.
    */
-  async complianceDecided(input: { userId: string; kind: "gst" | "kyc"; decisionId: string; approved: boolean; reason?: string | undefined }) {
+  async complianceDecided(input: { userId: string; kind: "gst" | "kyc" | "payout"; decisionId: string; approved: boolean; reason?: string | undefined }) {
     const user = await this.user(input.userId);
     if (!user) return;
     await this.deliver(`${input.kind}-${input.approved ? "approved" : "rejected"}/${input.userId}/${input.decisionId}`, user.email, T.complianceDecided({ kind: input.kind, approved: input.approved, reason: input.reason, role: user.role }, this.ctx));

@@ -10,11 +10,18 @@ import { useAdminAggregatorPortfolio } from "@/hooks/useAdminUsers";
 
 import { formatINR } from "@/lib/utils";
 
+// Keyed inner body so navigating between aggregator detail pages fully
+// re-mounts, avoiding the stale-data flash the artist detail page had.
+// See AdminArtistDetailPage for the full note.
 export default function AdminAggregatorDetailPage(
   props: PageProps<"/admin/aggregators/[aggregatorId]">,
 ) {
-  const [now] = useState(() => Date.now());
   const { aggregatorId } = use(props.params);
+  return <AdminAggregatorDetailBody key={aggregatorId} aggregatorId={aggregatorId} />;
+}
+
+function AdminAggregatorDetailBody({ aggregatorId }: { aggregatorId: string }) {
+  const [now] = useState(() => Date.now());
   const { data, isLoading } = useAdminAggregatorPortfolio(aggregatorId);
 
   if (isLoading) return null;
