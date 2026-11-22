@@ -27,6 +27,15 @@ export interface OutgoingMail {
   replyTo?: string | undefined;
   /** Which email this is, as a Resend tag, so the dashboard can be filtered by it. */
   tag?: string | undefined;
+  /** Optional file attachments — used by consignment emails (delivery
+   *  challan PDF) and anywhere else we need to attach a doc rather
+   *  than linking it. Passed through to Resend's attachments field. */
+  attachments?: Array<{
+    filename: string;
+    /** Raw bytes (we encode base64 when handing to Resend). */
+    content: Buffer;
+    contentType?: string;
+  }>;
 }
 
 const SANDBOX_SENDER = /@resend\.dev>?$/i;
@@ -112,6 +121,16 @@ export class Mailer {
       text: mail.text,
       ...(replyTo ? { replyTo } : {}),
       ...(mail.tag ? { tags: [{ name: "email", value: tagValue(mail.tag) }] } : {}),
+      // Resend expects attachments[].content as a base64 string.
+      ...(mail.attachments && mail.attachments.length > 0
+        ? {
+            attachments: mail.attachments.map((a) => ({
+              filename: a.filename,
+              content: a.content.toString("base64"),
+              ...(a.contentType ? { contentType: a.contentType } : {}),
+            })),
+          }
+        : {}),
     };
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {

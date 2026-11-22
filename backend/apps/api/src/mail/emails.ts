@@ -118,7 +118,12 @@ export class Emails {
    * without Firebase credentials, so no transactional flow fails on a push
    * failure.
    */
-  private async deliver(key: string, to: string | string[], content: T.Content | null): Promise<void> {
+  private async deliver(
+    key: string,
+    to: string | string[],
+    content: T.Content | null,
+    attachments?: Array<{ filename: string; content: Buffer; contentType?: string }>,
+  ): Promise<void> {
     if (!content) return;
     const recipients = [...new Set((Array.isArray(to) ? to : [to]).filter(Boolean))];
     if (!recipients.length) return;
@@ -134,7 +139,16 @@ export class Emails {
       }).catch((error: unknown) => this.logger.warn(`in-app notification ${key} failed: ${error instanceof Error ? error.message : String(error)}`));
     }
     const { html, text } = renderEmail(this.ctx, layout);
-    await this.mailer.send({ to: recipients, subject: content.subject, html, text, idempotencyKey: key, replyTo: content.replyTo, tag: key.split("/")[0] });
+    await this.mailer.send({
+      to: recipients,
+      subject: content.subject,
+      html,
+      text,
+      idempotencyKey: key,
+      replyTo: content.replyTo,
+      tag: key.split("/")[0],
+      ...(attachments && attachments.length ? { attachments } : {}),
+    });
     if (inApp) {
       // Push mirrors the in-app notification. Non-blocking: the mail has
       // already landed and PushSender swallows its own errors, but awaiting
@@ -449,6 +463,112 @@ export class Emails {
     }
   }
 
+  /**
+   * Consignment-dispatch confirmation. Fires AFTER shiprocket-booking
+   * has stamped the delivery challan + booked the courier pickup for
+   * the artist→aggregator inbound leg (`bookInboundShipment`).
+   *
+   * Sends two distinct messages: one to the artist (prepare-the-piece
+   * checklist + delivery challan attached) and one to the aggregator
+   * (receive-the-piece checklist + challan attached). Idempotent via
+   * the holding id in the key.
+   *
+   * Renderer for the attached challan is pulled on demand so this
+   * module stays decoupled from the PDF renderer's Nest wiring.
+   */
+  async consignmentDispatched(input: {
+    holdingId: string;
+    channel: "marketplace" | "aggregator";
+  }) {
+    const holding = await this.read<AggregatorHoldingDoc>(
+      Collections.aggregatorHoldings,
+      input.holdingId,
+    );
+    if (!holding?.deliveryChallan) {
+      this.logger.warn(
+        `consignment mail skipped: holding ${input.holdingId} has no challan yet`,
+      );
+      return;
+    }
+    const artwork = await this.artwork(holding.artworkId);
+    if (!artwork?.artistId) return;
+    const [artist, aggregator] = await Promise.all([
+      this.user(artwork.artistId),
+      this.user(holding.aggregatorId),
+    ]);
+
+    // Render the challan PDF once, attach to both recipients.
+    const { renderDeliveryChallanPdf } = await import("../delivery-challan-pdf.ts");
+    const snap = holding.deliveryChallan;
+    const pdf = await renderDeliveryChallanPdf({
+      ...snap,
+      challanDate: snap.challanDate.toDate(),
+      returnDeadline: snap.returnDeadline?.toDate() ?? null,
+      currentDeadline: snap.currentDeadline?.toDate() ?? null,
+      ewayBill: {
+        number: snap.ewayBill.number,
+        generatedAt: snap.ewayBill.generatedAt?.toDate() ?? null,
+        validUntil: snap.ewayBill.validUntil?.toDate() ?? null,
+      },
+    });
+    const challanAttachment = {
+      filename: `delivery-challan-${snap.number.replace(/\//g, "-")}.pdf`,
+      content: pdf,
+      contentType: "application/pdf",
+    };
+
+    const sizeText = buildSizeText(artwork);
+    // Artist CTA points to their own dashboard entry (not the public
+    // marketplace page) — the email tells the artist their piece has
+    // been reserved, and the next action is preparing the artwork,
+    // which happens through the dashboard.
+    const artworkUrl = `${this.ctx.site}/dashboard/artworks/${holding.artworkId}`;
+
+    if (artist?.email) {
+      await this.deliver(
+        `consignment-artist/${input.holdingId}`,
+        artist.email,
+        T.consignmentDispatchedArtist(
+          {
+            artworkId: holding.artworkId,
+            title: artwork.title,
+            artistName: artist.name,
+            medium: artwork.medium ?? null,
+            sizeText,
+            listedPricePaise: holding.displayPricePaise,
+            channel: input.channel,
+            artworkUrl,
+            challanNumber: snap.number,
+            returnDeadline: snap.returnDeadline?.toDate() ?? null,
+          },
+          this.ctx,
+        ),
+        [challanAttachment],
+      );
+    }
+    if (aggregator?.email) {
+      await this.deliver(
+        `consignment-aggregator/${input.holdingId}`,
+        aggregator.email,
+        T.consignmentDispatchedAggregator(
+          {
+            artworkId: holding.artworkId,
+            title: artwork.title,
+            artistName: artist?.name ?? "the artist",
+            medium: artwork.medium ?? null,
+            sizeText,
+            listedPricePaise: holding.displayPricePaise,
+            aggregatorVenue: aggregator.name,
+            challanNumber: snap.number,
+            currentDeadline: snap.currentDeadline?.toDate() ?? null,
+          },
+          this.ctx,
+        ),
+        [challanAttachment],
+      );
+    }
+  }
+
   /** An aggregator priced a piece far above GalleryZone's offer. Allowed (client, 30 Sep 2026: no limit), but GalleryZone is told. */
   async holdingPriceWarning(input: { holdingId: string; artworkId: string; aggregatorId: string; sellingPricePaise: number; offerSellingPricePaise: number | null }) {
     const [artwork, aggregator, admins] = await Promise.all([this.artwork(input.artworkId), this.user(input.aggregatorId), this.admins()]);
@@ -573,4 +693,8 @@ export class Emails {
   swallow(label: string) {
     return (error: unknown) => this.logger.error(`${label}: ${String(error)}`);
   }
+}
+
+function buildSizeText(artwork: ArtworkDoc): string | null {
+  return (artwork.dimensions ?? "").trim() || null;
 }

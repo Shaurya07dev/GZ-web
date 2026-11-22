@@ -228,9 +228,17 @@ export class AggregatorReservationIntentsController {
     if (outcome.kind === "finalized" || outcome.kind === "already_finalized") {
       // Book the inbound (artist → aggregator) ShipRocket leg. Fire-and-forget;
       // the webhook writes the AWB onto the holding when it comes back.
-      void bookInboundShipment(this.db, outcome.holdingId, artworkId, aggregatorId).catch((err) => {
-        this.logger.error(`shiprocket inbound booking failed for holding ${outcome.holdingId}: ${String(err)}`);
-      });
+      // Chain the consignment handoff email so the artist + aggregator
+      // both get the delivery challan PDF the moment the courier is booked.
+      void bookInboundShipment(this.db, outcome.holdingId, artworkId, aggregatorId)
+        .then(() =>
+          this.emails
+            .consignmentDispatched({ holdingId: outcome.holdingId, channel: "aggregator" })
+            .catch(this.emails.swallow("consignment mail")),
+        )
+        .catch((err) => {
+          this.logger.error(`shiprocket inbound booking failed for holding ${outcome.holdingId}: ${String(err)}`);
+        });
       return { status: outcome.kind, holdingId: outcome.holdingId };
     }
     return { status: outcome.kind, reason: outcome.reason };

@@ -123,9 +123,20 @@ export class AggregatorController {
       // forget: a ShipRocket outage must not fail the reservation itself,
       // and the booking fills in asynchronously via the webhook. The result
       // (AWB + stage) is written to the holding when it comes back.
-      void bookInboundShipment(this.db, result.holdingId, body.artworkId, req.authUser.uid).catch((error) => {
-        console.error(JSON.stringify({ event: "shiprocket.inbound.failed", holdingId: result.holdingId, error: String(error) }));
-      });
+      //
+      // After a successful book + challan stamp, fire the consignment
+      // handoff email to the artist (with prep checklist) and the
+      // aggregator (receive checklist). Email failure is logged but not
+      // propagated — the shipment leg already left.
+      void bookInboundShipment(this.db, result.holdingId, body.artworkId, req.authUser.uid)
+        .then(() =>
+          this.emails
+            .consignmentDispatched({ holdingId: result.holdingId, channel: "aggregator" })
+            .catch(this.emails.swallow("consignment mail")),
+        )
+        .catch((error) => {
+          console.error(JSON.stringify({ event: "shiprocket.inbound.failed", holdingId: result.holdingId, error: String(error) }));
+        });
 
       const holding = await getAggregatorHolding(this.db, req.authUser.uid, result.holdingId);
       return holding ?? result;

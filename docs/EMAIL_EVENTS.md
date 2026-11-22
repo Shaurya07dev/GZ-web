@@ -87,7 +87,7 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 | Your printed certificate is on its way | The artist posts the printed certificate | Live | `coa-dispatched` |
 | Your cart is waiting | A cart sits unpaid (built, nothing fires it yet) | Built, not triggered | `abandoned-cart` |
 
-### Artists (25)
+### Artists (27)
 
 | Email | Sends when | Status | Template id |
 | --- | --- | --- | --- |
@@ -112,12 +112,14 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 | A gallery has reserved your artwork | A gallery reserves their piece | Live | `holding-reserved-artist` |
 | A gallery returned your artwork | A gallery sends the piece back | Live | `holding-returned-artist` |
 | Your artwork sold at a gallery | A gallery sells their piece | Live | `sale-recorded-artist` |
+| Consignment reserved (marketplace) — with delivery challan | GalleryZone books the pickup for a marketplace sale | Live | `consignment-dispatched-artist-marketplace` |
+| Consignment reserved (aggregator channel) — with delivery challan | GalleryZone books the pickup for an aggregator-channel placement | Live | `consignment-dispatched-artist-aggregator` |
 | External-sale fee confirmed or waived | An admin decides an external-sale fee | Live | `external-fee-decided` |
 | Withdrawal request received | They request a withdrawal (aggregators too) | Live | `withdrawal-requested` |
 | Payout sent | An admin pays it out | Live | `withdrawal-paid` |
 | Withdrawal not approved | An admin declines it | Live | `withdrawal-declined` |
 
-### Aggregators (11)
+### Aggregators (12)
 
 | Email | Sends when | Status | Template id |
 | --- | --- | --- | --- |
@@ -126,6 +128,7 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 | Your display period has ended | A placement window runs out | Live | `holding-period-ended` |
 | Your return is recorded | They return an unsold piece | Live | `holding-returned-aggregator` |
 | Your sale is recorded, and what to remit | They record a sale | Live | `sale-recorded-aggregator` |
+| Consignment on its way to your venue — with delivery challan | GalleryZone dispatches a piece to their venue | Live | `consignment-dispatched-aggregator` |
 | Wallet top-up received | A wallet top-up is paid | Live | `wallet-topup` |
 | Cash remittance received | A cash remittance is paid | Live | `remittance-received` |
 | Reservation couldn't be completed: refund | A paid reservation can't be completed and is refunded | Live | `reservation-refunded` |

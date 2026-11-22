@@ -697,6 +697,150 @@ export function holdingReservedArtist(i: { title: string; gallery: string; until
   };
 }
 
+/**
+ * Consignment-dispatch confirmation sent to the artist when GalleryZone
+ * books the pickup for their piece (artist-studio → aggregator venue
+ * for display, or artist-studio → GZ warehouse for marketplace sale).
+ *
+ * Client-specified copy (22 Nov 2026). Preparation checklist + NFC,
+ * video-recording and packing standards are mandatory for every leg.
+ * The delivery challan PDF is attached via emails.ts at send time so
+ * the artist can print and attach the designated original copy.
+ */
+export function consignmentDispatchedArtist(
+  i: {
+    artworkId: string;
+    title: string;
+    artistName: string;
+    medium: string | null;
+    sizeText: string | null;
+    listedPricePaise: number;
+    channel: "marketplace" | "aggregator";
+    artworkUrl: string;
+    challanNumber: string;
+    returnDeadline: Date | null;
+  },
+  c: Ctx,
+): Content {
+  const channelLabel =
+    i.channel === "aggregator"
+      ? "GalleryZone Aggregator Sales Channel"
+      : "GalleryZone Marketplace";
+  const details: Array<[string, string]> = [
+    ["Artwork ID", i.artworkId],
+    ["Artwork Title", i.title],
+    ["Artist Name", i.artistName],
+    ...(i.medium ? ([["Medium", i.medium]] as Array<[string, string]>) : []),
+    ...(i.sizeText ? ([["Artwork Size", i.sizeText]] as Array<[string, string]>) : []),
+    ["Listed Price", inr(i.listedPricePaise)],
+    ["Consignment Channel", channelLabel],
+    ["Delivery Challan No.", i.challanNumber],
+    ["Status", "Reserved for Consignment"],
+    ["Next Stage", "Artwork Preparation & Shipment"],
+    ["Pickup", "To be scheduled by GalleryZone"],
+    ...(i.returnDeadline
+      ? ([[
+          "Current Placement Deadline",
+          longDate(i.returnDeadline),
+        ]] as Array<[string, string]>)
+      : []),
+  ];
+  return {
+    subject: `Consignment Confirmation — ${q(short(i.title))} reserved for ${channelLabel}`,
+    category: "transactional",
+    layout: {
+      audience: "artist",
+      preheader: `${q(i.title)} is reserved and will proceed to preparation + pickup. Delivery challan attached.`,
+      heading: "Your artwork is reserved for consignment",
+      paragraphs: [
+        rich`We are pleased to confirm that your artwork has been selected and reserved for consignment through the ${strong(channelLabel)}.`,
+        "This email confirms the consignment details for the artwork below. The artwork will now proceed to the preparation, packing, pickup and delivery process per GalleryZone consignment standards.",
+      ],
+      details,
+      note: {
+        label: "Action required — prepare the artwork",
+        text: [
+          "• Properly prepare and inspect the artwork before packing.",
+          "• Attach the NFC at the prescribed location on the back of the artwork.",
+          "• Write Artist Name, Artwork Title, Medium, Size, Place and Year on the back as required.",
+          "• Pack securely to GalleryZone packing standards.",
+          "• Include the required Display Cards.",
+          "• Record the complete packing process on video, from the artwork's condition before packing through to the final sealed package.",
+          "",
+          "Do NOT hand over the artwork to any person other than the designated pickup representative identified for the shipment.",
+          "",
+          "The delivery challan is attached to this email. Print it, retain your copy for your records, and securely attach the designated original copy to the artwork package.",
+        ].join("\n"),
+      },
+      cta: { label: "Open this artwork", url: i.artworkUrl },
+      footnote:
+        "Pickup date, courier and AWB details will be communicated through the GalleryZone platform.",
+    },
+  };
+}
+
+/**
+ * Consignment-received notification sent to the aggregator confirming
+ * an artwork is on its way to their venue. Mirrors the artist copy but
+ * framed from the receiving end — they need to log receipt, verify the
+ * NFC + packing, and sign the delivery challan.
+ */
+export function consignmentDispatchedAggregator(
+  i: {
+    artworkId: string;
+    title: string;
+    artistName: string;
+    medium: string | null;
+    sizeText: string | null;
+    listedPricePaise: number;
+    aggregatorVenue: string;
+    challanNumber: string;
+    currentDeadline: Date | null;
+  },
+  c: Ctx,
+): Content {
+  const details: Array<[string, string]> = [
+    ["Artwork ID", i.artworkId],
+    ["Artwork Title", i.title],
+    ["Artist Name", i.artistName],
+    ...(i.medium ? ([["Medium", i.medium]] as Array<[string, string]>) : []),
+    ...(i.sizeText ? ([["Artwork Size", i.sizeText]] as Array<[string, string]>) : []),
+    ["Listed Price", inr(i.listedPricePaise)],
+    ["Dispatched To", i.aggregatorVenue],
+    ["Delivery Challan No.", i.challanNumber],
+    ...(i.currentDeadline
+      ? ([[
+          "Current Placement Deadline",
+          longDate(i.currentDeadline),
+        ]] as Array<[string, string]>)
+      : []),
+  ];
+  return {
+    subject: `Consignment in transit — ${q(short(i.title))} by ${i.artistName}`,
+    category: "transactional",
+    layout: {
+      audience: "aggregator",
+      preheader: `${q(i.title)} is on its way. Delivery challan attached.`,
+      heading: "Artwork on its way to your venue",
+      paragraphs: [
+        rich`${strong(i.title)} by ${strong(i.artistName)} has been reserved for display at ${strong(i.aggregatorVenue)} and is being dispatched by GalleryZone.`,
+        "On receipt, verify the NFC, inspect packing, sign the delivery challan and record its arrival in your dashboard. The delivery challan is attached — retain your copy for your records.",
+      ],
+      details,
+      note: {
+        label: "On receipt",
+        text: [
+          "• Inspect the parcel before opening. Photograph any external damage.",
+          "• Verify the NFC tag matches the artwork ID on the challan.",
+          "• Sign and retain the designated copy of the delivery challan.",
+          "• Record receipt in your GalleryZone dashboard to start the placement clock.",
+        ].join("\n"),
+      },
+      cta: { label: "Open my collection", url: `${c.site}/aggregator/collection` },
+    },
+  };
+}
+
 /** An aggregator priced a piece far above GalleryZone's offer. Allowed, but GalleryZone is told. */
 export function holdingPriceWarning(i: { title: string; aggregatorName: string; sellingPricePaise: number; offerPaise: number | null; artworkId: string }, c: Ctx): Content {
   // The offer is only known on the route that computes it in the request; the other route stores the flag, not the offer.
@@ -1087,6 +1231,8 @@ export const catalogue: CatalogueEntry[] = [
   { id: "holding-reserved-artist", who: "Artist", when: "A gallery reserves their piece", make: (c) => holdingReservedArtist({ title: T, gallery: "Kala Ghar Gallery", until: D, tagLocked: false }, c) },
   { id: "holding-returned-artist", who: "Artist", when: "A gallery sends the piece back", make: (c) => holdingReturnedArtist({ title: T, gallery: "Kala Ghar Gallery" }, c) },
   { id: "sale-recorded-artist", who: "Artist", when: "A gallery sells their piece", make: (c) => saleRecordedArtist({ title: T, gallery: "Kala Ghar Gallery" }, c) },
+  { id: "consignment-dispatched-artist-marketplace", who: "Artist", when: "GalleryZone books the pickup for a marketplace sale", make: (c) => consignmentDispatchedArtist({ artworkId: "art_44", title: T, artistName: "Meera Iyer", medium: "Mixed media on canvas", sizeText: "90 x 60 cm", listedPricePaise: 2_100_000, channel: "marketplace", artworkUrl: `${c.site}/dashboard/artworks/art_44`, challanNumber: "GZ/DC/26-27/000042", returnDeadline: null }, c) },
+  { id: "consignment-dispatched-artist-aggregator", who: "Artist", when: "GalleryZone books the pickup for an aggregator-channel placement", make: (c) => consignmentDispatchedArtist({ artworkId: "art_44", title: T, artistName: "Meera Iyer", medium: "Mixed media on canvas", sizeText: "90 x 60 cm", listedPricePaise: 2_100_000, channel: "aggregator", artworkUrl: `${c.site}/dashboard/artworks/art_44`, challanNumber: "GZ/DC/26-27/000042", returnDeadline: D }, c) },
   { id: "external-fee-decided", who: "Artist", when: "An admin decides an external-sale fee", make: (c) => externalSaleFeeDecided({ title: T, amountPaise: 240_000, waived: false }, c) },
   { id: "withdrawal-requested", who: "Artist", when: "They request a withdrawal (aggregators too)", make: (c) => withdrawalRequested({ amountPaise: 1_480_000, role: "artist" }, c) },
   { id: "withdrawal-paid", who: "Artist", when: "An admin pays it out", make: (c) => withdrawalDecided({ amountPaise: 1_480_000, approved: true, role: "artist" }, c) },
@@ -1097,6 +1243,7 @@ export const catalogue: CatalogueEntry[] = [
   { id: "holding-period-ended", who: "Aggregator", when: "A placement window runs out", make: (c) => holdingPeriodEnded({ title: T, advancePaise: 370_000 }, c) },
   { id: "holding-returned-aggregator", who: "Aggregator", when: "They return an unsold piece", make: (c) => holdingReturnedAggregator({ title: T, advancePaise: 370_000 }, c) },
   { id: "sale-recorded-aggregator", who: "Aggregator", when: "They record a sale", make: (c) => saleRecordedAggregator({ title: T, soldPricePaise: 2_100_000, buyerName: "Rohan Kapoor", cash: true, remitBy: D }, c) },
+  { id: "consignment-dispatched-aggregator", who: "Aggregator", when: "GalleryZone dispatches a piece to their venue", make: (c) => consignmentDispatchedAggregator({ artworkId: "art_44", title: T, artistName: "Meera Iyer", medium: "Mixed media on canvas", sizeText: "90 x 60 cm", listedPricePaise: 2_100_000, aggregatorVenue: "Kala Ghar Gallery, Jaipur", challanNumber: "GZ/DC/26-27/000042", currentDeadline: D }, c) },
   { id: "wallet-topup", who: "Aggregator", when: "A payment is received", make: (c) => walletTopupReceived({ amountPaise: 5_000_000, paidAt: D, method: "razorpay_upi" }, c) },
   { id: "remittance-received", who: "Aggregator", when: "A cash remittance is paid", make: (c) => remittanceReceived({ amountPaise: 2_100_000, paidAt: D, saleCount: 1, method: "razorpay_netbanking" }, c) },
   { id: "reservation-refunded", who: "Aggregator", when: "A paid reservation can't be completed and is refunded", make: (c) => reservationRefunded({ title: T, amountPaise: 370_000 }, c) },
