@@ -40,6 +40,35 @@ export interface AggregatorShipment {
   nfcReady: boolean;
 }
 
+export interface CommissionInvoiceAcceptance {
+  /** ISO timestamp — wire format is a plain string on the acceptance block. */
+  acceptedAt: string;
+  acceptedByIp: string;
+  acceptedByUserAgent: string;
+}
+
+/** Projection of the aggregator commission invoice snapshot sent to
+ *  the portal. Mirrors the backend's AggregatorCommissionInvoiceSnapshot
+ *  (apps/api/src/aggregator-commission-invoice-pdf.ts). Dates are ISO
+ *  strings on the wire. */
+export interface CommissionInvoiceSnapshot {
+  number: string;
+  fiscalYear: string;
+  issuedAt: string;
+  dueDate: string;
+  commercialShare: {
+    tier: 1 | 2 | 3;
+    tierPercent: 20 | 35 | 50;
+    markupPoolPaise: number;
+    grossInclusivePaise: number;
+  };
+  taxBreakdown:
+    | { kind: "intra_state"; taxablePaise: number; cgstPaise: number; sgstPaise: number; ratePercent: 18 }
+    | { kind: "inter_state"; taxablePaise: number; igstPaise: number; ratePercent: 18 }
+    | { kind: "unregistered"; taxablePaise: number; ratePercent: 0 };
+  acceptance: CommissionInvoiceAcceptance | null;
+}
+
 export interface AggregatorAnalyticsSummary {
   salesCount: number;
   totalRevenue: number;
@@ -298,6 +327,34 @@ export const aggregatorSalesService = {
   processSettlement: async (_saleId: string): Promise<Settlement> => {
     throw new Error("Settlements are processed by GalleryZone after delivery.");
   },
+
+  /**
+   * Commission tax invoice for a facilitated counter sale. The settlement
+   * list rows are keyed as "stl-<saleId>" — the id passed here is the
+   * bare saleId (controllers strip the prefix on the caller side). The
+   * invoice is stamped lazily on first PDF download; getCommissionInvoice
+   * returns {snapshot: null} until that first download happens.
+   */
+  getCommissionInvoice: async (
+    saleId: string,
+  ): Promise<{ snapshot: CommissionInvoiceSnapshot | null }> => {
+    return http.get<{ snapshot: CommissionInvoiceSnapshot | null }>(
+      `/v1/aggregator/sales/${encodeURIComponent(saleId)}/commission-invoice`,
+    );
+  },
+
+  agreeCommissionInvoice: async (
+    saleId: string,
+  ): Promise<{ acceptance: CommissionInvoiceAcceptance | null }> => {
+    return http.post<{ acceptance: CommissionInvoiceAcceptance | null }>(
+      `/v1/aggregator/sales/${encodeURIComponent(saleId)}/commission-invoice/agree`,
+    );
+  },
+
+  /** Returns the authenticated PDF download path. The caller feeds it to
+   *  downloadAuthenticatedFile() so axios can send the auth header. */
+  commissionInvoicePdfPath: (saleId: string): string =>
+    `/v1/aggregator/sales/${encodeURIComponent(saleId)}/commission-invoice.pdf`,
 
   getAnalytics: async (): Promise<AggregatorAnalyticsSummary> => {
     const [all, holdings] = await Promise.all([sales(), aggregatorService.listCollection()]);

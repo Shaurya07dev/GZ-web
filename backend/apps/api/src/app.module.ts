@@ -24,6 +24,7 @@ import { AdminExportController } from "./admin-export.controller.ts";
 import { AddressesController } from "./addresses.controller.ts";
 import { AdminSettlementsController } from "./admin-settlements.controller.ts";
 import { AggregatorSalesController } from "./aggregator-sales.controller.ts";
+import { AggregatorCommissionInvoiceController } from "./aggregator-commission-invoice.controller.ts";
 import { DeactivationController } from "./deactivation.controller.ts";
 import { OrderListingsController } from "./order-listings.controller.ts";
 import { AdminOrdersController } from "./admin-orders.controller.ts";
@@ -107,6 +108,7 @@ import { DbModule } from "./db.module.ts";
     AddressesController,
     AdminSettlementsController,
     AggregatorSalesController,
+    AggregatorCommissionInvoiceController,
     DeactivationController,
     OrderListingsController,
     AdminOrdersController,

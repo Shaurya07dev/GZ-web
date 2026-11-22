@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Landmark } from "lucide-react";
+import { CheckCircle2, Download, Landmark } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,10 @@ import {
   adminStatusLabel,
 } from "@/features/admin/admin-status-badge";
 import {
+  useAgreeCommissionInvoiceMutation,
   useAggregatorSettlements,
+  useCommissionInvoice,
+  useDownloadCommissionInvoiceMutation,
   useProcessSettlementMutation,
   useRazorpayRemittanceMutation,
   useRemittancesDue,
@@ -358,9 +361,115 @@ function SettlementDetailDialog({
                 </dd>
               </div>
             </dl>
+
+            <CommissionInvoiceSection saleId={settlement.orderId} />
           </>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Commission tax invoice (MOU 9.6 — GST-inclusive aggregator share).
+ * GalleryZone generates the invoice on the aggregator's behalf and the
+ * aggregator agrees to its contents in-portal; the acceptance timestamp
+ * + IP + user-agent are stamped on the invoice snapshot server-side.
+ *
+ * The invoice is stamped lazily on the first PDF download, so the
+ * "Pending download" state is normal for newly-settled sales.
+ */
+function CommissionInvoiceSection({ saleId }: { saleId: string }) {
+  const invoice = useCommissionInvoice(saleId);
+  const download = useDownloadCommissionInvoiceMutation();
+  const agree = useAgreeCommissionInvoiceMutation();
+
+  const snapshot = invoice.data?.snapshot ?? null;
+  const acceptance = snapshot?.acceptance ?? null;
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 rounded-md border border-border/80 bg-muted/20 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-foreground">
+            Commission tax invoice
+          </h3>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            GalleryZone issues this on your behalf for your GST-inclusive share
+            of the markup pool. Tap &ldquo;I agree&rdquo; after reviewing the
+            PDF to accept the contents.
+          </p>
+        </div>
+        {snapshot && (
+          <span className="shrink-0 rounded-sm bg-background px-2 py-1 font-mono text-[11px] text-foreground">
+            {snapshot.number}
+          </span>
+        )}
+      </div>
+
+      {snapshot && (
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+          <div>
+            <dt className="text-muted-foreground">Tier</dt>
+            <dd className="text-foreground">
+              Tier {snapshot.commercialShare.tier} ({snapshot.commercialShare.tierPercent}%)
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Gross (GST-incl.)</dt>
+            <dd className="text-foreground tabular-nums">
+              {formatINR(snapshot.commercialShare.grossInclusivePaise / 100)}
+            </dd>
+          </div>
+        </dl>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={download.isPending}
+          onClick={() =>
+            download.mutate(saleId, {
+              onSuccess: () => toast.success("Commission invoice downloaded"),
+              onError: (error) => toast.error(error.message),
+            })
+          }
+        >
+          <Download className="mr-1.5 size-3.5" aria-hidden />
+          {download.isPending ? "Downloading…" : "Download PDF"}
+        </Button>
+
+        {acceptance ? (
+          <span className="inline-flex items-center gap-1.5 rounded-sm bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700">
+            <CheckCircle2 className="size-3.5" aria-hidden />
+            Agreed on{" "}
+            {new Date(acceptance.acceptedAt).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+        ) : snapshot ? (
+          <Button
+            size="sm"
+            disabled={agree.isPending}
+            onClick={() =>
+              agree.mutate(saleId, {
+                onSuccess: () => toast.success("Agreement recorded"),
+                onError: (error) => toast.error(error.message),
+              })
+            }
+          >
+            {agree.isPending ? "Saving…" : "I agree with these terms"}
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            Download the PDF first — a GSTIN-compliant invoice number is
+            allocated on first view.
+          </span>
+        )}
+      </div>
+    </div>
   );
 }

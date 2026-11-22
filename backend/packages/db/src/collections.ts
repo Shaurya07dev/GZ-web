@@ -126,6 +126,14 @@ export const Collections = {
    *  this doc but it's legally required when paying an unregistered
    *  supplier. */
   paymentVoucherCounters: "paymentVoucherCounters",
+  /** Monotonic aggregator-commission-invoice counter — the self-invoice
+   *  GZ generates on behalf of the aggregator for their tier share of
+   *  the markup pool on a facilitated counter sale (MOU Clause 9.6
+   *  v2026.4). Own series "GZ/AC/26-27/000001" distinct from tax
+   *  invoices, delivery challans and payment vouchers. Added 22 Nov
+   *  2026. The aggregator agrees to the invoice contents in-portal;
+   *  acceptance timestamp + IP is stamped on the snapshot. */
+  aggregatorCommissionInvoiceCounters: "aggregatorCommissionInvoiceCounters",
   aggregatorRemittances: "aggregatorRemittances",
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
@@ -1001,6 +1009,91 @@ export interface PaymentVoucherCounterDoc {
   nextSeq: number;
 }
 
+/** Fiscal-year counter for the aggregator-commission-invoice series
+ *  ("GZ/AC/26-27/000001"). One doc per fiscal year; sequence is
+ *  allocated in a Firestore transaction, same pattern as invoices and
+ *  payment vouchers. */
+export interface AggregatorCommissionInvoiceCounterDoc {
+  fiscalYear: string;
+  nextSeq: number;
+}
+
+/**
+ * Snapshot of an aggregator commission tax invoice — the self-invoice
+ * GalleryZone generates on behalf of the aggregator for their tier
+ * share of the markup pool (MOU 9.6 v2026.4). Stored on the aggregator
+ * sale doc; the renderer in the api layer owns the "live" Date-based
+ * shape and this type is the Firestore-Timestamp variant written to
+ * disk.
+ *
+ * Idempotent — once stamped the fields never change except for the
+ * `acceptance` block, which is written by the aggregator tapping
+ * "I agree" in the settlement portal.
+ */
+export interface AggregatorCommissionInvoiceDocSnapshot {
+  number: string;
+  fiscalYear: string;
+  issuedAt: FirebaseFirestore.Timestamp;
+  dueDate: FirebaseFirestore.Timestamp;
+  servicePeriod: {
+    from: FirebaseFirestore.Timestamp;
+    to: FirebaseFirestore.Timestamp;
+  };
+  aggregator: {
+    legalName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    stateCode: string;
+    numericCode: string;
+    phone: string | null;
+    email: string | null;
+    pan: string | null;
+    gstin: string | null;
+  };
+  billedTo: {
+    legalName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    gstin: string;
+    stateCode: string;
+    pan: string;
+  };
+  sale: {
+    artworkId: string;
+    artworkTitle: string;
+    artistName: string;
+    medium: string | null;
+    customerInvoiceNumber: string;
+    saleDate: FirebaseFirestore.Timestamp;
+    listedSellingPaise: number;
+    artistPaise: number;
+  };
+  commercialShare: {
+    tier: 1 | 2 | 3;
+    tierPercent: 20 | 35 | 50;
+    markupPoolPaise: number;
+    grossInclusivePaise: number;
+  };
+  taxBreakdown:
+    | { kind: "intra_state"; taxablePaise: number; cgstPaise: number; sgstPaise: number; ratePercent: 18 }
+    | { kind: "inter_state"; taxablePaise: number; igstPaise: number; ratePercent: 18 }
+    | { kind: "unregistered"; taxablePaise: number; ratePercent: 0 };
+  /** Null until the aggregator presses "I agree" — the PDF still
+   *  renders, but with a "Pending acceptance" badge in place of the
+   *  signature block. */
+  acceptance: {
+    acceptedAt: FirebaseFirestore.Timestamp;
+    acceptedByIp: string;
+    acceptedByUserAgent: string;
+  } | null;
+}
+
 export interface OrderStatusEventDoc {
   status: OrderStatus;
   changedAt: FirebaseFirestore.Timestamp;
@@ -1294,6 +1387,16 @@ export interface AggregatorSaleDoc {
   couponCode?: string | null;
   /** Discount the coupon took off this sale, paise. Absorbed by platform revenue. */
   couponDiscountPaise?: number | null;
+  /**
+   * Self-invoice GZ generated on behalf of the aggregator for their
+   * GST-inclusive tier share of the markup pool (MOU Clause 9.6 v2026.4).
+   * Stamped lazily on first aggregator/admin download — until then the
+   * invoice does not legally exist (no number has been allocated).
+   * Acceptance is captured when the aggregator taps "I agree" in the
+   * settlement portal. Absent on sales that recorded before 22 Nov 2026
+   * or have had no download yet.
+   */
+  commissionInvoice?: AggregatorCommissionInvoiceDocSnapshot;
 }
 
 /**
