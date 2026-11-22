@@ -21,6 +21,10 @@ import {
 } from "./collections.ts";
 import { DbError } from "./errors.ts";
 import { findIndianState } from "./india-states.ts";
+import {
+  assertCompleteBuyerAddress,
+  assertCompletePickupProfile,
+} from "./doc-field-guards.ts";
 
 export class InvoiceError extends DbError {}
 
@@ -187,23 +191,33 @@ export async function getOrCreateInvoice(
   const customer = customerSnap.data() as UserDoc | undefined;
   const address = addressSnap.data() as AddressDoc | undefined;
   const buyerProfile = buyerProfileSnap.data() as ProfileDoc | undefined;
-  if (!customer || !address) {
-    throw new InvoiceError(`Missing buyer or address for order ${input.orderId}`);
+  if (!customer) {
+    throw new InvoiceError(`Missing buyer for order ${input.orderId}`);
   }
+  // Rule 46 requires the recipient's full address on every tax invoice.
+  // If the buyer saved an incomplete address, refuse to stamp rather
+  // than freezing blanks that are legally defective. Fixable by having
+  // the buyer re-save the delivery address with the missing fields.
+  assertCompleteBuyerAddress(address, InvoiceError);
   const buyerGstin = buyerProfile?.gstin?.trim() || null;
 
   const artistUser = artistUserSnap?.data() as UserDoc | undefined;
   const artistProfile = artistProfileSnap?.data() as ProfileDoc | undefined;
+  // Only validate the artist profile when the order has one — legacy
+  // orders without an artistId skip this block entirely (see below).
+  if (artistId && artistUser && artistProfile) {
+    assertCompletePickupProfile("Artist", artistProfile, InvoiceError);
+  }
   const artistStateMeta = findIndianState(artistProfile?.pickupState);
   const soldBy: InvoiceSnapshot["soldBy"] | undefined =
     artistId && artistUser && artistProfile
       ? {
           legalName: artistUser.name ?? "Artist",
-          addressLine1: artistProfile.pickupLine1 ?? "",
+          addressLine1: artistProfile.pickupLine1!,
           addressLine2: artistProfile.pickupLine2 ?? null,
-          city: artistProfile.pickupCity ?? "",
-          state: artistProfile.pickupState ?? "",
-          pincode: artistProfile.pickupPincode ?? "",
+          city: artistProfile.pickupCity!,
+          state: artistProfile.pickupState!,
+          pincode: artistProfile.pickupPincode!,
           stateCode: artistStateMeta?.code ?? "",
           numericCode: artistStateMeta?.numericCode ?? "",
           pan: artistProfile.pan?.trim() || null,

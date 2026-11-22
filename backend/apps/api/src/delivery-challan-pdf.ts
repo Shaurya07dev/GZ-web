@@ -20,6 +20,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import PDFDocument from "pdfkit";
+import { textOrMissing } from "@galleryzone/db";
 import {
   COLOR_BORDER,
   COLOR_MUTED,
@@ -221,9 +222,9 @@ function draw(doc: PDFKit.PDFDocument, s: DeliveryChallanSnapshot): void {
   y += 16;
 
   const consignorBody = [
-    s.consignor.addressLine1,
+    textOrMissing(s.consignor.addressLine1),
     s.consignor.addressLine2,
-    `${s.consignor.city}, ${s.consignor.state} - ${s.consignor.pincode}`,
+    `${textOrMissing(s.consignor.city) ?? ""}, ${textOrMissing(s.consignor.state) ?? ""} - ${textOrMissing(s.consignor.pincode) ?? ""}`,
     `GSTIN: ${s.consignor.gstin ?? "Unregistered"}   |   State Code: ${s.consignor.stateCode ?? "—"} (${stateDisplayCode(s.consignor.state) || "—"})`,
   ].filter((l): l is string => Boolean(l && l.trim()));
   for (const line of consignorBody) {
@@ -557,11 +558,14 @@ function draw(doc: PDFKit.PDFDocument, s: DeliveryChallanSnapshot): void {
 }
 
 function partyLines(p: DeliveryChallanParty): string[] {
+  // Required fields pass through textOrMissing so a legacy snapshot
+  // persisted with blanks prints a visible marker rather than
+  // shipping a defective challan.
   return [
     p.legalName,
-    p.addressLine1,
+    textOrMissing(p.addressLine1),
     p.addressLine2,
-    `${p.city}, ${p.state} - ${p.pincode}`,
+    `${textOrMissing(p.city) ?? ""}, ${textOrMissing(p.state) ?? ""} - ${textOrMissing(p.pincode) ?? ""}`,
     p.stateCode
       ? `State Code: ${p.stateCode} (${stateDisplayCode(p.state) || "—"})`
       : null,

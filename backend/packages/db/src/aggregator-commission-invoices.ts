@@ -39,6 +39,7 @@ import {
 import { DbError } from "./errors.ts";
 import { fiscalYearOf } from "./invoices.ts";
 import { findIndianState } from "./india-states.ts";
+import { assertCompletePickupProfile } from "./doc-field-guards.ts";
 
 export class AggregatorCommissionInvoiceError extends DbError {}
 
@@ -176,6 +177,15 @@ export async function getOrCreateAggregatorCommissionInvoice(
       `Aggregator ${holding.aggregatorId} has no companyName — complete the profile before downloading`,
     );
   }
+  // Pickup address is the aggregator's FROM party on the commission
+  // invoice — all four fields must be present or the Rule 46 doc is
+  // legally defective. Message surfaces the specific missing field so
+  // ops can point the aggregator to it.
+  assertCompletePickupProfile(
+    "Aggregator",
+    aggregatorProfile,
+    AggregatorCommissionInvoiceError,
+  );
 
   // Markup pool = sold price ABOVE the displayPrice (what GalleryZone
   // sent the piece out at). Can't be negative — the floor matches
@@ -285,11 +295,11 @@ export async function getOrCreateAggregatorCommissionInvoice(
       },
       aggregator: {
         legalName: aggregatorProfile.companyName!.trim(),
-        addressLine1: aggregatorProfile.pickupLine1 ?? "",
+        addressLine1: aggregatorProfile.pickupLine1!,
         addressLine2: aggregatorProfile.pickupLine2?.trim() || null,
-        city: aggregatorProfile.pickupCity ?? "",
+        city: aggregatorProfile.pickupCity!,
         state: aggregatorState.name,
-        pincode: aggregatorProfile.pickupPincode ?? "",
+        pincode: aggregatorProfile.pickupPincode!,
         stateCode: aggregatorState.code,
         numericCode: aggregatorState.numericCode,
         phone: aggregatorUser.phone ?? null,

@@ -19,6 +19,7 @@
 
 import { existsSync } from "node:fs";
 import PDFDocument from "pdfkit";
+import { textOrMissing } from "@galleryzone/db";
 import {
   COLOR_BORDER,
   COLOR_MUTED,
@@ -212,9 +213,9 @@ function draw(
 
   const fromLines = [
     s.aggregator.legalName,
-    s.aggregator.addressLine1,
+    textOrMissing(s.aggregator.addressLine1),
     s.aggregator.addressLine2,
-    `${s.aggregator.city}, ${s.aggregator.state} - ${s.aggregator.pincode}`,
+    `${textOrMissing(s.aggregator.city) ?? ""}, ${textOrMissing(s.aggregator.state) ?? ""} - ${textOrMissing(s.aggregator.pincode) ?? ""}`,
     `State Code: ${s.aggregator.stateCode} (${s.aggregator.numericCode})`,
     s.aggregator.gstin ? `GSTIN: ${s.aggregator.gstin}` : "GST Status: Unregistered",
     s.aggregator.pan ? `PAN: ${s.aggregator.pan}` : null,
@@ -224,9 +225,9 @@ function draw(
 
   const toLines = [
     s.billedTo.legalName,
-    s.billedTo.addressLine1,
+    textOrMissing(s.billedTo.addressLine1),
     s.billedTo.addressLine2,
-    `${s.billedTo.city}, ${s.billedTo.state} - ${s.billedTo.pincode}`,
+    `${textOrMissing(s.billedTo.city) ?? ""}, ${textOrMissing(s.billedTo.state) ?? ""} - ${textOrMissing(s.billedTo.pincode) ?? ""}`,
     `State Code: ${s.billedTo.stateCode}`,
     `GSTIN: ${s.billedTo.gstin}`,
     `PAN: ${s.billedTo.pan}`,

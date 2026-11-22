@@ -29,7 +29,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import PDFDocument from "pdfkit";
-import type { InvoiceLine, InvoiceSnapshot, OrderDoc } from "@galleryzone/db";
+import { textOrMissing, type InvoiceLine, type InvoiceSnapshot, type OrderDoc } from "@galleryzone/db";
 
 const LOGO_PATH = resolve(import.meta.dirname, "..", "assets", "invoice-logo.png");
 const LOGO_EXISTS = existsSync(LOGO_PATH);
@@ -159,9 +159,9 @@ function drawInvoice(doc: PDFKit.PDFDocument, input: InvoiceLineInput): void {
 
   const buyerAddrLines = [
     invoice.buyer.name,
-    invoice.buyer.addressLine1,
+    textOrMissing(invoice.buyer.addressLine1),
     invoice.buyer.addressLine2,
-    `${invoice.buyer.city}, ${invoice.buyer.state}, ${invoice.buyer.pincode}`,
+    `${textOrMissing(invoice.buyer.city) ?? ""}, ${textOrMissing(invoice.buyer.state) ?? ""}, ${textOrMissing(invoice.buyer.pincode) ?? ""}`,
     "IN",
   ].filter((s): s is string => Boolean(s && String(s).trim()));
 
@@ -211,10 +211,10 @@ function drawInvoice(doc: PDFKit.PDFDocument, input: InvoiceLineInput): void {
   const soldByLines = soldBy
     ? [
         soldBy.legalName,
-        soldBy.addressLine1,
+        textOrMissing(soldBy.addressLine1),
         soldBy.addressLine2,
-        `${[soldBy.city, soldBy.state].filter(Boolean).join(", ")}${
-          soldBy.pincode ? ` - ${soldBy.pincode}` : ""
+        `${[textOrMissing(soldBy.city), textOrMissing(soldBy.state)].filter(Boolean).join(", ")}${
+          soldBy.pincode?.trim() ? ` - ${soldBy.pincode}` : " - — MISSING —"
         }`,
         "IN",
       ].filter((s): s is string => Boolean(s && s.trim()))

@@ -34,6 +34,7 @@ import {
 import { DbError } from "./errors.ts";
 import { fiscalYearOf } from "./invoices.ts";
 import { findIndianState } from "./india-states.ts";
+import { assertCompletePickupProfile } from "./doc-field-guards.ts";
 
 export class DeliveryChallanError extends DbError {}
 
@@ -433,14 +434,17 @@ function partyFromArtistProfile(
   user: UserDoc,
   profile: ProfileDoc,
 ): DeliveryChallanParty {
+  // Required fields are enforced upstream by assertCompletePickupProfile;
+  // the ! assertions below are safe because the guard would have thrown.
+  assertCompletePickupProfile("Artist", profile, DeliveryChallanError);
   const stateMeta = findIndianState(profile.pickupState);
   return {
     legalName: user.name ?? "Artist",
-    addressLine1: profile.pickupLine1 ?? "",
+    addressLine1: profile.pickupLine1!,
     addressLine2: profile.pickupLine2 ?? null,
-    city: profile.pickupCity ?? "",
-    state: profile.pickupState ?? "",
-    pincode: profile.pickupPincode ?? "",
+    city: profile.pickupCity!,
+    state: profile.pickupState!,
+    pincode: profile.pickupPincode!,
     stateCode: stateMeta?.code ?? null,
     gstin: profile.gstin?.trim() || null,
   };
@@ -450,14 +454,15 @@ function partyFromAggregatorProfile(
   user: UserDoc,
   profile: ProfileDoc,
 ): DeliveryChallanParty {
+  assertCompletePickupProfile("Aggregator", profile, DeliveryChallanError);
   const stateMeta = findIndianState(profile.pickupState);
   return {
     legalName: user.name ?? "Aggregator",
-    addressLine1: profile.pickupLine1 ?? "",
+    addressLine1: profile.pickupLine1!,
     addressLine2: profile.pickupLine2 ?? null,
-    city: profile.pickupCity ?? "",
-    state: profile.pickupState ?? "",
-    pincode: profile.pickupPincode ?? "",
+    city: profile.pickupCity!,
+    state: profile.pickupState!,
+    pincode: profile.pickupPincode!,
     stateCode: stateMeta?.code ?? null,
     gstin: profile.gstin?.trim() || null,
   };

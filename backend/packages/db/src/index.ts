@@ -63,4 +63,5 @@ export * from "./india-states.ts";
 export * from "./delivery-challans.ts";
 export * from "./purchase-bills.ts";
 export * from "./aggregator-commission-invoices.ts";
+export * from "./doc-field-guards.ts";
 export * from "./coupons.ts";

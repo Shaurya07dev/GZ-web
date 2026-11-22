@@ -16,6 +16,7 @@
 
 import { existsSync } from "node:fs";
 import PDFDocument from "pdfkit";
+import { textOrMissing } from "@galleryzone/db";
 import {
   COLOR_BORDER,
   COLOR_MUTED,
@@ -294,9 +295,9 @@ function draw(doc: PDFKit.PDFDocument, s: PurchaseBillSnapshot): void {
 
   const payerLines = [
     s.payer.legalName,
-    s.payer.addressLine1,
+    textOrMissing(s.payer.addressLine1),
     s.payer.addressLine2,
-    `${s.payer.city}, ${s.payer.state} - ${s.payer.pincode}`,
+    `${textOrMissing(s.payer.city) ?? ""}, ${textOrMissing(s.payer.state) ?? ""} - ${textOrMissing(s.payer.pincode) ?? ""}`,
     `GSTIN: ${s.payer.gstin}`,
     `State Code: ${s.payer.stateCode}`,
     `PAN: ${s.payer.pan}`,
@@ -308,9 +309,9 @@ function draw(doc: PDFKit.PDFDocument, s: PurchaseBillSnapshot): void {
 
   const payeeLines = [
     s.payee.fullName,
-    s.payee.addressLine1,
+    textOrMissing(s.payee.addressLine1),
     s.payee.addressLine2,
-    `${s.payee.city}, ${s.payee.state} - ${s.payee.pincode}`,
+    `${textOrMissing(s.payee.city) ?? ""}, ${textOrMissing(s.payee.state) ?? ""} - ${textOrMissing(s.payee.pincode) ?? ""}`,
     `GST Status: ${s.payee.gstStatus}`,
     s.payee.pan ? `PAN: ${s.payee.pan}` : null,
     s.payee.phone ? `Phone: ${s.payee.phone}` : null,

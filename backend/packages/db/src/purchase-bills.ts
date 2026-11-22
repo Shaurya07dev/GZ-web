@@ -34,6 +34,7 @@ import {
 import { DbError } from "./errors.ts";
 import { fiscalYearOf } from "./invoices.ts";
 import { findIndianState } from "./india-states.ts";
+import { assertCompletePickupProfile } from "./doc-field-guards.ts";
 import {
   artistSettlementOf,
   type PricingRates,
@@ -157,6 +158,10 @@ export async function getOrCreatePurchaseBill(
       `Artist ${settlement.artistId} missing or has no profile`,
     );
   }
+  // The voucher is a Rule 52 payment document — the payee's address
+  // has to print on it. Refuse to stamp rather than freeze blanks that
+  // can't be edited after release.
+  assertCompletePickupProfile("Artist", artistProfile, PurchaseBillError);
 
   // Artist price — prefer the frozen value on the order (stored at
   // checkout), fall back to the pricing subcollection for legacy rows.
@@ -189,11 +194,11 @@ export async function getOrCreatePurchaseBill(
   const payer = input.payer;
   const payee = {
     fullName: artistUser.name ?? "Artist",
-    addressLine1: artistProfile.pickupLine1 ?? "",
+    addressLine1: artistProfile.pickupLine1!,
     addressLine2: artistProfile.pickupLine2 ?? null,
-    city: artistProfile.pickupCity ?? "",
-    state: artistProfile.pickupState ?? "",
-    pincode: artistProfile.pickupPincode ?? "",
+    city: artistProfile.pickupCity!,
+    state: artistProfile.pickupState!,
+    pincode: artistProfile.pickupPincode!,
     pan: artistProfile.pan?.trim() || null,
     phone: artistUser.phone ?? null,
     gstStatus: artistProfile.gstin?.trim() || "Unregistered (Below Threshold)",
