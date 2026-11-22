@@ -61,4 +61,5 @@ export * from "./holding-claim.ts";
 export * from "./invoices.ts";
 export * from "./india-states.ts";
 export * from "./delivery-challans.ts";
+export * from "./purchase-bills.ts";
 export * from "./coupons.ts";

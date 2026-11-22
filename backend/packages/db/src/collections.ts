@@ -119,6 +119,13 @@ export const Collections = {
    *  (artist→aggregator, aggregator→artist return, rotation) ships with
    *  the legally required document. */
   deliveryChallanCounters: "deliveryChallanCounters",
+  /** Monotonic payment-voucher counter (Rule 52 purchase-cum-payment
+   *  bills GZ issues to the artist when releasing their settlement).
+   *  Own series "GZ/PV/26-27/000001" distinct from tax invoices and
+   *  delivery challans. Added 22 Nov 2026 — artist pays nothing for
+   *  this doc but it's legally required when paying an unregistered
+   *  supplier. */
+  paymentVoucherCounters: "paymentVoucherCounters",
   aggregatorRemittances: "aggregatorRemittances",
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
@@ -624,6 +631,14 @@ export interface OrderDoc {
    *  internal records. For non-sale legs (artist→aggregator rotation,
    *  returns) see AggregatorHoldingDoc.deliveryChallan. */
   deliveryChallan?: DeliveryChallanSnapshot | null;
+  /** Rule 52 purchase-cum-payment bill — stamped at the moment admin
+   *  releases the artist's settlement for this order. Carries the
+   *  final paid-out amount, the deductions (TDS, convenience,
+   *  technology, service GST, delivery, platform facilitation), and
+   *  the artist's unregistered/registered status. Downloaded by the
+   *  artist from their payouts page + by admin from the settlement
+   *  queue. Frozen once stamped. 22 Nov 2026. */
+  purchaseBill?: PurchaseBillSnapshot | null;
   /** Set by markOrderRefunded when admin issues a Razorpay refund. The
    *  order status is also moved to "cancelled" in the same write. Absent on
    *  orders that were never refunded. Added 8 Nov 2026. */
@@ -882,6 +897,106 @@ export interface DeliveryChallanSnapshot {
  *  Same shape as InvoiceCounterDoc but a separate collection since
  *  the two series are legally distinct. */
 export interface DeliveryChallanCounterDoc {
+  fiscalYear: string;
+  nextSeq: number;
+}
+
+/** GalleryZone's own identity on a payment voucher — the registered
+ *  recipient/payer that's issuing the voucher to the artist. Separate
+ *  from `SellerIdentity` only because this schema file can't import
+ *  types from the apps layer (one-way dependency). Mirrors the shape
+ *  exactly. */
+export interface PurchaseBillPayer {
+  legalName: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  gstin: string;
+  stateCode: string;
+  pan: string;
+}
+
+/** The artist being paid. GST status is a literal string ("Unregistered
+ *  (Below Threshold)" or a GSTIN, etc.) because Rule 52 wants it
+ *  printed verbatim, not computed on the render side. */
+export interface PurchaseBillPayee {
+  fullName: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  pan: string | null;
+  phone: string | null;
+  gstStatus: string;
+}
+
+/** Line 1 context — the artwork the payout is against. */
+export interface PurchaseBillArtwork {
+  id: string;
+  title: string;
+  medium: string | null;
+  /** Always "9701" today (art HSN). Snapshot anyway in case we ever
+   *  sell other HSN categories. */
+  hsn: string;
+}
+
+/** Lives on OrderDoc. Stamped on the artist-settlement release path
+ *  and never rewritten. Every field is frozen because Rule 52 payment
+ *  vouchers participate in the artist's GST / income-tax filings; a
+ *  later profile edit must not back-date the record. */
+export interface PurchaseBillSnapshot {
+  /** "GZ/PV/26-27/000001". Globally unique per fiscal year. */
+  number: string;
+  fiscalYear: string;
+  /** "marketplace" → only TDS + platform-facilitation deductions.
+   *  "aggregator" → adds Convenience (SAC 998599), Technology
+   *  (SAC 998319), Service GST @18%, Delivery deductions. */
+  channel: "marketplace" | "aggregator";
+  voucherDate: FirebaseFirestore.Timestamp;
+  /** NEFT / UPI / Cheque / RTGS / Wallet — stamped from the actual
+   *  payout rail at release time. */
+  paymentMode: "NEFT" | "RTGS" | "UPI" | "Cheque" | "Wallet";
+  /** Bank UTR or RazorpayX payout id — audit trail for the artist. */
+  paymentRef: string;
+  /** Buyer-side order id the payout is against. */
+  orderNumber: string;
+  /** The customer tax invoice number that corresponds to this payout.
+   *  Null if the order hasn't had its tax invoice downloaded yet
+   *  (stamp happens on first invoice download); rare in practice. */
+  customerInvoiceNumber: string | null;
+  payer: PurchaseBillPayer;
+  payee: PurchaseBillPayee;
+  artwork: PurchaseBillArtwork;
+  /** Aggregator venue name when channel === "aggregator" — printed as
+   *  context on Line 1. */
+  soldViaAggregator?: string | null;
+  /** All amounts in paise. Mirrors the renderer's shape 1:1 so the
+   *  stamp function can hand the snapshot straight to the renderer. */
+  amounts: {
+    artistPayoutShare: number;
+    tds: number;
+    platformFacilitation: number;
+    convenience: number;
+    convenienceGst: number;
+    technology: number;
+    technologyGst: number;
+    otherCharges: number;
+    otherChargesGst: number;
+    delivery: number;
+    rcmGst: number;
+    netPayable: number;
+  };
+  /** Supply classification (payer state vs payee state) for the service
+   *  rows. True → half-split (CGST + SGST), false → IGST single. */
+  intraState: boolean;
+  issuedAt: FirebaseFirestore.Timestamp;
+}
+
+/** Fiscal-year counter for the payment-voucher series. */
+export interface PaymentVoucherCounterDoc {
   fiscalYear: string;
   nextSeq: number;
 }

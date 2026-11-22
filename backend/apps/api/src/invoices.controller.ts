@@ -29,11 +29,13 @@ import {
   type ArtworkDoc,
   type Db,
   type OrderDoc,
+  type PurchaseBillSnapshot,
 } from "@galleryzone/db";
 import { Public, Roles } from "./auth/roles.decorator.ts";
 import type { AuthenticatedRequest } from "./auth/roles.guard.ts";
 import { DB, ENV } from "./db.module.ts";
 import { renderInvoicePdf } from "./invoice-pdf.ts";
+import { renderPurchaseBillPdf } from "./purchase-bill-pdf.ts";
 
 /** HMAC-sign an orderId with the Razorpay webhook secret (already a
  *  per-env shared secret). Shiprocket fetches the public invoice URL
@@ -220,4 +222,77 @@ export class InvoicesController {
       throw error;
     }
   }
+
+  /**
+   * Purchase-cum-Payment Bill download (CGST Rule 52). Authenticated to:
+   *   - the artist whose piece was sold (they need it for their own
+   *     books, especially around TDS reconciliation and §194-O filing);
+   *   - any platform admin (ops team support).
+   * Returns 404 for anyone else so the route never confirms an order id
+   * to a stranger.
+   *
+   * The snapshot is stamped automatically on markSettlementProcessed
+   * (admin-settlements controller); this route only reads + renders the
+   * frozen snapshot. If the snapshot isn't there yet (settlement hasn't
+   * been processed), we 404 rather than stamping — the bill is supposed
+   * to represent money that actually moved to the artist, not just a
+   * pending credit.
+   */
+  @Roles("artist", "platform_admin")
+  @Get(":id/purchase-bill.pdf")
+  @Header("Content-Type", "application/pdf")
+  async downloadPurchaseBill(
+    @Req() req: AuthenticatedRequest,
+    @Param("id") id: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const orderSnap = await this.db.collection(Collections.orders).doc(id).get();
+    if (!orderSnap.exists) {
+      throw new NotFoundException({
+        type: "about:blank",
+        title: "Not found",
+        status: 404,
+        code: "not_found",
+      });
+    }
+    const order = orderSnap.data() as OrderDoc;
+
+    const isAdmin = req.authUser.grants.includes("platform_admin");
+    const isOwningArtist = order.artistId === req.authUser.uid;
+    if (!isAdmin && !isOwningArtist) {
+      throw new NotFoundException({
+        type: "about:blank",
+        title: "Not found",
+        status: 404,
+        code: "not_found",
+      });
+    }
+
+    if (!order.purchaseBill) {
+      throw new NotFoundException({
+        type: "about:blank",
+        title:
+          "Payment voucher not available yet — released once admin marks the settlement paid.",
+        status: 404,
+        code: "purchase_bill_not_stamped",
+      });
+    }
+
+    const pdf = await renderPurchaseBillPdf(toPurchaseBillRenderer(order.purchaseBill));
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="payment-voucher-${order.purchaseBill.number.replace(/\//g, "-")}.pdf"`,
+    );
+    res.setHeader("Content-Length", String(pdf.byteLength));
+    res.end(pdf);
+  }
+}
+
+/** Convert the persisted snapshot (Firestore Timestamps) to the shape
+ *  the renderer wants (plain Dates). */
+function toPurchaseBillRenderer(snapshot: PurchaseBillSnapshot) {
+  return {
+    ...snapshot,
+    voucherDate: snapshot.voucherDate.toDate(),
+  };
 }
