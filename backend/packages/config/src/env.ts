@@ -100,6 +100,36 @@ export interface AppEnv {
     otpTemplateName: string;
   } | null;
   /**
+   * Masters India / WhiteBooks e-way bill GSP. Null until every variable
+   * below is set, so the EwayBillService answers 503 and the Shiprocket
+   * booking paths fall back to shipping WITHOUT an e-way bill (which is
+   * the pre-launch state). Sandbox credentials are shared across all 36
+   * state GSTIN sub-users documented in the WhiteBooks Credentials PDF;
+   * production needs a GSP sub-user created on ewaybillgst.gov.in.
+   *
+   * `mode` is strict so a copy-paste typo can't silently send sandbox
+   * traffic in production or vice versa.
+   */
+  ewayBill: {
+    provider: "masters_india";
+    mode: "sandbox" | "production";
+    baseUrl: string;
+    clientId: string;
+    clientSecret: string;
+    /** The registered GSTIN this account authenticates against. Must
+     *  match INVOICE_SELLER_GSTIN in production; sandbox uses one of
+     *  the 36 pre-created sub-user GSTINs instead. */
+    gstin: string;
+    /** Sub-user username on the government EWB portal, registered
+     *  under this GSTIN specifically for GSP (Masters India) API
+     *  access. Software only — never used by humans. */
+    gstinUsername: string;
+    gstinPassword: string;
+    /** Email the WhiteBooks account was registered with. Appears on
+     *  every request as the `email` query parameter per NIC spec. */
+    accountEmail: string;
+  } | null;
+  /**
    * The one admin account GalleryZone operates with. The seed script runs on
    * every API boot: creates the Firebase Auth user if missing, writes the
    * users/{uid} profile with role:admin, resets the password if it drifted.
@@ -313,6 +343,41 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
             otpTemplateName: source.WHATSAPP_OTP_TEMPLATE_NAME.trim(),
           }
         : null,
+    // See the ewayBill block in AppEnv for why every field is required
+    // — null disables the whole service and shipments go without an
+    // e-way bill, matching pre-launch behaviour.
+    ewayBill: (() => {
+      if (source.EWAYBILL_PROVIDER?.trim() !== "masters_india") return null;
+      const required6 = [
+        source.EWAYBILL_API_BASE_URL,
+        source.EWAYBILL_CLIENT_ID,
+        source.EWAYBILL_CLIENT_SECRET,
+        source.EWAYBILL_GSTIN,
+        source.EWAYBILL_GSTIN_USERNAME,
+        source.EWAYBILL_GSTIN_PASSWORD,
+      ];
+      if (required6.some((v) => !v?.trim())) return null;
+      const mode = source.EWAYBILL_MODE?.trim();
+      if (mode !== "sandbox" && mode !== "production") {
+        throw new Error(
+          `EWAYBILL_MODE=${JSON.stringify(source.EWAYBILL_MODE)} is not a valid mode. Set to "sandbox" or "production". Refused rather than defaulted — a copy-paste typo cannot be allowed to silently send sandbox traffic in prod or vice versa.`,
+        );
+      }
+      return {
+        provider: "masters_india" as const,
+        mode,
+        baseUrl: source.EWAYBILL_API_BASE_URL!.trim().replace(/\/$/, ""),
+        clientId: source.EWAYBILL_CLIENT_ID!.trim(),
+        clientSecret: source.EWAYBILL_CLIENT_SECRET!.trim(),
+        gstin: source.EWAYBILL_GSTIN!.trim().toUpperCase(),
+        gstinUsername: source.EWAYBILL_GSTIN_USERNAME!.trim(),
+        gstinPassword: source.EWAYBILL_GSTIN_PASSWORD!,
+        accountEmail:
+          source.EWAYBILL_ACCOUNT_EMAIL?.trim() ||
+          source.INVOICE_SELLER_SUPPORT_EMAIL?.trim() ||
+          "support@galleryzone.in",
+      };
+    })(),
     adminSeed:
       source.ADMIN_SEED_EMAIL && source.ADMIN_SEED_PASSWORD
         ? {

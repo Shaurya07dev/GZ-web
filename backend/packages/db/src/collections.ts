@@ -134,6 +134,24 @@ export const Collections = {
    *  2026. The aggregator agrees to the invoice contents in-portal;
    *  acceptance timestamp + IP is stamped on the snapshot. */
   aggregatorCommissionInvoiceCounters: "aggregatorCommissionInvoiceCounters",
+  /**
+   * Masters India (WhiteBooks GSP) e-way bill session cache. One doc
+   * per `(gstin, mode)` tuple — the session is a server-side
+   * authorization at WhiteBooks keyed on the headers + warm-up call.
+   * Expires after ~6 hours; `expiresAt` is the Timestamp before which
+   * no fresh authenticate call is needed. Prevents every outbound
+   * request from re-authenticating (NIC rate-limits that).
+   */
+  ewayBillSessions: "ewayBillSessions",
+  /**
+   * Audit trail for every e-way bill API call we make — one row per
+   * attempt (success OR failure), keyed by autoID. Admin
+   * `/admin/eway-bills` reads from this collection to show the full
+   * history, retry failed bills, and cancel/extend existing ones. The
+   * challan's `ewayBill` snapshot carries the SUCCESS result; this
+   * collection carries the attempt log including failures.
+   */
+  ewayBillEvents: "ewayBillEvents",
   aggregatorRemittances: "aggregatorRemittances",
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
@@ -1016,6 +1034,61 @@ export interface PaymentVoucherCounterDoc {
 export interface AggregatorCommissionInvoiceCounterDoc {
   fiscalYear: string;
   nextSeq: number;
+}
+
+/**
+ * Server-side session created on WhiteBooks by an authenticate warm-up
+ * call. Doc id = `${gstin}:${mode}` so sandbox + production never share
+ * a row. Reused by every subsequent API call until `expiresAt` passes,
+ * after which the next caller re-authenticates.
+ */
+export interface EwayBillSessionDoc {
+  gstin: string;
+  mode: "sandbox" | "production";
+  authenticatedAt: FirebaseFirestore.Timestamp;
+  /** NIC EWB sessions are 6 hours (360 minutes). We stamp a 15-minute
+   *  safety buffer, re-authenticating at the 5h45m mark. */
+  expiresAt: FirebaseFirestore.Timestamp;
+}
+
+/**
+ * One row per API attempt — success or failure — against the Masters
+ * India e-way bill endpoint. Admin audit trail + the source of truth
+ * for the /admin/eway-bills retry/cancel/extend screen.
+ */
+export interface EwayBillEventDoc {
+  /** Which internal doc this attempt relates to. */
+  subject:
+    | { kind: "order_shipment"; orderId: string }
+    | { kind: "holding_inbound"; holdingId: string }
+    | { kind: "holding_return"; holdingId: string };
+  /** The WhiteBooks endpoint called ("genewaybill", "canewb", etc). */
+  endpoint: string;
+  action: "generate" | "cancel" | "extend" | "update_transporter" | "get";
+  requestAt: FirebaseFirestore.Timestamp;
+  /** The uid of the admin who initiated this attempt, or null for
+   *  server-initiated (shipment-booking) attempts. */
+  initiatedBy: string | null;
+  /** The HTTP status + the NIC `status_cd` ("1" = success). */
+  httpStatus: number;
+  statusCd: string | null;
+  /** On success: the e-way bill number issued. Null on failure. */
+  ewbNo: string | null;
+  /** On success: generated-at timestamp returned by WhiteBooks
+   *  (string per NIC — stored verbatim for audit). Null on failure. */
+  generatedAt: string | null;
+  /** On success: valid-until timestamp returned. Null on failure. */
+  validUntil: string | null;
+  /** On failure: NIC error code + message. */
+  errorCode: string | null;
+  errorMessage: string | null;
+  /** The REDACTED outbound body (no secrets). Kept small for admin
+   *  debugging; full requests are in Sentry breadcrumbs if needed. */
+  requestSummary: Record<string, unknown>;
+  /** The RAW response body. Kept so a post-mortem can reconstruct what
+   *  NIC said without re-calling. Size-limited to 8 KB — truncated
+   *  responses include `truncated: true`. */
+  responseSnippet: string;
 }
 
 /**

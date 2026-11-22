@@ -53,6 +53,7 @@ import { FollowsController, WishlistController } from "./wishlist.controller.ts"
 import { OtpController } from "./auth/otp.controller.ts";
 import { AdminSeed } from "./admin-seed.ts";
 import { WhatsAppSender } from "./sms/whatsapp.ts";
+import { EwayBillService } from "./eway-bill/eway-bill.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
@@ -151,6 +152,7 @@ import { DbModule } from "./db.module.ts";
     Emails,
     PushSender,
     WhatsAppSender,
+    EwayBillService,
     Razorpay,
     CashfreeVerification,
     AdminSeed,
