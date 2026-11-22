@@ -233,7 +233,7 @@ export class AggregatorReservationIntentsController {
       void bookInboundShipment(this.db, outcome.holdingId, artworkId, aggregatorId)
         .then(() =>
           this.emails
-            .consignmentDispatched({ holdingId: outcome.holdingId, channel: "aggregator" })
+            .consignmentDispatched({ holdingId: outcome.holdingId })
             .catch(this.emails.swallow("consignment mail")),
         )
         .catch((err) => {

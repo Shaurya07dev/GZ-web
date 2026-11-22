@@ -131,7 +131,7 @@ export class AggregatorController {
       void bookInboundShipment(this.db, result.holdingId, body.artworkId, req.authUser.uid)
         .then(() =>
           this.emails
-            .consignmentDispatched({ holdingId: result.holdingId, channel: "aggregator" })
+            .consignmentDispatched({ holdingId: result.holdingId })
             .catch(this.emails.swallow("consignment mail")),
         )
         .catch((error) => {

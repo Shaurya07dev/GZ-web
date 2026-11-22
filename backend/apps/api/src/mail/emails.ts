@@ -325,31 +325,39 @@ export class Emails {
     if (artist) {
       // Marketplace artist email — the long client-exact copy with Path
       // A handout attached. Pulls artwork details so the email shows
-      // medium + size + listed price + a direct artwork link.
+      // medium + size + listed price + a direct artwork link. If the
+      // order can't be read (shouldn't happen — this runs AFTER the
+      // order writes), skip rather than send an email with garbage
+      // fields; ops can trigger a resend once the data settles.
       const order = await this.read<OrderDoc>(Collections.orders, input.orderId);
-      const artwork = order ? await this.artwork(order.artworkId) : undefined;
-      const pathAHandout = handoutAttachment("sell-marketplace-pathA");
-      await this.deliver(
-        `order-paid-artist/${input.orderId}`,
-        artist.email,
-        T.artistOrderConfirmedMarketplace(
-          {
-            artworkId: order?.artworkId ?? input.orderId,
-            title: input.title,
-            artistName: artist.name,
-            medium: artwork?.medium ?? null,
-            sizeText: artwork ? buildSizeText(artwork) : null,
-            // Listed price is the full buyer-paid amount (what the
-            // artwork sold at); artistNet is the payout AFTER
-            // deductions, which belongs on the settlement note, not
-            // the order confirmation.
-            listedPricePaise: input.totalPaise,
-            artworkUrl: `${this.ctx.site}/dashboard/artworks/${order?.artworkId ?? ""}`,
-          },
-          this.ctx,
-        ),
-        [pathAHandout],
-      );
+      if (!order) {
+        this.logger.warn(
+          `orderPaid artist mail skipped: order ${input.orderId} not readable`,
+        );
+      } else {
+        const artwork = await this.artwork(order.artworkId);
+        const pathAHandout = handoutAttachment("sell-marketplace-pathA");
+        await this.deliver(
+          `order-paid-artist/${input.orderId}`,
+          artist.email,
+          T.artistOrderConfirmedMarketplace(
+            {
+              artworkId: order.artworkId,
+              title: input.title,
+              artistName: artist.name,
+              medium: artwork?.medium ?? null,
+              sizeText: artwork ? buildSizeText(artwork) : null,
+              // Listed price = full buyer-paid amount (what the artwork
+              // sold at). artistNet is the payout AFTER deductions,
+              // which belongs on the settlement note, not here.
+              listedPricePaise: input.totalPaise,
+              artworkUrl: `${this.ctx.site}/dashboard/artworks/${order.artworkId}`,
+            },
+            this.ctx,
+          ),
+          [pathAHandout],
+        );
+      }
     }
   }
 
@@ -555,7 +563,6 @@ export class Emails {
    */
   async consignmentDispatched(input: {
     holdingId: string;
-    channel: "marketplace" | "aggregator";
   }) {
     const holding = await this.read<AggregatorHoldingDoc>(
       Collections.aggregatorHoldings,

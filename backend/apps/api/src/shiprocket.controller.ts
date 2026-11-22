@@ -8,10 +8,11 @@ import { Body, Controller, Headers, HttpCode, Logger, Post, Req } from "@nestjs/
 import { Timestamp } from "firebase-admin/firestore";
 import type { Request } from "express";
 import { Inject } from "@nestjs/common";
-import { Collections, type Db } from "@galleryzone/db";
+import { Collections, type Db, type OrderDoc } from "@galleryzone/db";
 import { Public } from "./auth/roles.decorator.ts";
 import { SkipThrottle } from "@nestjs/throttler";
 import { DB } from "./db.module.ts";
+import { Emails } from "./mail/emails.ts";
 import {
   stageFromWebhook,
   verifyWebhookHmac,
@@ -23,7 +24,10 @@ import {
 export class ShiprocketController {
   private readonly logger = new Logger(ShiprocketController.name);
 
-  constructor(@Inject(DB) private readonly db: Db) {}
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    private readonly emails: Emails,
+  ) {}
 
   // ShipRocket sends the shared-secret token in whichever HTTP header name
   // was selected on their webhook config screen. Default is x-api-key; we
@@ -146,6 +150,36 @@ export class ShiprocketController {
         await this.db
           .collection(`orders/${orderId}/statusHistory`)
           .add({ status: nextStatus, changedAt: patch.trackedAt });
+        // Fire the matching lifecycle email. Delivered specifically
+        // attaches the Transfer-Rights handout (see emails.orderStatus),
+        // so this path is how the artist actually gets it on a real
+        // courier-driven delivery — not just admin manual flips.
+        const snap = await orderRef.get();
+        const order = snap.data() as OrderDoc | undefined;
+        if (order) {
+          // Fetch the artwork title live — it's keyed off the artwork,
+          // not the order, and the invoice snapshot (which carries
+          // description lines rather than a single title) isn't a
+          // clean source. Artwork edits after the order shouldn't
+          // affect this email — if the title changed, the latest one
+          // is the right one to show now.
+          const artworkSnap = await this.db
+            .collection(Collections.artworks)
+            .doc(order.artworkId)
+            .get();
+          const title =
+            (artworkSnap.data() as { title?: string } | undefined)?.title ??
+            "your artwork";
+          void this.emails
+            .orderStatus({
+              orderId,
+              customerId: order.customerId,
+              artistId: order.artistId ?? null,
+              title,
+              status: nextStatus,
+            })
+            .catch(this.emails.swallow("shiprocket order status mail"));
+        }
       }
       return { received: true, matched: true, leg: "order", stage, status: nextStatus };
     }
