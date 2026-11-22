@@ -10,6 +10,7 @@ import { PublicPricingRulesController, RateConfigController } from "./rate-confi
 import { ArtworksController } from "./artworks.controller.ts";
 import { OrdersController } from "./orders.controller.ts";
 import { InvoicesController } from "./invoices.controller.ts";
+import { DeliveryChallansController } from "./delivery-challans.controller.ts";
 import { AggregatorController } from "./aggregator.controller.ts";
 import { ModerationController } from "./moderation.controller.ts";
 import { ArtistArtworksController } from "./artist-artworks.controller.ts";
@@ -89,6 +90,7 @@ import { DbModule } from "./db.module.ts";
     ArtworksController,
     OrdersController,
     InvoicesController,
+    DeliveryChallansController,
     AggregatorController,
     ModerationController,
     ArtistArtworksController,

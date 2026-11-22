@@ -112,6 +112,13 @@ export const Collections = {
   reservationIntents: "reservationIntents",
   /** Monotonic invoice-number counters, one doc per fiscal year (`FY2026-27`). */
   invoiceCounters: "invoiceCounters",
+  /** Monotonic delivery-challan counter, one doc per fiscal year.
+   *  Separate from invoiceCounters because Rule 55 challans have their
+   *  own numbering series ("GZ/DC/26-27/000001") distinct from the GST
+   *  invoice series. Added 22 Nov 2026 so every non-sale Shiprocket leg
+   *  (artist→aggregator, aggregator→artist return, rotation) ships with
+   *  the legally required document. */
+  deliveryChallanCounters: "deliveryChallanCounters",
   aggregatorRemittances: "aggregatorRemittances",
   /** Per-user shopping cart doc (one per uid). */
   carts: "carts",
@@ -610,6 +617,13 @@ export interface OrderDoc {
    *  so the invoice number and tax split stay stable regardless of later rate
    *  changes or buyer-address edits. Audit §9. */
   invoice?: InvoiceSnapshot | null;
+  /** Delivery-challan snapshot stamped on the SHIPMENT leg from artist
+   *  studio to the buyer (marketplace sale) or aggregator venue to the
+   *  buyer (aggregator sale). Movement with a sale still needs the tax
+   *  invoice attached; the challan is complementary and kept for
+   *  internal records. For non-sale legs (artist→aggregator rotation,
+   *  returns) see AggregatorHoldingDoc.deliveryChallan. */
+  deliveryChallan?: DeliveryChallanSnapshot | null;
   /** Set by markOrderRefunded when admin issues a Razorpay refund. The
    *  order status is also moved to "cancelled" in the same write. Absent on
    *  orders that were never refunded. Added 8 Nov 2026. */
@@ -757,6 +771,117 @@ export interface InvoiceSnapshot {
 }
 
 export interface InvoiceCounterDoc {
+  fiscalYear: string;
+  nextSeq: number;
+}
+
+/** Delivery Challan line item (one artwork per challan in practice;
+ *  shape is an array so a future multi-piece consignment doesn't need
+ *  a schema migration). */
+export interface DeliveryChallanLine {
+  /** Artwork master id (ART-XXXXXX). */
+  artworkId: string;
+  title: string;
+  artistName: string;
+  medium: string | null;
+  /** HSN for art is "9701". */
+  hsn: string;
+  qty: number;
+  /** "No." by default. */
+  unit: string;
+  /** Artist's own price in paise (what GZ would pay if sold at base). */
+  artistValuePaise: number;
+  /** Listed selling price in paise — the "provisional" declared value
+   *  used by insurers and NIC e-way bill. Marked-up from artist value
+   *  by the platform commission layer. */
+  provisionalValuePaise: number;
+}
+
+/** Party on a delivery challan — consignor (GalleryZone), dispatched-
+ *  from (artist studio or aggregator venue), or consignee (aggregator
+ *  venue or artist studio for returns). Frozen at stamp time. */
+export interface DeliveryChallanParty {
+  legalName: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+  /** Postal abbreviation like "TS". Null when state isn't resolvable. */
+  stateCode: string | null;
+  /** GSTIN when registered; null prints as "Unregistered". */
+  gstin: string | null;
+}
+
+/** Why the consignment is moving. CGST-recognised vocabulary. */
+export type DeliveryChallanReason =
+  | "sale_on_approval"
+  | "exhibition_display"
+  | "return_of_goods"
+  | "job_work";
+
+/** Mode of transport, maps 1:1 to NIC e-way bill portal values. */
+export type DeliveryChallanTransportMode =
+  | "Road"
+  | "Rail"
+  | "Air"
+  | "Ship"
+  | "Courier";
+
+/** Lives on OrderDoc or AggregatorHoldingDoc so the challan number
+ *  can't drift across reads. Rule 55 requires in-transit documentation
+ *  for every goods movement that isn't a supply (display, rotation,
+ *  returns); the snapshot is what Shiprocket's courier physically
+ *  carries in the parcel. */
+export interface DeliveryChallanSnapshot {
+  /** "GZ/DC/26-27/000001". Globally unique per fiscal year. */
+  number: string;
+  fiscalYear: string;
+  /** When the challan was first stamped. */
+  challanDate: FirebaseFirestore.Timestamp;
+  /** Which of the three physical copies this render is for. Shiprocket
+   *  gets Duplicate (for transporter); consignor keeps Triplicate;
+   *  consignee signs Original on receipt. We stamp once and render the
+   *  requested copy on demand. */
+  copyLabel: "Original" | "Duplicate" | "Triplicate";
+  reason: DeliveryChallanReason;
+  /** 6-month display-and-approval deadline per GST Section 31(7). Null
+   *  on return legs where no further deadline applies. */
+  returnDeadline: FirebaseFirestore.Timestamp | null;
+  /** Shorter current window — e.g. aggregator placement of 30 days,
+   *  distinct from the overall 6-month cycle. */
+  currentDeadline: FirebaseFirestore.Timestamp | null;
+  /** E-Way Bill Part A — filled by our ClearTax integration (Phase 2).
+   *  All fields null today; renderer prints "NA" when number is null. */
+  ewayBill: {
+    /** 12-digit EWB number from NIC via ClearTax, or null. */
+    number: string | null;
+    generatedAt: FirebaseFirestore.Timestamp | null;
+    validUntil: FirebaseFirestore.Timestamp | null;
+  };
+  transport: {
+    mode: DeliveryChallanTransportMode;
+    transporterName: string;
+    /** Vehicle registration, AWB number, or docket number. */
+    vehicleOrDocket: string;
+  };
+  /** Consignor / Billed-From — always GalleryZone (the issuing party). */
+  consignor: DeliveryChallanParty;
+  /** Physical origin where the courier picks up (artist studio for the
+   *  artist→aggregator leg; aggregator venue for returns). */
+  dispatchedFrom: DeliveryChallanParty;
+  /** Delivery destination (aggregator venue; artist studio for
+   *  returns). */
+  consignee: DeliveryChallanParty;
+  items: DeliveryChallanLine[];
+  /** Optional free-text instructions ("fragile, do not stack"). */
+  notes?: string | null;
+}
+
+/** Fiscal-year counter for the delivery-challan numbering series.
+ *  Same shape as InvoiceCounterDoc but a separate collection since
+ *  the two series are legally distinct. */
+export interface DeliveryChallanCounterDoc {
   fiscalYear: string;
   nextSeq: number;
 }
@@ -947,6 +1072,19 @@ export interface AggregatorHoldingDoc {
     state: string;
     pincode: string;
   } | null;
+  /** Rule 55 delivery challan for the ARTIST→AGGREGATOR inbound leg.
+   *  Stamped by bookInboundShipment() just before the Shiprocket book
+   *  call. The signed public URL of this challan is what Shiprocket's
+   *  courier physically carries in the parcel as a substitute for the
+   *  (non-existent) tax invoice — Rule 31(7) treats the movement as
+   *  not-a-supply until the piece is sold. */
+  deliveryChallan?: DeliveryChallanSnapshot | null;
+  /** Rule 55 delivery challan for the AGGREGATOR→ARTIST return leg.
+   *  Stamped by bookReturnShipment() when the aggregator returns an
+   *  unsold piece. Separate field from the inbound challan because the
+   *  consignor/consignee flip and the two numbers belong to different
+   *  shipments that may need to be printed independently. */
+  returnDeliveryChallan?: DeliveryChallanSnapshot | null;
 }
 
 export interface HoldingExtensionRequest {

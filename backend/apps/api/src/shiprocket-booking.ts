@@ -8,9 +8,56 @@
 // clearly without masking the parent operation's success.
 
 import { Timestamp } from "firebase-admin/firestore";
-import { Collections, type AddressDoc, type AggregatorHoldingDoc, type AggregatorSaleDoc, type ArtworkDoc, type Db, type OrderDoc, type ProfileDoc, type UserDoc } from "@galleryzone/db";
+import {
+  Collections,
+  getOrCreateArtistReturnDeliveryChallan,
+  getOrCreateHoldingDeliveryChallan,
+  type AddressDoc,
+  type AggregatorHoldingDoc,
+  type AggregatorSaleDoc,
+  type ArtworkDoc,
+  type Db,
+  type DeliveryChallanParty,
+  type OrderDoc,
+  type ProfileDoc,
+  type UserDoc,
+} from "@galleryzone/db";
 import { invoiceUrlForShiprocket } from "./invoices.controller.ts";
+import { challanUrlForShiprocket } from "./delivery-challans.controller.ts";
 import { bookShipment, isShiprocketConfigured, pickupNicknameFor, registerPickupLocation } from "./shiprocket.ts";
+
+/**
+ * Build the signed public Delivery Challan URL for Shiprocket to fetch
+ * and print into the parcel. Returns undefined if PUBLIC_API_URL or the
+ * webhook secret isn't configured — shipment still books, just without
+ * the challan attached.
+ */
+function challanUrl(holdingId: string, leg: "inbound" | "return"): string | undefined {
+  const publicApiUrl = process.env.PUBLIC_API_URL?.trim();
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET?.trim();
+  if (!publicApiUrl || !secret) return undefined;
+  return challanUrlForShiprocket({ publicApiUrl, holdingId, leg, secret });
+}
+
+/**
+ * GalleryZone's own identity as the consignor on every delivery
+ * challan. Read from the same INVOICE_SELLER_* env vars the tax
+ * invoice uses so the two documents stay in sync if we ever move
+ * office. Pulled through process.env (rather than DI) so the
+ * stamp-trigger can be called from non-controller code paths.
+ */
+function consignorIdentityFromEnv(): DeliveryChallanParty {
+  return {
+    legalName: process.env.INVOICE_SELLER_LEGAL_NAME?.trim() || "Galleryzone Private Limited",
+    addressLine1: process.env.INVOICE_SELLER_ADDRESS_LINE1?.trim() || "GalleryZone Office",
+    addressLine2: process.env.INVOICE_SELLER_ADDRESS_LINE2?.trim() || null,
+    city: process.env.INVOICE_SELLER_CITY?.trim() || "Hyderabad",
+    state: process.env.INVOICE_SELLER_STATE?.trim() || "Telangana",
+    pincode: process.env.INVOICE_SELLER_PINCODE?.trim() || "502313",
+    stateCode: process.env.INVOICE_SELLER_STATE_CODE?.trim().toUpperCase() || "TS",
+    gstin: process.env.INVOICE_SELLER_GSTIN?.trim() || null,
+  };
+}
 
 /**
  * Lazily register a vendor's (artist or aggregator) address as a
@@ -154,6 +201,23 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
     pickup.user,
     pickup.profile,
   );
+  // Stamp the Rule 55 delivery challan BEFORE handing to Shiprocket.
+  // The challan is what legally travels with the parcel on this non-
+  // sale leg (Section 31(7) — display / sale-on-approval is not a
+  // supply, so a tax invoice doesn't apply). getOrCreate... is
+  // idempotent so a retried booking re-uses the same challan number.
+  await getOrCreateHoldingDeliveryChallan(db, {
+    holdingId,
+    leg: "inbound",
+    consignor: consignorIdentityFromEnv(),
+    transport: {
+      mode: "Courier",
+      transporterName: "Shiprocket",
+      vehicleOrDocket: "AWB pending — assigned by courier on pickup",
+    },
+  });
+  const inboundChallanUrl = challanUrl(holdingId, "inbound");
+
   const booked = await bookShipment({
     orderReference: `holding-${holdingId}`,
     pickupLocationNickname: pickupNickname,
@@ -181,6 +245,10 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
     weightKg: artwork.physical?.weightKg ?? 2,
     artworkTitle: artwork.title,
     valueInr: Math.round(artwork.listing?.displayPricePaise ? artwork.listing.displayPricePaise / 100 : 1),
+    // Delivery challan URL — Shiprocket fetches + prints it onto the
+    // parcel. If PUBLIC_API_URL isn't set, the leg ships without it
+    // and the challan has to be downloaded from admin manually.
+    ...(inboundChallanUrl ? { invoiceUrl: inboundChallanUrl } : {}),
   });
   // Mirror what the webhook writes, so the UI tracker lights up immediately
   // (the AWB is already issued by this point; the webhook will push stage
@@ -457,6 +525,36 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
     aggProfile,
   );
 
+  // Stamp the Rule 55 return-leg challan BEFORE handing to Shiprocket.
+  // Idempotent — a retried booking re-uses the same challan number.
+  // If the holding has a `returnDropAddress` (standard path when the
+  // artist asked for a return via Razorpay quote), use the artist-
+  // return stamp which pulls that address as the consignee. Otherwise
+  // fall back to the generic holding stamp (admin-initiated return).
+  if (holding.returnDropAddress) {
+    await getOrCreateArtistReturnDeliveryChallan(db, {
+      holdingId,
+      consignor: consignorIdentityFromEnv(),
+      transport: {
+        mode: "Courier",
+        transporterName: "Shiprocket",
+        vehicleOrDocket: "AWB pending — assigned by courier on pickup",
+      },
+    });
+  } else {
+    await getOrCreateHoldingDeliveryChallan(db, {
+      holdingId,
+      leg: "return",
+      consignor: consignorIdentityFromEnv(),
+      transport: {
+        mode: "Courier",
+        transporterName: "Shiprocket",
+        vehicleOrDocket: "AWB pending — assigned by courier on pickup",
+      },
+    });
+  }
+  const returnChallanUrlStr = challanUrl(holdingId, "return");
+
   // Keyed `return-<holdingId>` so the webhook controller can distinguish
   // it from the inbound and advance the return-specific state field on
   // the holding (handled in shiprocket.controller.ts).
@@ -476,6 +574,7 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
     weightKg: artwork.physical?.weightKg ?? 2,
     artworkTitle: artwork.title,
     valueInr: Math.max(1, Math.round(holding.displayPricePaise / 100)),
+    ...(returnChallanUrlStr ? { invoiceUrl: returnChallanUrlStr } : {}),
   });
 
   await db.collection(Collections.aggregatorHoldings).doc(holdingId).set(
