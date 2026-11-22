@@ -9,7 +9,7 @@
 // Turn it off with HOLDING_EXPIRY_SWEEP=false.
 
 import { Inject, Injectable, Logger, type OnApplicationBootstrap, type OnModuleDestroy } from "@nestjs/common";
-import { expireDueHoldings, type Db } from "@galleryzone/db";
+import { expireDueHoldings, flagDueDay20Reminders, type Db } from "@galleryzone/db";
 import { DB } from "./db.module.ts";
 import { Emails } from "./mail/emails.ts";
 import { ReadCache } from "./read-cache.ts";
@@ -43,6 +43,17 @@ export class HoldingExpirySweep implements OnApplicationBootstrap, OnModuleDestr
     if (this.running) return;
     this.running = true;
     try {
+      // Day-20 reminders first — these only READ + stamp an
+      // idempotency marker, never close a holding. Safe to run
+      // before the end-of-window pass.
+      const day20 = await flagDueDay20Reminders(this.db);
+      if (day20.length) {
+        this.logger.log(`flagged ${day20.length} placement(s) at day 20`);
+        for (const d of day20) {
+          void this.emails.holdingDisplayDay20(d).catch(this.emails.swallow("day-20 reminder mail"));
+        }
+      }
+
       const { expired, failed } = await expireDueHoldings(this.db);
       for (const f of failed) this.logger.error(`could not end holding ${f.holdingId}: ${f.error}`);
       if (!expired.length) return;

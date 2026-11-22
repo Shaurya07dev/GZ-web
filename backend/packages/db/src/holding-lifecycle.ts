@@ -137,6 +137,47 @@ export interface ExpiredHolding {
  * reserved holdings are few. ponytail: a decision landing between this read
  * and the return would lose to the sweep; add a transaction if that ever shows.
  */
+/**
+ * Day-20 reminder sweep. Finds `reserved` holdings whose window has been
+ * running for ≥20 days AND haven't had the reminder fired yet, stamps a
+ * `day20ReminderSentAt` idempotency marker on each, and returns the set
+ * for the api layer to email about. Idempotent — a second sweep on the
+ * same day skips rows already stamped.
+ *
+ * The reminder fires when the piece has been on display for 20 days
+ * out of the 30-day placement window, i.e. 10 days before
+ * `expiresAt`. We compute that offset by subtracting from `expiresAt`
+ * rather than counting forward from `assignedAt` so a later-approved
+ * extension (which pushes `expiresAt` out) also pushes the reminder
+ * out proportionally.
+ */
+export async function flagDueDay20Reminders(
+  db: Firestore,
+  now: Date = new Date(),
+): Promise<Array<{ holdingId: string; aggregatorId: string; artworkId: string }>> {
+  const snap = await db
+    .collection(Collections.aggregatorHoldings)
+    .where("status", "==", "reserved")
+    .get();
+  const due: Array<{ holdingId: string; aggregatorId: string; artworkId: string }> = [];
+  for (const d of snap.docs) {
+    const h = d.data() as AggregatorHoldingDoc;
+    if (h.day20ReminderSentAt) continue;
+    // 10 days before window-end, i.e. day 20 on a 30-day window.
+    const threshold = h.expiresAt.toDate().getTime() - 10 * 24 * 60 * 60 * 1000;
+    if (now.getTime() < threshold) continue;
+    try {
+      await d.ref.update({ day20ReminderSentAt: Timestamp.fromDate(now) });
+      due.push({ holdingId: d.id, aggregatorId: h.aggregatorId, artworkId: h.artworkId });
+    } catch (error) {
+      // Losing a reminder once is fine; the next sweep picks it up.
+      // Don't let one failure stall the rest of the batch.
+      void error;
+    }
+  }
+  return due;
+}
+
 export async function expireDueHoldings(
   db: Firestore,
   now: Date = new Date(),

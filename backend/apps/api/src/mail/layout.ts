@@ -98,6 +98,14 @@ const STYLE_BLOCK = style(`
   body{margin:0;padding:0;-webkit-text-size-adjust:100%;}
   table{border-collapse:collapse;}
   img{border:0;display:block;}
+  /* Logo swap. Two variants ship:
+       .logo-for-dark-bg — the WHITE logo, visible by default when the
+         top band renders as our dark colour (#0B0A08).
+       .logo-for-light-bg — the BLACK logo, shown only in dark mode
+         where the band is explicitly flipped to light so the mark
+         keeps contrast when the email client auto-recolours things.
+     Rule: band colour + logo colour must always be opposites. */
+  .logo-for-light-bg{display:none;}
   @media (max-width:620px){
     .wrap{width:100%!important;}
     .pad{padding-left:22px!important;padding-right:22px!important;}
@@ -111,6 +119,12 @@ const STYLE_BLOCK = style(`
     .tx{color:${COLOR.dark.ink}!important;}
     .mu{color:${COLOR.dark.muted}!important;}
     .lk{color:${COLOR.dark.link}!important;}
+    /* Flip the brand band to a WHITE pane in dark mode, and swap in
+       the black logo. Pair has strong contrast either way: dark-band
+       + white-logo (light mode) or white-band + black-logo (dark). */
+    .band{background-color:#FFFFFF!important;background:#FFFFFF!important;}
+    .logo-for-dark-bg{display:none!important;}
+    .logo-for-light-bg{display:block!important;}
   }
 `);
 
@@ -163,7 +177,12 @@ export function renderEmail(ctx: RenderContext, l: Layout): { html: string; text
 <div style="display:none;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;">${esc(preheader)}${"&zwnj;&nbsp;".repeat(70)}</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" class="page" bgcolor="${COLOR.page}" style="background:${COLOR.page};"><tr><td align="center" style="padding:24px 12px 40px;">
 <table role="presentation" class="wrap" width="600" cellspacing="0" cellpadding="0" style="width:600px;max-width:600px;">
-<tr><td bgcolor="${COLOR.band}" style="background:${COLOR.band};border-radius:12px 12px 0 0;padding:20px 32px;" align="left"><a href="${esc(site)}" style="text-decoration:none;"><img src="${esc(site)}/brand/gz-email-logo.png" width="80" height="72" alt="GalleryZone" style="display:block;border:0;font:400 22px/1.2 ${SERIF};color:${COLOR.bandInk};"></a></td></tr>
+<tr><td bgcolor="${COLOR.band}" class="band" style="background-color:${COLOR.band};background:${COLOR.band};border-radius:12px 12px 0 0;padding:20px 32px;mso-padding-alt:0;" align="left"><!--[if !mso]><!--><a href="${esc(site)}" style="text-decoration:none;"><!-- Dual-logo pattern: ".logo-for-dark-bg" is the WHITE/gold logo that
+       sits on our dark band in light mode. ".logo-for-light-bg" is
+       the BLACK logo used in dark mode where the band is flipped to
+       white. See STYLE_BLOCK for the swap rule. Keeping both <img>s in
+       the HTML lets whichever one the client supports render, with CSS
+       display controlling which actually shows. --><img class="logo-for-dark-bg" src="${esc(site)}/brand/gz-email-logo-dark.png" width="80" height="72" alt="GalleryZone" style="display:block;border:0;font:400 22px/1.2 ${SERIF};color:${COLOR.bandInk};"><img class="logo-for-light-bg" src="${esc(site)}/brand/gz-email-logo-light.png" width="80" height="72" alt="GalleryZone" style="display:none;border:0;font:400 22px/1.2 ${SERIF};color:${COLOR.ink};"></a><!--<![endif]--><!--[if mso]><a href="${esc(site)}"><img src="${esc(site)}/brand/gz-email-logo-dark.png" width="80" height="72" alt="GalleryZone" style="display:block;border:0;"/></a><![endif]--></td></tr>
 <tr><td class="card pad" bgcolor="${COLOR.card}" style="background:${COLOR.card};padding:36px 40px 34px;border:1px solid ${COLOR.line};border-top:0;border-radius:0 0 12px 12px;">
 <h1 class="h tx" style="margin:0 0 20px;font:400 28px/1.25 ${SERIF};color:${COLOR.ink};">${esc(l.heading)}</h1>
 ${l.paragraphs.map(paragraph).join("\n")}

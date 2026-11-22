@@ -31,6 +31,7 @@ import type { OrderStatus } from "@galleryzone/domain";
 import type { AppEnv } from "@galleryzone/config";
 import { DB, ENV } from "../db.module.ts";
 import { renderEmail } from "./layout.ts";
+import { handoutAttachment } from "./handouts.ts";
 import { Mailer } from "./mailer.ts";
 import { PushSender } from "./push.ts";
 import { asText } from "./rich.ts";
@@ -170,7 +171,22 @@ export class Emails {
   async welcome(uid: string, verifyUrl: string | null) {
     const u = await this.user(uid);
     if (!u) return;
-    await this.deliver(`welcome/${uid}`, u.email, T.welcome({ name: u.name, role: u.role, verifyUrl }, this.ctx));
+    // Attach the role-appropriate walkthrough handout. Artists get
+    // the sign-in guide; aggregators get the 8-step lifecycle deck.
+    // Other roles (customer, admin) get no attachment — the generic
+    // welcome copy is all they need.
+    const extras =
+      u.role === "artist"
+        ? [handoutAttachment("artist-signin-walkthrough")]
+        : u.role === "aggregator"
+          ? [handoutAttachment("aggregator-signup-lifecycle")]
+          : undefined;
+    await this.deliver(
+      `welcome/${uid}`,
+      u.email,
+      T.welcome({ name: u.name, role: u.role, verifyUrl }, this.ctx),
+      extras,
+    );
   }
 
   /**
@@ -240,7 +256,18 @@ export class Emails {
   async artworkSubmitted(artworkId: string, artistId: string, title: string) {
     const [artist, admins] = await Promise.all([this.user(artistId), this.admins()]);
     const n = again();
-    if (artist) await this.deliver(`artwork-submitted/${artworkId}/${n}`, artist.email, T.artworkSubmitted({ title }, this.ctx));
+    if (artist) {
+      // Attach the Steps 4–6 handout to the artist's own copy — walks
+      // them through the "next after listing" actions. Admins get the
+      // admin-facing version without the handout.
+      const listHandout = handoutAttachment("artist-list-artwork");
+      await this.deliver(
+        `artwork-submitted/${artworkId}/${n}`,
+        artist.email,
+        T.artworkSubmitted({ title }, this.ctx),
+        [listHandout],
+      );
+    }
     await this.deliver(`artwork-submitted-admin/${artworkId}/${n}`, admins, T.artworkSubmittedAdmin({ title, artistName: artist?.name ?? "An artist" }, this.ctx));
   }
 
@@ -295,7 +322,35 @@ export class Emails {
   async orderPaid(input: { orderId: string; customerId: string; artistId: string; title: string; totalPaise: number; artistNetPaise: number }) {
     const [buyer, artist] = await Promise.all([this.user(input.customerId), this.user(input.artistId)]);
     if (buyer) await this.deliver(`order-paid-buyer/${input.orderId}`, buyer.email, T.orderPaidBuyer({ orderId: input.orderId, title: input.title, totalPaise: input.totalPaise }, this.ctx));
-    if (artist) await this.deliver(`order-paid-artist/${input.orderId}`, artist.email, T.orderPaidArtist({ title: input.title, artistNetPaise: input.artistNetPaise }, this.ctx));
+    if (artist) {
+      // Marketplace artist email — the long client-exact copy with Path
+      // A handout attached. Pulls artwork details so the email shows
+      // medium + size + listed price + a direct artwork link.
+      const order = await this.read<OrderDoc>(Collections.orders, input.orderId);
+      const artwork = order ? await this.artwork(order.artworkId) : undefined;
+      const pathAHandout = handoutAttachment("sell-marketplace-pathA");
+      await this.deliver(
+        `order-paid-artist/${input.orderId}`,
+        artist.email,
+        T.artistOrderConfirmedMarketplace(
+          {
+            artworkId: order?.artworkId ?? input.orderId,
+            title: input.title,
+            artistName: artist.name,
+            medium: artwork?.medium ?? null,
+            sizeText: artwork ? buildSizeText(artwork) : null,
+            // Listed price is the full buyer-paid amount (what the
+            // artwork sold at); artistNet is the payout AFTER
+            // deductions, which belongs on the settlement note, not
+            // the order confirmation.
+            listedPricePaise: input.totalPaise,
+            artworkUrl: `${this.ctx.site}/dashboard/artworks/${order?.artworkId ?? ""}`,
+          },
+          this.ctx,
+        ),
+        [pathAHandout],
+      );
+    }
   }
 
   /**
@@ -310,7 +365,21 @@ export class Emails {
     const buyer = await this.user(input.customerId);
     if (buyer) await this.deliver(`order-${input.status}-buyer/${input.orderId}`, buyer.email, T.orderStatusBuyer(facts, this.ctx));
     const artist = input.artistId ? await this.user(input.artistId) : null;
-    if (artist) await this.deliver(`order-${input.status}-artist/${input.orderId}`, artist.email, T.orderStatusArtist(facts, this.ctx));
+    if (artist) {
+      // On delivery, attach the transfer-rights handout — the piece
+      // is now with the collector and the artist's transfer-rights
+      // obligations begin from the delivered moment.
+      const extras =
+        input.status === "delivered"
+          ? [handoutAttachment("transfer-rights")]
+          : undefined;
+      await this.deliver(
+        `order-${input.status}-artist/${input.orderId}`,
+        artist.email,
+        T.orderStatusArtist(facts, this.ctx),
+        extras,
+      );
+    }
   }
 
   /** The buyer got as far as the gateway and it didn't go through. */
@@ -443,7 +512,15 @@ export class Emails {
       await this.deliver(`holding-reserved-artist/${input.holdingId}`, artist.email, T.holdingReservedArtist({ title: artwork.title, gallery: aggregator?.name ?? "a partner gallery", until: input.expiresAt, tagLocked: Boolean(artwork.nfcLockedAt) }, this.ctx));
     }
     if (aggregator) {
-      await this.deliver(`holding-reserved-aggregator/${input.holdingId}`, aggregator.email, T.holdingReservedAggregator({ title: artwork.title, until: input.expiresAt, advancePaise: input.advanceAmountPaise, displayPricePaise: input.displayPricePaise }, this.ctx));
+      // Attach the Steps 3–8 detailed handout — walks the aggregator
+      // through what happens from reservation to sale.
+      const reservationHandout = handoutAttachment("aggregator-reservation-detail");
+      await this.deliver(
+        `holding-reserved-aggregator/${input.holdingId}`,
+        aggregator.email,
+        T.holdingReservedAggregator({ title: artwork.title, until: input.expiresAt, advancePaise: input.advanceAmountPaise, displayPricePaise: input.displayPricePaise }, this.ctx),
+        [reservationHandout],
+      );
     }
   }
 
@@ -525,10 +602,14 @@ export class Emails {
     const artworkUrl = `${this.ctx.site}/dashboard/artworks/${holding.artworkId}`;
 
     if (artist?.email) {
+      // Path B — Display Through Aggregators. Attached alongside the
+      // delivery challan so the artist has every document + the
+      // preparation guide in a single email.
+      const pathBHandout = handoutAttachment("display-aggregator-pathB");
       await this.deliver(
         `consignment-artist/${input.holdingId}`,
         artist.email,
-        T.consignmentDispatchedArtist(
+        T.artistConsignmentReservedAggregator(
           {
             artworkId: holding.artworkId,
             title: artwork.title,
@@ -536,14 +617,11 @@ export class Emails {
             medium: artwork.medium ?? null,
             sizeText,
             listedPricePaise: holding.displayPricePaise,
-            channel: input.channel,
             artworkUrl,
-            challanNumber: snap.number,
-            returnDeadline: snap.returnDeadline?.toDate() ?? null,
           },
           this.ctx,
         ),
-        [challanAttachment],
+        [challanAttachment, pathBHandout],
       );
     }
     if (aggregator?.email) {
@@ -591,7 +669,33 @@ export class Emails {
   async holdingPeriodEnded(input: { holdingId: string; artworkId: string; aggregatorId: string; advancePaise: number }) {
     const [artwork, aggregator] = await Promise.all([this.artwork(input.artworkId), this.user(input.aggregatorId)]);
     if (!aggregator) return;
-    await this.deliver(`holding-period-ended/${input.holdingId}`, aggregator.email, T.holdingPeriodEnded({ title: artwork?.title ?? "your piece", advancePaise: input.advancePaise }, this.ctx));
+    // Attach the 30-day-completion packaging SOP so the aggregator
+    // has the full return-handoff checklist in the same email.
+    const day30Handout = handoutAttachment("display-day-30");
+    await this.deliver(
+      `holding-period-ended/${input.holdingId}`,
+      aggregator.email,
+      T.holdingPeriodEnded({ title: artwork?.title ?? "your piece", advancePaise: input.advancePaise }, this.ctx),
+      [day30Handout],
+    );
+  }
+
+  /**
+   * Day-20 reminder: the piece is 10 days away from the end of its
+   * placement window. Fires once per holding (idempotency key on
+   * holdingId alone). Payload mirrors holdingPeriodEnded so the
+   * copy can reuse the holding + advance context.
+   */
+  async holdingDisplayDay20(input: { holdingId: string; artworkId: string; aggregatorId: string }) {
+    const [artwork, aggregator] = await Promise.all([this.artwork(input.artworkId), this.user(input.aggregatorId)]);
+    if (!aggregator) return;
+    const day20Handout = handoutAttachment("display-day-20");
+    await this.deliver(
+      `holding-display-day-20/${input.holdingId}`,
+      aggregator.email,
+      T.holdingDisplayDay20({ title: artwork?.title ?? "your piece" }, this.ctx),
+      [day20Handout],
+    );
   }
 
   /** The aggregator sent an unsold piece back early. Both sides hear it. */
@@ -613,7 +717,15 @@ export class Emails {
     const [aggregator, artist] = await Promise.all([holding ? this.user(holding.aggregatorId) : null, artwork ? this.user(artwork.artistId) : null]);
     const title = artwork?.title ?? "your piece";
     if (aggregator) {
-      await this.deliver(`sale-recorded-aggregator/${saleId}`, aggregator.email, T.saleRecordedAggregator({ title, soldPricePaise: sale.soldPricePaise, buyerName: sale.buyerName, cash: sale.paymentRoute === "cash_at_premises", remitBy: sale.remitDueAt?.toDate() ?? null }, this.ctx));
+      // Attach the Steps 7 & 8 handout — the post-sale handoff walk-
+      // through (collect buyer, remit, close the ledger).
+      const saleHandout = handoutAttachment("aggregator-sale-detail");
+      await this.deliver(
+        `sale-recorded-aggregator/${saleId}`,
+        aggregator.email,
+        T.saleRecordedAggregator({ title, soldPricePaise: sale.soldPricePaise, buyerName: sale.buyerName, cash: sale.paymentRoute === "cash_at_premises", remitBy: sale.remitDueAt?.toDate() ?? null }, this.ctx),
+        [saleHandout],
+      );
     }
     if (artist) await this.deliver(`sale-recorded-artist/${saleId}`, artist.email, T.saleRecordedArtist({ title, gallery: aggregator?.name ?? "A gallery" }, this.ctx));
   }

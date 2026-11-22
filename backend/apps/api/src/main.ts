@@ -6,6 +6,7 @@ import { loadEnv } from "@galleryzone/config";
 import { AppModule } from "./app.module.ts";
 import { HttpExceptionFilter } from "./http-exception.filter.ts";
 import { RouteParamPipe } from "./route-param.pipe.ts";
+import { assertAllHandoutsLoadable } from "./mail/handouts.ts";
 
 // Real NestJS bootstrap. Wired in: RolesGuard (global, fail-closed — real
 // Firebase ID-token verification, see auth/roles.guard.ts), the RFC 7807
@@ -14,6 +15,10 @@ import { RouteParamPipe } from "./route-param.pipe.ts";
 // its own edge, so the client IP is the first X-Forwarded-For hop.
 async function bootstrap() {
   const env = loadEnv();
+  // Ship-blocker check: every lifecycle email that attaches a handout
+  // has to find its file on disk, or the email goes out without the
+  // client's intended PDF. Refuse to boot if any file is missing.
+  assertAllHandoutsLoadable();
   // rawBody: both webhook signatures (Razorpay's over the body, Cashfree
   // Secure ID's over the timestamp plus the body) are computed over the exact
   // bytes received, so a re-serialised body will not match.

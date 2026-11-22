@@ -1254,6 +1254,13 @@ export interface AggregatorHoldingDoc {
    *  the quote is created) — until then the artist can walk away without
    *  leaving dangling state. 16 Nov 2026. */
   artistReturnRequestedAt?: FirebaseFirestore.Timestamp | null;
+  /**
+   * Idempotency marker for the day-20 placement reminder. Set once by
+   * flagDueDay20Reminders() when the sweep picks the holding up;
+   * subsequent sweeps skip it so the aggregator never gets two
+   * reminders for the same window. Null / absent = not yet fired.
+   */
+  day20ReminderSentAt?: FirebaseFirestore.Timestamp | null;
   /** The last return-shipping quote we created for this holding. Kept
    *  so the UI can resume a half-paid attempt without re-quoting, and
    *  so the verify endpoint can tell which order it's verifying. */
