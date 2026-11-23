@@ -485,3 +485,101 @@ function partyFromReturnDropAddress(
   };
 }
 
+// ─── e-way bill stamping ────────────────────────────────────────────
+
+/**
+ * Merge an e-way bill number + validity window into an already-stamped
+ * challan snapshot. Called by the orchestrator in apps/api after
+ * EwayBillService.generate() returns, so the number can be printed on
+ * the challan PDF + handed to Shiprocket.
+ *
+ * Idempotent: a second call with the same ewbNo is a no-op; a different
+ * ewbNo throws DeliveryChallanError (we never want to silently replace
+ * a legally-registered bill with another one — a replacement needs an
+ * explicit cancel-then-re-generate path).
+ *
+ * Throws if the challan hasn't been stamped yet (the caller must stamp
+ * the challan first — the EWB is generated AGAINST it).
+ */
+export async function stampEwayBillOnHoldingChallan(
+  db: Firestore,
+  input: {
+    holdingId: string;
+    leg: "inbound" | "return";
+    ewbNo: string;
+    generatedAt: Date;
+    validUntil: Date;
+  },
+): Promise<void> {
+  const ref = db.collection(Collections.aggregatorHoldings).doc(input.holdingId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new DeliveryChallanError(`No aggregator holding ${input.holdingId}`);
+  }
+  const holding = snap.data() as AggregatorHoldingDoc;
+  const field = input.leg === "inbound" ? "deliveryChallan" : "returnDeliveryChallan";
+  const challan = holding[field as "deliveryChallan" | "returnDeliveryChallan"];
+  if (!challan) {
+    throw new DeliveryChallanError(
+      `Cannot stamp e-way bill — challan for holding ${input.holdingId} (${input.leg}) is not stamped yet`,
+    );
+  }
+  const existing = challan.ewayBill?.number ?? null;
+  if (existing && existing === input.ewbNo) return; // idempotent re-stamp
+  if (existing && existing !== input.ewbNo) {
+    throw new DeliveryChallanError(
+      `Challan for holding ${input.holdingId} (${input.leg}) already carries e-way bill ${existing}; refusing silent replacement with ${input.ewbNo}`,
+    );
+  }
+  const nextChallan: DeliveryChallanSnapshot = {
+    ...challan,
+    ewayBill: {
+      number: input.ewbNo,
+      generatedAt: Timestamp.fromDate(input.generatedAt),
+      validUntil: Timestamp.fromDate(input.validUntil),
+    },
+  };
+  await ref.update({ [field]: nextChallan });
+}
+
+/** Same as above, but for the challan stamped onto an OrderDoc
+ *  (marketplace sale leg — artist studio → buyer). */
+export async function stampEwayBillOnOrderChallan(
+  db: Firestore,
+  input: {
+    orderId: string;
+    ewbNo: string;
+    generatedAt: Date;
+    validUntil: Date;
+  },
+): Promise<void> {
+  const ref = db.collection(Collections.orders).doc(input.orderId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new DeliveryChallanError(`No order ${input.orderId}`);
+  }
+  const data = snap.data() as { deliveryChallan?: DeliveryChallanSnapshot | null };
+  const challan = data.deliveryChallan;
+  if (!challan) {
+    throw new DeliveryChallanError(
+      `Cannot stamp e-way bill — challan for order ${input.orderId} is not stamped yet`,
+    );
+  }
+  const existing = challan.ewayBill?.number ?? null;
+  if (existing && existing === input.ewbNo) return;
+  if (existing && existing !== input.ewbNo) {
+    throw new DeliveryChallanError(
+      `Order ${input.orderId} challan already carries e-way bill ${existing}; refusing silent replacement with ${input.ewbNo}`,
+    );
+  }
+  const nextChallan: DeliveryChallanSnapshot = {
+    ...challan,
+    ewayBill: {
+      number: input.ewbNo,
+      generatedAt: Timestamp.fromDate(input.generatedAt),
+      validUntil: Timestamp.fromDate(input.validUntil),
+    },
+  };
+  await ref.update({ deliveryChallan: nextChallan });
+}
+

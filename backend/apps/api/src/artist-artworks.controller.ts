@@ -48,6 +48,7 @@ import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Razorpay } from "./payments/razorpay.ts";
 import { getShippingRate, isShiprocketConfigured } from "./shiprocket.ts";
 import { bookReturnShipment } from "./shiprocket-booking.ts";
+import { EwayBillService } from "./eway-bill/eway-bill.ts";
 import { FieldValue } from "firebase-admin/firestore";
 
 const returnDropAddressSchema = z
@@ -143,6 +144,7 @@ export class ArtistArtworksController {
     private readonly cache: ReadCache,
     private readonly emails: Emails,
     private readonly razorpay: Razorpay,
+    private readonly ewayBill: EwayBillService,
   ) {}
 
   private async artworkOf(id: string): Promise<(ArtworkDoc & { id: string }) | null> {
@@ -403,7 +405,7 @@ export class ArtistArtworksController {
     });
 
     // Fire-and-forget: the booking either succeeds or an admin rebooks.
-    void bookReturnShipment(this.db, body.holdingId).catch((error) => {
+    void bookReturnShipment(this.db, body.holdingId, this.ewayBill).catch((error) => {
       console.error(
         JSON.stringify({
           event: "shiprocket.return.failed",

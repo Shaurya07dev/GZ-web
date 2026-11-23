@@ -272,12 +272,16 @@ function draw(doc: PDFKit.PDFDocument, s: DeliveryChallanSnapshot): void {
       "E-Way Bill No.",
       s.ewayBill.number
         ? s.ewayBill.number
-        : "NA (Consignment ≤ ₹50,000 inter-state)",
+        : "NA (Consignment ≤ ₹50,000 or not yet generated)",
     ],
-    [
-      "E-Way Bill Valid Until",
-      s.ewayBill.validUntil ? formatDate(s.ewayBill.validUntil) : "NA",
-    ],
+    // Only show the generated-at + valid-until rows when a bill
+    // actually exists — "NA" for both reads as noise otherwise.
+    ...(s.ewayBill.number && s.ewayBill.generatedAt
+      ? ([["E-Way Bill Generated", formatDate(s.ewayBill.generatedAt)]] as Array<[string, string]>)
+      : []),
+    ...(s.ewayBill.number && s.ewayBill.validUntil
+      ? ([["E-Way Bill Valid Until", formatDate(s.ewayBill.validUntil)]] as Array<[string, string]>)
+      : []),
     ["Mode of Transport", s.transport.mode],
     ["Transporter / Courier", s.transport.transporterName],
     ["Vehicle / AWB No.", s.transport.vehicleOrDocket],

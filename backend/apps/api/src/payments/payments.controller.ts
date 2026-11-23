@@ -83,6 +83,7 @@ import {
   type ArtworkDoc,
 } from "@galleryzone/db";
 import { bookInboundShipment, bookOutboundOrderShipment } from "../shiprocket-booking.ts";
+import { EwayBillService } from "../eway-bill/eway-bill.ts";
 import { resolveShippingQuote } from "../shipping-quote.ts";
 import { startWalletTopupInputSchema, type StartWalletTopupInput } from "@galleryzone/contracts";
 import type { AppEnv } from "@galleryzone/config";
@@ -157,6 +158,7 @@ export class PaymentsController {
     private readonly razorpay: Razorpay,
     private readonly emails: Emails,
     private readonly cache: ReadCache,
+    private readonly ewayBill: EwayBillService,
   ) {}
 
   private async ownOrder(req: AuthenticatedRequest, id: string) {
@@ -715,7 +717,7 @@ export class PaymentsController {
         }
       } else if (outcome.kind === "finalized") {
         void this.emails.holdingReservedById(outcome.holdingId).catch(this.emails.swallow("holding reserved mail"));
-        void bookInboundShipment(this.db, outcome.holdingId, intent.artworkId, intent.aggregatorId).catch((err) =>
+        void bookInboundShipment(this.db, outcome.holdingId, intent.artworkId, intent.aggregatorId, this.ewayBill).catch((err) =>
           console.error(JSON.stringify({ event: "shiprocket.inbound.failed", holdingId: outcome.holdingId, error: String(err) })),
         );
       }

@@ -80,6 +80,14 @@ export interface ShipmentBookingInput {
    */
   invoiceUrl?: string;
   /**
+   * The 12-digit NIC e-way bill number generated for this consignment
+   * (if value ≥ ₹50,000 and the EwayBillService was reachable). When
+   * set, Shiprocket prints it on the shipping label — the courier
+   * driver may be asked to show it at a checkpoint, and the e-way
+   * bill is also attached to the physical challan in the parcel.
+   */
+  ewayBillNo?: string;
+  /**
    * Shiprocket pickup-location nickname for this specific pickup. When
    * provided, Shiprocket uses the registered warehouse matching that
    * nickname as the pickup address. When omitted, falls back to the
@@ -412,6 +420,11 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
     // shipment). Only sent when provided — inbound-only legs that carry
     // no sale skip it.
     ...(input.invoiceUrl ? { invoice_url: input.invoiceUrl } : {}),
+    // The NIC 12-digit e-way bill number, when generated. Shiprocket
+    // prints it on the shipping label — the courier driver carries
+    // the physical bill (attached to the challan on the parcel) and
+    // this field lets Shiprocket match the digital record.
+    ...(input.ewayBillNo ? { ewaybill_no: input.ewayBillNo } : {}),
   };
   const res = await fetch(`${CONFIG!.baseUrl}/orders/create/adhoc`, {
     method: "POST",

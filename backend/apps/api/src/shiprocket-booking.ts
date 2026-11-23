@@ -25,6 +25,12 @@ import {
 import { invoiceUrlForShiprocket } from "./invoices.controller.ts";
 import { challanUrlForShiprocket } from "./delivery-challans.controller.ts";
 import { bookShipment, isShiprocketConfigured, pickupNicknameFor, registerPickupLocation } from "./shiprocket.ts";
+import { EwayBillService, stateNumericCode } from "./eway-bill/eway-bill.ts";
+import {
+  formatNicDate,
+  maybeGenerateForHolding,
+  maybeGenerateForOrder,
+} from "./eway-bill/eway-bill-orchestrator.ts";
 
 /**
  * Build the signed public Delivery Challan URL for Shiprocket to fetch
@@ -123,7 +129,13 @@ function outboundInvoiceUrl(orderId: string): string | undefined {
   return invoiceUrlForShiprocket({ publicApiUrl, orderId, secret });
 }
 
-export async function bookInboundShipment(db: Db, holdingId: string, artworkId: string, aggregatorId: string): Promise<void> {
+export async function bookInboundShipment(
+  db: Db,
+  holdingId: string,
+  artworkId: string,
+  aggregatorId: string,
+  ewayBillService: EwayBillService | null = null,
+): Promise<void> {
   // Without credentials there is nothing to book (the wrapper no longer fakes a
   // demo id), so stop before reading anything. Callers log this; the
   // reservation itself still stands.
@@ -206,7 +218,7 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
   // sale leg (Section 31(7) — display / sale-on-approval is not a
   // supply, so a tax invoice doesn't apply). getOrCreate... is
   // idempotent so a retried booking re-uses the same challan number.
-  await getOrCreateHoldingDeliveryChallan(db, {
+  const challan = await getOrCreateHoldingDeliveryChallan(db, {
     holdingId,
     leg: "inbound",
     consignor: consignorIdentityFromEnv(),
@@ -217,6 +229,59 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
     },
   });
   const inboundChallanUrl = challanUrl(holdingId, "inbound");
+
+  // E-way bill (value ≥ ₹50,000). The challan's consignor + consignee
+  // blocks already have the correct addresses frozen at stamp time —
+  // reuse them so the EWB payload matches what the challan PDF prints.
+  // On failure the shipment proceeds without a bill; admin can retry
+  // from /admin/eway-bills. The ewbNo (if issued) is passed to
+  // Shiprocket so it prints on the shipping label.
+  const consignorPincode = Number(challan.consignor.pincode) || 0;
+  const consigneePincode = Number(challan.consignee.pincode) || 0;
+  const consignorStateCode = challan.consignor.stateCode ?? "";
+  const consigneeStateCode = challan.consignee.stateCode ?? "";
+  const totalValuePaise = artwork.listing?.displayPricePaise ?? 0;
+  const ewbNo = consignorStateCode && consigneeStateCode
+    ? await maybeGenerateForHolding({
+        db,
+        service: ewayBillService,
+        holdingId,
+        leg: "inbound",
+        input: {
+          subject: { kind: "holding_inbound", holdingId },
+          docType: "CHL",
+          docNo: challan.number,
+          docDate: formatNicDate(challan.challanDate.toDate()),
+          totalValuePaise,
+          from: {
+            gstin: challan.consignor.gstin ?? "",
+            tradeName: challan.consignor.legalName,
+            addressLine1: challan.consignor.addressLine1,
+            addressLine2: challan.consignor.addressLine2,
+            place: challan.consignor.city,
+            pincode: consignorPincode,
+            stateCode: consignorStateCode,
+          },
+          to: {
+            gstin: challan.consignee.gstin ?? "",
+            tradeName: challan.consignee.legalName,
+            addressLine1: challan.consignee.addressLine1,
+            addressLine2: challan.consignee.addressLine2,
+            place: challan.consignee.city,
+            pincode: consigneePincode,
+            stateCode: consigneeStateCode,
+          },
+          transportDistanceKm: 100, // conservative default; Shiprocket's quote isn't on this path
+          item: {
+            description: artwork.title,
+            // HSN 9701 = paintings & drawings; 9703 = sculpture.
+            hsnCode: "9701",
+            gstRatePercent: 12,
+          },
+          initiatedBy: null,
+        },
+      })
+    : null;
 
   const booked = await bookShipment({
     orderReference: `holding-${holdingId}`,
@@ -249,6 +314,7 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
     // parcel. If PUBLIC_API_URL isn't set, the leg ships without it
     // and the challan has to be downloaded from admin manually.
     ...(inboundChallanUrl ? { invoiceUrl: inboundChallanUrl } : {}),
+    ...(ewbNo ? { ewayBillNo: ewbNo } : {}),
   });
   // Mirror what the webhook writes, so the UI tracker lights up immediately
   // (the AWB is already issued by this point; the webhook will push stage
@@ -281,6 +347,13 @@ export async function bookInboundShipment(db: Db, holdingId: string, artworkId: 
  */
 export async function bookOutboundOrderShipment(db: Db, orderId: string): Promise<void> {
   if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured; outbound order booking was not created");
+  // TODO: generate EWB for marketplace orders ≥ ₹50,000. Deferred from
+  // v1 — the artist→buyer leg has no delivery-challan snapshot to
+  // stamp onto (uses the tax invoice instead), and the vast majority
+  // of marketplace sales (prints, small originals) fall below the
+  // threshold anyway. Expensive originals move through the aggregator
+  // flow which DOES generate EWB. Revisit when a marketplace sale
+  // above ₹50k is first observed.
 
   const orderSnap = await db.collection(Collections.orders).doc(orderId).get();
   const order = orderSnap.data() as OrderDoc | undefined;
@@ -460,7 +533,11 @@ export async function bookOutboundAggregatorSaleShipment(db: Db, saleId: string)
  * return naturally overwrites it (the holding is leaving the aggregator
  * anyway). Fire-and-forget. 9 Nov 2026.
  */
-export async function bookReturnShipment(db: Db, holdingId: string): Promise<void> {
+export async function bookReturnShipment(
+  db: Db,
+  holdingId: string,
+  ewayBillService: EwayBillService | null = null,
+): Promise<void> {
   if (!isShiprocketConfigured()) throw new Error("ShipRocket is not configured; return booking was not created");
 
   const holdingSnap = await db.collection(Collections.aggregatorHoldings).doc(holdingId).get();
@@ -531,29 +608,70 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
   // artist asked for a return via Razorpay quote), use the artist-
   // return stamp which pulls that address as the consignee. Otherwise
   // fall back to the generic holding stamp (admin-initiated return).
-  if (holding.returnDropAddress) {
-    await getOrCreateArtistReturnDeliveryChallan(db, {
-      holdingId,
-      consignor: consignorIdentityFromEnv(),
-      transport: {
-        mode: "Courier",
-        transporterName: "Shiprocket",
-        vehicleOrDocket: "AWB pending — assigned by courier on pickup",
-      },
-    });
-  } else {
-    await getOrCreateHoldingDeliveryChallan(db, {
-      holdingId,
-      leg: "return",
-      consignor: consignorIdentityFromEnv(),
-      transport: {
-        mode: "Courier",
-        transporterName: "Shiprocket",
-        vehicleOrDocket: "AWB pending — assigned by courier on pickup",
-      },
-    });
-  }
+  const returnChallan = holding.returnDropAddress
+    ? await getOrCreateArtistReturnDeliveryChallan(db, {
+        holdingId,
+        consignor: consignorIdentityFromEnv(),
+        transport: {
+          mode: "Courier",
+          transporterName: "Shiprocket",
+          vehicleOrDocket: "AWB pending — assigned by courier on pickup",
+        },
+      })
+    : await getOrCreateHoldingDeliveryChallan(db, {
+        holdingId,
+        leg: "return",
+        consignor: consignorIdentityFromEnv(),
+        transport: {
+          mode: "Courier",
+          transporterName: "Shiprocket",
+          vehicleOrDocket: "AWB pending — assigned by courier on pickup",
+        },
+      });
   const returnChallanUrlStr = challanUrl(holdingId, "return");
+
+  // E-way bill on the return leg. "Return of unsold" uses subSupplyType
+  // 7 (For own use). Same gate as inbound — only above ₹50k.
+  const returnEwbNo = returnChallan.consignor.stateCode && returnChallan.consignee.stateCode
+    ? await maybeGenerateForHolding({
+        db,
+        service: ewayBillService,
+        holdingId,
+        leg: "return",
+        input: {
+          subject: { kind: "holding_return", holdingId },
+          docType: "CHL",
+          docNo: returnChallan.number,
+          docDate: formatNicDate(returnChallan.challanDate.toDate()),
+          totalValuePaise: holding.displayPricePaise,
+          from: {
+            gstin: returnChallan.consignor.gstin ?? "",
+            tradeName: returnChallan.consignor.legalName,
+            addressLine1: returnChallan.consignor.addressLine1,
+            addressLine2: returnChallan.consignor.addressLine2,
+            place: returnChallan.consignor.city,
+            pincode: Number(returnChallan.consignor.pincode) || 0,
+            stateCode: returnChallan.consignor.stateCode,
+          },
+          to: {
+            gstin: returnChallan.consignee.gstin ?? "",
+            tradeName: returnChallan.consignee.legalName,
+            addressLine1: returnChallan.consignee.addressLine1,
+            addressLine2: returnChallan.consignee.addressLine2,
+            place: returnChallan.consignee.city,
+            pincode: Number(returnChallan.consignee.pincode) || 0,
+            stateCode: returnChallan.consignee.stateCode,
+          },
+          transportDistanceKm: 100,
+          item: {
+            description: artwork.title,
+            hsnCode: "9701",
+            gstRatePercent: 12,
+          },
+          initiatedBy: null,
+        },
+      })
+    : null;
 
   // Keyed `return-<holdingId>` so the webhook controller can distinguish
   // it from the inbound and advance the return-specific state field on
@@ -575,6 +693,7 @@ export async function bookReturnShipment(db: Db, holdingId: string): Promise<voi
     artworkTitle: artwork.title,
     valueInr: Math.max(1, Math.round(holding.displayPricePaise / 100)),
     ...(returnChallanUrlStr ? { invoiceUrl: returnChallanUrlStr } : {}),
+    ...(returnEwbNo ? { ewayBillNo: returnEwbNo } : {}),
   });
 
   await db.collection(Collections.aggregatorHoldings).doc(holdingId).set(

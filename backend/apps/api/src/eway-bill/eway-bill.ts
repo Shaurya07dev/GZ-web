@@ -1,8 +1,5 @@
 // EwayBillService — adapter for the Masters India / WhiteBooks GSP
-// e-way bill API (NIC v1.03 shape). Scaffold only — the public methods
-// below are stubs that throw EwayBillError("config:disabled") when the
-// env is not configured, so wiring in the Shiprocket booking paths can
-// land safely before sandbox credentials are live.
+// e-way bill API (NIC v1.03 shape).
 //
 // Live endpoints we target (base URL in env.ewayBill.baseUrl):
 //   GET  /ewaybillapi/v1.03/authenticate
@@ -20,13 +17,19 @@
 //   gstin: the registered GSTIN this session authenticated as
 // plus an `email=` query param on every URL.
 //
-// See the Postman collection in /tmp/ewb/ (unzipped from the Resources
-// download in the WhiteBooks dashboard) for full request/response
-// shapes.
+// All call attempts (success + failure) write an ewayBillEvents audit
+// row so the admin console can see history + retry/cancel failed bills.
 
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Timestamp } from "firebase-admin/firestore";
 import type { AppEnv } from "@galleryzone/config";
-import { ENV } from "../db.module.ts";
+import {
+  Collections,
+  type Db,
+  type EwayBillEventDoc,
+  type EwayBillSessionDoc,
+} from "@galleryzone/db";
+import { DB, ENV } from "../db.module.ts";
 
 // Re-export the pure helpers so callers can import { EwayBillError }
 // from this file without reaching into eway-bill-helpers.
@@ -41,50 +44,43 @@ export {
   RESPONSE_SNIPPET_MAX,
 } from "./eway-bill-helpers.ts";
 import {
+  clampSnippet,
   EwayBillError as EwayBillErrorInternal,
+  isNicSuccess,
+  parseNicError,
+  redactForAudit,
+  stateNumericCode,
 } from "./eway-bill-helpers.ts";
 
-/** Minimum information callers hand us to generate an e-way bill. The
- *  service enriches this with the registered-GSTIN block, numeric
- *  state codes, HSN defaults, etc. before calling NIC. */
+/** NIC session lives 6h server-side. We re-auth 15 minutes early so a
+ *  call doesn't land mid-rotation. */
+const SESSION_TTL_MS = (6 * 60 - 15) * 60 * 1000;
+
+/** The source-IP we claim to the WhiteBooks `ip_address` header. NIC
+ *  uses it for audit logging, not whitelisting (sandbox accepts
+ *  anything). In production the account can be IP-whitelisted; the
+ *  Railway egress is stable per service. */
+const DEFAULT_IP_HEADER = "0.0.0.0";
+
+/** Minimum information callers hand us to generate an e-way bill. */
 export interface GenerateEwayBillInput {
-  /** What we're moving. "order_shipment" = marketplace sale, "holding_
-   *  inbound" = artist→aggregator, "holding_return" = aggregator→artist. */
   subject:
     | { kind: "order_shipment"; orderId: string }
     | { kind: "holding_inbound"; holdingId: string }
     | { kind: "holding_return"; holdingId: string };
-  /** Which doc travels with the consignment. "INV" for marketplace
-   *  sales, "CHL" for non-sale legs. Must match what we hand Shiprocket. */
   docType: "INV" | "CHL";
-  /** The doc number printed on the PDF (e.g. "GZ/26-27/000142" for
-   *  tax invoices, "GZ/DC/26-27/000042" for challans). */
   docNo: string;
-  /** Doc date in dd/mm/yyyy (NIC format). */
+  /** dd/mm/yyyy. */
   docDate: string;
-  /** Pre-tax consignment value, paise. The service gate checks this
-   *  against EWB_VALUE_THRESHOLD_PAISE before calling NIC — callers can
-   *  blindly request a bill and we'll no-op below ₹50,000. */
   totalValuePaise: number;
-  /** FROM party (consignor). */
   from: EwayBillParty;
-  /** TO party (consignee). */
   to: EwayBillParty;
-  /** Approximate transport distance in km. NIC uses it to compute the
-   *  validity window (1 day per 200 km). Shiprocket's quote carries
-   *  this; callers should pass it through. */
   transportDistanceKm: number;
-  /** The one artwork line. Multiple-item e-way bills are allowed by
-   *  NIC but we only ever ship one artwork per leg. */
   item: {
     description: string;
-    /** HSN — 9701 for paintings, 9703 for sculpture, 9702 for prints. */
     hsnCode: string;
-    /** Rate as integer percent, e.g. 12. */
     gstRatePercent: 0 | 5 | 12 | 18 | 28;
   };
-  /** Admin uid that initiated the generate, or null when fired
-   *  automatically from a Shiprocket booking path. */
   initiatedBy: string | null;
 }
 
@@ -95,24 +91,71 @@ export interface EwayBillParty {
   addressLine2: string | null;
   place: string;
   pincode: number;
-  /** Two-letter postal code ("TS", "KA"). The service converts to
-   *  NIC's numeric code (36, 29) at request time. */
+  /** Two-letter postal code ("TS", "KA"). */
   stateCode: string;
 }
 
 export interface GenerateEwayBillResult {
   ewbNo: string;
   generatedAt: string;
-  /** NIC's validity format is "dd/mm/yyyy HH:MM". We parse to Date at
-   *  snapshot time in the stamping layer. */
   validUntil: string;
+}
+
+/** Shape of the NIC POST body we build. Faithful to the Postman
+ *  collection — field names are NIC's, not ours. */
+interface NicGenerateBody {
+  supplyType: "O" | "I";
+  subSupplyType: string;
+  docType: "INV" | "CHL";
+  docNo: string;
+  docDate: string;
+  fromGstin: string;
+  fromTrdName: string;
+  fromAddr1: string;
+  fromAddr2: string;
+  fromPlace: string;
+  fromPincode: number;
+  fromStateCode: number;
+  actFromStateCode: number;
+  toGstin: string;
+  toTrdName: string;
+  toAddr1: string;
+  toAddr2: string;
+  toPlace: string;
+  toPincode: number;
+  toStateCode: number;
+  actToStateCode: number;
+  transactionType: 1 | 2 | 3 | 4;
+  totalValue: number;
+  cgstValue: number;
+  sgstValue: number;
+  igstValue: number;
+  cessValue: number;
+  totInvValue: number;
+  transMode: "1";
+  transDistance: string;
+  itemList: Array<{
+    productName: string;
+    productDesc: string;
+    hsnCode: number;
+    quantity: number;
+    qtyUnit: string;
+    taxableAmount: number;
+    cgstRate: number;
+    sgstRate: number;
+    igstRate: number;
+    cessRate: number;
+  }>;
 }
 
 @Injectable()
 export class EwayBillService {
   private readonly logger = new Logger(EwayBillService.name);
 
-  constructor(@Inject(ENV) private readonly env: AppEnv) {
+  constructor(
+    @Inject(DB) private readonly db: Db,
+    @Inject(ENV) private readonly env: AppEnv,
+  ) {
     if (this.enabled) {
       this.logger.log(
         `e-way bill service enabled (mode=${env.ewayBill!.mode}, gstin=${env.ewayBill!.gstin})`,
@@ -124,91 +167,484 @@ export class EwayBillService {
     }
   }
 
-  /** True iff every env var is set AND the provider is "masters_india". */
   get enabled(): boolean {
     return this.env.ewayBill !== null;
   }
 
-  /** Human-readable "why am I disabled" message the controller can
-   *  surface. Returns null when enabled. */
   get disabledReason(): string | null {
     if (this.enabled) return null;
-    if (!this.env.ewayBill)
-      return "e-way bill generation is disabled (EWAYBILL_PROVIDER / EWAYBILL_* env vars incomplete)";
-    return null;
+    return "e-way bill generation is disabled (EWAYBILL_PROVIDER / EWAYBILL_* env vars incomplete)";
   }
 
-  // ─── Scaffold stubs — bodies land in a follow-up commit ───────────
+  // ─── Public API ────────────────────────────────────────────────────
 
-  /**
-   * Generate an e-way bill for a shipment. Returns the bill number +
-   * validity + the raw NIC response for audit storage upstream.
-   *
-   * Short-circuits BELOW the ₹50,000 threshold: logs and returns null
-   * so callers can treat "no bill needed" as a success path.
-   *
-   * Throws EwayBillError on API failure — never on "not applicable".
-   */
-  async generate(
-    _input: GenerateEwayBillInput,
-  ): Promise<GenerateEwayBillResult | null> {
+  async generate(input: GenerateEwayBillInput): Promise<GenerateEwayBillResult> {
+    this.assertEnabled();
+    const cfg = this.env.ewayBill!;
+
+    const fromState = stateNumericCode(input.from.stateCode);
+    const toState = stateNumericCode(input.to.stateCode);
+    if (fromState === null) {
+      throw new EwayBillErrorInternal(
+        `From state "${input.from.stateCode}" is not an Indian state/UT`,
+        "config:bad_from_state",
+      );
+    }
+    if (toState === null) {
+      throw new EwayBillErrorInternal(
+        `To state "${input.to.stateCode}" is not an Indian state/UT`,
+        "config:bad_to_state",
+      );
+    }
+
+    // GST on art is 12% (HSN 9701). Intra-state splits into CGST+SGST;
+    // inter-state is one IGST amount. NIC wants both the per-item rate
+    // AND the top-level total — we send consistent values.
+    const taxable = Math.round(input.totalValuePaise / 100);
+    const rate = input.item.gstRatePercent / 100;
+    const gstAmount = Math.round(taxable * rate);
+    const intraState = fromState === toState;
+    const cgst = intraState ? Math.floor(gstAmount / 2) : 0;
+    const sgst = intraState ? gstAmount - cgst : 0;
+    const igst = intraState ? 0 : gstAmount;
+    const totInvValue = taxable + gstAmount;
+
+    const body: NicGenerateBody = {
+      supplyType: "O",
+      // "6" = Exhibition or fairs (non-sale display legs).
+      // "1" = Supply (ordinary sale, marketplace shipment).
+      // "7" = For own use (return of unsold piece).
+      subSupplyType:
+        input.subject.kind === "order_shipment"
+          ? "1"
+          : input.subject.kind === "holding_return"
+            ? "7"
+            : "6",
+      docType: input.docType,
+      docNo: input.docNo,
+      docDate: input.docDate,
+      fromGstin: input.from.gstin || "URP", // NIC's code for unregistered
+      fromTrdName: input.from.tradeName,
+      fromAddr1: input.from.addressLine1.slice(0, 120),
+      fromAddr2: (input.from.addressLine2 ?? "").slice(0, 120),
+      fromPlace: input.from.place.slice(0, 50),
+      fromPincode: input.from.pincode,
+      fromStateCode: fromState,
+      actFromStateCode: fromState,
+      toGstin: input.to.gstin || "URP",
+      toTrdName: input.to.tradeName,
+      toAddr1: input.to.addressLine1.slice(0, 120),
+      toAddr2: (input.to.addressLine2 ?? "").slice(0, 120),
+      toPlace: input.to.place.slice(0, 50),
+      toPincode: input.to.pincode,
+      toStateCode: toState,
+      actToStateCode: toState,
+      // 1 = Regular (consignor + consignee at same party addresses as from/to).
+      transactionType: 1,
+      totalValue: taxable,
+      cgstValue: cgst,
+      sgstValue: sgst,
+      igstValue: igst,
+      cessValue: 0,
+      totInvValue,
+      transMode: "1", // Road
+      transDistance: String(Math.max(1, Math.round(input.transportDistanceKm))),
+      itemList: [
+        {
+          productName: input.item.description.slice(0, 100),
+          productDesc: input.item.description.slice(0, 100),
+          hsnCode: Number(input.item.hsnCode),
+          quantity: 1,
+          qtyUnit: "PCS",
+          taxableAmount: taxable,
+          cgstRate: intraState ? input.item.gstRatePercent / 2 : 0,
+          sgstRate: intraState ? input.item.gstRatePercent / 2 : 0,
+          igstRate: intraState ? 0 : input.item.gstRatePercent,
+          cessRate: 0,
+        },
+      ],
+    };
+
+    const url = this.urlFor("/ewaybillapi/v1.03/ewayapi/genewaybill");
+    const started = new Date();
+    let httpStatus = 0;
+    let responseText = "";
+    let parsed: unknown = null;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { ...this.commonHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      httpStatus = res.status;
+      responseText = await res.text();
+      try {
+        parsed = JSON.parse(responseText);
+      } catch {
+        parsed = null;
+      }
+    } catch (err) {
+      await this.writeAudit({
+        subject: input.subject,
+        endpoint: "genewaybill",
+        action: "generate",
+        requestAt: started,
+        initiatedBy: input.initiatedBy,
+        httpStatus,
+        statusCd: null,
+        ewbNo: null,
+        generatedAt: null,
+        validUntil: null,
+        errorCode: "transport:fetch_failed",
+        errorMessage: String(err),
+        requestSummary: redactForAudit(body as unknown as Record<string, unknown>),
+        responseSnippet: "",
+      });
+      throw new EwayBillErrorInternal(
+        `e-way bill API unreachable: ${String(err)}`,
+        "transport:fetch_failed",
+      );
+    }
+
+    if (!isNicSuccess(parsed)) {
+      const err = parseNicError(parsed);
+      await this.writeAudit({
+        subject: input.subject,
+        endpoint: "genewaybill",
+        action: "generate",
+        requestAt: started,
+        initiatedBy: input.initiatedBy,
+        httpStatus,
+        statusCd: err.nicStatusCd || null,
+        ewbNo: null,
+        generatedAt: null,
+        validUntil: null,
+        errorCode: err.code,
+        errorMessage: err.message,
+        requestSummary: redactForAudit(body as unknown as Record<string, unknown>),
+        responseSnippet: clampSnippet(responseText),
+      });
+      throw new EwayBillErrorInternal(err.message, err.code, {
+        httpStatus,
+        nicStatusCd: err.nicStatusCd,
+      });
+    }
+
+    const data = (parsed as { data?: { ewayBillNo?: unknown; ewayBillDate?: unknown; validUpto?: unknown } }).data ?? {};
+    const ewbNo = data.ewayBillNo === undefined || data.ewayBillNo === null ? "" : String(data.ewayBillNo);
+    const generatedAtStr = typeof data.ewayBillDate === "string" ? data.ewayBillDate : "";
+    const validUntilStr = typeof data.validUpto === "string" ? data.validUpto : "";
+    if (!ewbNo || !generatedAtStr || !validUntilStr) {
+      await this.writeAudit({
+        subject: input.subject,
+        endpoint: "genewaybill",
+        action: "generate",
+        requestAt: started,
+        initiatedBy: input.initiatedBy,
+        httpStatus,
+        statusCd: "1",
+        ewbNo: null,
+        generatedAt: null,
+        validUntil: null,
+        errorCode: "parse:missing_data",
+        errorMessage: "NIC success response missing ewayBillNo / ewayBillDate / validUpto",
+        requestSummary: redactForAudit(body as unknown as Record<string, unknown>),
+        responseSnippet: clampSnippet(responseText),
+      });
+      throw new EwayBillErrorInternal(
+        "NIC success response missing expected fields",
+        "parse:missing_data",
+        { httpStatus, nicStatusCd: "1" },
+      );
+    }
+
+    await this.writeAudit({
+      subject: input.subject,
+      endpoint: "genewaybill",
+      action: "generate",
+      requestAt: started,
+      initiatedBy: input.initiatedBy,
+      httpStatus,
+      statusCd: "1",
+      ewbNo,
+      generatedAt: generatedAtStr,
+      validUntil: validUntilStr,
+      errorCode: null,
+      errorMessage: null,
+      requestSummary: redactForAudit(body as unknown as Record<string, unknown>),
+      responseSnippet: clampSnippet(responseText),
+    });
+    return { ewbNo, generatedAt: generatedAtStr, validUntil: validUntilStr };
+  }
+
+  async cancel(input: {
+    ewbNo: string;
+    reasonCode: 1 | 2 | 3 | 4;
+    remarks: string;
+    initiatedBy: string;
+  }): Promise<void> {
+    this.assertEnabled();
+    const body = {
+      ewbNo: Number(input.ewbNo),
+      cancelRsnCode: input.reasonCode,
+      cancelRmrk: input.remarks.slice(0, 100),
+    };
+    const url = this.urlFor("/ewaybillapi/v1.03/ewayapi/canewb");
+    await this.callAndAudit({
+      url,
+      method: "POST",
+      bodyJson: body,
+      endpoint: "canewb",
+      action: "cancel",
+      initiatedBy: input.initiatedBy,
+      // No subject — cancel is addressed by ewbNo, not internal doc.
+      subjectRef: { kind: "ewb_only", ewbNo: input.ewbNo },
+    });
+  }
+
+  async extendValidity(input: {
+    ewbNo: string;
+    remainingDistanceKm: number;
+    reasonCode: number;
+    remarks: string;
+    initiatedBy: string;
+    // "1" = In movement, "2" = In transit (parked somewhere).
+    consignmentStatus: "1" | "2";
+    from: { place: string; pincode: number; stateCode: string };
+  }): Promise<GenerateEwayBillResult> {
+    this.assertEnabled();
+    const fromState = stateNumericCode(input.from.stateCode);
+    if (fromState === null) {
+      throw new EwayBillErrorInternal(
+        `Extend: from state "${input.from.stateCode}" is not an Indian state/UT`,
+        "config:bad_from_state",
+      );
+    }
+    const body = {
+      ewbNo: Number(input.ewbNo),
+      extnRsnCode: input.reasonCode,
+      extnRemarks: input.remarks.slice(0, 100),
+      fromPlace: input.from.place,
+      fromPincode: input.from.pincode,
+      fromState: fromState,
+      remainingDistance: Math.max(1, Math.round(input.remainingDistanceKm)),
+      // "R" = In Movement, continues by road.
+      transMode: "1",
+      consignmentStatus: input.consignmentStatus,
+      transitType: "R",
+    };
+    const url = this.urlFor("/ewaybillapi/v1.03/ewayapi/extendvalidity");
+    const result = await this.callAndAudit({
+      url,
+      method: "POST",
+      bodyJson: body,
+      endpoint: "extendvalidity",
+      action: "extend",
+      initiatedBy: input.initiatedBy,
+      subjectRef: { kind: "ewb_only", ewbNo: input.ewbNo },
+    });
+    const data = (result.parsed as { data?: { ewayBillNo?: unknown; ewayBillDate?: unknown; validUpto?: unknown } }).data ?? {};
+    return {
+      ewbNo: String(data.ewayBillNo ?? input.ewbNo),
+      generatedAt: typeof data.ewayBillDate === "string" ? data.ewayBillDate : "",
+      validUntil: typeof data.validUpto === "string" ? data.validUpto : "",
+    };
+  }
+
+  // ─── Session management ────────────────────────────────────────────
+
+  /** Warm-up authentication. WhiteBooks keeps the session server-side,
+   *  so we only need to re-authenticate every ~6h. Session doc id =
+   *  `${gstin}:${mode}` to keep sandbox + production separate. */
+  async authenticate(): Promise<void> {
+    this.assertEnabled();
+    const cfg = this.env.ewayBill!;
+    const sessionId = `${cfg.gstin}:${cfg.mode}`;
+    const ref = this.db
+      .collection(Collections.ewayBillSessions)
+      .doc(sessionId);
+    const existing = await ref.get();
+    const now = Date.now();
+    const currentExpiry = (existing.data() as EwayBillSessionDoc | undefined)?.expiresAt?.toMillis() ?? 0;
+    if (currentExpiry > now) return; // still fresh
+
+    const url =
+      this.urlFor("/ewaybillapi/v1.03/authenticate") +
+      `&username=${encodeURIComponent(cfg.gstinUsername)}&password=${encodeURIComponent(cfg.gstinPassword)}`;
+    const res = await fetch(url, { method: "GET", headers: this.commonHeaders() });
+    const text = await res.text();
+    let body: unknown = null;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = null;
+    }
+    if (!isNicSuccess(body)) {
+      const err = parseNicError(body);
+      throw new EwayBillErrorInternal(
+        `e-way bill authenticate failed: ${err.message}`,
+        err.code || "auth:refused",
+        { httpStatus: res.status, nicStatusCd: err.nicStatusCd },
+      );
+    }
+    const doc: EwayBillSessionDoc = {
+      gstin: cfg.gstin,
+      mode: cfg.mode,
+      authenticatedAt: Timestamp.fromMillis(now),
+      expiresAt: Timestamp.fromMillis(now + SESSION_TTL_MS),
+    };
+    await ref.set(doc);
+  }
+
+  // ─── Internals ─────────────────────────────────────────────────────
+
+  private assertEnabled(): void {
     if (!this.enabled) {
       throw new EwayBillErrorInternal(
         this.disabledReason ?? "e-way bill service disabled",
         "config:disabled",
       );
     }
-    // Scaffold — real implementation lands in task #222. Throws so
-    // anyone wiring generate() prematurely finds out in sandbox.
-    throw new EwayBillErrorInternal(
-      "EwayBillService.generate not yet implemented — scaffold only",
-      "config:unimplemented",
-    );
   }
 
-  /** Cancel a generated bill within 24h. NIC accepts reason codes 1-4:
-   *   1 = Duplicate, 2 = Order cancelled, 3 = Data entry mistake,
-   *   4 = Others (requires remarks). */
-  async cancel(
-    _input: {
-      ewbNo: string;
-      reasonCode: 1 | 2 | 3 | 4;
-      remarks: string;
-      initiatedBy: string;
-    },
-  ): Promise<void> {
-    if (!this.enabled) {
-      throw new EwayBillErrorInternal(
-        this.disabledReason ?? "e-way bill service disabled",
-        "config:disabled",
-      );
-    }
-    throw new EwayBillErrorInternal(
-      "EwayBillService.cancel not yet implemented — scaffold only",
-      "config:unimplemented",
-    );
+  private urlFor(path: string): string {
+    const cfg = this.env.ewayBill!;
+    const email = encodeURIComponent(cfg.accountEmail);
+    return `${cfg.baseUrl}${path}?email=${email}`;
   }
 
-  /** Extend the validity of an existing bill (parcel stuck in transit).
-   *  NIC requires remaining distance + reason + current vehicle info. */
-  async extendValidity(
-    _input: {
-      ewbNo: string;
-      remainingDistanceKm: number;
-      reasonCode: number;
-      remarks: string;
-      initiatedBy: string;
-    },
-  ): Promise<GenerateEwayBillResult> {
-    if (!this.enabled) {
+  private commonHeaders(): Record<string, string> {
+    const cfg = this.env.ewayBill!;
+    return {
+      ip_address: DEFAULT_IP_HEADER,
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      gstin: cfg.gstin,
+      Accept: "application/json",
+    };
+  }
+
+  /** Shared wrapper for cancel + extend. Keeps the audit + error
+   *  handling consistent with generate() without duplicating all the
+   *  branches above (which has its own shape — the ewbNo is in the
+   *  request, not derived from a subject). */
+  private async callAndAudit(args: {
+    url: string;
+    method: "POST" | "GET";
+    bodyJson: unknown;
+    endpoint: string;
+    action: EwayBillEventDoc["action"];
+    initiatedBy: string | null;
+    subjectRef: { kind: "ewb_only"; ewbNo: string };
+  }): Promise<{ parsed: unknown; statusCd: string }> {
+    const started = new Date();
+    let httpStatus = 0;
+    let responseText = "";
+    let parsed: unknown = null;
+    const bodyAudit =
+      args.bodyJson && typeof args.bodyJson === "object"
+        ? redactForAudit(args.bodyJson as Record<string, unknown>)
+        : {};
+    // These actions don't tie to a single internal subject the audit
+    // table understands — write a placeholder subject that still lets
+    // admin UI filter by ewbNo. We use order_shipment with orderId =
+    // "ewb:<ewbNo>" so the field stays discriminable.
+    const subject: EwayBillEventDoc["subject"] = {
+      kind: "order_shipment",
+      orderId: `ewb:${args.subjectRef.ewbNo}`,
+    };
+    try {
+      const init: RequestInit = {
+        method: args.method,
+        headers:
+          args.method === "POST"
+            ? { ...this.commonHeaders(), "Content-Type": "application/json" }
+            : this.commonHeaders(),
+      };
+      if (args.method === "POST") init.body = JSON.stringify(args.bodyJson);
+      const res = await fetch(args.url, init);
+      httpStatus = res.status;
+      responseText = await res.text();
+      try {
+        parsed = JSON.parse(responseText);
+      } catch {
+        parsed = null;
+      }
+    } catch (err) {
+      await this.writeAudit({
+        subject,
+        endpoint: args.endpoint,
+        action: args.action,
+        requestAt: started,
+        initiatedBy: args.initiatedBy,
+        httpStatus,
+        statusCd: null,
+        ewbNo: args.subjectRef.ewbNo,
+        generatedAt: null,
+        validUntil: null,
+        errorCode: "transport:fetch_failed",
+        errorMessage: String(err),
+        requestSummary: bodyAudit,
+        responseSnippet: "",
+      });
       throw new EwayBillErrorInternal(
-        this.disabledReason ?? "e-way bill service disabled",
-        "config:disabled",
+        `e-way bill API unreachable: ${String(err)}`,
+        "transport:fetch_failed",
       );
     }
-    throw new EwayBillErrorInternal(
-      "EwayBillService.extendValidity not yet implemented — scaffold only",
-      "config:unimplemented",
-    );
+    if (!isNicSuccess(parsed)) {
+      const err = parseNicError(parsed);
+      await this.writeAudit({
+        subject,
+        endpoint: args.endpoint,
+        action: args.action,
+        requestAt: started,
+        initiatedBy: args.initiatedBy,
+        httpStatus,
+        statusCd: err.nicStatusCd || null,
+        ewbNo: args.subjectRef.ewbNo,
+        generatedAt: null,
+        validUntil: null,
+        errorCode: err.code,
+        errorMessage: err.message,
+        requestSummary: bodyAudit,
+        responseSnippet: clampSnippet(responseText),
+      });
+      throw new EwayBillErrorInternal(err.message, err.code, {
+        httpStatus,
+        nicStatusCd: err.nicStatusCd,
+      });
+    }
+    await this.writeAudit({
+      subject,
+      endpoint: args.endpoint,
+      action: args.action,
+      requestAt: started,
+      initiatedBy: args.initiatedBy,
+      httpStatus,
+      statusCd: "1",
+      ewbNo: args.subjectRef.ewbNo,
+      generatedAt: null,
+      validUntil: null,
+      errorCode: null,
+      errorMessage: null,
+      requestSummary: bodyAudit,
+      responseSnippet: clampSnippet(responseText),
+    });
+    return { parsed, statusCd: "1" };
+  }
+
+  private async writeAudit(ev: Omit<EwayBillEventDoc, "requestAt"> & { requestAt: Date }): Promise<void> {
+    try {
+      const doc: EwayBillEventDoc = {
+        ...ev,
+        requestAt: Timestamp.fromDate(ev.requestAt),
+      };
+      await this.db.collection(Collections.ewayBillEvents).add(doc);
+    } catch (err) {
+      // Audit failure must never block the call it's auditing. Logged
+      // so a disappeared audit trail is noticed in Sentry.
+      this.logger.error(`audit write failed: ${String(err)}`);
+    }
   }
 }

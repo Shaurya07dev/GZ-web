@@ -43,6 +43,7 @@ import { DB } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { bookInboundShipment, bookOutboundAggregatorSaleShipment, bookReturnShipment } from "./shiprocket-booking.ts";
+import { EwayBillService } from "./eway-bill/eway-bill.ts";
 
 const notFound = () => new NotFoundException({ type: "about:blank", title: "Not found", status: 404, code: "not_found" });
 
@@ -61,6 +62,7 @@ export class AggregatorController {
     @Inject(DB) private readonly db: Db,
     private readonly cache: ReadCache,
     private readonly emails: Emails,
+    private readonly ewayBill: EwayBillService,
   ) {}
 
   private rates() {
@@ -128,7 +130,7 @@ export class AggregatorController {
       // handoff email to the artist (with prep checklist) and the
       // aggregator (receive checklist). Email failure is logged but not
       // propagated — the shipment leg already left.
-      void bookInboundShipment(this.db, result.holdingId, body.artworkId, req.authUser.uid)
+      void bookInboundShipment(this.db, result.holdingId, body.artworkId, req.authUser.uid, this.ewayBill)
         .then(() =>
           this.emails
             .consignmentDispatched({ holdingId: result.holdingId })
@@ -171,7 +173,7 @@ export class AggregatorController {
       // Previously the piece was marked "returned" in the DB but nobody
       // actually picked it up — the aggregator was left to arrange
       // courier off-platform. 9 Nov 2026.
-      void bookReturnShipment(this.db, id).catch((error) => {
+      void bookReturnShipment(this.db, id, this.ewayBill).catch((error) => {
         console.error(JSON.stringify({ event: "shiprocket.return.failed", holdingId: id, error: String(error) }));
       });
       return getAggregatorHolding(this.db, req.authUser.uid, id);

@@ -40,6 +40,7 @@ import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Razorpay } from "./payments/razorpay.ts";
 import { bookInboundShipment } from "./shiprocket-booking.ts";
 import { Emails } from "./mail/emails.ts";
+import { EwayBillService } from "./eway-bill/eway-bill.ts";
 
 // The response shape mirrors what openRazorpayCheckout() on the frontend
 // expects, so the client hands it straight to Checkout.js. Shape is inferred
@@ -56,6 +57,7 @@ export class AggregatorReservationIntentsController {
     @Inject(ENV) private readonly env: AppEnv,
     private readonly razorpay: Razorpay,
     private readonly emails: Emails,
+    private readonly ewayBill: EwayBillService,
   ) {}
 
   @Roles("aggregator")
@@ -230,7 +232,7 @@ export class AggregatorReservationIntentsController {
       // the webhook writes the AWB onto the holding when it comes back.
       // Chain the consignment handoff email so the artist + aggregator
       // both get the delivery challan PDF the moment the courier is booked.
-      void bookInboundShipment(this.db, outcome.holdingId, artworkId, aggregatorId)
+      void bookInboundShipment(this.db, outcome.holdingId, artworkId, aggregatorId, this.ewayBill)
         .then(() =>
           this.emails
             .consignmentDispatched({ holdingId: outcome.holdingId })
