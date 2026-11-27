@@ -65,12 +65,25 @@ export async function reserveHolding({
   aggregatorId,
   artworkId,
   sellingPricePaise,
+  getDeliveryQuote,
 }: {
   db: Firestore;
   aggregatorId: string;
   artworkId: string;
   /** The price before GST the aggregator chooses. Month 1 only; omitted means GalleryZone's offer. */
   sellingPricePaise?: number | undefined;
+  /** Live Shiprocket quote for the artist→aggregator leg. Returns paise.
+   *  Null = quote unavailable → fall back to rates.deliveryChargePaise.
+   *  Threading the same callback used by computeOffer(): the amount
+   *  shown on the reserve page and the amount charged at Razorpay must
+   *  agree, which only works if both paths call the same quote fn. */
+  getDeliveryQuote?: (input: {
+    artworkId: string;
+    aggregatorId: string;
+    artistId: string;
+    artworkWeightKg: number;
+    declaredValueInr: number;
+  }) => Promise<number | null>;
 }): Promise<ReserveHoldingResult> {
   const pricingSnap = await db.collection(artworkPricingCol(artworkId)).doc("data").get();
   if (!pricingSnap.exists) throw new AggregatorFlowError(`No artwork ${artworkId}`);
@@ -114,7 +127,31 @@ export async function reserveHolding({
   const appreciated = month === 1 && chosenPricePaise > offerPricePaise;
   const priceWarning = month === 1 && isPriceWarning(chosenPricePaise, offerPricePaise, rates);
   const displayPricePaise = withGst(chosenPricePaise, rates);
-  const advance = aggregatorAdvanceForMonth({ month, sellingPrice: chosenPricePaise, artistPrice: pricing.artistPricePaise, rates });
+
+  // Live delivery quote if the caller supplied one, else rate-config
+  // fallback. Keeping the quote lookup outside the pricing calc keeps
+  // the domain function pure.
+  let liveDeliveryPaise: number | null = null;
+  if (getDeliveryQuote && artwork?.artistId) {
+    try {
+      liveDeliveryPaise = await getDeliveryQuote({
+        artworkId,
+        aggregatorId,
+        artistId: artwork.artistId,
+        artworkWeightKg: artwork.physical?.weightKg ?? 2,
+        declaredValueInr: Math.max(1, Math.round(chosenPricePaise / 100)),
+      });
+    } catch {
+      liveDeliveryPaise = null;
+    }
+  }
+  const advance = aggregatorAdvanceForMonth({
+    month,
+    sellingPrice: chosenPricePaise,
+    artistPrice: pricing.artistPricePaise,
+    rates,
+    ...(liveDeliveryPaise !== null ? { deliveryCharge: liveDeliveryPaise } : {}),
+  });
   const window = placementWindow({ cycleStartedAt, assignedAt: now, rates });
 
   const holdingRef = db.collection(Collections.aggregatorHoldings).doc();

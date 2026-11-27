@@ -39,8 +39,10 @@ import { DB, ENV } from "./db.module.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { Razorpay } from "./payments/razorpay.ts";
 import { bookInboundShipment } from "./shiprocket-booking.ts";
+import { getShippingRate } from "./shiprocket.ts";
 import { Emails } from "./mail/emails.ts";
 import { EwayBillService } from "./eway-bill/eway-bill.ts";
+import type { ProfileDoc } from "@galleryzone/db";
 
 // The response shape mirrors what openRazorpayCheckout() on the frontend
 // expects, so the client hands it straight to Checkout.js. Shape is inferred
@@ -60,6 +62,40 @@ export class AggregatorReservationIntentsController {
     private readonly ewayBill: EwayBillService,
   ) {}
 
+  /**
+   * Live Shiprocket serviceability quote for the artist → aggregator
+   * leg. Returns null when either pincode is missing or Shiprocket
+   * refuses the pair. Duplicated with AggregatorController — small
+   * enough that a shared helper would just push an extra dependency
+   * through both constructors.
+   */
+  private deliveryQuoteFor(aggregatorId: string) {
+    return async (input: {
+      artworkId: string;
+      aggregatorId: string;
+      artistId: string;
+      artworkWeightKg: number;
+      declaredValueInr: number;
+    }): Promise<number | null> => {
+      const [aggSnap, artistSnap] = await Promise.all([
+        this.db.collection(`users/${aggregatorId}/profile`).doc("data").get(),
+        this.db.collection(`users/${input.artistId}/profile`).doc("data").get(),
+      ]);
+      const aggProfile = aggSnap.data() as ProfileDoc | undefined;
+      const artistProfile = artistSnap.data() as ProfileDoc | undefined;
+      const pickup = artistProfile?.pickupPincode?.trim();
+      const drop = aggProfile?.pickupPincode?.trim();
+      if (!pickup || !drop) return null;
+      const quote = await getShippingRate({
+        pickupPincode: pickup,
+        dropPincode: drop,
+        weightKg: input.artworkWeightKg,
+        valueInr: input.declaredValueInr,
+      });
+      return quote ? quote.ratePaise : null;
+    };
+  }
+
   @Roles("aggregator")
   @Post()
   async create(
@@ -78,12 +114,22 @@ export class AggregatorReservationIntentsController {
 
     let created;
     try {
-      created = await createReservationIntent(this.db, {
-        aggregatorId: req.authUser.uid,
-        artworkId: body.artworkId,
-        sellingPricePaise: body.sellingPricePaise,
-        idempotencyKey: body.idempotencyKey,
-      });
+      created = await createReservationIntent(
+        this.db,
+        {
+          aggregatorId: req.authUser.uid,
+          artworkId: body.artworkId,
+          sellingPricePaise: body.sellingPricePaise,
+          idempotencyKey: body.idempotencyKey,
+        },
+        {
+          // Same live Shiprocket quote path AggregatorController uses on
+          // the reserve page — the Razorpay amount must match what the
+          // page displayed, which only works if both call the same
+          // function.
+          getDeliveryQuote: this.deliveryQuoteFor(req.authUser.uid),
+        },
+      );
     } catch (err) {
       if (err instanceof ReservationIntentError) {
         throw new BadRequestException({ type: "about:blank", title: err.message, status: 400, code: "reservation_rejected" });

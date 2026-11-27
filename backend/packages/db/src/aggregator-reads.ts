@@ -59,8 +59,31 @@ export async function holdingsFor(db: Firestore, artworkId: string): Promise<(Ag
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as AggregatorHoldingDoc) }));
 }
 
+/**
+ * Live delivery quote for an artwork heading to a specific aggregator.
+ * Returns paise. Null = quote unavailable (Shiprocket down / pincode
+ * unreachable); caller falls back to the rate-config flat default.
+ *
+ * Passed as a callback from the api layer so this db module stays free
+ * of HTTP clients. computeOffer uses it to replace the flat
+ * rates.deliveryChargePaise with a real courier quote based on
+ * artist pickup → aggregator drop + artwork weight.
+ */
+export type DeliveryQuoteFn = (input: {
+  artworkId: string;
+  aggregatorId: string;
+  artistId: string;
+  artworkWeightKg: number;
+  declaredValueInr: number;
+}) => Promise<number | null>;
+
 /** This month's terms for a piece — never exposes artistPricePaise itself. */
-export async function computeOffer(db: Firestore, artworkId: string, rates: PricingRates): Promise<AggregatorOffer | null> {
+export async function computeOffer(
+  db: Firestore,
+  artworkId: string,
+  rates: PricingRates,
+  opts: { aggregatorId?: string; getDeliveryQuote?: DeliveryQuoteFn } = {},
+): Promise<AggregatorOffer | null> {
   const pricing = (await db.collection(artworkPricingCol(artworkId)).doc("data").get()).data() as ArtworkPricingDoc | undefined;
   if (!pricing) return null;
   const prior = await holdingsFor(db, artworkId);
@@ -70,10 +93,38 @@ export async function computeOffer(db: Firestore, artworkId: string, rates: Pric
   const sellingPrice = aggregatorOfferPriceOf(pricing.artistPricePaise, month, rates, { appreciated: prior[0]?.appreciated ?? false });
   const offerPrice = withGst(sellingPrice, rates);
   const standardPrice = withGst(aggregatorOfferPriceOf(pricing.artistPricePaise, 1, rates), rates);
-  const advance = aggregatorAdvanceForMonth({ month, sellingPrice, artistPrice: pricing.artistPricePaise, rates });
   const window = placementWindow({ cycleStartedAt, assignedAt: now, rates });
   const listingEnd = new Date(cycleStartedAt.getTime() + rates.aggregatorListingDays * 86_400_000);
   const artwork = (await db.collection(Collections.artworks).doc(artworkId).get()).data() as ArtworkDoc | undefined;
+
+  // Live courier quote (preferred) — replaces the flat rates.deliveryChargePaise
+  // which was ₹25 in prod due to an old data-entry bug. If the quote
+  // callback isn't supplied OR the quote fails (Shiprocket unreachable,
+  // pincode not serviceable), fall back to the rate config so the UI
+  // still shows a number rather than refusing to load the offer.
+  let liveDeliveryPaise: number | null = null;
+  if (opts.getDeliveryQuote && opts.aggregatorId && artwork?.artistId) {
+    try {
+      liveDeliveryPaise = await opts.getDeliveryQuote({
+        artworkId,
+        aggregatorId: opts.aggregatorId,
+        artistId: artwork.artistId,
+        artworkWeightKg: artwork.physical?.weightKg ?? 2,
+        declaredValueInr: Math.max(1, Math.round(sellingPrice / 100)),
+      });
+    } catch {
+      liveDeliveryPaise = null;
+    }
+  }
+
+  const advance = aggregatorAdvanceForMonth({
+    month,
+    sellingPrice,
+    artistPrice: pricing.artistPricePaise,
+    rates,
+    ...(liveDeliveryPaise !== null ? { deliveryCharge: liveDeliveryPaise } : {}),
+  });
+
   return {
     artworkId,
     month,
@@ -104,7 +155,12 @@ export interface ReservableArtwork extends PublicArtworkView {
  * anyone, cycle not exhausted, and not one they have already held (a piece
  * moves on to a different aggregator).
  */
-export async function listAggregatorInventory(db: Firestore, rates: PricingRates, aggregatorId: string): Promise<ReservableArtwork[]> {
+export async function listAggregatorInventory(
+  db: Firestore,
+  rates: PricingRates,
+  aggregatorId: string,
+  opts: { getDeliveryQuote?: DeliveryQuoteFn } = {},
+): Promise<ReservableArtwork[]> {
   const snap = await db.collection(Collections.artworks).where("listing.status", "==", "marketplace").get();
   const candidates = snap.docs.filter((d) => AGGREGATOR_LISTING_TYPES.has((d.data() as ArtworkDoc).listingType));
   const out: ReservableArtwork[] = [];
@@ -113,7 +169,10 @@ export async function listAggregatorInventory(db: Firestore, rates: PricingRates
     if (holdings.some((h) => ACTIVE_HOLDING.has(h.status))) continue;
     if (holdings.some((h) => h.aggregatorId === aggregatorId)) continue;
     if (holdings.length >= rates.aggregatorCycleMonths) continue;
-    const [view, offer] = await Promise.all([getPublicArtwork(db, d.id), computeOffer(db, d.id, rates)]);
+    const [view, offer] = await Promise.all([
+      getPublicArtwork(db, d.id),
+      computeOffer(db, d.id, rates, { aggregatorId, ...(opts.getDeliveryQuote ? { getDeliveryQuote: opts.getDeliveryQuote } : {}) }),
+    ]);
     if (!view || !offer || offer.daysLeftInListing < rates.aggregatorPlacementDays) continue;
     out.push({ ...view, offer });
   }

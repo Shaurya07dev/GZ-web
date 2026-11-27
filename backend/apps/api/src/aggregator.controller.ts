@@ -13,6 +13,7 @@ import { BadRequestException, Body, Controller, ConflictException, ForbiddenExce
 import {
   AggregatorFlowError,
   AggregatorReadError,
+  Collections,
   FirestoreRateConfigStore,
   HoldingLifecycleError,
   getAggregatorHolding,
@@ -25,6 +26,7 @@ import {
   reserveHolding,
   returnHolding,
   type Db,
+  type ProfileDoc,
 } from "@galleryzone/db";
 import { loadActiveRates } from "@galleryzone/config";
 import { IllegalTransitionError } from "@galleryzone/domain";
@@ -43,6 +45,7 @@ import { DB } from "./db.module.ts";
 import { ReadCache } from "./read-cache.ts";
 import { ZodValidationPipe } from "./zod-validation.pipe.ts";
 import { bookInboundShipment, bookOutboundAggregatorSaleShipment, bookReturnShipment } from "./shiprocket-booking.ts";
+import { getShippingRate } from "./shiprocket.ts";
 import { EwayBillService } from "./eway-bill/eway-bill.ts";
 
 const notFound = () => new NotFoundException({ type: "about:blank", title: "Not found", status: 404, code: "not_found" });
@@ -69,10 +72,51 @@ export class AggregatorController {
     return loadActiveRates(new FirestoreRateConfigStore(this.db));
   }
 
+  /**
+   * Returns a callback that asks Shiprocket for a live artist→aggregator
+   * shipping quote (in paise). Reads the two profiles just-in-time and
+   * caches nothing — correct for the inventory browse where every
+   * artwork is a different artist, and fine for the reserve path too.
+   * Returns null when either pincode is missing or Shiprocket refuses
+   * the pair (unserviceable route) so callers fall through to the
+   * rate-config default. Shared by inventory listing + reservation so
+   * both show the same number.
+   */
+  private deliveryQuoteFor(aggregatorId: string) {
+    return async (input: {
+      artworkId: string;
+      aggregatorId: string;
+      artistId: string;
+      artworkWeightKg: number;
+      declaredValueInr: number;
+    }): Promise<number | null> => {
+      const [aggSnap, artistSnap] = await Promise.all([
+        this.db.collection(`users/${aggregatorId}/profile`).doc("data").get(),
+        this.db.collection(`users/${input.artistId}/profile`).doc("data").get(),
+      ]);
+      const aggProfile = aggSnap.data() as ProfileDoc | undefined;
+      const artistProfile = artistSnap.data() as ProfileDoc | undefined;
+      const pickup = artistProfile?.pickupPincode?.trim();
+      const drop = aggProfile?.pickupPincode?.trim();
+      if (!pickup || !drop) return null;
+      const quote = await getShippingRate({
+        pickupPincode: pickup,
+        dropPincode: drop,
+        weightKg: input.artworkWeightKg,
+        valueInr: input.declaredValueInr,
+      });
+      return quote ? quote.ratePaise : null;
+    };
+  }
+
   @Roles("aggregator")
   @Get("inventory")
   async inventory(@Req() req: AuthenticatedRequest) {
-    return { artworks: await listAggregatorInventory(this.db, await this.rates(), req.authUser.uid) };
+    return {
+      artworks: await listAggregatorInventory(this.db, await this.rates(), req.authUser.uid, {
+        getDeliveryQuote: this.deliveryQuoteFor(req.authUser.uid),
+      }),
+    };
   }
 
   @Roles("aggregator")
@@ -101,7 +145,17 @@ export class AggregatorController {
       throw new ForbiddenException({ type: "about:blank", title: "Add your GST number in My Profile, and wait for GalleryZone to approve it, before reserving artwork", status: 403, code: "gst_required" });
     }
     try {
-      const result = await reserveHolding({ db: this.db, aggregatorId: req.authUser.uid, artworkId: body.artworkId, sellingPricePaise: body.sellingPricePaise });
+      const result = await reserveHolding({
+        db: this.db,
+        aggregatorId: req.authUser.uid,
+        artworkId: body.artworkId,
+        sellingPricePaise: body.sellingPricePaise,
+        // Same quote the inventory page displayed — if the pair is
+        // serviceable the reserved advance uses the live rate; if
+        // Shiprocket is down the flat default kicks in and the user
+        // sees the same number everywhere (never silently different).
+        getDeliveryQuote: this.deliveryQuoteFor(req.authUser.uid),
+      });
       this.cache.clear();
       // Priced far above the offer: allowed, but GalleryZone is told.
       if (result.priceWarning) {

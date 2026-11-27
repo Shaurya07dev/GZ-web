@@ -117,7 +117,22 @@ export interface CreateReservationIntentResult {
  * by this aggregator before, cycle exhausted, no listing days left). The
  * finalize transaction re-checks everything that could change in flight.
  */
-export async function createReservationIntent(db: Firestore, input: CreateReservationIntentInput): Promise<CreateReservationIntentResult> {
+export async function createReservationIntent(
+  db: Firestore,
+  input: CreateReservationIntentInput,
+  opts: {
+    /** Same shape as the one on reserveHolding + computeOffer — threads
+     *  a live Shiprocket quote through the advance computation so the
+     *  Razorpay amount matches what the reserve page showed. */
+    getDeliveryQuote?: (input: {
+      artworkId: string;
+      aggregatorId: string;
+      artistId: string;
+      artworkWeightKg: number;
+      declaredValueInr: number;
+    }) => Promise<number | null>;
+  } = {},
+): Promise<CreateReservationIntentResult> {
   // Idempotency check: same key still in a usable state → return it as-is.
   const existingSnap = await db
     .collection(Collections.reservationIntents)
@@ -145,11 +160,31 @@ export async function createReservationIntent(db: Firestore, input: CreateReserv
 
   // Validate sellingPrice: month 1 can price above offer, else must equal offer.
   const sellingPricePaise = resolveSellingPrice(input.sellingPricePaise, offerPricePaise, monthContext.month);
+
+  // Live quote (if the caller provided one) so the Razorpay amount
+  // matches what the reserve page displayed. Pure best-effort: on
+  // failure we fall back to rates.deliveryChargePaise.
+  let liveDeliveryPaise: number | null = null;
+  if (opts.getDeliveryQuote && artwork.artistId) {
+    try {
+      liveDeliveryPaise = await opts.getDeliveryQuote({
+        artworkId: input.artworkId,
+        aggregatorId: input.aggregatorId,
+        artistId: artwork.artistId,
+        artworkWeightKg: artwork.physical?.weightKg ?? 2,
+        declaredValueInr: Math.max(1, Math.round(sellingPricePaise / 100)),
+      });
+    } catch {
+      liveDeliveryPaise = null;
+    }
+  }
+
   const advance = aggregatorAdvanceForMonth({
     month: monthContext.month,
     sellingPrice: sellingPricePaise,
     artistPrice: pricing.artistPricePaise,
     rates,
+    ...(liveDeliveryPaise !== null ? { deliveryCharge: liveDeliveryPaise } : {}),
   });
   // Light pre-check so the aggregator doesn't pay for an artwork someone else
   // just reserved. The finalize transaction is the authoritative gate.
