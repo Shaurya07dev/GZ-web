@@ -481,14 +481,40 @@ export async function bookShipment(input: ShipmentBookingInput): Promise<BookedS
   if (data.shipment_id) {
     try {
       // Courier assignment picks a specific courier and generates the AWB
-      // barcode. `courier_id` optional; omitting lets Shiprocket pick the
-      // cheapest serviceable courier. We pass the one from the quote when
-      // available (input.preferredCourierId) so the actual billed rate
-      // matches what the buyer saw at checkout within Shiprocket's own
-      // slot-availability variance (which is typically ±₹5).
+      // barcode. We ALWAYS pick a courier ourselves — never let Shiprocket
+      // auto-select — because their auto-select includes air couriers,
+      // which the client has banned (28 Nov 2026: Delhivery Air booked
+      // ₹1,425 on a ₹81,900 piece).
+      //
+      // If the caller passed a preferredCourierId (from a prior rate
+      // quote), use that. Otherwise, fetch a quote inline now so we can
+      // pick a ground-only courier — getShippingRate() already filters
+      // air. Only if THAT also fails do we fall through to Shiprocket's
+      // auto-select (which is the pre-veto behaviour — explicitly logged
+      // as a last resort, not the happy path).
+      let courierId = input.preferredCourierId;
+      if (!courierId) {
+        const quote = await getShippingRate({
+          pickupPincode: input.pickup.pincode,
+          dropPincode: input.dropoff.pincode,
+          weightKg: input.weightKg,
+          valueInr: input.valueInr,
+        });
+        if (quote) {
+          courierId = quote.courierCompanyId;
+        } else {
+          console.warn(
+            JSON.stringify({
+              event: "shiprocket.courier.auto_fallback",
+              orderReference: input.orderReference,
+              reason: "no ground-only quote available; letting Shiprocket auto-select (may include air)",
+            }),
+          );
+        }
+      }
       const assigned = await assignCourier({
         shipmentId: data.shipment_id,
-        ...(input.preferredCourierId ? { courierId: input.preferredCourierId } : {}),
+        ...(courierId ? { courierId } : {}),
         token,
       });
       awb = assigned.awb ?? awb;
