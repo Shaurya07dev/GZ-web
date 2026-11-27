@@ -92,6 +92,23 @@ function friendlyAuthError(error: unknown): Error {
   }
 }
 
+/** Renders a role as the article + noun we use in user-facing error
+ *  messages ("an artist", "an aggregator", "a collector"). */
+function describeRole(role: string): string {
+  switch (role) {
+    case "artist":
+      return "an artist";
+    case "aggregator":
+      return "an aggregator";
+    case "customer":
+      return "a collector";
+    case "admin":
+      return "an admin";
+    default:
+      return role;
+  }
+}
+
 /** Reads /me and mirrors the role into the session cookie. */
 async function establishSession(rememberMe = true): Promise<CurrentUser> {
   const me = await http.get<CurrentUser>("/v1/auth/me");
@@ -146,6 +163,17 @@ export const authService = {
     }
     try {
       const me = await establishSession();
+      // Role mismatch guard — user clicked "Sign up as <aggregator>"
+      // but this Google account is already registered as <artist>. We
+      // used to silently log them into the existing role and dump them
+      // on the wrong dashboard; now we refuse the sign-up and tell
+      // them to log in under their existing role instead.
+      if (options.role && me.role !== options.role) {
+        await firebaseSignOut(firebaseAuth()).catch(() => {});
+        throw new Error(
+          `This Google account is already registered as ${describeRole(me.role)}. Log in from the ${describeRole(me.role)} login page instead — a single Google account cannot hold two different GalleryZone roles.`,
+        );
+      }
       return { email: me.email, role: me.role };
     } catch (error) {
       if (!isApiError(error, 401)) throw error;

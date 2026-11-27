@@ -139,8 +139,26 @@ export async function registerUser(
 
   try {
     await createUserProfile(db, userRecord.uid, { email, name, role, phone });
+    // Email + phone uniqueness claims. Firebase Auth already refuses
+    // duplicate emails on createUser above, so the email claim here is
+    // a belt-and-braces mirror so admin tooling has a single lookup
+    // point. Phone is NOT enforced by Firebase Auth — this is the
+    // real gate.
+    const { claimIdentifier } = await import("./unique-identifiers.ts");
+    await claimIdentifier(db, "email", email, userRecord.uid);
+    if (phone) {
+      await claimIdentifier(db, "phone", phone, userRecord.uid);
+    }
   } catch (error) {
     await auth.deleteUser(userRecord.uid).catch(() => {}); // best-effort cleanup — don't mask the original error
+    // Also release any identifier claims we managed to write before
+    // the error, so a retried register call with a different uid can
+    // succeed.
+    try {
+      const { releaseIdentifier } = await import("./unique-identifiers.ts");
+      await releaseIdentifier(db, "email", email, userRecord.uid).catch(() => {});
+      if (phone) await releaseIdentifier(db, "phone", phone, userRecord.uid).catch(() => {});
+    } catch {}
     throw error;
   }
 

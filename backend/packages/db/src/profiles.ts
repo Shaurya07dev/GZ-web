@@ -224,6 +224,58 @@ export async function updateOwnProfile(db: Firestore, uid: string, patch: Profil
     }
   }
 
+  // Uniqueness gate (runs BEFORE the batch so a failed claim leaves no
+  // partial state). We re-claim each field that's part of the patch
+  // and whose value actually changed — identical values are a no-op,
+  // new values that clash with another uid throw UniqueIdentifierError
+  // which propagates back to the controller as a 409.
+  //
+  // Ordering matters: we claim NEW values first, THEN release OLD ones.
+  // reclaimIdentifier does this atomically per field inside its own
+  // runTransaction, so a failed claim never strands the user with
+  // their old value gone.
+  const { reclaimIdentifier } = await import("./unique-identifiers.ts");
+  if (userUpdate.phone !== undefined) {
+    await reclaimIdentifier(db, "phone", {
+      uid,
+      previousValue: user.phone ?? null,
+      nextValue: userUpdate.phone,
+    });
+  }
+  if (profileUpdate.pan !== undefined) {
+    await reclaimIdentifier(db, "pan", {
+      uid,
+      previousValue: current.pan ?? null,
+      nextValue: profileUpdate.pan ?? null,
+    });
+  }
+  if (profileUpdate.gstin !== undefined) {
+    await reclaimIdentifier(db, "gstin", {
+      uid,
+      previousValue: current.gstin ?? null,
+      nextValue: profileUpdate.gstin ?? null,
+    });
+  }
+  if (patch.bankAccountNumber !== undefined) {
+    // bankAccountNumber was already validated + normalised above; the
+    // raw digits aren't in profileUpdate (that only carries the masked
+    // tail), so we use the input value directly. Previous value is the
+    // masked tail which we can't reverse — fall back to a per-uid
+    // sentinel so release at least decrements one slot when the user
+    // clears their account. The next time they set a new one we claim
+    // afresh; a stale index doc for a replaced account number is
+    // harmless (nobody else can claim THAT exact number either, which
+    // is the correct outcome).
+    const rawNext = patch.bankAccountNumber?.trim() ? patch.bankAccountNumber.trim().replace(/\s/g, "") : null;
+    if (rawNext) {
+      await reclaimIdentifier(db, "bankAccount", {
+        uid,
+        previousValue: null, // we can't recover the prev raw number from the masked tail
+        nextValue: rawNext,
+      });
+    }
+  }
+
   const batch = db.batch();
   if (Object.keys(userUpdate).length) batch.update(userRef, userUpdate);
   if (Object.keys(profileUpdate).length) batch.set(profileRef, { ...current, ...profileUpdate }, { merge: true });

@@ -4,7 +4,7 @@
 // One route pair rather than one per role — the body schema is a superset
 // and the db layer ignores what doesn't apply (a customer has no GSTIN).
 
-import { BadRequestException, Body, Controller, Delete, Get, Inject, NotFoundException, Patch, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, Delete, Get, Inject, NotFoundException, Patch, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import {
   freeAccessFor,
@@ -16,6 +16,7 @@ import {
   MAX_IMAGE_BYTES,
   ProfileUpdateError,
   refreshArtistListings,
+  UniqueIdentifierError,
   type Db,
   type OwnProfile,
 } from "@galleryzone/db";
@@ -146,6 +147,12 @@ export class ProfileController {
       }
       return this.withFreeAccess(profile);
     } catch (error) {
+      if (error instanceof UniqueIdentifierError) {
+        // 409 Conflict — the field is well-formed but already claimed
+        // by another account. Frontend shows the server message under
+        // the specific field.
+        throw new ConflictException({ type: "about:blank", title: error.message, status: 409, code: "identifier_conflict" });
+      }
       if (error instanceof ProfileUpdateError) {
         throw new BadRequestException({ type: "about:blank", title: error.message, status: 400, code: "profile_rejected" });
       }

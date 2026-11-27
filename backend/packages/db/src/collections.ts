@@ -135,6 +135,16 @@ export const Collections = {
    *  acceptance timestamp + IP is stamped on the snapshot. */
   aggregatorCommissionInvoiceCounters: "aggregatorCommissionInvoiceCounters",
   /**
+   * Account-wide uniqueness index for personally-identifying fields:
+   * email, phone, PAN, GSTIN, bank account number, Aadhaar. One doc per
+   * claimed value — doc id is `${scope}:${normalisedValue}` for
+   * non-sensitive scopes, `${scope}:${sha256(value)}` for sensitive
+   * ones (bankAccount, aadhaar) so Firestore exports don't leak the
+   * raw value. Enforced transactionally — see
+   * packages/db/src/unique-identifiers.ts.
+   */
+  uniqueIdentifiers: "uniqueIdentifiers",
+  /**
    * Masters India (WhiteBooks GSP) e-way bill session cache. One doc
    * per `(gstin, mode)` tuple — the session is a server-side
    * authorization at WhiteBooks keyed on the headers + warm-up call.

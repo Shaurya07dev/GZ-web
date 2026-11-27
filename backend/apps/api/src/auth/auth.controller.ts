@@ -29,6 +29,7 @@ import {
 import { z } from "zod";
 import {
   AuthError,
+  UniqueIdentifierError,
   createUserProfile,
   generateEmailVerificationLink,
   generatePasswordResetLink,
@@ -122,6 +123,12 @@ export class AuthController {
       }
       if (code === "auth/invalid-email" || code === "auth/invalid-password") {
         throw new ConflictException(problem(409, "Firebase rejected the email or password", "invalid_credentials", code));
+      }
+      // UniqueIdentifierError surfaces here when a phone number is
+      // already claimed by another account. Email is enforced by
+      // Firebase Auth above; phone is our own check.
+      if (error instanceof UniqueIdentifierError) {
+        throw new ConflictException(problem(409, error.message, "identifier_conflict"));
       }
       throw error;
     }
