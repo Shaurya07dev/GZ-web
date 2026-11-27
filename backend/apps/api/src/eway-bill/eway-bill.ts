@@ -180,6 +180,14 @@ export class EwayBillService {
 
   async generate(input: GenerateEwayBillInput): Promise<GenerateEwayBillResult> {
     this.assertEnabled();
+    // NIC / WhiteBooks requires a session warm-up via /authenticate
+    // BEFORE any other endpoint will accept the request headers —
+    // without it, every POST comes back status_cd:"0" with "Invalid
+    // credentials provided or your account is not active". We cache
+    // the session doc in Firestore so the 6h TTL is reused across
+    // calls; `ensureAuthenticated` only hits the network when the
+    // cached session is missing or near-expiry.
+    await this.ensureAuthenticated();
     const cfg = this.env.ewayBill!;
 
     const fromState = stateNumericCode(input.from.stateCode);
@@ -384,6 +392,7 @@ export class EwayBillService {
     initiatedBy: string;
   }): Promise<void> {
     this.assertEnabled();
+    await this.ensureAuthenticated();
     const body = {
       ewbNo: Number(input.ewbNo),
       cancelRsnCode: input.reasonCode,
@@ -413,6 +422,7 @@ export class EwayBillService {
     from: { place: string; pincode: number; stateCode: string };
   }): Promise<GenerateEwayBillResult> {
     this.assertEnabled();
+    await this.ensureAuthenticated();
     const fromState = stateNumericCode(input.from.stateCode);
     if (fromState === null) {
       throw new EwayBillErrorInternal(
@@ -453,9 +463,18 @@ export class EwayBillService {
 
   // ─── Session management ────────────────────────────────────────────
 
-  /** Warm-up authentication. WhiteBooks keeps the session server-side,
-   *  so we only need to re-authenticate every ~6h. Session doc id =
-   *  `${gstin}:${mode}` to keep sandbox + production separate. */
+  /** Warm-up authentication against WhiteBooks. The GSP keeps the
+   *  session server-side and refuses every other endpoint with
+   *  "Invalid credentials provided or your account is not active"
+   *  unless this has been hit first. Session TTL is ~6h; we cache the
+   *  expiry in Firestore so parallel API calls don't all re-auth. Doc
+   *  id = `${gstin}:${mode}` so sandbox + prod never cross streams.
+   *
+   *  Call site: NOT directly — the public generate/cancel/extend
+   *  methods call `ensureAuthenticated()` which no-ops when the cached
+   *  session is still fresh and calls this when it isn't. Kept as a
+   *  separate public method so admin tooling can force a re-auth if
+   *  WhiteBooks invalidates us server-side. */
   async authenticate(): Promise<void> {
     this.assertEnabled();
     const cfg = this.env.ewayBill!;
@@ -463,10 +482,7 @@ export class EwayBillService {
     const ref = this.db
       .collection(Collections.ewayBillSessions)
       .doc(sessionId);
-    const existing = await ref.get();
     const now = Date.now();
-    const currentExpiry = (existing.data() as EwayBillSessionDoc | undefined)?.expiresAt?.toMillis() ?? 0;
-    if (currentExpiry > now) return; // still fresh
 
     const url =
       this.urlFor("/ewaybillapi/v1.03/authenticate") +
@@ -494,6 +510,23 @@ export class EwayBillService {
       expiresAt: Timestamp.fromMillis(now + SESSION_TTL_MS),
     };
     await ref.set(doc);
+    this.logger.log(`e-way bill session (re-)authenticated for ${sessionId}`);
+  }
+
+  /** Read the cached session; if it's missing or within 15 minutes of
+   *  expiry, re-authenticate. Called from every public entry point. */
+  private async ensureAuthenticated(): Promise<void> {
+    const cfg = this.env.ewayBill!;
+    const sessionId = `${cfg.gstin}:${cfg.mode}`;
+    const ref = this.db
+      .collection(Collections.ewayBillSessions)
+      .doc(sessionId);
+    const existing = await ref.get();
+    const currentExpiry =
+      (existing.data() as EwayBillSessionDoc | undefined)?.expiresAt?.toMillis() ??
+      0;
+    if (currentExpiry > Date.now()) return; // cached session still fresh
+    await this.authenticate();
   }
 
   // ─── Internals ─────────────────────────────────────────────────────
