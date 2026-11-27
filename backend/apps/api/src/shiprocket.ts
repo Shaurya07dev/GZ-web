@@ -323,8 +323,24 @@ export async function getShippingRate(input: ShippingRateInput): Promise<Shippin
     .filter((o) => Number.isFinite(o.rateNum) && o.rateNum > 0);
   if (normalised.length === 0) return null;
 
-  normalised.sort((a, b) => a.rateNum - b.rateNum);
-  const cheapest = normalised[0]!;
+  // Hard veto on air couriers — client directive 28 Nov 2026 after a
+  // ₹81,900 test shipment booked Delhivery Air at ~₹1,425. Air rates
+  // are 3-5× surface for GZ's artwork catchment and the aggregator
+  // can't recoup them on any realistic sale. Surface + express are
+  // both acceptable; air is not. The veto is name-based because
+  // Shiprocket's API doesn't return a service-type field.
+  const AIR_PATTERN = /\bair\b/i;
+  const groundOnly = normalised.filter((o) => !AIR_PATTERN.test(o.courier_name));
+  // Belt-and-braces: if literally every option is air (unusual but
+  // possible for Jammu/Andaman routes), we fall back to the air
+  // options rather than refusing to ship. Log so ops can see it.
+  const selectable = groundOnly.length > 0 ? groundOnly : normalised;
+  if (groundOnly.length === 0) {
+    console.warn(JSON.stringify({ event: "shiprocket.rate.no_ground", pickupPincode: input.pickupPincode, dropPincode: input.dropPincode, rejected: normalised.map((o) => o.courier_name) }));
+  }
+
+  selectable.sort((a, b) => a.rateNum - b.rateNum);
+  const cheapest = selectable[0]!;
   return {
     carrier: cheapest.courier_name,
     ratePaise: Math.round(cheapest.rateNum * 100),
