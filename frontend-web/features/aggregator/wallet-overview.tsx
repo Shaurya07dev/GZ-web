@@ -2,56 +2,76 @@
 
 import { motion } from "framer-motion";
 import {
-  Wallet,
-  Clock3,
-  Lock,
   ArrowDownRight,
   ArrowUpRight,
   Building2,
+  Clock3,
   Info,
+  Landmark,
+  Lock,
+  Wallet,
 } from "lucide-react";
 import {
   useAggregatorWallet,
   useAggregatorWalletTransactions,
 } from "@/hooks/useAggregatorWallet";
 import {
+  useAggregatorCollection,
+} from "@/hooks/useAggregatorCollection";
+import {
   useAggregatorProfile,
   useUpdateAggregatorProfileMutation,
 } from "@/hooks/useAggregatorProfile";
 import { GstNumberCard } from "@/components/shared/gst-number-card";
+import { formatINR } from "@/lib/utils";
 import type { WalletTransaction } from "@/features/dashboard/dashboard-data";
+import type { AggregatorHolding } from "@/types/aggregator";
+import type { ArtworkSummary } from "@/types/artwork";
 
-// Client (18 Oct 2026): there is no wallet, no top-up, no withdrawal flow.
-// The aggregator pays the deposit + delivery per piece through Razorpay at
-// reservation time. Commission earned on sales sits in GalleryZone's escrow
-// and the admin transfers it out directly, marking each payment paid with a
-// bank reference. This view is read-only: what is owed, what is still
-// clearing, and where the money will land.
+// IMPORTANT: there is NO wallet, NO top-up, NO withdrawal flow on this
+// platform. Client decision 18 Oct 2026. The aggregator pays the
+// advance + delivery per piece through Razorpay AT RESERVATION TIME.
+// Commission earned on sales sits in GalleryZone's escrow and admin
+// transfers it to the aggregator's bank with a reference number.
+//
+// This page is called "Earnings" in nav; its job is to explain the
+// escrow state honestly: what is held against which reservation, what
+// is owed to the aggregator as commission, and where that commission
+// lands. No actionable "add funds" or "withdraw" button — on purpose.
+
+type HoldingRow = AggregatorHolding & { artwork: ArtworkSummary };
 
 export function WalletOverview() {
   const { data: wallet } = useAggregatorWallet();
+  const { data: holdings } = useAggregatorCollection();
   const { data: transactions } = useAggregatorWalletTransactions();
   const { data: profile } = useAggregatorProfile();
   const updateProfileMutation = useUpdateAggregatorProfileMutation();
 
+  // Only reserved holdings carry held money. Sold-pending-settlement
+  // has its hold released on the sale posting; returned holdings have
+  // their hold released on the return posting. If the ledger and the
+  // holdings list disagree the ledger wins — use it for the HEADER
+  // number, and use the holdings for the per-row breakdown.
+  const activeHoldings = (holdings ?? []).filter((h) => h.status === "reserved");
   const balance = wallet?.balance ?? 0;
   const locked = wallet?.lockedBalance ?? 0;
-  const free = balance - locked;
+  const owed = balance - locked;
 
   const summaryCards = [
     {
-      key: "free",
+      key: "owed",
       label: "Owed to you",
-      value: free,
-      hint: "Commission GalleryZone will transfer to your bank",
-      icon: Wallet,
+      value: owed,
+      hint: "Commission GalleryZone will transfer to your bank after each clearing cycle.",
+      icon: Landmark,
       tone: "gold" as const,
     },
     {
-      key: "locked",
-      label: "Held against reservations",
+      key: "held",
+      label: "Held in escrow against reservations",
       value: locked,
-      hint: "Advances and delivery you paid on pieces you are displaying",
+      hint: "Advance + delivery you paid per piece. Released back to this balance when a piece sells or returned to GalleryZone if the delivery leg was consumed.",
       icon: Lock,
       tone: "neutral" as const,
     },
@@ -59,7 +79,7 @@ export function WalletOverview() {
       key: "pending",
       label: "Commission clearing",
       value: wallet?.pendingBalance ?? 0,
-      hint: "Earned on sales, waiting for delivery to confirm",
+      hint: "Earned on sales, waiting for delivery to confirm before it moves to 'Owed to you'.",
       icon: Clock3,
       tone: "neutral" as const,
     },
@@ -86,7 +106,7 @@ export function WalletOverview() {
               />
             </div>
             <p className="mt-3 font-display text-3xl font-semibold tabular-nums text-foreground">
-              ₹{card.value.toLocaleString("en-IN")}
+              {formatINR(card.value)}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
           </motion.div>
@@ -94,6 +114,11 @@ export function WalletOverview() {
       </div>
 
       <EscrowExplainerCard />
+
+      {/* Per-reservation held breakdown — the new piece.  The ledger-side
+          total above is the single source of truth; this table itemises
+          where each rupee of it is sitting. */}
+      <HeldPerReservationCard holdings={activeHoldings} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.5fr]">
         <PayoutDestinationCard />
@@ -112,10 +137,9 @@ export function WalletOverview() {
   );
 }
 
-// The old AddFundsCard asked the aggregator to top up a wallet balance, which
-// in turn paid out the per-piece deposit and delivery. That whole flow is
-// gone — reservations now charge Razorpay directly, piece by piece — so this
-// card just states the new money flow in one place.
+// Replaces the old AddFundsCard. There is no wallet to top up — the
+// aggregator pays per-piece. This card states the money flow so
+// nobody mistakes "Owed to you" for a self-serve withdrawal button.
 function EscrowExplainerCard() {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-gold/30 bg-gold/5 p-5 sm:p-6">
@@ -128,11 +152,13 @@ function EscrowExplainerCard() {
             How the money moves
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Pay the deposit and delivery for each piece at the moment you
-            reserve it, through Razorpay. GalleryZone holds the full sale
-            amount in escrow when the piece sells, settles the artist&rsquo;s
-            share, and transfers your commission to your bank. Each transfer
-            carries a bank reference you&rsquo;ll see in the list on the right.
+            Pay the advance + delivery for each piece through Razorpay at the
+            moment you reserve it. That money moves into escrow — held
+            against the specific reservation, not spendable or withdrawable
+            until the piece sells or returns. When a piece sells,
+            GalleryZone takes its share, your commission moves into
+            &ldquo;Owed to you&rdquo;, and we transfer it to your bank with
+            a reference number you can match in your passbook.
           </p>
         </div>
       </div>
@@ -140,9 +166,94 @@ function EscrowExplainerCard() {
   );
 }
 
-// Replaces the old WithdrawCard. There is nothing to request — payouts leave
-// GalleryZone's escrow on a fixed cadence against the "Owed to you" figure
-// above. This card is a confirmation of where that money lands.
+// Per-reservation held breakdown — the detail view below the
+// three-card summary. The sum of (advance + delivery) across every
+// reserved holding here must equal the "Held in escrow" number
+// above; if it ever diverges the ledger is authoritative.
+function HeldPerReservationCard({ holdings }: { holdings: HoldingRow[] }) {
+  if (holdings.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
+        <h2 className="font-display text-base font-semibold text-foreground">
+          Held against reservations
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You don&rsquo;t have any active reservations right now. When you
+          reserve a piece, the advance + delivery you pay through Razorpay
+          will show up here with a clear release condition.
+        </p>
+      </div>
+    );
+  }
+
+  const heldTotal = holdings.reduce(
+    (sum, h) => sum + h.advanceAmount + (h.deliveryDeposit ?? 0),
+    0,
+  );
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-base font-semibold text-foreground">
+            Held against reservations
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Per-piece breakdown of what&rsquo;s in escrow right now.
+          </p>
+        </div>
+        <span className="shrink-0 font-display text-xl font-semibold tabular-nums text-foreground">
+          {formatINR(heldTotal)}
+        </span>
+      </div>
+
+      <ul className="mt-4 flex flex-col divide-y divide-border">
+        {holdings.map((h) => {
+          const total = h.advanceAmount + (h.deliveryDeposit ?? 0);
+          const expiresAt = new Date(h.expiresAt);
+          const daysLeft = Math.max(
+            0,
+            Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000),
+          );
+          return (
+            <li key={h.id} className="flex items-start justify-between gap-3 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {h.artwork.title}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Advance {formatINR(h.advanceAmount)}
+                  {h.deliveryDeposit
+                    ? ` · Delivery ${formatINR(h.deliveryDeposit)}`
+                    : ""}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Released when the piece{" "}
+                  <span className="font-medium text-foreground">sells</span>;
+                  {h.deliveryDeposit ? " delivery is forfeited if it returns unsold" : " refunded if it returns unsold"}.
+                  {daysLeft > 0 && (
+                    <>
+                      {" · "}
+                      {daysLeft} day{daysLeft === 1 ? "" : "s"} left in this
+                      placement window
+                    </>
+                  )}
+                </p>
+              </div>
+              <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">
+                {formatINR(total)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// Replaces the old WithdrawCard. There is nothing to request — payouts
+// leave GalleryZone's escrow on a fixed cadence against the "Owed to
+// you" figure above. This card just confirms where that money lands.
 function PayoutDestinationCard() {
   const { data: profile } = useAggregatorProfile();
   return (
@@ -190,7 +301,7 @@ function TransactionsCard({
   return (
     <div className="rounded-lg border border-border bg-card p-5 sm:p-6">
       <h2 className="font-display text-base font-semibold text-foreground">
-        Transaction history
+        Escrow transaction history
       </h2>
 
       <div
@@ -245,7 +356,7 @@ function TransactionRow({ tx }: { tx: WalletTransaction }) {
           isCredit ? "text-emerald-400" : "text-foreground"
         }`}
       >
-        {isCredit ? "+" : "−"}₹{Math.abs(tx.amount).toLocaleString("en-IN")}
+        {isCredit ? "+" : "−"}{formatINR(Math.abs(tx.amount))}
       </span>
     </div>
   );

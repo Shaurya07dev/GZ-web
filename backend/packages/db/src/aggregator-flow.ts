@@ -174,15 +174,23 @@ export async function reserveHolding({
     returnedAt: null,
   };
 
-  // The advance and the delivery deposit are set aside from the aggregator's
-  // wallet (client, 30 Sep 2026: money comes in by gateway top-up). The funds
-  // check, the hold and the holding itself commit in ONE transaction, so a
-  // reservation can never exist without its money, or take money twice.
+  // The advance and the delivery deposit are set aside from the
+  // aggregator's escrow ledger. Client flipped the money flow 18 Oct
+  // 2026: there IS NO wallet top-up any more — the aggregator pays
+  // through Razorpay at reservation time (createReservationIntent →
+  // finalizeReservationIntent), which credits aggregator_payable first
+  // and then this hold moves it to aggregator_held atomically. If
+  // someone hits THIS legacy path (direct POST /v1/aggregator/holdings)
+  // without the Razorpay credit having landed, the balance check still
+  // catches it — but the error message now reflects the current flow
+  // rather than pointing at a non-existent "Add funds" button.
   await postLedgerEntries(db, {
     postings: async (tx) => {
       const { balancePaise } = await getWalletBalance(db, "aggregator_payable", aggregatorId, tx);
       if (balancePaise < advance.payable) {
-        throw new AggregatorFlowError(`Your wallet needs ${inr(advance.payable)} free to reserve this piece and has ${inr(Math.max(0, balancePaise))}. Add funds in Earnings & Wallet.`);
+        throw new AggregatorFlowError(
+          `Reservation requires ${inr(advance.payable)} to be paid via Razorpay (advance ${inr(advance.advance)} + delivery ${inr(advance.deliveryCharge)}). Use the Reserve button on the inventory listing to open the payment dialog — the money moves into escrow against this specific piece.`,
+        );
       }
       return aggregatorHoldPostings({ aggregatorId, advancePaise: advance.advance, deliveryPaise: advance.deliveryCharge });
     },
