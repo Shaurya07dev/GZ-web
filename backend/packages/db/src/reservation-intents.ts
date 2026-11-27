@@ -339,7 +339,21 @@ export async function finalizeReservationIntent(db: Firestore, input: FinalizeRe
     const appreciated = month === 1 && chosenPricePaise > offerPricePaise;
     const priceWarning = month === 1 && isPriceWarning(chosenPricePaise, offerPricePaise, rates);
     const displayPricePaise = withGst(chosenPricePaise, rates);
-    const advance = aggregatorAdvanceForMonth({ month, sellingPrice: chosenPricePaise, artistPrice: pricing.artistPricePaise, rates });
+    // IMPORTANT: use the delivery charge LOCKED on the intent at
+    // creation time (which was the live Shiprocket quote). Recomputing
+    // here without the override would fall back to rates.deliveryChargePaise
+    // (the flat ₹25 historical default) and silently overwrite the
+    // ₹200+ the aggregator actually paid through Razorpay with a
+    // smaller number on the holding doc — admin thinks less money came
+    // in than really did. Lock the exact figure we quoted the user to
+    // the exact figure stamped on the holding.
+    const advance = aggregatorAdvanceForMonth({
+      month,
+      sellingPrice: chosenPricePaise,
+      artistPrice: pricing.artistPricePaise,
+      rates,
+      deliveryCharge: intent.deliveryDepositPaise,
+    });
     const window = placementWindow({ cycleStartedAt, assignedAt: new Date(), rates });
 
     const holdingRef = db.collection(Collections.aggregatorHoldings).doc();
