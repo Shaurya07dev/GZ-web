@@ -26,15 +26,19 @@ import {
 import {
   aggregatorAdvanceForMonth,
   aggregatorOfferPriceOf,
+  artworkStateMachine,
   canPlaceWithAnotherAggregator,
   isPriceWarning,
   placementWindow,
+  reservationIntentPayAndHoldPostings,
   withGst,
   type HoldingStatus,
   type PricingRates,
 } from "@galleryzone/domain";
 import { FirestoreRateConfigStore } from "./firestore-rate-config-store.ts";
 import { DbError } from "./errors.ts";
+import { FieldValue } from "firebase-admin/firestore";
+import { appendArtworkStatus, latestStatusOf } from "./listing-projection.ts";
 
 async function requireActiveRates(db: Firestore): Promise<PricingRates> {
   const store = new FirestoreRateConfigStore(db);
@@ -272,7 +276,7 @@ export async function finalizeReservationIntent(db: Firestore, input: FinalizeRe
   const intentRef = db.collection(Collections.reservationIntents).doc(input.intentId);
   const artworkRef = db.collection(Collections.artworks).doc("placeholder"); // reassigned per-txn
 
-  return db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const intentSnap = await tx.get(intentRef);
     const intent = intentSnap.data() as ReservationIntentDoc | undefined;
     if (!intent) throw new ReservationIntentError(`No reservation intent ${input.intentId}`);
@@ -356,6 +360,8 @@ export async function finalizeReservationIntent(db: Firestore, input: FinalizeRe
     });
     const window = placementWindow({ cycleStartedAt, assignedAt: new Date(), rates });
 
+    // Generate the holdingId INSIDE the transaction so the idempotency
+    // key below sees the same value every retry.
     const holdingRef = db.collection(Collections.aggregatorHoldings).doc();
     const holding: AggregatorHoldingDoc = {
       artworkId: intent.artworkId,
@@ -384,12 +390,97 @@ export async function finalizeReservationIntent(db: Firestore, input: FinalizeRe
       holdingId: holdingRef.id,
     };
     tx.update(intentRef, finalizedPatch);
+
+    // Ledger entries — CRITICAL. Without these the aggregator's Razorpay
+    // payment lives in Razorpay's escrow (gateway_escrow in our model)
+    // but our BOOKS show zero movement — the "Held in escrow" number on
+    // the aggregator wallet page reads 0, admin pages show no money
+    // flow, and if the piece sells the commission math has no held
+    // amount to release. See domain/settlement.ts:
+    // reservationIntentPayAndHoldPostings for the 4-leg layout.
+    // Idempotency key uses intentId so a retried finalize call writes
+    // the same keys and Firestore rejects dupes rather than
+    // double-posting.
+    const totalPaise = advance.advance + advance.deliveryCharge;
+    const postings = reservationIntentPayAndHoldPostings({
+      aggregatorId: input.aggregatorId,
+      advancePaise: advance.advance,
+      deliveryPaise: advance.deliveryCharge,
+    });
+    const idempotencyPrefix = `intent:${input.intentId}:pay-and-hold`;
+    for (let i = 0; i < postings.length; i++) {
+      const posting = postings[i]!;
+      // Resolve account id — read + conditional create inside this
+      // same transaction so we stay consistent with the holding + intent
+      // writes above.
+      const accountQuery = db
+        .collection(Collections.ledgerAccounts)
+        .where("type", "==", posting.accountType)
+        .where("ownerId", "==", posting.ownerId ?? null);
+      const existingAcct = await tx.get(accountQuery);
+      let accountId: string;
+      if (existingAcct.empty) {
+        const acctRef = db.collection(Collections.ledgerAccounts).doc();
+        tx.set(acctRef, { type: posting.accountType, ownerId: posting.ownerId ?? null });
+        accountId = acctRef.id;
+      } else {
+        accountId = existingAcct.docs[0]!.id;
+      }
+      const entryId = `${idempotencyPrefix}:${i}`;
+      const entryRef = db.collection(Collections.ledgerEntries).doc(entryId);
+      tx.create(entryRef, {
+        transactionId: idempotencyPrefix,
+        accountId,
+        amountPaise: posting.amountPaise,
+        reason: posting.reason,
+        relatedOrderId: null,
+        relatedHoldingId: holdingRef.id,
+        idempotencyKey: entryId,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+
     return {
       kind: "finalized" as const,
       holdingId: holdingRef.id,
       intent: toRow(input.intentId, { ...intent, ...finalizedPatch } as ReservationIntentDoc),
     };
   });
+
+  // Post-commit: transition artwork status marketplace → with_aggregator
+  // so the piece disappears from the marketplace listing. Runs OUTSIDE
+  // the transaction because appendArtworkStatus uses a batch with its
+  // own commit. If this fails the holding still exists but the artwork
+  // may be visible — logged below, admin can trigger a resync.
+  //
+  // Only emit this for the "finalized" outcome. The refund paths above
+  // return early without creating a holding, so there's no transition
+  // to do. We detect "finalized" by the shape of the returned result.
+  if (result.kind === "finalized") {
+    try {
+      const currentStatus = await latestStatusOf(db, result.intent.artworkId);
+      if (currentStatus === "marketplace") {
+        artworkStateMachine.assertTransition("marketplace", "with_aggregator");
+        await appendArtworkStatus(db, result.intent.artworkId, {
+          status: "with_aggregator",
+          changedBy: result.intent.aggregatorId,
+          reason: `holding:${result.holdingId}`,
+        });
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(
+        JSON.stringify({
+          event: "finalize.status_transition.failed",
+          holdingId: result.holdingId,
+          artworkId: result.intent.artworkId,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    }
+  }
+
+  return result;
 }
 
 function markNeedsRefundInTx(tx: Transaction, intentRef: FirebaseFirestore.DocumentReference, intent: ReservationIntentDoc, providerPaymentId: string, reason: string) {

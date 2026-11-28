@@ -853,6 +853,53 @@ export function consignmentDispatchedAggregator(
 }
 
 /** An aggregator priced a piece far above GalleryZone's offer. Allowed, but GalleryZone is told. */
+/**
+ * Admin notification on EVERY aggregator reservation. Previously nothing
+ * was sent to admin when an aggregator paid — client flagged this as a
+ * critical visibility gap (28 Nov 2026). Shows aggregator name, artwork,
+ * what they paid, and a direct link to the admin reservation view.
+ */
+export function holdingReservedAdmin(
+  i: {
+    title: string;
+    aggregatorName: string;
+    artistName: string;
+    advancePaise: number;
+    deliveryPaise: number;
+    displayPricePaise: number;
+    paymentId: string;
+    artworkId: string;
+    holdingId: string;
+  },
+  c: Ctx,
+): Content {
+  const total = i.advancePaise + i.deliveryPaise;
+  return {
+    subject: `Reservation: ${q(short(i.title))} — ${inr(total)} paid`,
+    category: "transactional",
+    layout: {
+      audience: "admin",
+      heading: "An aggregator just reserved a piece",
+      paragraphs: [
+        rich`${strong(i.aggregatorName)} reserved ${q(i.title)} by ${strong(i.artistName)}. They paid ${strong(inr(total))} through Razorpay — this is now in escrow against the holding.`,
+      ],
+      details: [
+        ["Aggregator", i.aggregatorName],
+        ["Artwork", i.title],
+        ["Artist", i.artistName],
+        ["Advance", inr(i.advancePaise)],
+        ["Delivery deposit", inr(i.deliveryPaise)],
+        ["Total escrowed", inr(total)],
+        ["Display price (buyer-facing)", inr(i.displayPricePaise)],
+        ["Razorpay payment id", i.paymentId],
+      ],
+      cta: { label: "Open this reservation", url: `${c.site}/admin/aggregators` },
+      footnote:
+        "The escrow is released when the piece sells (advance returns, delivery is consumed) or when the aggregator returns it (advance returns, delivery is forfeited).",
+    },
+  };
+}
+
 export function holdingPriceWarning(i: { title: string; aggregatorName: string; sellingPricePaise: number; offerPaise: number | null; artworkId: string }, c: Ctx): Content {
   // The offer is only known on the route that computes it in the request; the other route stores the flag, not the offer.
   const over = i.offerPaise ? Math.round((i.sellingPricePaise / i.offerPaise - 1) * 100) : null;
@@ -1291,6 +1338,7 @@ export const catalogue: CatalogueEntry[] = [
   { id: "withdrawal-requested-admin", who: "Admin", when: "Someone requests a withdrawal", make: (c) => withdrawalRequestedAdmin({ name: "Meera Iyer", amountPaise: 1_480_000 }, c) },
   { id: "deactivation-requested-admin", who: "Admin", when: "Someone asks to deactivate", make: (c) => deactivationRequestedAdmin({ name: "Meera Iyer", reason: "I'm moving abroad and stopping sales." }, c) },
   { id: "support-new-admin", who: "Admin", when: "A support ticket arrives", make: () => supportNewAdmin({ subject: "My payout is late", message: "Hi, my withdrawal from Monday hasn't arrived.\nCan you check?", name: "Meera Iyer", email: "meera@example.in", role: "artist" }) },
+  { id: "holding-reserved-admin", who: "Admin", when: "An aggregator reserves a piece (every reservation)", make: (c) => holdingReservedAdmin({ title: T, aggregatorName: "Kala Ghar Gallery", artistName: "Meera Iyer", advancePaise: 390_000, deliveryPaise: 25_000, displayPricePaise: 8_190_000, paymentId: "pay_PHfZabc1234567", artworkId: "art_44", holdingId: "hld_FXnmm6" }, c) },
   { id: "holding-price-warning", who: "Admin", when: "A piece is reserved far above the offer", make: (c) => holdingPriceWarning({ title: T, aggregatorName: "Kala Ghar Gallery", sellingPricePaise: 3_000_000, offerPaise: 2_100_000, artworkId: "art_44" }, c) },
   { id: "holding-extension-requested", who: "Admin", when: "An aggregator asks for more time", make: (c) => holdingExtensionRequested({ title: T, aggregatorName: "Kala Ghar Gallery", until: D, assurance: "A collector has seen it twice and is deciding this week.", artworkId: "art_44" }, c) },
   { id: "holding-report-filed", who: "Admin", when: "An aggregator reports a problem with a piece", make: (c) => holdingReportFiledAdmin({ title: T, aggregatorName: "Kala Ghar Gallery", artistName: "Meera Iyer", issueType: "damaged_in_transit", description: "The frame corner arrived cracked." }, c) },

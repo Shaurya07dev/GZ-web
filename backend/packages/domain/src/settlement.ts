@@ -234,6 +234,46 @@ export function aggregatorHoldPostings({
   );
 }
 
+/**
+ * Intent-flow reservation: the aggregator pays through Razorpay AT
+ * reservation time (client flipped the money flow 18 Oct 2026 — no
+ * more wallet top-ups). The cash goes from Razorpay into escrow AND
+ * into the held bucket in one event, because there's no spendable
+ * wallet balance to move it through. This is the combination of
+ * walletTopupPostings + aggregatorHoldPostings collapsed into one
+ * atomic 4-leg posting so the ledger reads the real state after the
+ * Razorpay capture.
+ *
+ * Net effect on balances:
+ *   gateway_escrow  += (advance + delivery)   (money is real, in Razorpay)
+ *   aggregator_held -= (advance + delivery)   (owed to aggregator but locked)
+ * The aggregator_payable legs cancel out — the aggregator never had a
+ * spendable balance, we just need the paper trail to show it passed
+ * through there on the way to held.
+ */
+export function reservationIntentPayAndHoldPostings({
+  aggregatorId,
+  advancePaise,
+  deliveryPaise,
+}: {
+  aggregatorId: string;
+  advancePaise: number;
+  deliveryPaise: number;
+}): Posting[] {
+  const total = advancePaise + deliveryPaise;
+  return assertBalanced(
+    [
+      // Pay-in leg: money lands in gateway escrow, logged as owed to the aggregator.
+      { accountType: "gateway_escrow", amountPaise: total, reason: "reservation_payment_capture" },
+      { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: -total, reason: "reservation_payment_capture" },
+      // Hold leg: immediately set aside against this specific reservation.
+      { accountType: "aggregator_payable", ownerId: aggregatorId, amountPaise: total, reason: "reservation_hold" },
+      { accountType: "aggregator_held", ownerId: aggregatorId, amountPaise: -total, reason: "reservation_hold" },
+    ],
+    "reservationIntentPayAndHoldPostings",
+  );
+}
+
 // --- Unsold return: advance back in the wallet, delivery forfeited ----------------
 //
 // The delivery deposit pays for the courier leg the piece caused, so it goes to

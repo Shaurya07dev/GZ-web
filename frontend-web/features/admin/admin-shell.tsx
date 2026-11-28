@@ -24,6 +24,7 @@ import {
   Receipt,
   Scale,
   Truck,
+  Lock,
   Inbox,
   Megaphone,
   ScrollText,
@@ -196,6 +197,7 @@ const NAV_GROUPS: AdminNavGroup[] = [
     heading: "Commerce",
     items: [
       { label: "Orders", href: "/admin/orders", icon: Receipt, tourId: "admin-orders" },
+      { label: "Reservations", href: "/admin/reservations", icon: Lock },
       { label: "Settlements", href: "/admin/settlements", icon: Scale, tourId: "admin-settlements" },
       { label: "E-Way Bills", href: "/admin/eway-bills", icon: Truck },
       { label: "Coupons", href: "/admin/coupons", icon: Tags },

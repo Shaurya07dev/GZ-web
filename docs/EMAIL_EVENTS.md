@@ -136,7 +136,7 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 | Your agreement is signed | They sign the aggregator agreement | Live | `mou-signed-aggregator` |
 | GSTIN verified (or needs another look) | An admin approves their GSTIN | Live | `gst-verified` |
 
-### Admins (8)
+### Admins (9)
 
 | Email | Sends when | Status | Template id |
 | --- | --- | --- | --- |
@@ -144,6 +144,7 @@ Then read them in real inboxes: `npm run email:send-sample -- you@example.com --
 | Withdrawal awaiting approval | Someone requests a withdrawal | Live | `withdrawal-requested-admin` |
 | Deactivation request | Someone asks to deactivate | Live | `deactivation-requested-admin` |
 | New support ticket (reply goes to the person) | A support ticket arrives | Live | `support-new-admin` |
+| An aggregator reserved a piece (with money details) | An aggregator reserves a piece (every reservation) | Live | `holding-reserved-admin` |
 | A piece was priced far above the offer | A piece is reserved far above the offer | Live | `holding-price-warning` |
 | An aggregator wants more time | An aggregator asks for more time | Live | `holding-extension-requested` |
 | An aggregator reported a problem | An aggregator reports a problem with a piece | Live | `holding-report-filed` |

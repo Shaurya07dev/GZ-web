@@ -512,10 +512,14 @@ export class Emails {
    * sides need this in writing: the artist because their work is moving, the
    * aggregator because it is the record of the terms and the advance.
    */
-  async aggregatorReserved(input: { holdingId: string; artworkId: string; aggregatorId: string; advanceAmountPaise: number; displayPricePaise: number; expiresAt: Date }) {
+  async aggregatorReserved(input: { holdingId: string; artworkId: string; aggregatorId: string; advanceAmountPaise: number; deliveryDepositPaise?: number; displayPricePaise: number; expiresAt: Date; providerPaymentId?: string | null }) {
     const artwork = await this.artwork(input.artworkId);
     if (!artwork?.artistId) return;
-    const [artist, aggregator] = await Promise.all([this.user(artwork.artistId), this.user(input.aggregatorId)]);
+    const [artist, aggregator, admins] = await Promise.all([
+      this.user(artwork.artistId),
+      this.user(input.aggregatorId),
+      this.admins(),
+    ]);
     if (artist) {
       await this.deliver(`holding-reserved-artist/${input.holdingId}`, artist.email, T.holdingReservedArtist({ title: artwork.title, gallery: aggregator?.name ?? "a partner gallery", until: input.expiresAt, tagLocked: Boolean(artwork.nfcLockedAt) }, this.ctx));
     }
@@ -530,6 +534,28 @@ export class Emails {
         [reservationHandout],
       );
     }
+    // Admin notification — client-flagged gap 28 Nov 2026: admin had
+    // zero visibility when an aggregator paid. Surfaces the money
+    // flow + Razorpay payment id so admin can reconcile against
+    // Razorpay dashboard on sight.
+    await this.deliver(
+      `holding-reserved-admin/${input.holdingId}`,
+      admins,
+      T.holdingReservedAdmin(
+        {
+          title: artwork.title,
+          aggregatorName: aggregator?.name ?? "An aggregator",
+          artistName: artist?.name ?? "The artist",
+          advancePaise: input.advanceAmountPaise,
+          deliveryPaise: input.deliveryDepositPaise ?? 0,
+          displayPricePaise: input.displayPricePaise,
+          paymentId: input.providerPaymentId ?? "(not available)",
+          artworkId: input.artworkId,
+          holdingId: input.holdingId,
+        },
+        this.ctx,
+      ),
+    );
   }
 
   /**
@@ -542,7 +568,24 @@ export class Emails {
   async holdingReservedById(holdingId: string) {
     const holding = await this.read<AggregatorHoldingDoc>(Collections.aggregatorHoldings, holdingId);
     if (!holding) return;
-    await this.aggregatorReserved({ holdingId, artworkId: holding.artworkId, aggregatorId: holding.aggregatorId, advanceAmountPaise: holding.advanceAmountPaise, displayPricePaise: holding.displayPricePaise, expiresAt: holding.expiresAt.toDate() });
+    // Look up the intent that finalized into this holding so we can
+    // attach the Razorpay payment id to the admin notification.
+    const intentsSnap = await this.db
+      .collection(Collections.reservationIntents)
+      .where("holdingId", "==", holdingId)
+      .limit(1)
+      .get();
+    const intent = intentsSnap.docs[0]?.data() as { providerPaymentId?: string | null } | undefined;
+    await this.aggregatorReserved({
+      holdingId,
+      artworkId: holding.artworkId,
+      aggregatorId: holding.aggregatorId,
+      advanceAmountPaise: holding.advanceAmountPaise,
+      deliveryDepositPaise: holding.deliveryDepositPaise ?? 0,
+      displayPricePaise: holding.displayPricePaise,
+      expiresAt: holding.expiresAt.toDate(),
+      providerPaymentId: intent?.providerPaymentId ?? null,
+    });
     if (holding.priceWarning && holding.sellingPricePaise) {
       await this.holdingPriceWarning({ holdingId, artworkId: holding.artworkId, aggregatorId: holding.aggregatorId, sellingPricePaise: holding.sellingPricePaise, offerSellingPricePaise: null });
     }

@@ -55,6 +55,7 @@ import { AdminSeed } from "./admin-seed.ts";
 import { WhatsAppSender } from "./sms/whatsapp.ts";
 import { EwayBillService } from "./eway-bill/eway-bill.ts";
 import { AdminEwayBillsController } from "./admin-eway-bills.controller.ts";
+import { AdminReservationsController } from "./admin-reservations.controller.ts";
 import { PaymentsController } from "./payments/payments.controller.ts";
 import { ProfileController } from "./profile.controller.ts";
 import { CollectionController } from "./collection.controller.ts";
@@ -110,6 +111,7 @@ import { DbModule } from "./db.module.ts";
     AddressesController,
     AdminSettlementsController,
     AdminEwayBillsController,
+    AdminReservationsController,
     AggregatorSalesController,
     AggregatorCommissionInvoiceController,
     DeactivationController,
